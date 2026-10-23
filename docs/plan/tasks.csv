@@ -15,7 +15,9 @@ A07,azd + Bicep: provision C1 resources with managed identity,一键在微软云
 A08,"Azure adapters: Cosmos DB, Service Bus, Web PubSub",把后台从「本机版」切换到「云上版」,把迷你版里的传送带、档案柜、喇叭换成微软云上的真东西。,A,Must,M3,3.5,A07 A03,在云上运行时，所有部件的测试都通过,ADR-0006
 A09,"What-if wiring: enqueue, batch call, progress push",把「假如」按钮和重踢比赛连起来,用户点「假如」后，任务送去重踢比赛，进度实时显示，结果回到屏幕。,A,Must,M2,2,B08 D07,从点按钮到看到结果，不超过 30 秒,FR-11
 A10,Deploy and smoke test (azd deploy),上线并做一次冒烟测试,把整个系统放到公网上，再快速检查一遍主要功能能不能用。,A,Must,M3,1.5,A08,公网网址能打开；快速检查全部通过,FR-13
-B01,"Domain models and contract export (Pydantic, JSON Schema, TS)",定好大家共用的「数据格式」,先约定比赛、事件、转折点这些数据长什么样，前后端照这个格式写，就不会对不上。,B,Must,M0,3,T01,数据格式定稿并合并；前端能直接用,架构 7.4
+A11,"Personalized narrative API: audience, language, focus params and cache",让接口按观众返回不同的解释,网页带上观看模式、语言、主队和球员，接口返回对应版本的解释；同一组设置只生成一次，下次直接用。,A,Must,M2,2,A04 A05 D11,每种设置组合都能拿到对应版本；同一组设置第二次请求不再调用 AI,FR-23 FR-24 FR-25
+A12,"Overlay endpoint: timed, fixed-schema JSON",做转播叠加层的数据接口,给转播系统一个接口，按比赛时钟返回转折点，格式固定，方便叠加到直播画面上。,A,Must,M3,1,A04,返回的 JSON 通过 Schema 校验；每条都带比赛时钟,FR-26
+B01,"Domain models and contract export (Pydantic, JSON Schema, TS)",定好大家共用的「数据格式」,先约定比赛、事件、转折点这些数据长什么样，前后端照这个格式写，就不会对不上。个性化要用的字段今晚一起定：观看模式、语言、主队、关注球员。,B,Must,M0,3.5,T01,数据格式定稿并合并；前端能直接用；包含 audience、language、focus_team、focus_player，StatRef 可选 player_id，以及 Overlay 和 Recap 模型,架构 7.4 FR-23 FR-24 FR-25 FR-26
 B02,Fixture v0: hand-written demo-1021.json for the frontend,先手写一份演示比赛数据,在模拟器做好之前，先手写一份假数据，让做网页的同学马上能开工。,B,Must,M0,1,B01,做网页的同学不用等，就能开始做看板和详情页,
 B03,Simulator: full match with seed determinism,做模拟球场：踢完整一场比赛,用规则和随机数「踢」出一场 90 分钟的比赛，记下每一次传球、射门、抢断。,B,Must,M1,6,B01,同一个随机种子踢两次，结果一模一样；一场比赛不到 0.1 秒踢完,ADR-0008
 B04,"Snapshots, resume, plant API, demo-1021 preset",让比赛能「存档、读档」,比赛每分钟存一次档，可以从任意一分钟接着往下踢；还能在指定时间安排红牌、换人。,B,Must,M1,3.5,B03,从任何一分钟接着踢结果都一致；演示比赛里有 38 分钟红牌和 63 分钟换人,ADR-0008
@@ -24,6 +26,7 @@ B06,Momentum EWMA and CUSUM change points,做势头计和报警器,把比赛走�
 B07,Calibration on 200 matches and fixture v1 from the simulator,检查假比赛像不像真比赛,跑 200 场模拟比赛，看进球数、射门数这些统计像不像真实足球，不像就调整。,B,Must,M1,2,B04 B05,平均每场 2.5 到 3 个进球、20 到 28 次射门；演示数据换成模拟器生成的,
 B08,"Batch simulation: process pool, paired seeds, Wilson CI",实现「重踢 1000 次」,从某一分钟开始，照原样和改一处各踢 500 次，统计胜平负的比例和可信范围。,B,Must,M2,4,B04,1000 次重踢不超过 6 秒；同样的设置结果一致,ADR-0009
 B09,Severity rules and CUSUM tuning (D reviews football sense),调整报警器的灵敏度,报警太多会刷屏，太少会漏掉。和懂足球的同学一起调到刚刚好。,B,Must,M2,2,B06 B07,演示比赛只出现 2 到 3 个转折点，而且每个都说得通,ADR-0010
+B10,Player-level stats for focus mode,算出每个球员的数据,在 15 项统计的基础上按球员再算一遍，「关注球员」模式要用这些数字。,B,Must,M2,1.5,B05,任选一名球员都能拿到个人数据；有单元测试,FR-24
 C01,Web scaffold and theme tokens for the chosen UI style,搭网页的骨架和配色,建好网页项目，把选定的 UI 风格做成统一的颜色和字体。,C,Must,M0,2,A01,选定的风格已经生效，深色和浅色都能用,ADR-0012
 C02,"S1 live board on fixtures: top bar, momentum, pivots, stats, feed",做实时看板（S1）,做主屏幕：比分、时间、势头曲线、转折点卡片、数据栏、事件滚动条。先用假数据。,C,Must,M1,6,B02 C01,和原型里的 S1 一样；势头曲线在第 45 分钟重新开始,原型 S1
 C03,"Live data: REST, WebSocket client, gap recovery",让看板接上真实数据,把看板从假数据换成后台推送的实时数据，断网后能自己恢复。,C,Must,M1,3,A04 A06 C02,比赛加速播放时，曲线 2 秒内更新；断网后能自动重连,US-01
@@ -31,6 +34,8 @@ C04,"S2 pivot detail: static pitch, evidence highlight, before/after",做转折�
 C05,"S3 What-if Lab: scenario buttons, confirm, progress, distribution",做「假如」实验室（S3）,选一个改动，确认后开始重踢，最后用两条对比条展示结果。,C,Must,M2,5,A09 C04,和原型里的 S3 一样；「这是模拟，不是预测」的提示一直显示,原型 S3
 C06,"States: loading, error, degraded, Start demo button",处理加载、出错、降级这些情况,网络慢、断网、AI 暂时不可用时，页面要给出清楚的提示，不能白屏或报错。,C,Must,M4,2,C03,断网或 AI 不可用时，页面不会报错,原型状态矩阵
 C07,Visual polish and screenshots for README and video,美化界面并截图,最后打磨细节，给说明文档和视频准备好截图。,C,Must,M4,2,C05,说明文档用的 3 张截图；录屏时画面没有错位,
+C08,"Viewer settings: mode toggle, team and player pickers, language switch",做观看设置：模式、主队、球员、语言,在页面上放一个设置栏：切换分析师和球迷模式，选主队和关注球员，切换语言。,C,Must,M2,3,C02 C04 A11,切换后 3 秒内换成对应版本；刷新页面后设置还在；关注球员的事件在球场图上高亮,FR-23 FR-24 FR-25
+C09,Overlay preview page,做叠加层预览页,做一个透明背景的页面，模拟转折点卡片叠在直播画面上的样子，录视频时用。,C,Must,M4,2,A12,透明背景下卡片按比赛时钟出现和消失；录屏画面清楚,FR-26
 D01,Foundry deployments (standard and mini) and quota test,开通 AI 大脑（Foundry 模型）,在微软 Foundry 上开好两个 AI 模型：一个聪明一点，一个快一点，并测试能不能同时处理多个请求。,D,Must,M0,2,T02,两个模型都能用；同时发 10 个请求不会被限流,ADR-0004
 D02,Stat vocabulary (15) and explanation style guide (English),写统计词表和解说风格指南,列出 AI 可以引用的 15 项统计，再写一份英文解说的写作规范，附好例子和坏例子。,D,Must,M0,2,T01,和 B05 的统计项一一对应；风格指南里有 5 个好例子、5 个坏例子,ADR-0005
 D03,"PivotJudge prompt, output schema, few-shot examples",教「判定员」判断是不是转折点,写给 AI 判定员的说明书（提示词），让它判断报警的那一刻算不算真正的转折点。,D,Must,M1,2.5,D02 B02,演示比赛的 38 和 63 分钟判定为「是」；随便找的时刻大多判定为「否」,
@@ -40,9 +45,12 @@ D06,Detect workflow in Agent Framework (pair with A),把判定、写稿、核对
 D07,"Scenario catalog, UI copy (English), Comparator prompt",写「假如」的场景说明和对比解释,写清楚 5 种「假如」场景各自的界面文字和适用条件，再教 AI 解释两组结果为什么不同。,D,Must,M2,3,D04,5 种场景都有文案和适用条件；对比解释能通过核对,原型 B5
 D09,Pitch and README (English),写项目介绍（Pitch）和说明文档,用英文写给评委看的项目介绍，和仓库首页的说明文档。,D,Must,M4,4,C07,说明文档里有架构图、运行方法、评测结果和 Copilot 使用说明,
 D10,S4 Agent trace list (simple),做 AI 工作记录列表（S4）,做一个简单的列表，展示 AI 小组每一步做了什么，包括「被打回、重写、通过」的过程。,D,Must,M4,2,A05 C02,能看到一次「被拒绝、重写、通过」的完整记录,US-08
+D11,Audience modes and focus in Explainer and Comparator prompts,教写稿员按观众换写法,写稿员和对比解释都分成两种写法：分析师版讲数字和战术，球迷版讲成故事；还能从主队或关注球员的角度写。,D,Must,M2,3,D04 D07,演示比赛的每个转折点都有两版，都能通过核对；球迷版没有专业缩写,FR-23 FR-24
+D12,"Multi-language output (EN, ZH, ES) with language-agnostic verification",让解释支持多种语言,解释可以用英文、中文、西班牙文写出来，核对员照样能核对里面的数字。,D,Must,M2,2,D04 D05,三种语言都能通过核对；数字和英文版一致,FR-25
 S1,NL scenario parsing (Translator),用一句话提「假如」,让用户直接打字提问，比如「如果 63 分钟没换人呢」，AI 把这句话转成具体的场景设置。,D+A,Should,M4,3,D07 A09,看不懂时，给出 3 个示例让用户点,F13
 S2,Event Hubs and Functions metrics (C2 profile),升级成完整的云上「传送带」,把比赛数据改走微软云的事件流服务和函数计算，冲 Cloud Native 奖。,A,Should,M4,8,A10,切换之后，其他代码都不用改,ADR-0002 ADR-0011
 S3,Detection eval on 20 planted seeds and Foundry eval,给「找转折点」打分,用 20 场埋好转折点的比赛，统计找对了多少，把结果写进说明文档。,B+D,Should,M4,5,B07 B09,找对的比例和解释的可信度都写进了说明文档,F14
 S4,Animated pitch replay,球场动画回放,让转折点前后的动作在球场图上动起来。,C,Could,M4,4,C04,,F15
 S5,Separate S0 lobby page,单独的大厅页,做一个单独的首页，用来新建比赛和查看历史比赛。,C,Could,M4,2,C06,,
 S6,Container Apps Jobs sharding for large N,超大规模重踢,需要重踢上万次时，把任务分给多台云服务器一起做。,A+B,Could,,8,S2,,F16
+S7,Match Recap at full time,终场自动写赛后报道,比赛结束后，把核对过的转折点串成一篇赛后报道，同样分观看模式和语言。,D+A,Should,M4,3,D11 D12 A11,报道里的数字都通过核对；两种模式、三种语言都能生成,FR-27
