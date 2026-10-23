@@ -47,9 +47,35 @@ export interface VerifierIssue {
     | "direction_mismatch"
     | "significance_unsupported"
     | "banned_term"
+    | "context_invalid"
     | "schema_invalid";
   message: string;
   sentence_index: number | null;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AttackingAttributes".
+ */
+export interface AttackingAttributes {
+  crossing: number;
+  finishing: number;
+  heading_accuracy: number;
+  short_passing: number;
+  volleys: number;
+}
+/**
+ * Six headline ratings, weighted from the detailed ones (an approximation of game cards).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AttributeSummary".
+ */
+export interface AttributeSummary {
+  defending: number;
+  dribbling: number;
+  pace: number;
+  passing: number;
+  physical: number;
+  shooting: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -60,6 +86,23 @@ export interface BallPosition {
   x: number;
   y: number;
   z: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "CareerStint".
+ */
+export interface CareerStint {
+  appearances: number;
+  as_coach: boolean;
+  club_id: string;
+  club_name: string;
+  departure: ("transfer" | "loan_end" | "released" | "contract_end" | "sacked" | "resigned") | null;
+  departure_mood: "amicable" | "neutral" | "acrimonious";
+  from_year: number;
+  goals: number;
+  loan: boolean;
+  stint_id: string;
+  to_year: number | null;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -105,6 +148,99 @@ export interface StatRef {
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Coach".
+ */
+export interface Coach {
+  age: number;
+  attributes: CoachAttributes;
+  career: CareerStint[];
+  coach_id: string;
+  name: string;
+  nationality: string;
+  personality: Personality;
+  preferred_formation: string;
+  style: "defensive" | "balanced" | "attacking";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "CoachAttributes".
+ */
+export interface CoachAttributes {
+  in_game_adaptability: number;
+  man_management: number;
+  motivation: number;
+  tactical_knowledge: number;
+}
+/**
+ * Hidden traits. They never show on screen but shape how a player reacts to context.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Personality".
+ */
+export interface Personality {
+  ambition: number;
+  big_matches: number;
+  consistency: number;
+  controversy: number;
+  injury_proneness: number;
+  leadership: number;
+  loyalty: number;
+  pressure: number;
+  professionalism: number;
+  teamwork: number;
+  temperament: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Competition".
+ */
+export interface Competition {
+  competition_id: string;
+  importance: number;
+  level: "league" | "domestic_cup" | "continental_club" | "international_tournament" | "friendly";
+  name: string;
+  neutral_venue: boolean;
+  stage: "league" | "group" | "round_of_32" | "round_of_16" | "quarter_final" | "semi_final" | "final" | "friendly";
+  tier: number;
+}
+/**
+ * One modifier the simulator applied because of the context. Small by design (|delta| <= 0.15).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "ContextEffect".
+ */
+export interface ContextEffect {
+  delta: number;
+  effect_id: string;
+  note: string;
+  source:
+    | "former_club"
+    | "former_teammate"
+    | "former_coach"
+    | "rivalry"
+    | "competition"
+    | "stakes"
+    | "crowd"
+    | "off_field"
+    | "form"
+    | "fatigue"
+    | "weather";
+  source_ref: string | null;
+  subject_id: string;
+  target:
+    "composure" | "motivation" | "concentration" | "fitness" | "aggression" | "chemistry" | "card_risk" | "error_rate";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "DefendingAttributes".
+ */
+export interface DefendingAttributes {
+  defensive_awareness: number;
+  sliding_tackle: number;
+  standing_tackle: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "Envelope".
  */
 export interface Envelope {
@@ -135,6 +271,10 @@ export interface Envelope {
 export interface ExplanationSentence {
   claims: Claim[];
   /**
+   * @maxItems 3
+   */
+  context_ids: string[];
+  /**
    * @minItems 1
    * @maxItems 4
    */
@@ -143,11 +283,37 @@ export interface ExplanationSentence {
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "GoalkeepingAttributes".
+ */
+export interface GoalkeepingAttributes {
+  diving: number;
+  handling: number;
+  kicking: number;
+  positioning: number;
+  reflexes: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "LineupSlot".
+ */
+export interface LineupSlot {
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  anchor: [number, number];
+  player_id: string;
+  role: "GK" | "LB" | "CB" | "RB" | "LWB" | "RWB" | "DM" | "CM" | "AM" | "LM" | "RM" | "LW" | "RW" | "ST";
+  slot: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "Match".
  */
 export interface Match {
   away: Team;
   clock: number;
+  context: MatchContext;
   home: Team;
   match_id: string;
   period: 1 | 2;
@@ -162,45 +328,276 @@ export interface Match {
  * via the `definition` "Team".
  */
 export interface Team {
+  club_id: string;
+  coach: Coach;
   color: string;
-  formation: string;
   name: string;
-  players: Player[];
+  sheet: TeamSheet;
   short_name: string;
   side: "home" | "away";
+  squad: Player[];
+  tactics: TeamTactics;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamSheet".
+ */
+export interface TeamSheet {
+  /**
+   * @maxItems 15
+   */
+  bench: string[];
+  captain_id: string;
+  corner_taker_left_id: string;
+  corner_taker_right_id: string;
+  formation: string;
+  free_kick_taker_id: string;
+  penalty_taker_id: string;
+  /**
+   * @minItems 7
+   * @maxItems 11
+   */
+  starters: [LineupSlot, LineupSlot, LineupSlot, LineupSlot, LineupSlot, LineupSlot, LineupSlot, ...LineupSlot[]];
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "Player".
  */
 export interface Player {
+  age: number;
   attributes: PlayerAttributes;
+  career: CareerStint[];
+  height_cm: number;
   name: string;
+  nationality: string;
+  personality: Personality;
   player_id: string;
   /**
    * Broad position group derived from `role`.
    */
   position: "GK" | "DF" | "MF" | "FW";
-  preferred_foot: "left" | "right" | "both";
+  preferred_foot: "left" | "right";
   role: "GK" | "LB" | "CB" | "RB" | "LWB" | "RWB" | "DM" | "CM" | "AM" | "LM" | "RM" | "LW" | "RW" | "ST";
+  secondary_roles: (
+    "GK" | "LB" | "CB" | "RB" | "LWB" | "RWB" | "DM" | "CM" | "AM" | "LM" | "RM" | "LW" | "RW" | "ST"
+  )[];
   shirt_number: number;
+  skill_moves: number;
   team: "home" | "away";
+  traits: (
+    | "finesse_shot"
+    | "power_shot"
+    | "dead_ball"
+    | "chip_shot"
+    | "acrobatic"
+    | "incisive_pass"
+    | "long_ball_pass"
+    | "whipped_cross"
+    | "tiki_taka"
+    | "rapid"
+    | "quick_step"
+    | "technical"
+    | "trickster"
+    | "first_touch"
+    | "press_proven"
+    | "intercept"
+    | "block"
+    | "bruiser"
+    | "slide_tackle"
+    | "aerial"
+    | "relentless"
+    | "long_throw"
+    | "leader"
+  )[];
+  weak_foot: number;
+  weight_kg: number;
+  work_rate_attack: "low" | "medium" | "high";
+  work_rate_defence: "low" | "medium" | "high";
 }
 /**
- * Ability ratings the simulator uses, so players differ from one another.
+ * 34 visible ratings in seven groups. The simulator reads these directly.
  *
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "PlayerAttributes".
  */
 export interface PlayerAttributes {
+  attacking: AttackingAttributes;
+  defending: DefendingAttributes;
+  goalkeeping: GoalkeepingAttributes;
+  mentality: MentalityAttributes;
+  movement: MovementAttributes;
+  power: PowerAttributes;
+  skill: SkillAttributes;
+  summary: AttributeSummary1;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "MentalityAttributes".
+ */
+export interface MentalityAttributes {
+  aggression: number;
+  attack_positioning: number;
+  composure: number;
+  interceptions: number;
+  penalties: number;
+  vision: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "MovementAttributes".
+ */
+export interface MovementAttributes {
+  acceleration: number;
+  agility: number;
+  balance: number;
+  reactions: number;
+  sprint_speed: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PowerAttributes".
+ */
+export interface PowerAttributes {
+  jumping: number;
+  long_shots: number;
+  shot_power: number;
+  stamina: number;
+  strength: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "SkillAttributes".
+ */
+export interface SkillAttributes {
+  ball_control: number;
+  curve: number;
+  dribbling: number;
+  free_kick_accuracy: number;
+  long_passing: number;
+}
+/**
+ * Six headline ratings, weighted from the detailed ones (an approximation of game cards).
+ */
+export interface AttributeSummary1 {
   defending: number;
   dribbling: number;
-  goalkeeping: number;
   pace: number;
   passing: number;
   physical: number;
   shooting: number;
-  stamina: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamTactics".
+ */
+export interface TeamTactics {
+  attack_focus: "left" | "centre" | "right" | "balanced";
+  counter_attack: boolean;
+  instructions: PlayerInstruction[];
+  line_height: "low" | "mid" | "high";
+  offside_trap: boolean;
+  passing: "short" | "mixed" | "direct";
+  press: "low" | "mid" | "high";
+  tempo: "slow" | "normal" | "fast";
+  time_wasting: boolean;
+  width: "narrow" | "normal" | "wide";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerInstruction".
+ */
+export interface PlayerInstruction {
+  instruction:
+    | "stay_back"
+    | "get_forward"
+    | "overlap"
+    | "underlap"
+    | "cut_inside"
+    | "stay_wide"
+    | "roam"
+    | "hold_position"
+    | "press_more"
+    | "sit_deeper"
+    | "man_mark";
+  player_id: string;
+  target_player_id: string | null;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "MatchContext".
+ */
+export interface MatchContext {
+  attendance: number;
+  competition: Competition;
+  conditions: PreMatchCondition[];
+  derby: boolean;
+  effects: ContextEffect[];
+  news: OffFieldEvent[];
+  relationships: Relationship[];
+  stakes: "none" | "title_race" | "relegation" | "qualification" | "knockout";
+  venue: string;
+  weather: "clear" | "rain" | "wind" | "heat" | "snow";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PreMatchCondition".
+ */
+export interface PreMatchCondition {
+  carrying_knock: boolean;
+  days_since_last_match: number | null;
+  fitness: number;
+  morale: number;
+  on_yellow_card_threshold: boolean;
+  player_id: string;
+  /**
+   * @maxItems 5
+   */
+  recent_ratings: number[];
+  sharpness: number;
+}
+/**
+ * A fictional news item about a player or coach before the match.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "OffFieldEvent".
+ */
+export interface OffFieldEvent {
+  headline: string;
+  hours_before_kickoff: number;
+  kind:
+    | "nightlife"
+    | "late_return"
+    | "family_matter"
+    | "contract_dispute"
+    | "transfer_rumour"
+    | "public_criticism"
+    | "fan_conflict"
+    | "training_ground_clash"
+    | "disciplinary"
+    | "illness"
+    | "charity"
+    | "milestone"
+    | "new_contract";
+  news_id: string;
+  public: boolean;
+  sentiment: "negative" | "neutral" | "positive";
+  severity: number;
+  subject_id: string;
+}
+/**
+ * A tie between two people that can matter on match day (chemistry, motivation, needle).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Relationship".
+ */
+export interface Relationship {
+  kind:
+    "former_teammate" | "former_coach" | "former_player" | "mentor" | "friend" | "rival" | "feud" | "national_teammate";
+  other_id: string;
+  person_id: string;
+  relationship_id: string;
+  sentiment: number;
+  shared_seasons: number;
 }
 export interface Score {
   away: number;
@@ -211,6 +608,10 @@ export interface Score {
  * via the `definition` "MatchEvent".
  */
 export interface MatchEvent {
+  /**
+   * Penalty or six-yard box `location` falls in, if any, from the acting team's view.
+   */
+  area: ("own_six_yard_box" | "own_box" | "opp_box" | "opp_six_yard_box" | "open") | null;
   ball_speed_kmh: number | null;
   body_part: ("left_foot" | "right_foot" | "head" | "other") | null;
   end_location: [number, number] | null;
@@ -219,6 +620,10 @@ export interface MatchEvent {
    * Threat-grid zone of `location`.
    */
   from_zone: [number, number] | null;
+  /**
+   * Vertical lane of `location` (wings, half-spaces, centre), from the acting team's view.
+   */
+  lane: ("left_wing" | "left_half_space" | "centre" | "right_half_space" | "right_wing") | null;
   location: [number, number] | null;
   match_id: string;
   meta: {
@@ -255,10 +660,18 @@ export interface MatchEvent {
   related_event_ids: string[];
   schema_version: 1;
   seq: number;
+  shot_end_height_m: number | null;
   shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post") | null;
+  substitution: Substitution | null;
   success_prob: number | null;
   t: number;
+  tactics: TeamTactics | null;
   team: "home" | "away";
+  team_sheet: TeamSheet | null;
+  /**
+   * Pitch third of `location`, from the acting team's point of view.
+   */
+  third: ("defensive" | "middle" | "final") | null;
   threat: number;
   /**
    * Threat-grid zone of `end_location`.
@@ -280,12 +693,23 @@ export interface MatchEvent {
     | "foul"
     | "card"
     | "offside"
+    | "injury"
     | "substitution"
     | "tactical_shift"
     | "kickoff"
     | "period_end";
   under_pressure: boolean;
   xg: number | null;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Substitution".
+ */
+export interface Substitution {
+  player_off_id: string;
+  player_on_id: string;
+  reason: "tactical" | "fatigue" | "injury" | "card_risk" | "time_wasting";
+  slot: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -416,7 +840,7 @@ export interface PlantSpec {
     [k: string]: number | string;
   };
   team: "home" | "away";
-  type: "red_card" | "substitution" | "goal" | "press_change" | "formation_change";
+  type: "red_card" | "substitution" | "goal" | "press_change" | "formation_change" | "injury";
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -486,14 +910,19 @@ export interface ScenarioSpec {
   };
   pivot_id: string;
   seed_base: number;
+  tactics: TeamTactics | null;
   target_event_id: string | null;
+  team: ("home" | "away") | null;
+  team_sheet: TeamSheet | null;
   type:
     | "cancel_substitution"
     | "move_substitution"
     | "remove_red_card"
     | "remove_goal"
     | "change_press"
-    | "change_formation";
+    | "change_formation"
+    | "change_tactics"
+    | "change_lineup";
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

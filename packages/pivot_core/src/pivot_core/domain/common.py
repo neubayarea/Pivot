@@ -24,15 +24,60 @@ X = Annotated[float, Field(ge=0, le=PITCH_LENGTH)]
 Y = Annotated[float, Field(ge=0, le=PITCH_WIDTH)]
 Point = tuple[X, Y]
 
-# Zone on the 12 x 8 grid used by the threat model: (column 0-11 towards the away goal, row 0-7).
-Zone = tuple[Annotated[int, Field(ge=0, le=11)], Annotated[int, Field(ge=0, le=7)]]
+# Threat grid: 16 x 12 cells of about 6.6 x 5.7 m, the resolution commonly used for
+# expected-threat (xT) models. Zone = (column 0-15 towards the away goal, row 0-11).
+GRID_COLS = 16
+GRID_ROWS = 12
+Zone = tuple[Annotated[int, Field(ge=0, le=GRID_COLS - 1)], Annotated[int, Field(ge=0, le=GRID_ROWS - 1)]]
+
+# Tactical areas, always from the attacking team's point of view.
+Third = Literal["defensive", "middle", "final"]
+Lane = Literal["left_wing", "left_half_space", "centre", "right_half_space", "right_wing"]
+Area = Literal["own_six_yard_box", "own_box", "opp_box", "opp_six_yard_box", "open"]
+
+# Lane edges follow the lines of the penalty box (40.32 m wide) and six-yard box (18.32 m wide).
+_LANE_EDGES = (13.84, 24.84, 43.16, 54.16)
+_BOX_DEPTH, _SIX_DEPTH = 16.5, 5.5
 
 
 def zone_of(p: tuple[float, float]) -> tuple[int, int]:
     """Map a pitch point to its threat-grid zone."""
-    col = min(int(p[0] / PITCH_LENGTH * 12), 11)
-    row = min(int(p[1] / PITCH_WIDTH * 8), 7)
+    col = min(int(p[0] / PITCH_LENGTH * GRID_COLS), GRID_COLS - 1)
+    row = min(int(p[1] / PITCH_WIDTH * GRID_ROWS), GRID_ROWS - 1)
     return (col, row)
+
+
+def attacking_view(p: tuple[float, float], side: str) -> tuple[float, float]:
+    """Point as seen by `side` attacking left to right: x from own goal, y from own right touchline."""
+    x, y = p
+    return (x, y) if side == "home" else (PITCH_LENGTH - x, PITCH_WIDTH - y)
+
+
+def third_of(p: tuple[float, float], side: str) -> str:
+    x, _ = attacking_view(p, side)
+    return "defensive" if x < PITCH_LENGTH / 3 else "middle" if x < 2 * PITCH_LENGTH / 3 else "final"
+
+
+def lane_of(p: tuple[float, float], side: str) -> str:
+    # Facing the opponent's goal, the attacker's left is the high-y side.
+    _, y = attacking_view(p, side)
+    lanes = ("right_wing", "right_half_space", "centre", "left_half_space", "left_wing")
+    return lanes[sum(y >= edge for edge in _LANE_EDGES)]
+
+
+def area_of(p: tuple[float, float], side: str) -> str:
+    x, y = attacking_view(p, side)
+    in_box_width = _LANE_EDGES[0] <= y <= _LANE_EDGES[3]
+    in_six_width = _LANE_EDGES[1] <= y <= _LANE_EDGES[2]
+    if x >= PITCH_LENGTH - _SIX_DEPTH and in_six_width:
+        return "opp_six_yard_box"
+    if x >= PITCH_LENGTH - _BOX_DEPTH and in_box_width:
+        return "opp_box"
+    if x <= _SIX_DEPTH and in_six_width:
+        return "own_six_yard_box"
+    if x <= _BOX_DEPTH and in_box_width:
+        return "own_box"
+    return "open"
 
 
 class Model(BaseModel):

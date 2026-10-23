@@ -7,13 +7,14 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from .common import Minute, Model, Side
+from .lineup import TeamSheet, TeamTactics
 from .narrative import Narrative
 
 Probability = Annotated[float, Field(ge=0, le=1)]
 
 ScenarioType = Literal[
     "cancel_substitution", "move_substitution", "remove_red_card", "remove_goal", "change_press",
-    "change_formation",
+    "change_formation", "change_tactics", "change_lineup",
 ]
 
 
@@ -22,6 +23,9 @@ class ScenarioSpec(Model):
     pivot_id: str
     target_event_id: str | None = None
     at_minute: Minute                         # resume from this minute's snapshot
+    team: Side | None = None                  # side whose sheet or tactics change
+    team_sheet: TeamSheet | None = None       # change_formation, change_lineup
+    tactics: TeamTactics | None = None        # change_press, change_tactics
     params: dict[str, int | str] = {}
     n_runs: Literal[200, 500, 1000] = 500
     seed_base: int                            # run i uses seed_base + i for both arms
@@ -31,7 +35,7 @@ class PlantSpec(Model):
     """Force an event at a given minute. Used by the eval seeds and the demo preset."""
 
     minute: Minute
-    type: Literal["red_card", "substitution", "goal", "press_change", "formation_change"]
+    type: Literal["red_card", "substitution", "goal", "press_change", "formation_change", "injury"]
     team: Side
     params: dict[str, int | str] = {}
 

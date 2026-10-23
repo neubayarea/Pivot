@@ -12,12 +12,15 @@ from typing import Annotated, Literal
 
 from pydantic import Field, computed_field
 
-from .common import ClockSeconds, Model, Point, Side, zone_of
+from .common import (
+    Area, ClockSeconds, Lane, Model, Point, Side, Third, area_of, lane_of, third_of, zone_of,
+)
+from .lineup import Substitution, TeamSheet, TeamTactics
 
 EventType = Literal[
     "pass", "carry", "dribble", "shot", "save",
     "pressure", "duel", "tackle", "interception", "clearance", "block", "ball_recovery",
-    "foul", "card", "offside", "substitution", "tactical_shift",
+    "foul", "card", "offside", "injury", "substitution", "tactical_shift",
     "kickoff", "period_end",
 ]
 
@@ -55,6 +58,7 @@ class MatchEvent(Model):
     success_prob: Annotated[float, Field(ge=0, le=1)] | None = None
     shot_outcome: ShotOutcome | None = None   # shots only; a goal is a shot with outcome "goal"
     xg: Annotated[float, Field(ge=0, le=1)] | None = None   # shots only
+    shot_end_height_m: Annotated[float, Field(ge=0, le=10)] | None = None   # height at the goal line; the goal is 2.44 m
     pass_type: PassType | None = None         # passes only
     pass_height: PassHeight | None = None     # passes only
     body_part: BodyPart | None = None         # passes, shots, clearances
@@ -66,7 +70,12 @@ class MatchEvent(Model):
     # foul and the card that followed, tackle and the duel it won.
     related_event_ids: list[str] = []
     threat: float = 0.0                       # threat added by this event, from the threat grid
-    meta: dict[str, str] = {}                 # card colour, players on and off, new formation, ...
+    # Coach decisions. Kick-off events carry each team's starting sheet and tactics;
+    # tactical shifts and substitutions carry the sheet and tactics that apply from now on.
+    team_sheet: TeamSheet | None = None
+    tactics: TeamTactics | None = None
+    substitution: Substitution | None = None
+    meta: dict[str, str] = {}                 # card colour and other small details
 
     @computed_field
     @property
@@ -85,3 +94,21 @@ class MatchEvent(Model):
     def to_zone(self) -> tuple[int, int] | None:
         """Threat-grid zone of `end_location`."""
         return zone_of(self.end_location) if self.end_location else None
+
+    @computed_field
+    @property
+    def third(self) -> Third | None:
+        """Pitch third of `location`, from the acting team's point of view."""
+        return third_of(self.location, self.team) if self.location else None
+
+    @computed_field
+    @property
+    def lane(self) -> Lane | None:
+        """Vertical lane of `location` (wings, half-spaces, centre), from the acting team's view."""
+        return lane_of(self.location, self.team) if self.location else None
+
+    @computed_field
+    @property
+    def area(self) -> Area | None:
+        """Penalty or six-yard box `location` falls in, if any, from the acting team's view."""
+        return area_of(self.location, self.team) if self.location else None

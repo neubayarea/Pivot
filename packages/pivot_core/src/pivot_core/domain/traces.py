@@ -15,7 +15,7 @@ AgentName = Literal[
 IssueCode = Literal[
     "sentence_count", "too_long", "evidence_count", "evidence_invalid",
     "number_mismatch", "direction_mismatch", "significance_unsupported", "banned_term",
-    "schema_invalid",
+    "context_invalid", "schema_invalid",
 ]
 
 

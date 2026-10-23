@@ -106,6 +106,79 @@
       "title": "AgentTrace",
       "type": "object"
     },
+    "AttackingAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "crossing": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "finishing": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "heading_accuracy": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "short_passing": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "volleys": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "crossing",
+        "finishing",
+        "heading_accuracy",
+        "short_passing",
+        "volleys"
+      ],
+      "title": "AttackingAttributes",
+      "type": "object"
+    },
+    "AttributeSummary": {
+      "additionalProperties": false,
+      "description": "Six headline ratings, weighted from the detailed ones (an approximation of game cards).",
+      "properties": {
+        "defending": {
+          "type": "integer"
+        },
+        "dribbling": {
+          "type": "integer"
+        },
+        "pace": {
+          "type": "integer"
+        },
+        "passing": {
+          "type": "integer"
+        },
+        "physical": {
+          "type": "integer"
+        },
+        "shooting": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pace",
+        "shooting",
+        "passing",
+        "dribbling",
+        "defending",
+        "physical"
+      ],
+      "title": "AttributeSummary",
+      "type": "object"
+    },
     "BallPosition": {
       "additionalProperties": false,
       "properties": {
@@ -146,6 +219,99 @@
       "title": "BallPosition",
       "type": "object"
     },
+    "CareerStint": {
+      "additionalProperties": false,
+      "properties": {
+        "appearances": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "as_coach": {
+          "default": false,
+          "type": "boolean"
+        },
+        "club_id": {
+          "type": "string"
+        },
+        "club_name": {
+          "type": "string"
+        },
+        "departure": {
+          "anyOf": [
+            {
+              "enum": [
+                "transfer",
+                "loan_end",
+                "released",
+                "contract_end",
+                "sacked",
+                "resigned"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "departure_mood": {
+          "default": "neutral",
+          "enum": [
+            "amicable",
+            "neutral",
+            "acrimonious"
+          ],
+          "type": "string"
+        },
+        "from_year": {
+          "maximum": 2030,
+          "minimum": 1980,
+          "type": "integer"
+        },
+        "goals": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "loan": {
+          "default": false,
+          "type": "boolean"
+        },
+        "stint_id": {
+          "type": "string"
+        },
+        "to_year": {
+          "anyOf": [
+            {
+              "maximum": 2030,
+              "minimum": 1980,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "stint_id",
+        "club_id",
+        "club_name",
+        "from_year",
+        "to_year",
+        "as_coach",
+        "loan",
+        "appearances",
+        "goals",
+        "departure",
+        "departure_mood"
+      ],
+      "title": "CareerStint",
+      "type": "object"
+    },
     "Claim": {
       "additionalProperties": false,
       "properties": {
@@ -173,6 +339,256 @@
         "stat_ref"
       ],
       "title": "Claim",
+      "type": "object"
+    },
+    "Coach": {
+      "additionalProperties": false,
+      "properties": {
+        "age": {
+          "maximum": 85,
+          "minimum": 25,
+          "type": "integer"
+        },
+        "attributes": {
+          "$ref": "#/$defs/CoachAttributes"
+        },
+        "career": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CareerStint"
+          },
+          "type": "array"
+        },
+        "coach_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nationality": {
+          "type": "string"
+        },
+        "personality": {
+          "$ref": "#/$defs/Personality"
+        },
+        "preferred_formation": {
+          "pattern": "^\\d(-\\d){2,4}$",
+          "type": "string"
+        },
+        "style": {
+          "enum": [
+            "defensive",
+            "balanced",
+            "attacking"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "coach_id",
+        "name",
+        "age",
+        "nationality",
+        "style",
+        "preferred_formation",
+        "attributes",
+        "personality",
+        "career"
+      ],
+      "title": "Coach",
+      "type": "object"
+    },
+    "CoachAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "in_game_adaptability": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "man_management": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "motivation": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "tactical_knowledge": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tactical_knowledge",
+        "in_game_adaptability",
+        "man_management",
+        "motivation"
+      ],
+      "title": "CoachAttributes",
+      "type": "object"
+    },
+    "Competition": {
+      "additionalProperties": false,
+      "properties": {
+        "competition_id": {
+          "type": "string"
+        },
+        "importance": {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "level": {
+          "enum": [
+            "league",
+            "domestic_cup",
+            "continental_club",
+            "international_tournament",
+            "friendly"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "neutral_venue": {
+          "default": false,
+          "type": "boolean"
+        },
+        "stage": {
+          "default": "league",
+          "enum": [
+            "league",
+            "group",
+            "round_of_32",
+            "round_of_16",
+            "quarter_final",
+            "semi_final",
+            "final",
+            "friendly"
+          ],
+          "type": "string"
+        },
+        "tier": {
+          "default": 1,
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "competition_id",
+        "name",
+        "level",
+        "tier",
+        "stage",
+        "importance",
+        "neutral_venue"
+      ],
+      "title": "Competition",
+      "type": "object"
+    },
+    "ContextEffect": {
+      "additionalProperties": false,
+      "description": "One modifier the simulator applied because of the context. Small by design (|delta| <= 0.15).",
+      "properties": {
+        "delta": {
+          "maximum": 0.15,
+          "minimum": -0.15,
+          "type": "number"
+        },
+        "effect_id": {
+          "type": "string"
+        },
+        "note": {
+          "maxLength": 120,
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "former_club",
+            "former_teammate",
+            "former_coach",
+            "rivalry",
+            "competition",
+            "stakes",
+            "crowd",
+            "off_field",
+            "form",
+            "fatigue",
+            "weather"
+          ],
+          "type": "string"
+        },
+        "source_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "composure",
+            "motivation",
+            "concentration",
+            "fitness",
+            "aggression",
+            "chemistry",
+            "card_risk",
+            "error_rate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "effect_id",
+        "subject_id",
+        "source",
+        "source_ref",
+        "target",
+        "delta",
+        "note"
+      ],
+      "title": "ContextEffect",
+      "type": "object"
+    },
+    "DefendingAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "defensive_awareness": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "sliding_tackle": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "standing_tackle": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "defensive_awareness",
+        "standing_tackle",
+        "sliding_tackle"
+      ],
+      "title": "DefendingAttributes",
       "type": "object"
     },
     "Envelope": {
@@ -230,6 +646,14 @@
           },
           "type": "array"
         },
+        "context_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "type": "array"
+        },
         "evidence_ids": {
           "items": {
             "type": "string"
@@ -245,9 +669,107 @@
       "required": [
         "text",
         "evidence_ids",
-        "claims"
+        "claims",
+        "context_ids"
       ],
       "title": "ExplanationSentence",
+      "type": "object"
+    },
+    "GoalkeepingAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "diving": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "handling": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "kicking": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "positioning": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reflexes": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "diving",
+        "handling",
+        "kicking",
+        "positioning",
+        "reflexes"
+      ],
+      "title": "GoalkeepingAttributes",
+      "type": "object"
+    },
+    "LineupSlot": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "additionalItems": false,
+          "items": [
+            {
+              "maximum": 105.0,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "maximum": 68.0,
+              "minimum": 0,
+              "type": "number"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "GK",
+            "LB",
+            "CB",
+            "RB",
+            "LWB",
+            "RWB",
+            "DM",
+            "CM",
+            "AM",
+            "LM",
+            "RM",
+            "LW",
+            "RW",
+            "ST"
+          ],
+          "type": "string"
+        },
+        "slot": {
+          "maximum": 11,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "player_id",
+        "slot",
+        "role",
+        "anchor"
+      ],
+      "title": "LineupSlot",
       "type": "object"
     },
     "Match": {
@@ -261,6 +783,9 @@
           "maximum": 5400,
           "minimum": 0,
           "type": "integer"
+        },
+        "context": {
+          "$ref": "#/$defs/MatchContext"
         },
         "home": {
           "$ref": "#/$defs/Team"
@@ -323,6 +848,7 @@
         "preset",
         "home",
         "away",
+        "context",
         "status",
         "speed",
         "clock",
@@ -332,9 +858,112 @@
       "title": "Match",
       "type": "object"
     },
+    "MatchContext": {
+      "additionalProperties": false,
+      "properties": {
+        "attendance": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "competition": {
+          "$ref": "#/$defs/Competition"
+        },
+        "conditions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PreMatchCondition"
+          },
+          "type": "array"
+        },
+        "derby": {
+          "default": false,
+          "type": "boolean"
+        },
+        "effects": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ContextEffect"
+          },
+          "type": "array"
+        },
+        "news": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OffFieldEvent"
+          },
+          "type": "array"
+        },
+        "relationships": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Relationship"
+          },
+          "type": "array"
+        },
+        "stakes": {
+          "default": "none",
+          "enum": [
+            "none",
+            "title_race",
+            "relegation",
+            "qualification",
+            "knockout"
+          ],
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "weather": {
+          "default": "clear",
+          "enum": [
+            "clear",
+            "rain",
+            "wind",
+            "heat",
+            "snow"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "competition",
+        "venue",
+        "attendance",
+        "derby",
+        "stakes",
+        "weather",
+        "conditions",
+        "news",
+        "relationships",
+        "effects"
+      ],
+      "title": "MatchContext",
+      "type": "object"
+    },
     "MatchEvent": {
       "additionalProperties": false,
       "properties": {
+        "area": {
+          "anyOf": [
+            {
+              "enum": [
+                "own_six_yard_box",
+                "own_box",
+                "opp_box",
+                "opp_six_yard_box",
+                "open"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Penalty or six-yard box `location` falls in, if any, from the acting team's view.",
+          "readOnly": true
+        },
         "ball_speed_kmh": {
           "anyOf": [
             {
@@ -415,6 +1044,25 @@
             }
           ],
           "description": "Threat-grid zone of `location`.",
+          "readOnly": true
+        },
+        "lane": {
+          "anyOf": [
+            {
+              "enum": [
+                "left_wing",
+                "left_half_space",
+                "centre",
+                "right_half_space",
+                "right_wing"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Vertical lane of `location` (wings, half-spaces, centre), from the acting team's view.",
           "readOnly": true
         },
         "location": {
@@ -592,6 +1240,19 @@
           "minimum": 0,
           "type": "integer"
         },
+        "shot_end_height_m": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "shot_outcome": {
           "anyOf": [
             {
@@ -603,6 +1264,17 @@
                 "post"
               ],
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "substitution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Substitution"
             },
             {
               "type": "null"
@@ -628,12 +1300,51 @@
           "minimum": 0,
           "type": "integer"
         },
+        "tactics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamTactics"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "team": {
           "enum": [
             "home",
             "away"
           ],
           "type": "string"
+        },
+        "team_sheet": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSheet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "third": {
+          "anyOf": [
+            {
+              "enum": [
+                "defensive",
+                "middle",
+                "final"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pitch third of `location`, from the acting team's point of view.",
+          "readOnly": true
         },
         "threat": {
           "default": 0.0,
@@ -679,6 +1390,7 @@
             "foul",
             "card",
             "offside",
+            "injury",
             "substitution",
             "tactical_shift",
             "kickoff",
@@ -721,6 +1433,7 @@
         "success_prob",
         "shot_outcome",
         "xg",
+        "shot_end_height_m",
         "pass_type",
         "pass_height",
         "body_part",
@@ -730,12 +1443,63 @@
         "play_pattern",
         "related_event_ids",
         "threat",
+        "team_sheet",
+        "tactics",
+        "substitution",
         "meta",
         "minute",
         "from_zone",
-        "to_zone"
+        "to_zone",
+        "third",
+        "lane",
+        "area"
       ],
       "title": "MatchEvent",
+      "type": "object"
+    },
+    "MentalityAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "aggression": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "attack_positioning": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "composure": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "interceptions": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "penalties": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "vision": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "aggression",
+        "interceptions",
+        "attack_positioning",
+        "vision",
+        "penalties",
+        "composure"
+      ],
+      "title": "MentalityAttributes",
       "type": "object"
     },
     "MinuteMetric": {
@@ -779,6 +1543,45 @@
         "pressure_away"
       ],
       "title": "MinuteMetric",
+      "type": "object"
+    },
+    "MovementAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "acceleration": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "agility": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "balance": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reactions": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "sprint_speed": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "acceleration",
+        "sprint_speed",
+        "agility",
+        "reactions",
+        "balance"
+      ],
+      "title": "MovementAttributes",
       "type": "object"
     },
     "Narrative": {
@@ -832,6 +1635,75 @@
         "chain_id"
       ],
       "title": "Narrative",
+      "type": "object"
+    },
+    "OffFieldEvent": {
+      "additionalProperties": false,
+      "description": "A fictional news item about a player or coach before the match.",
+      "properties": {
+        "headline": {
+          "maxLength": 120,
+          "type": "string"
+        },
+        "hours_before_kickoff": {
+          "maximum": 720,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "nightlife",
+            "late_return",
+            "family_matter",
+            "contract_dispute",
+            "transfer_rumour",
+            "public_criticism",
+            "fan_conflict",
+            "training_ground_clash",
+            "disciplinary",
+            "illness",
+            "charity",
+            "milestone",
+            "new_contract"
+          ],
+          "type": "string"
+        },
+        "news_id": {
+          "type": "string"
+        },
+        "public": {
+          "default": true,
+          "type": "boolean"
+        },
+        "sentiment": {
+          "enum": [
+            "negative",
+            "neutral",
+            "positive"
+          ],
+          "type": "string"
+        },
+        "severity": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "subject_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "news_id",
+        "subject_id",
+        "kind",
+        "hours_before_kickoff",
+        "severity",
+        "sentiment",
+        "public",
+        "headline"
+      ],
+      "title": "OffFieldEvent",
       "type": "object"
     },
     "OutcomeDist": {
@@ -1019,6 +1891,82 @@
       "title": "OverlayItem",
       "type": "object"
     },
+    "Personality": {
+      "additionalProperties": false,
+      "description": "Hidden traits. They never show on screen but shape how a player reacts to context.",
+      "properties": {
+        "ambition": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "big_matches": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "consistency": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "controversy": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "injury_proneness": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "leadership": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "loyalty": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "pressure": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "professionalism": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "teamwork": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "temperament": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "consistency",
+        "big_matches",
+        "pressure",
+        "professionalism",
+        "temperament",
+        "ambition",
+        "loyalty",
+        "leadership",
+        "teamwork",
+        "injury_proneness",
+        "controversy"
+      ],
+      "title": "Personality",
+      "type": "object"
+    },
     "Pivot": {
       "additionalProperties": false,
       "properties": {
@@ -1190,7 +2138,8 @@
             "substitution",
             "goal",
             "press_change",
-            "formation_change"
+            "formation_change",
+            "injury"
           ],
           "type": "string"
         }
@@ -1207,11 +2156,34 @@
     "Player": {
       "additionalProperties": false,
       "properties": {
+        "age": {
+          "maximum": 45,
+          "minimum": 15,
+          "type": "integer"
+        },
         "attributes": {
           "$ref": "#/$defs/PlayerAttributes"
         },
+        "career": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CareerStint"
+          },
+          "type": "array"
+        },
+        "height_cm": {
+          "maximum": 210,
+          "minimum": 150,
+          "type": "integer"
+        },
         "name": {
           "type": "string"
+        },
+        "nationality": {
+          "type": "string"
+        },
+        "personality": {
+          "$ref": "#/$defs/Personality"
         },
         "player_id": {
           "type": "string"
@@ -1231,8 +2203,7 @@
           "default": "right",
           "enum": [
             "left",
-            "right",
-            "both"
+            "right"
           ],
           "type": "string"
         },
@@ -1255,8 +2226,37 @@
           ],
           "type": "string"
         },
+        "secondary_roles": {
+          "default": [],
+          "items": {
+            "enum": [
+              "GK",
+              "LB",
+              "CB",
+              "RB",
+              "LWB",
+              "RWB",
+              "DM",
+              "CM",
+              "AM",
+              "LM",
+              "RM",
+              "LW",
+              "RW",
+              "ST"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
         "shirt_number": {
           "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "skill_moves": {
+          "default": 2,
+          "maximum": 5,
           "minimum": 1,
           "type": "integer"
         },
@@ -1264,6 +2264,67 @@
           "enum": [
             "home",
             "away"
+          ],
+          "type": "string"
+        },
+        "traits": {
+          "default": [],
+          "items": {
+            "enum": [
+              "finesse_shot",
+              "power_shot",
+              "dead_ball",
+              "chip_shot",
+              "acrobatic",
+              "incisive_pass",
+              "long_ball_pass",
+              "whipped_cross",
+              "tiki_taka",
+              "rapid",
+              "quick_step",
+              "technical",
+              "trickster",
+              "first_touch",
+              "press_proven",
+              "intercept",
+              "block",
+              "bruiser",
+              "slide_tackle",
+              "aerial",
+              "relentless",
+              "long_throw",
+              "leader"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "weak_foot": {
+          "default": 3,
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "weight_kg": {
+          "maximum": 110,
+          "minimum": 50,
+          "type": "integer"
+        },
+        "work_rate_attack": {
+          "default": "medium",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "type": "string"
+        },
+        "work_rate_defence": {
+          "default": "medium",
+          "enum": [
+            "low",
+            "medium",
+            "high"
           ],
           "type": "string"
         }
@@ -1274,8 +2335,20 @@
         "team",
         "shirt_number",
         "role",
+        "secondary_roles",
+        "age",
+        "nationality",
+        "height_cm",
+        "weight_kg",
         "preferred_foot",
+        "weak_foot",
+        "skill_moves",
+        "work_rate_attack",
+        "work_rate_defence",
         "attributes",
+        "personality",
+        "traits",
+        "career",
         "position"
       ],
       "title": "Player",
@@ -1283,61 +2356,87 @@
     },
     "PlayerAttributes": {
       "additionalProperties": false,
-      "description": "Ability ratings the simulator uses, so players differ from one another.",
+      "description": "34 visible ratings in seven groups. The simulator reads these directly.",
       "properties": {
-        "defending": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "attacking": {
+          "$ref": "#/$defs/AttackingAttributes"
         },
-        "dribbling": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "defending": {
+          "$ref": "#/$defs/DefendingAttributes"
         },
         "goalkeeping": {
-          "default": 10,
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+          "$ref": "#/$defs/GoalkeepingAttributes"
         },
-        "pace": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "mentality": {
+          "$ref": "#/$defs/MentalityAttributes"
         },
-        "passing": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "movement": {
+          "$ref": "#/$defs/MovementAttributes"
         },
-        "physical": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "power": {
+          "$ref": "#/$defs/PowerAttributes"
         },
-        "shooting": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "skill": {
+          "$ref": "#/$defs/SkillAttributes"
         },
-        "stamina": {
-          "maximum": 99,
-          "minimum": 1,
-          "type": "integer"
+        "summary": {
+          "$ref": "#/$defs/AttributeSummary",
+          "readOnly": true
         }
       },
       "required": [
-        "pace",
-        "passing",
-        "dribbling",
-        "shooting",
+        "attacking",
+        "skill",
+        "movement",
+        "power",
+        "mentality",
         "defending",
-        "physical",
-        "stamina",
-        "goalkeeping"
+        "goalkeeping",
+        "summary"
       ],
       "title": "PlayerAttributes",
+      "type": "object"
+    },
+    "PlayerInstruction": {
+      "additionalProperties": false,
+      "properties": {
+        "instruction": {
+          "enum": [
+            "stay_back",
+            "get_forward",
+            "overlap",
+            "underlap",
+            "cut_inside",
+            "stay_wide",
+            "roam",
+            "hold_position",
+            "press_more",
+            "sit_deeper",
+            "man_mark"
+          ],
+          "type": "string"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "target_player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "player_id",
+        "instruction",
+        "target_player_id"
+      ],
+      "title": "PlayerInstruction",
       "type": "object"
     },
     "PlayerPosition": {
@@ -1379,6 +2478,111 @@
       "title": "PlayerPosition",
       "type": "object"
     },
+    "PowerAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "jumping": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "long_shots": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "shot_power": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "stamina": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "strength": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "shot_power",
+        "jumping",
+        "stamina",
+        "strength",
+        "long_shots"
+      ],
+      "title": "PowerAttributes",
+      "type": "object"
+    },
+    "PreMatchCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "carrying_knock": {
+          "default": false,
+          "type": "boolean"
+        },
+        "days_since_last_match": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fitness": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "morale": {
+          "default": 60,
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "on_yellow_card_threshold": {
+          "default": false,
+          "type": "boolean"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "recent_ratings": {
+          "default": [],
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 5,
+          "type": "array"
+        },
+        "sharpness": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "player_id",
+        "fitness",
+        "sharpness",
+        "morale",
+        "recent_ratings",
+        "days_since_last_match",
+        "carrying_knock",
+        "on_yellow_card_threshold"
+      ],
+      "title": "PreMatchCondition",
+      "type": "object"
+    },
     "Recap": {
       "additionalProperties": false,
       "properties": {
@@ -1405,6 +2609,55 @@
         "narrative"
       ],
       "title": "Recap",
+      "type": "object"
+    },
+    "Relationship": {
+      "additionalProperties": false,
+      "description": "A tie between two people that can matter on match day (chemistry, motivation, needle).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "former_teammate",
+            "former_coach",
+            "former_player",
+            "mentor",
+            "friend",
+            "rival",
+            "feud",
+            "national_teammate"
+          ],
+          "type": "string"
+        },
+        "other_id": {
+          "type": "string"
+        },
+        "person_id": {
+          "type": "string"
+        },
+        "relationship_id": {
+          "type": "string"
+        },
+        "sentiment": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": -1,
+          "type": "number"
+        },
+        "shared_seasons": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relationship_id",
+        "person_id",
+        "other_id",
+        "kind",
+        "shared_seasons",
+        "sentiment"
+      ],
+      "title": "Relationship",
       "type": "object"
     },
     "Scenario": {
@@ -1493,10 +2746,47 @@
         "seed_base": {
           "type": "integer"
         },
+        "tactics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamTactics"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "target_event_id": {
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "team": {
+          "anyOf": [
+            {
+              "enum": [
+                "home",
+                "away"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "team_sheet": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSheet"
             },
             {
               "type": "null"
@@ -1511,7 +2801,9 @@
             "remove_red_card",
             "remove_goal",
             "change_press",
-            "change_formation"
+            "change_formation",
+            "change_tactics",
+            "change_lineup"
           ],
           "type": "string"
         }
@@ -1521,6 +2813,9 @@
         "pivot_id",
         "target_event_id",
         "at_minute",
+        "team",
+        "team_sheet",
+        "tactics",
         "params",
         "n_runs",
         "seed_base"
@@ -1609,6 +2904,45 @@
       "title": "SimResult",
       "type": "object"
     },
+    "SkillAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "ball_control": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "curve": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "dribbling": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "free_kick_accuracy": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "long_passing": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dribbling",
+        "curve",
+        "free_kick_accuracy",
+        "long_passing",
+        "ball_control"
+      ],
+      "title": "SkillAttributes",
+      "type": "object"
+    },
     "StatRef": {
       "additionalProperties": false,
       "properties": {
@@ -1682,25 +3016,58 @@
       "title": "StatRef",
       "type": "object"
     },
+    "Substitution": {
+      "additionalProperties": false,
+      "properties": {
+        "player_off_id": {
+          "type": "string"
+        },
+        "player_on_id": {
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "tactical",
+            "fatigue",
+            "injury",
+            "card_risk",
+            "time_wasting"
+          ],
+          "type": "string"
+        },
+        "slot": {
+          "maximum": 11,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "player_off_id",
+        "player_on_id",
+        "slot",
+        "reason"
+      ],
+      "title": "Substitution",
+      "type": "object"
+    },
     "Team": {
       "additionalProperties": false,
       "properties": {
-        "color": {
-          "pattern": "^#[0-9A-Fa-f]{6}$",
+        "club_id": {
           "type": "string"
         },
-        "formation": {
-          "pattern": "^\\d(-\\d){2,4}$",
+        "coach": {
+          "$ref": "#/$defs/Coach"
+        },
+        "color": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
           "type": "string"
         },
         "name": {
           "type": "string"
         },
-        "players": {
-          "items": {
-            "$ref": "#/$defs/Player"
-          },
-          "type": "array"
+        "sheet": {
+          "$ref": "#/$defs/TeamSheet"
         },
         "short_name": {
           "maxLength": 4,
@@ -1712,17 +3079,174 @@
             "away"
           ],
           "type": "string"
+        },
+        "squad": {
+          "items": {
+            "$ref": "#/$defs/Player"
+          },
+          "type": "array"
+        },
+        "tactics": {
+          "$ref": "#/$defs/TeamTactics"
         }
       },
       "required": [
         "side",
+        "club_id",
         "name",
         "short_name",
         "color",
-        "formation",
-        "players"
+        "coach",
+        "squad",
+        "sheet",
+        "tactics"
       ],
       "title": "Team",
+      "type": "object"
+    },
+    "TeamSheet": {
+      "additionalProperties": false,
+      "properties": {
+        "bench": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 15,
+          "type": "array"
+        },
+        "captain_id": {
+          "type": "string"
+        },
+        "corner_taker_left_id": {
+          "type": "string"
+        },
+        "corner_taker_right_id": {
+          "type": "string"
+        },
+        "formation": {
+          "pattern": "^\\d(-\\d){2,4}$",
+          "type": "string"
+        },
+        "free_kick_taker_id": {
+          "type": "string"
+        },
+        "penalty_taker_id": {
+          "type": "string"
+        },
+        "starters": {
+          "items": {
+            "$ref": "#/$defs/LineupSlot"
+          },
+          "maxItems": 11,
+          "minItems": 7,
+          "type": "array"
+        }
+      },
+      "required": [
+        "formation",
+        "starters",
+        "bench",
+        "captain_id",
+        "penalty_taker_id",
+        "free_kick_taker_id",
+        "corner_taker_left_id",
+        "corner_taker_right_id"
+      ],
+      "title": "TeamSheet",
+      "type": "object"
+    },
+    "TeamTactics": {
+      "additionalProperties": false,
+      "properties": {
+        "attack_focus": {
+          "default": "balanced",
+          "enum": [
+            "left",
+            "centre",
+            "right",
+            "balanced"
+          ],
+          "type": "string"
+        },
+        "counter_attack": {
+          "default": false,
+          "type": "boolean"
+        },
+        "instructions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PlayerInstruction"
+          },
+          "type": "array"
+        },
+        "line_height": {
+          "default": "mid",
+          "enum": [
+            "low",
+            "mid",
+            "high"
+          ],
+          "type": "string"
+        },
+        "offside_trap": {
+          "default": false,
+          "type": "boolean"
+        },
+        "passing": {
+          "default": "mixed",
+          "enum": [
+            "short",
+            "mixed",
+            "direct"
+          ],
+          "type": "string"
+        },
+        "press": {
+          "default": "mid",
+          "enum": [
+            "low",
+            "mid",
+            "high"
+          ],
+          "type": "string"
+        },
+        "tempo": {
+          "default": "normal",
+          "enum": [
+            "slow",
+            "normal",
+            "fast"
+          ],
+          "type": "string"
+        },
+        "time_wasting": {
+          "default": false,
+          "type": "boolean"
+        },
+        "width": {
+          "default": "normal",
+          "enum": [
+            "narrow",
+            "normal",
+            "wide"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "line_height",
+        "press",
+        "width",
+        "tempo",
+        "passing",
+        "attack_focus",
+        "counter_attack",
+        "offside_trap",
+        "time_wasting",
+        "instructions"
+      ],
+      "title": "TeamTactics",
       "type": "object"
     },
     "TrackingFrame": {
@@ -1813,6 +3337,7 @@
             "direction_mismatch",
             "significance_unsupported",
             "banned_term",
+            "context_invalid",
             "schema_invalid"
           ],
           "type": "string"

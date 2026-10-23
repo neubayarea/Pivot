@@ -29,6 +29,9 @@ class ExplanationSentence(Model):
     text: str                                 # at most 30 words (checked by the Verifier)
     evidence_ids: Annotated[list[str], Field(min_length=1, max_length=4)]
     claims: list[Claim] = []                  # every number in `text` must appear here
+    # Off-pitch facts the sentence relies on ("back at his former club"): effect_id, news_id,
+    # stint_id or relationship_id from the match context. The Verifier checks they exist.
+    context_ids: Annotated[list[str], Field(max_length=3)] = []
 
 
 class Narrative(Model):
