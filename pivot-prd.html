@@ -1,0 +1,908 @@
+<title>Pivot PRD</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 规格文档 —— 左侧目录（宽屏粘性）+ 右侧正文；与选题板同一套球场色系 */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --line:#D5DDD3; --fg:#17231C; --muted:#5A6A5F;
+  --pitch:#1E6B45; --pitch-soft:#E1EEE5; --plum:#4A1D57; --plum-soft:#EFE6F2;
+  --warn:#9A5B00; --warn-soft:#FBF0DC; --crit:#A3302A; --crit-soft:#F8E3E1;
+  --display:"Barlow Condensed","Noto Sans SC",system-ui,sans-serif;
+  --body:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33;
+  --warn:#F0B451; --warn-soft:#33281A; --crit:#F08A80; --crit-soft:#3A1F1D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33;
+  --warn:#F0B451; --warn-soft:#33281A; --crit:#F08A80; --crit-soft:#3A1F1D; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}
+.layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:210px minmax(0,1fr);gap:40px}
+aside{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-top:40px;max-height:100vh;overflow:auto}
+aside p{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+aside ol{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:13.5px}
+aside a{color:var(--muted);text-decoration:none;display:block;padding:3px 0 3px 10px;border-left:2px solid var(--line)}
+aside a:hover,aside a:focus-visible{color:var(--pitch);border-left-color:var(--pitch);outline:none}
+main{min-width:0}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(40px,6.5vw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.01em}
+h2{font-size:30px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+h2 .sec{font-family:var(--mono);font-size:14px;color:var(--pitch);margin-right:10px;vertical-align:middle;letter-spacing:0}
+h3{font-size:21px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+.muted{color:var(--muted)}
+.small{font-size:13.5px}
+header{padding-block:44px 28px;display:grid;gap:16px}
+section{display:grid;gap:16px;padding-block:40px;border-top:2px solid var(--line);scroll-margin-top:12px}
+.sub{display:grid;gap:12px;padding-top:8px}
+.prose{max-width:70ch;display:grid;gap:10px}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.meta div{background:var(--surface);padding:10px 14px;display:grid}
+.meta span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.meta b{font-weight:500}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:16px 18px;display:grid;gap:8px;align-content:start;min-width:0}
+.panel h3{font-size:18px}
+.callout{border-left:3px solid var(--pitch);background:var(--pitch-soft);padding:12px 16px;display:grid;gap:6px}
+.callout.plum{border-color:var(--plum);background:var(--plum-soft)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+ul.tight,ol.tight{margin:0;padding-left:1.15em;display:grid;gap:4px}
+.tag{display:inline-block;font-family:var(--mono);font-size:11.5px;line-height:1.6;padding:1px 7px;border-radius:3px;background:var(--pitch-soft);color:var(--pitch);white-space:nowrap}
+.tag.p0{background:var(--crit-soft);color:var(--crit)}
+.tag.p1{background:var(--warn-soft);color:var(--warn)}
+.tag.p2{background:var(--plum-soft);color:var(--plum)}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--bg)}
+td code,p code,li code{font-family:var(--mono);font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:3px}
+td.id{font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--muted)}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+pre.code{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.6;background:var(--surface);border:1px solid var(--line);padding:14px 16px;overflow-x:auto}
+.mm{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto}
+.mm pre{margin:0}
+.story{background:var(--surface);border:1px solid var(--line);padding:14px 18px;display:grid;gap:8px}
+.story .as{font-size:15px}
+.story .as b{color:var(--plum);font-weight:700}
+.story ul{margin:0;padding-left:0;list-style:none;display:grid;gap:3px;font-size:14px}
+.story li::before{content:"☐ ";color:var(--pitch);font-family:var(--mono)}
+.story .sid{font-family:var(--mono);font-size:12px;color:var(--muted)}
+/* 线框 */
+.wire{display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);padding:10px;font-size:12.5px}
+.wire .row{display:grid;gap:6px}
+.wire .box{border:1.5px dashed var(--line);padding:8px 10px;color:var(--muted);min-height:44px;display:grid;align-content:center}
+.wire .box b{color:var(--fg);font-weight:500;font-size:13px}
+.wire .box.hot{border-color:var(--pitch);color:var(--pitch)}
+.wire .box.hot b{color:var(--pitch)}
+.wcap{font-family:var(--mono);font-size:12px;color:var(--muted)}
+a{color:var(--pitch)}
+.posmap{background:var(--surface);border:1px solid var(--line);padding:8px;overflow-x:auto}
+.posmap svg{display:block;width:100%;min-width:520px;height:auto}
+.posmap .ax{stroke:var(--line);stroke-width:1.5;fill:none}
+.posmap .mid{stroke:var(--line);stroke-dasharray:4 4;fill:none}
+.posmap .lbl{fill:var(--muted);font-family:var(--mono);font-size:11px}
+.posmap .q{fill:var(--muted);font-family:var(--body);font-size:11px;opacity:.75}
+.posmap .dot{fill:var(--plum)}
+.posmap .name{fill:var(--fg);font-family:var(--body);font-size:12.5px}
+.posmap .us{fill:var(--pitch)}
+.posmap .usname{fill:var(--pitch);font-family:var(--body);font-size:13.5px;font-weight:700}
+.posmap .gap{fill:var(--pitch-soft);stroke:var(--pitch);stroke-dasharray:3 3}
+td.c{text-align:center;font-family:var(--mono)}
+td.c.y{color:var(--pitch)} td.c.h{color:var(--warn)} td.c.n{color:var(--muted)}
+aside a.subl{padding-left:22px;font-size:12.5px}
+@media (max-width:880px){
+  .layout{grid-template-columns:1fr;gap:0}
+  aside{position:static;max-height:none;padding-top:24px}
+  aside ol{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .wire .row{grid-template-columns:1fr!important}
+}
+</style>
+
+<div class="layout">
+<aside>
+  <p>目录</p>
+  <ol>
+    <li><a href="#s1">1 执行摘要</a></li>
+    <li><a href="#s2">2 问题定义</a></li>
+    <li><a class="subl" href="#comp">2.2 竞品分析</a></li>
+    <li><a href="#s3">3 方案概述</a></li>
+    <li><a href="#s4">4 用户故事与需求</a></li>
+    <li><a href="#s5">5 体验设计</a></li>
+    <li><a href="#s6">6 技术方案</a></li>
+    <li><a href="#s7">7 AI 评测与指标</a></li>
+    <li><a href="#s8">8 风险与对策</a></li>
+    <li><a href="#s9">9 排期与分工</a></li>
+    <li><a href="#s10">10 提交与 Demo</a></li>
+    <li><a href="#s11">11 赛后路线</a></li>
+    <li><a href="#s12">12 待定问题</a></li>
+  </ol>
+</aside>
+
+<main>
+<header>
+  <p class="eyebrow">产品需求文档 · Inside the Game: Developer Hackathon</p>
+  <h1>Pivot</h1>
+  <p class="eyebrow" style="font-size:13px">支点 · The Turning Point Engine for Football · Find the moment. Know why. Ask what if.</p>
+  <p class="prose" style="font-size:16.5px">实时发现比赛的转折点，用证据解释它为什么发生，再推演“如果当时不是这样”会怎样。本文档是四人团队在 6 天内交付黑客松作品的唯一需求依据。</p>
+  <div class="meta">
+    <div><span>版本</span><b>v1.0 草案</b></div>
+    <div><span>日期</span><b>2026-10-21</b></div>
+    <div><span>提交截止</span><b>2026-10-27</b></div>
+    <div><span>团队</span><b>4 人（A / B / C / D）</b></div>
+    <div><span>目标奖项</span><b>大奖 · Multi-Agent · Cloud Native</b></div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="sec">01</span>执行摘要</h2>
+  <div class="grid2">
+    <div class="panel">
+      <h3>问题</h3>
+      <p>比赛的结果常常由几个关键时刻决定，但分析师要在海量事件里手动找这些时刻，转播和流媒体平台靠人工打点，球迷争论“假如”时只能凭感觉。现有工具能告诉你发生了什么，却很少解释为什么，也没有人能回答“如果当时不是这样”。</p>
+    </div>
+    <div class="panel">
+      <h3>方案</h3>
+      <p>一个由多个 Agent 协作的事件驱动系统。它摄入合成比赛事件流，实时计算势头指标并检测转折点，用可追溯到事件 ID 的证据解释原因；用户可以对任意转折点提出“假如”，系统从那一刻重跑数百次模拟，给出结果分布和解释。</p>
+    </div>
+  </div>
+  <div class="grid3">
+    <div class="panel">
+      <h3>核心价值</h3>
+      <ul class="tight">
+        <li>分析师：复盘定位转折点从几十分钟缩到几秒</li>
+        <li>平台：自动产出带解释的高光事件流</li>
+        <li>球迷：有依据、可分享的“假如”推演</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>成功标准（黑客松）</h3>
+      <ul class="tight">
+        <li>10/26 前完成全部提交物</li>
+        <li>Demo 中三段闭环一次跑通，无剪辑拼接</li>
+        <li>植入转折点检出率 ≥ 80%</li>
+        <li>解释中的数字 100% 经过核查</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>资源</h3>
+      <ul class="tight">
+        <li>4 人 × 6 天</li>
+        <li>Azure 订阅 + Foundry 项目</li>
+        <li>云资源预算目标 &lt; $50（按需开启，提交后关闭）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="sec">02</span>问题定义</h2>
+
+  <div class="sub">
+    <h3>2.1 用户画像</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>维度</th><th>主用户：分析师 / 教练组</th><th>分发方：转播与 OTT 平台</th><th>传播方：铁杆球迷 / 播客</th></tr></thead>
+      <tbody>
+        <tr><td>Who</td><td>俱乐部数据分析师、助理教练、战术内容创作者</td><td>转播数据编辑、OTT 产品与工程团队</td><td>深度球迷、足球播客主持、社区 KOL</td></tr>
+        <tr><td>What</td><td>快速找到比赛转折点并拿出证据</td><td>实时拿到“值得推送”的时刻及其元数据</td><td>用有依据的推演支持自己的观点</td></tr>
+        <tr><td>When</td><td>赛后复盘（每周 1–2 场）、中场休息</td><td>比赛进行中，每场数十次</td><td>赛后 24 小时内的讨论高峰</td></tr>
+        <tr><td>Where</td><td>桌面端分析工具、视频剪辑软件</td><td>后台系统、推送平台</td><td>社交媒体、播客、论坛</td></tr>
+        <tr><td>Why（根因）</td><td>事件数据量大（一场约 1,600 到 2,000 个事件），指标多但缺少“哪一刻最重要”的判断</td><td>高光识别靠人工打点，延迟高、标准不一</td><td>没有工具能对“假如”做可信推演</td></tr>
+        <tr><td>不解决的代价</td><td>复盘耗时，结论靠直觉，难以说服教练</td><td>推送晚、错过流量窗口</td><td>讨论停留在情绪层面，内容同质</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted small">一场比赛的事件数量是行业常见量级的估计，Demo 中以我们自己的模拟器产出为准。</p>
+  </div>
+
+  <div class="sub" id="comp" style="scroll-margin-top:12px">
+    <h3>2.2 竞品分析</h3>
+    <div class="prose">
+      <p>竞品分为六类。最需要重视的两个是：主办方自己的 <b>Premier League Companion</b>，以及做法和我们最接近的 <b>Bundesliga Match Facts</b>。前者决定了我们在 Pitch 里应该站在什么位置，后者证明“势头 + 胜率突变”这个方向已经被联赛级产品验证过。</p>
+    </div>
+
+    <div class="scroll"><table>
+      <thead><tr><th>竞品</th><th>类型</th><th>它做了什么</th><th>空白</th><th>对我们的意义</th></tr></thead>
+      <tbody>
+        <tr><td><b>Premier League Companion</b><br><span class="muted small">Microsoft × 英超</span></td><td>联赛官方 AI 助手</td><td>2025 年 7 月起的五年合作产物，基于 Copilot 和 Azure Foundry，嵌在英超官方 App 和网站里。数据源包括 30 多个赛季的统计、30 万篇文章和 9,000 个视频；规划中有实时数据叠加、多语言和 Fantasy 工具</td><td>公开资料以问答和内容检索为主；没有提到转折点自动识别、证据追溯和反事实推演</td><td><b>不要正面竞争，要做它的上游。</b>Pitch 定位为“给 Companion 提供实时转折点和推演能力的情报引擎”，这和主办方的产品路线一致</td></tr>
+        <tr><td><b>Bundesliga Match Facts</b><br><span class="muted small">DFL × AWS</span></td><td>联赛官方实时指标</td><td>Win Probability：进球、红牌、换人等事件让胜率大幅变化时，转播画面弹出提示。Match Momentum：双方进攻威胁各打 0 到 10 分，展示差值，每个半场重置</td><td>固定的转播图形，没有自然语言解释，也不能点开看证据；观众不能自己提“假如”</td><td><b>证明方向成立。</b>我们的“势头 + 转折点”在思路上与它一致，可以在 Pitch 里引用为市场验证；差异在解释、证据和推演三个环节</td></tr>
+        <tr><td><b>Opta / Stats Perform</b></td><td>数据供应商</td><td>英超等赛事的官方数据和洞察提供方；OptaAI 为转播和媒体生成 AI 洞察；Opta Vision 结合计算机视觉、追踪数据和生成式 AI</td><td>面向企业、封闭、价格高；公开资料中没有面向用户的实时反事实推演</td><td><b>是数据层，不是对手。</b>我们说清楚“不比数据覆盖面”，未来接入的正是这类授权数据</td></tr>
+        <tr><td><b>Sofascore Attack Momentum</b></td><td>球迷比分 App</td><td>免费的实时进攻势头图，由射门、危险区域传球、定位球、反击等事件计算，所有用户都能看到</td><td>只显示“谁在压”，不解释为什么变，也不标出转折点</td><td><b>降低学习成本。</b>大众已经看得懂势头曲线，我们的 S1 看板可以沿用这种视觉语言，把创新集中在“为什么”和“假如”</td></tr>
+        <tr><td><b>WSC Sports</b></td><td>自动集锦</td><td>用 AI 分析转播画面、识别关键回合并近实时剪成集锦，客户包括多家 OTT 平台</td><td>工作在视频片段层，选的是“精彩”而不是“关键”；不解释比赛走向</td><td><b>潜在合作方。</b>我们的转折点 API 可以告诉剪辑系统哪一刻真正决定了比赛</td></tr>
+        <tr><td><b>Google DeepMind TacticAI</b></td><td>研究型战术 AI</td><td>与利物浦合作，只针对角球：预测结果并生成站位调整建议；盲测中专家约 90% 的情况下更偏好它的建议</td><td>只覆盖角球，不实时，未产品化</td><td><b>学术上的“反事实”先例。</b>说明“改变条件看结果”对教练有价值；我们把它从定位球扩展到整场比赛的关键事件</td></tr>
+        <tr><td><b>通用聊天机器人与其他参赛作品</b></td><td>间接竞品</td><td>能就比赛进行自由问答</td><td>数字容易编造，结论无法追溯</td><td><b>在本次黑客松里最常见。</b>核查 Agent 和证据标签是我们和它们拉开差距的主要手段</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 style="font-size:18px">功能对比</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>能力</th><th>PL Companion</th><th>Bundesliga MF</th><th>Opta</th><th>Sofascore</th><th>WSC</th><th>TacticAI</th><th>Pivot</th></tr></thead>
+      <tbody>
+        <tr><td>实时势头指标</td><td class="c n">?</td><td class="c y">●</td><td class="c y">●</td><td class="c y">●</td><td class="c n">○</td><td class="c n">○</td><td class="c y">●</td></tr>
+        <tr><td>自动识别关键时刻</td><td class="c n">?</td><td class="c y">●</td><td class="c h">◐</td><td class="c n">○</td><td class="c y">●</td><td class="c n">○</td><td class="c y">●</td></tr>
+        <tr><td>自然语言解释</td><td class="c y">●</td><td class="c n">○</td><td class="c y">●</td><td class="c n">○</td><td class="c n">○</td><td class="c h">◐</td><td class="c y">●</td></tr>
+        <tr><td>结论可追溯到事件</td><td class="c n">?</td><td class="c n">○</td><td class="c n">?</td><td class="c n">○</td><td class="c n">○</td><td class="c n">○</td><td class="c y">●</td></tr>
+        <tr><td>用户自定义反事实推演</td><td class="c n">○</td><td class="c n">○</td><td class="c n">?</td><td class="c n">○</td><td class="c n">○</td><td class="c h">◐</td><td class="c y">●</td></tr>
+        <tr><td>结果带不确定性</td><td class="c n">?</td><td class="c h">◐</td><td class="c n">?</td><td class="c n">○</td><td class="c n">○</td><td class="c h">◐</td><td class="c y">●</td></tr>
+        <tr><td>开放 API</td><td class="c n">○</td><td class="c n">○</td><td class="c y">●</td><td class="c n">○</td><td class="c y">●</td><td class="c n">○</td><td class="c y">●</td></tr>
+        <tr><td>真实数据覆盖</td><td class="c y">●</td><td class="c y">●</td><td class="c y">●</td><td class="c y">●</td><td class="c y">●</td><td class="c h">◐</td><td class="c n">○</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted small">● 具备　◐ 部分具备　○ 公开资料中未见　? 无法从公开资料判断。依据为各家公开发布的信息，不代表其内部能力。最后一行如实写出我们的短板：只有合成数据。</p>
+
+    <h3 style="font-size:18px">定位图</h3>
+    <div class="posmap">
+      <svg viewBox="0 0 640 400" role="img" aria-label="竞品定位图：横轴为解释深度，纵轴为交互程度，Pivot 位于右上角">
+        <rect class="gap" x="420" y="30" width="200" height="130" rx="4"/>
+        <text class="q" x="430" y="50">空白区：讲原因 + 能推演</text>
+        <line class="ax" x1="60" y1="350" x2="620" y2="350"/>
+        <line class="ax" x1="60" y1="350" x2="60" y2="20"/>
+        <line class="mid" x1="340" y1="350" x2="340" y2="20"/>
+        <line class="mid" x1="60" y1="185" x2="620" y2="185"/>
+        <text class="lbl" x="60" y="372">只给数字</text>
+        <text class="lbl" x="620" y="372" text-anchor="end">给出原因与证据 →</text>
+        <text class="lbl" x="52" y="345" text-anchor="end" transform="rotate(-90 52 345)">被动展示</text>
+        <text class="lbl" x="52" y="20" text-anchor="end" transform="rotate(-90 52 20)">← 可提问 / 可推演</text>
+        <text class="lbl" x="340" y="392" text-anchor="middle">解释深度</text>
+
+        <circle class="dot" cx="120" cy="310" r="6"/><text class="name" x="132" y="314">Sofascore</text>
+        <circle class="dot" cx="150" cy="268" r="6"/><text class="name" x="162" y="272">WSC Sports</text>
+        <circle class="dot" cx="230" cy="300" r="6"/><text class="name" x="242" y="304">Bundesliga MF</text>
+        <circle class="dot" cx="330" cy="240" r="6"/><text class="name" x="342" y="244">Opta / OptaAI</text>
+        <circle class="dot" cx="420" cy="225" r="6"/><text class="name" x="432" y="229">TacticAI</text>
+        <circle class="dot" cx="250" cy="80" r="6"/><text class="name" x="262" y="84">通用聊天机器人</text>
+        <circle class="dot" cx="340" cy="110" r="6"/><text class="name" x="352" y="114">PL Companion</text>
+        <circle class="us" cx="545" cy="95" r="9"/><text class="usname" x="530" y="125" text-anchor="middle">Pivot</text>
+      </svg>
+    </div>
+    <p class="muted small">定位是基于公开资料的定性判断，用于说明差异化方向，不是量化测评。</p>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>借鉴什么</h3>
+        <ul class="tight">
+          <li>Bundesliga：胜率突变由进球、红牌、换人触发，这可以直接作为转折点侦测 Agent 的先验</li>
+          <li>Bundesliga：势头每个半场重置，我们的指数加权势头也在半场时重置</li>
+          <li>Sofascore：势头曲线的视觉语言，大众已经熟悉，直接沿用</li>
+          <li>TacticAI：用专家盲测评估建议的质量，可以缩小成队内外 3 人盲评</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>差异化在哪里</h3>
+        <ul class="tight">
+          <li><b>证据追溯</b>：功能对比里没有一家明确做到，这是我们的第一卖点</li>
+          <li><b>用户发起的反事实</b>：只有 TacticAI 在角球上部分做到，整场比赛级别还是空白</li>
+          <li><b>不确定性可见</b>：用分布和置信区间代替单个胜率数字</li>
+          <li><b>开放的情报层</b>：API 优先，既能接球迷产品，也能接剪辑和转播系统</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>SWOT</h3>
+        <div class="scroll" style="border:0"><table>
+          <tr><td><b>优势</b></td><td>证据链 + 反事实组合独特；模拟器自带标准答案，评测客观；架构契合微软技术栈</td></tr>
+          <tr><td><b>劣势</b></td><td>只有合成数据；模拟器真实度有限；团队无品牌和数据渠道</td></tr>
+          <tr><td><b>机会</b></td><td>英超已全面转向 Azure 和 Foundry；Companion 规划实时功能，需要上游情报能力</td></tr>
+          <tr><td><b>威胁</b></td><td>Opta 等数据方可能自行推出同类功能；其他参赛队做出相近的势头产品</td></tr>
+        </table></div>
+      </div>
+      <div class="callout" style="align-content:start">
+        <b>写进 Pitch 的三句话</b>
+        <span>1. Bundesliga 已经证明球迷想知道“比赛在哪一刻变了”。</span>
+        <span>2. 但现有产品只告诉你变了，不告诉你为什么，更不让你问“假如”。</span>
+        <span>3. Pivot 是一层基于 Azure 和 Foundry 的情报引擎，可以直接为 Premier League Companion 这样的产品提供这些能力。</span>
+      </div>
+    </div>
+
+    <p class="muted small">竞品资料来源：
+      <a href="https://news.microsoft.com/source/2025/07/01/premier-league-and-microsoft-announce-five-year-strategic-partnership-to-personalize-the-fan-experience-with-ai-for-1-8-billion-people/">Microsoft News：英超与微软五年合作</a> ·
+      <a href="https://www.techtarget.com/data-technologies/feature/Microsoft-helps-Premier-League-fuel-fan-experience-with-AI">TechTarget：Premier League Companion</a> ·
+      <a href="https://bundesliga.com/en/bundesliga/news/pressure-handling-win-probability-join-bundesliga-match-facts-powered-by-aws-21390">Bundesliga：Win Probability</a> ·
+      <a href="https://www.bundesliga.com/en/bundesliga/news/bundesliga-match-facts-aws-match-momentum-34052">Bundesliga：Match Momentum</a> ·
+      <a href="https://www.statsperform.com/insights/the-premier-league-is-back-the-opta-insights-powering-the-new-season/">Stats Perform：Opta 英超新赛季</a> ·
+      <a href="https://www.sofascore.com/news/how-sofascores-attack-momentum-changed-sport-analysis">Sofascore：Attack Momentum</a> ·
+      <a href="https://broadcastnow.co.uk/tech-innovation/wsc-sports-to-automate-premier-sports-highlights/5169120.article">Broadcast：WSC Sports</a> ·
+      <a href="https://deepmind.google/blog/tacticai-ai-assistant-for-football-tactics/">Google DeepMind：TacticAI</a>
+    </p>
+  </div>
+
+  <div class="sub">
+    <h3>2.3 为什么是现在</h3>
+    <ul class="tight prose">
+      <li>英超的核心技术设施正在迁往 Azure，官方 AI 助手已经上线，联赛需要更深的实时比赛情报能力</li>
+      <li>大模型已经能稳定地把结构化数据改写成自然语言，但需要确定性计算和核查来压住幻觉，这正是多 Agent 架构的用武之地</li>
+      <li>云原生的事件流和弹性计算让“每个转折点跑几百次模拟”变得便宜且快</li>
+      <li>赛题要求使用合成数据，反而让我们拥有标准答案：转折点是我们自己植入的，可以客观评测检出率</li>
+    </ul>
+  </div>
+
+  <div class="sub">
+    <h3>2.4 与评审标准的映射</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>评审标准</th><th>本产品的得分点</th></tr></thead>
+      <tbody>
+        <tr><td>技术实现 20%</td><td>可复现的模拟器（带随机种子）；分层清晰的代码；单元测试覆盖指标计算；完整 README 和架构图</td></tr>
+        <tr><td>Agentic 设计 20%</td><td>5 个分工明确的 Agent；共享比赛状态；核查失败自动打回重写；模拟任务失败自动重试</td></tr>
+        <tr><td>真实影响 20%</td><td>对准分析师复盘和平台高光两个真实工作流；部署在 Azure 上可直接访问</td></tr>
+        <tr><td>UX 与呈现 20%</td><td>球场回放 + 势头曲线 + 推演分布，三屏讲清一个故事；Demo 有明确的起承转合</td></tr>
+        <tr><td>赛道契合 20%</td><td>合成事件 → 可解释的比赛情报 → 实时叙事，逐字对应赛题描述</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="sec">03</span>方案概述</h2>
+
+  <div class="sub">
+    <h3>3.1 三段闭环</h3>
+    <div class="grid3">
+      <div class="panel"><span class="tag">Detect</span><h3>实时发现</h3><p>模拟比赛事件流进入 Event Hubs，Functions 逐分钟计算势头和压迫指标，转折点侦测 Agent 判断是否出现转折。</p></div>
+      <div class="panel"><span class="tag">Explain</span><h3>证据解释</h3><p>解释 Agent 读取转折点前后的事件窗口，写出三句解释，每句都挂事件 ID；核查 Agent 逐个核对数字。</p></div>
+      <div class="panel"><span class="tag">Simulate</span><h3>反事实推演</h3><p>用户输入“假如”，场景翻译 Agent 把它变成参数修改；模拟器从该时刻重跑 N 次；对比分析 Agent 解释差异。</p></div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>3.2 用户旅程（分析师）</h3>
+    <ol class="tight prose">
+      <li>打开实时看板，选择一场正在模拟的比赛，看到比分、时间和跳动的势头曲线</li>
+      <li>第 63 分钟，曲线出现陡降，时间轴上自动出现一个转折点标记，侧栏弹出一张卡片</li>
+      <li>点开卡片：球场图回放转折点前后的 8 个关键事件，旁边是三句带证据标签的解释</li>
+      <li>点一个证据标签，对应事件在球场上高亮，并显示原始事件数据</li>
+      <li>点“假如…”，输入“如果 63 分钟没换人”，系统确认解析结果后开始推演</li>
+      <li>约 20 秒后，看到原始结果与反事实结果的胜平负分布对比、置信区间，以及一段解释</li>
+      <li>导出分享卡片，或复制该转折点的 API 链接给转播同事</li>
+    </ol>
+  </div>
+
+  <div class="sub">
+    <h3>3.3 差异化</h3>
+    <div class="grid2">
+      <div class="callout"><b>证据优先</b><span>每句解释都能点开看到支撑它的事件，评委可以当场验证。</span></div>
+      <div class="callout"><b>计算与生成分离</b><span>所有数字由代码算出，LLM 只负责选择、组织和表达，核查 Agent 兜底。</span></div>
+      <div class="callout plum"><b>不确定性可见</b><span>推演结果给出分布和置信区间，明确标注“基于合成模拟”，不包装成预测。</span></div>
+      <div class="callout plum"><b>自带标准答案</b><span>模拟器可以植入已知转折点，用来客观评测检测效果，这是使用真实数据做不到的。</span></div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>3.4 范围</h3>
+    <div class="grid2">
+      <div class="panel">
+        <h3>In scope</h3>
+        <ul class="tight">
+          <li>单场比赛的实时模拟与回放（可调速 1×–20×）</li>
+          <li>势头、压迫两个核心指标</li>
+          <li>转折点检测、解释与核查</li>
+          <li>三类“假如”场景：取消或增加红牌、提前或推迟换人、取消进球</li>
+          <li>推演结果分布、置信区间与解释</li>
+          <li>Agent 调用轨迹面板（给评委看协作过程）</li>
+          <li>只读 REST API：查询转折点</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Out of scope</h3>
+        <ul class="tight">
+          <li>真实比赛数据、真实球队和球员名字</li>
+          <li>用户账号体系（Demo 使用单一访客身份）</li>
+          <li>手机推送、API Management、Webhook 订阅</li>
+          <li>多场比赛管理、赛季级分析</li>
+          <li>视频素材、复盘报告导出</li>
+          <li>投注、赔率相关的任何功能</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>3.5 MVP 定义与验证假设</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>假设</th><th>验证方式</th><th>通过标准</th></tr></thead>
+      <tbody>
+        <tr><td>H1 基于势头的变点检测能找到有意义的转折点</td><td>20 场植入转折点的模拟比赛</td><td>检出率 ≥ 80%，每场误报 ≤ 2 个</td></tr>
+        <tr><td>H2 计算与生成分离能消除数字幻觉</td><td>核查 Agent 日志 + 人工抽查 30 条解释</td><td>上屏解释的数字错误为 0</td></tr>
+        <tr><td>H3 从状态续跑的模拟能产生可解释的差异</td><td>“取消红牌”场景对比</td><td>胜率变化方向符合足球常识，且差异显著（置信区间不重叠）</td></tr>
+        <tr><td>H4 三段闭环能在 2 分钟内讲清</td><td>队内外 3 人看 Demo 后复述</td><td>3 人都能说出产品做了哪三件事</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small"><b>MVP 的“能用”定义：</b>在部署好的公网地址上，任何人可以开一场模拟比赛，看到至少一个转折点及其解释，并对它发起一次推演，全程无需人工干预。</p>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="sec">04</span>用户故事与需求</h2>
+
+  <div class="sub">
+    <h3>4.1 用户故事</h3>
+    <div class="grid2">
+      <div class="story"><span class="sid">US-01 · Detect</span><p class="as">作为<b>分析师</b>，我想在比赛进行中看到势头曲线实时更新，以便感知比赛走向。</p><ul><li>曲线按比赛分钟更新，延迟 ≤ 2 秒</li><li>主客队用两种颜色区分，悬停显示该分钟数值</li><li>支持 1×、5×、20× 回放速度</li></ul></div>
+      <div class="story"><span class="sid">US-02 · Detect</span><p class="as">作为<b>分析师</b>，我想让系统自动标出转折点，以便不用自己在曲线里找。</p><ul><li>转折点在时间轴上以标记出现，并带严重程度</li><li>每场最多显示 5 个，按显著性排序</li><li>可以点“这不是转折点”提交反馈</li></ul></div>
+      <div class="story"><span class="sid">US-03 · Explain</span><p class="as">作为<b>分析师</b>，我想看到转折点的解释和支撑证据，以便向教练说明。</p><ul><li>解释不超过 3 句，每句至少 1 个证据标签</li><li>点证据标签，球场上高亮对应事件</li><li>所有数字都显示“已核查”状态</li></ul></div>
+      <div class="story"><span class="sid">US-04 · Explain</span><p class="as">作为<b>分析师</b>，我想在球场图上回放转折点前后的事件，以便看清战术变化。</p><ul><li>回放窗口为转折点前 5 分钟到后 3 分钟</li><li>传球、射门、抢断用不同图形</li><li>可暂停、拖动</li></ul></div>
+      <div class="story"><span class="sid">US-05 · Simulate</span><p class="as">作为<b>铁杆球迷</b>，我想用一句话提出“假如”，以便验证我的观点。</p><ul><li>支持中英文自然语言输入</li><li>系统先展示解析出的参数修改，确认后才开始推演</li><li>无法解析时给出 3 个可选示例</li></ul></div>
+      <div class="story"><span class="sid">US-06 · Simulate</span><p class="as">作为<b>铁杆球迷</b>，我想看到推演结果的分布而不是一个数字，以便知道结论有多可靠。</p><ul><li>展示原始与反事实的胜平负分布</li><li>标出 95% 置信区间和模拟次数</li><li>明确标注“基于合成模拟，不是预测”</li></ul></div>
+      <div class="story"><span class="sid">US-07 · 平台</span><p class="as">作为<b>OTT 工程师</b>，我想通过 API 拿到转折点和解释，以便接入自己的系统。</p><ul><li><code>GET /matches/{id}/turning-points</code> 返回 JSON</li><li>每条包含时间、严重程度、解释、证据事件 ID</li><li>有 OpenAPI 文档</li></ul></div>
+      <div class="story"><span class="sid">US-08 · 评委</span><p class="as">作为<b>评委</b>，我想看到 Agent 是怎么协作的，以便评估 Agentic 设计。</p><ul><li>轨迹面板按时间显示每个 Agent 的输入、输出、耗时</li><li>核查失败与重写在面板上清晰可见</li><li>可以按转折点筛选</li></ul></div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>4.2 功能需求</h3>
+    <p class="small muted">P0 = MVP 必须，没有就不提交；P1 = 计划内，10/25 前完成；P2 = 有余力再做。</p>
+    <div class="scroll"><table>
+      <thead><tr><th>ID</th><th>需求</th><th>优先级</th><th>负责</th><th>备注</th></tr></thead>
+      <tbody>
+        <tr><td class="id">FR-01</td><td>模拟器能用随机种子完整生成一场 90 分钟比赛的事件流</td><td><span class="tag p0">P0</span></td><td>B</td><td>同一种子结果完全一致</td></tr>
+        <tr><td class="id">FR-02</td><td>模拟器能从任意比赛状态快照继续模拟</td><td><span class="tag p0">P0</span></td><td>B</td><td>组合方案成立的前提</td></tr>
+        <tr><td class="id">FR-03</td><td>模拟器支持植入指定转折点（红牌、换人、进球）</td><td><span class="tag p0">P0</span></td><td>B</td><td>评测用</td></tr>
+        <tr><td class="id">FR-04</td><td>事件按比赛时钟发送到 Event Hubs，可调速</td><td><span class="tag p0">P0</span></td><td>A</td><td></td></tr>
+        <tr><td class="id">FR-05</td><td>逐分钟计算势头与压迫指标并写入存储</td><td><span class="tag p0">P0</span></td><td>A</td><td>纯函数，带单元测试</td></tr>
+        <tr><td class="id">FR-06</td><td>转折点侦测：变点算法初筛 + Agent 判定</td><td><span class="tag p0">P0</span></td><td>B + D</td><td>B 写算法，D 写 Agent</td></tr>
+        <tr><td class="id">FR-07</td><td>解释 Agent 生成带事件 ID 的三句解释</td><td><span class="tag p0">P0</span></td><td>D</td><td>结构化 JSON 输出</td></tr>
+        <tr><td class="id">FR-08</td><td>核查 Agent 校验解释中所有数字，失败打回，最多重试 2 次</td><td><span class="tag p0">P0</span></td><td>D</td><td>仍失败则降级为模板解释</td></tr>
+        <tr><td class="id">FR-09</td><td>前端实时看板：比分、时钟、势头曲线、转折点标记</td><td><span class="tag p0">P0</span></td><td>C</td><td>SignalR 推送</td></tr>
+        <tr><td class="id">FR-10</td><td>转折点详情：球场回放 + 解释 + 证据高亮</td><td><span class="tag p0">P0</span></td><td>C</td><td></td></tr>
+        <tr><td class="id">FR-11</td><td>至少一种“假如”场景可以端到端跑通（按钮选择即可）</td><td><span class="tag p0">P0</span></td><td>B + D + C</td><td>自然语言输入是 P1</td></tr>
+        <tr><td class="id">FR-12</td><td>推演结果展示分布、置信区间与解释</td><td><span class="tag p0">P0</span></td><td>C</td><td></td></tr>
+        <tr><td class="id">FR-13</td><td>部署到 Azure，公网可访问</td><td><span class="tag p0">P0</span></td><td>A</td><td></td></tr>
+        <tr><td class="id">FR-14</td><td>场景翻译 Agent：自然语言 → 参数修改，含确认步骤</td><td><span class="tag p1">P1</span></td><td>D</td><td></td></tr>
+        <tr><td class="id">FR-15</td><td>推演用 Container Apps Jobs 并行执行，失败分片自动重试</td><td><span class="tag p1">P1</span></td><td>A</td><td>未完成则进程内执行</td></tr>
+        <tr><td class="id">FR-16</td><td>Agent 轨迹面板</td><td><span class="tag p1">P1</span></td><td>C</td><td>评委视角很重要</td></tr>
+        <tr><td class="id">FR-17</td><td>只读 REST API + OpenAPI 文档</td><td><span class="tag p1">P1</span></td><td>A</td><td></td></tr>
+        <tr><td class="id">FR-18</td><td>Foundry 评测流水线（检出率、数字准确率、忠实度）</td><td><span class="tag p1">P1</span></td><td>B + D</td><td></td></tr>
+        <tr><td class="id">FR-19</td><td>延迟与吞吐运维看板</td><td><span class="tag p1">P1</span></td><td>A</td><td>Application Insights</td></tr>
+        <tr><td class="id">FR-20</td><td>分享卡片（PNG）</td><td><span class="tag p2">P2</span></td><td>C</td><td></td></tr>
+        <tr><td class="id">FR-21</td><td>压迫热区图</td><td><span class="tag p2">P2</span></td><td>C</td><td></td></tr>
+        <tr><td class="id">FR-22</td><td>“这不是转折点”反馈收集</td><td><span class="tag p2">P2</span></td><td>C</td><td></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>4.3 非功能需求</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>类别</th><th>指标</th><th>目标</th></tr></thead>
+      <tbody>
+        <tr><td>性能</td><td>事件产生 → 前端曲线更新</td><td class="num">p95 ≤ 2 s</td></tr>
+        <tr><td>性能</td><td>转折点出现 → 解释上屏（含核查）</td><td class="num">p95 ≤ 10 s</td></tr>
+        <tr><td>性能</td><td>500 次推演完成并展示</td><td class="num">≤ 30 s（并行）· ≤ 60 s（进程内降级）</td></tr>
+        <tr><td>准确性</td><td>上屏解释中的数字错误</td><td class="num">0</td></tr>
+        <tr><td>可复现</td><td>同一种子、同一场景</td><td>结果逐事件一致</td></tr>
+        <tr><td>可靠性</td><td>LLM 调用失败</td><td>指数退避重试 2 次后降级为模板解释，界面不报错</td></tr>
+        <tr><td>可扩展</td><td>并发比赛数</td><td class="num">Demo 需求 1 场，架构支持 ≥ 10 场</td></tr>
+        <tr><td>安全</td><td>密钥管理</td><td>Managed Identity + Key Vault，仓库中无密钥</td></tr>
+        <tr><td>内容安全</td><td>用户输入与模型输出</td><td>经 Azure AI Content Safety 过滤</td></tr>
+        <tr><td>可用性</td><td>设备</td><td>桌面浏览器优先（1280 宽），平板可用</td></tr>
+        <tr><td>无障碍</td><td>色彩与键盘</td><td>主客队配色色盲友好；主要操作可键盘完成</td></tr>
+        <tr><td>合规</td><td>数据与品牌</td><td>仅合成数据；虚构球队和球员；无第三方商标</td></tr>
+        <tr><td>成本</td><td>黑客松期间云资源</td><td class="num">&lt; $50</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="sec">05</span>体验设计</h2>
+
+  <div class="sub">
+    <h3>5.1 设计原则</h3>
+    <div class="grid2">
+      <div class="panel"><h3>证据离结论一步</h3><p>任何结论旁边都有证据入口，点一下就能看到原始事件。</p></div>
+      <div class="panel"><h3>一屏只回答一个问题</h3><p>看板回答“现在怎样”，详情回答“为什么”，实验室回答“假如”。</p></div>
+      <div class="panel"><h3>不确定性用图形表达</h3><p>分布条、置信区间、模拟次数始终可见，不用一个大数字吓人。</p></div>
+      <div class="panel"><h3>让 Agent 的工作被看见</h3><p>轨迹面板不是调试工具，而是产品的一部分，帮助用户信任结果。</p></div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>5.2 关键页面线框</h3>
+    <div class="grid2">
+      <div style="display:grid;gap:6px">
+        <p class="wcap">S1 实时看板</p>
+        <div class="wire">
+          <div class="box"><b>顶栏</b>比分 · 比赛时钟 · 回放速度 1× / 5× / 20×</div>
+          <div class="row" style="grid-template-columns:2fr 1fr">
+            <div class="box hot" style="min-height:120px"><b>势头曲线</b>主客双色 · 转折点标记 ▼</div>
+            <div class="box"><b>转折点卡片栏</b>最新在上 · 严重程度</div>
+          </div>
+          <div class="box"><b>事件流</b>滚动显示最近 10 个事件</div>
+        </div>
+      </div>
+      <div style="display:grid;gap:6px">
+        <p class="wcap">S2 转折点详情</p>
+        <div class="wire">
+          <div class="row" style="grid-template-columns:3fr 2fr">
+            <div class="box hot" style="min-height:140px"><b>球场回放</b>-5′ 到 +3′ · 播放 / 拖动</div>
+            <div class="box"><b>解释</b>三句话 · 证据标签 [E-1042] · 已核查 ✓</div>
+          </div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="box"><b>指标对比</b>转折前后势头 / 压迫</div>
+            <div class="box hot"><b>按钮：假如…</b>进入 S3</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;gap:6px">
+        <p class="wcap">S3 What-If 实验室</p>
+        <div class="wire">
+          <div class="box"><b>输入框</b>“如果 63 分钟没换人？” · 示例场景按钮</div>
+          <div class="box"><b>解析确认</b>修改：取消 63′ 换人 · 从 63′ 续跑 · 500 次</div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="box hot" style="min-height:90px"><b>分布对比</b>原始 vs 反事实 · 胜平负 · 95% CI</div>
+            <div class="box"><b>差异解释</b>三句话 + 证据</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;gap:6px">
+        <p class="wcap">S4 Agent 轨迹面板（侧滑）</p>
+        <div class="wire">
+          <div class="box"><b>时间线</b>侦测 → 解释 → 核查 ✗ → 解释（重写）→ 核查 ✓</div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="box"><b>节点详情</b>输入 · 输出 · 耗时 · token</div>
+            <div class="box"><b>运维</b>端到端延迟 · 模拟分片进度</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>5.3 信息架构</h3>
+    <div class="mm"><pre class="mermaid">
+mindmap
+  root((Pivot))
+    S1 实时看板
+      比分与时钟
+      势头曲线
+      转折点卡片
+      事件流
+    S2 转折点详情
+      球场回放
+      证据解释
+      前后指标对比
+    S3 What-If 实验室
+      场景输入
+      解析确认
+      分布对比
+      差异解释
+    S4 Agent 轨迹
+      协作时间线
+      节点详情
+      运维指标
+    API 文档
+  </pre></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2><span class="sec">06</span>技术方案</h2>
+
+  <div class="sub">
+    <h3>6.1 架构总览</h3>
+    <div class="mm"><pre class="mermaid">
+flowchart LR
+  subgraph SIMZ["模拟层"]
+    SIM["比赛模拟器<br>Container Apps"]
+    JOB["推演分片 × N<br>Container Apps Jobs"]
+  end
+  subgraph STREAM["事件层"]
+    EH["Event Hubs"]
+    FN["Functions<br>指标计算"]
+  end
+  subgraph AGENT["Agent 层 · Agent Framework"]
+    TP["转折点侦测"]
+    EX["解释"]
+    CK["数字核查"]
+    SC["场景翻译"]
+    CMP["对比分析"]
+  end
+  subgraph DATA["数据与交付"]
+    DB[("Cosmos DB")]
+    SR["SignalR Service"]
+    API["REST API"]
+    WEB["Static Web Apps"]
+  end
+  SIM --> EH --> FN --> DB
+  FN --> TP --> EX --> CK
+  CK -->|"不通过 ≤2 次"| EX
+  CK --> DB
+  DB --> SR --> WEB
+  DB --> API
+  WEB -->|"假如…"| SC --> JOB --> CMP --> CK
+  FDY["Foundry<br>模型 · 评测 · 追踪"] -.-> AGENT
+    </pre></div>
+  </div>
+
+  <div class="sub">
+    <h3>6.2 技术栈</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>层</th><th>选型</th><th>用途</th><th>选型理由</th></tr></thead>
+      <tbody>
+        <tr><td>模拟</td><td>Python 3.12 + NumPy</td><td>比赛模拟器</td><td>团队熟悉，向量化后单场模拟 &lt; 50 ms</td></tr>
+        <tr><td>计算</td><td>Azure Container Apps + Jobs</td><td>模拟器服务、并行推演</td><td>按需扩缩，Jobs 天然适合 N 个分片</td></tr>
+        <tr><td>事件</td><td>Azure Event Hubs</td><td>事件流摄入</td><td>Cloud Native 奖的核心；分区按比赛 ID</td></tr>
+        <tr><td>处理</td><td>Azure Functions（Event Hubs 触发）</td><td>指标计算</td><td>无服务器，按事件触发</td></tr>
+        <tr><td>Agent</td><td>Microsoft Agent Framework（Python）</td><td>5 个 Agent 的编排</td><td>Multi-Agent 奖点名的框架；支持工作流和共享状态</td></tr>
+        <tr><td>模型</td><td>Foundry 模型目录中的 GPT 系列</td><td>解释、场景翻译用标准版；侦测判定、核查用 mini 版</td><td>按任务难度分配，压成本和延迟</td></tr>
+        <tr><td>评测</td><td>Foundry Evaluations + Tracing</td><td>离线评测、调用追踪</td><td>冲 Foundry 加分</td></tr>
+        <tr><td>存储</td><td>Azure Cosmos DB（NoSQL，Serverless）</td><td>事件、指标、转折点、推演结果、轨迹</td><td>按比赛 ID 分区，免运维</td></tr>
+        <tr><td>实时</td><td>Azure SignalR Service</td><td>推送到前端</td><td>与 Functions 原生绑定</td></tr>
+        <tr><td>前端</td><td>React + Vite + D3 · Static Web Apps</td><td>四个页面</td><td>D3 画球场与曲线最灵活</td></tr>
+        <tr><td>安全</td><td>Managed Identity · Key Vault · Content Safety</td><td>密钥与内容过滤</td><td>Enterprise 维度加分</td></tr>
+        <tr><td>运维</td><td>Application Insights · GitHub Actions</td><td>监控、CI/CD</td><td>延迟看板直接取数</td></tr>
+        <tr><td>开发</td><td>GitHub Copilot</td><td>编码辅助</td><td>在 README 中说明使用方式</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>6.3 模拟器设计</h3>
+    <div class="prose">
+      <p>模拟器是整个系统的地基，同时服务三件事：生成“现实”比赛、从任意状态续跑推演、植入已知转折点做评测。采用<b>控球链马尔可夫模型</b>，复杂度够低，6 天内可以写完并调好。</p>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>状态（MatchState）</h3>
+        <ul class="tight">
+          <li>比赛时钟（秒）、比分</li>
+          <li>控球方、球所在区域（12 × 8 网格）</li>
+          <li>双方在场人数、每名球员体能值</li>
+          <li>双方战术参数：进攻倾向、压迫强度、阵型宽度</li>
+          <li>随机数生成器状态（保证可复现）</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>转移规则</h3>
+        <ul class="tight">
+          <li>每一步按区域和战术参数抽样动作：传球、带球、射门、丢失球权</li>
+          <li>成功率 = 基础率 × 球队实力 × 体能 × 人数修正</li>
+          <li>射门转化率取决于射门区域的威胁值（类 xT 网格）</li>
+          <li>红牌：人数修正降为约 0.85，压迫强度下降</li>
+          <li>换人：新球员体能重置，可改变战术参数</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout warn"><b>标定：</b>用 200 场模拟比赛检查统计量是否“像足球”：场均进球约 2.5 到 3、射门约 20 到 28、控球率分布合理。不像就调基础率，D1 结束前完成。</div>
+  </div>
+
+  <div class="sub">
+    <h3>6.4 指标与转折点算法</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>名称</th><th>定义</th><th>实现</th></tr></thead>
+      <tbody>
+        <tr><td>威胁值 threat</td><td>每个事件让球队进球概率增加的估计，按起止区域查威胁网格</td><td>网格由模拟器离线统计得到</td></tr>
+        <tr><td>势头 momentum</td><td>主队威胁值减客队威胁值，按分钟汇总后做指数加权平均（半衰期 5 分钟）</td><td>取值约在 −1 到 1</td></tr>
+        <tr><td>压迫 pressure</td><td>每分钟在对方前三分之一区域的抢断、拦截、施压次数</td><td>按队分别计算</td></tr>
+        <tr><td>候选转折点</td><td>对势头序列做 CUSUM 变点检测；变化幅度超过阈值并持续 ≥ 5 分钟</td><td>阈值用评测集调参</td></tr>
+        <tr><td>转折点判定</td><td>侦测 Agent 结合候选点前后的关键事件（进球、红牌、换人、战术变化），判断是否成立并给出严重程度 1–3</td><td>mini 模型，结构化输出</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>6.5 Agent 规格</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Agent</th><th>输入</th><th>输出</th><th>工具</th><th>失败处理</th></tr></thead>
+      <tbody>
+        <tr><td><b>转折点侦测</b></td><td>候选变点、前后 8 分钟事件摘要、指标</td><td><code>{is_turning_point, severity, trigger_event_ids}</code></td><td><code>get_events</code> <code>get_metrics</code></td><td>超时则仅凭算法结果标记为“待确认”</td></tr>
+        <tr><td><b>解释</b></td><td>转折点、事件窗口、指标对比</td><td>3 条 <code>{text, evidence_ids[], numbers[]}</code></td><td><code>get_events</code> <code>get_metrics</code></td><td>收到核查反馈后重写，最多 2 次</td></tr>
+        <tr><td><b>数字核查</b></td><td>解释或对比结果中的每个数字和证据 ID</td><td><code>{pass, issues[]}</code></td><td><code>compute_stat</code>（确定性）</td><td>2 次失败后降级为模板解释并记录</td></tr>
+        <tr><td><b>场景翻译</b></td><td>用户自然语言、当前比赛状态</td><td><code>{scenario_type, minute, params, n_runs}</code></td><td><code>list_scenario_types</code></td><td>无法解析时返回 3 个示例供选择</td></tr>
+        <tr><td><b>对比分析</b></td><td>原始与反事实的结果分布、关键统计差异</td><td>3 条带证据的差异解释</td><td><code>get_sim_summary</code></td><td>同解释 Agent，经核查</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout plum"><b>编排：</b>用 Agent Framework 的工作流把五个 Agent 串成两条链：Detect 链（侦测 → 解释 → 核查）由新指标触发；Simulate 链（场景翻译 → 模拟 → 对比 → 核查）由用户触发。共享状态存在 Cosmos DB 的 <code>match_state</code> 文档里，每一步写入一条轨迹记录。</div>
+  </div>
+
+  <div class="sub">
+    <h3>6.6 数据模型</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>实体</th><th>关键字段</th><th>分区键</th></tr></thead>
+      <tbody>
+        <tr><td>Match</td><td>id, seed, home, away, status, speed</td><td>id</td></tr>
+        <tr><td>Event</td><td>id, match_id, t, type, team, player, from_zone, to_zone, outcome, threat</td><td>match_id</td></tr>
+        <tr><td>MinuteMetric</td><td>match_id, minute, momentum, pressure_home, pressure_away</td><td>match_id</td></tr>
+        <tr><td>TurningPoint</td><td>id, match_id, minute, severity, trigger_event_ids, explanation[], verified</td><td>match_id</td></tr>
+        <tr><td>Scenario</td><td>id, turning_point_id, type, params, n_runs, status</td><td>match_id</td></tr>
+        <tr><td>SimResult</td><td>scenario_id, baseline{w,d,l}, counterfactual{w,d,l}, ci95, explanation[]</td><td>match_id</td></tr>
+        <tr><td>AgentTrace</td><td>id, chain_id, agent, input_ref, output, latency_ms, tokens, status</td><td>match_id</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small"><b>事件示例：</b></p>
+<pre class="code">{
+  "id": "E-1042",
+  "match_id": "M-seed-20261021",
+  "t": 3768,
+  "type": "pass",
+  "team": "Harbour City",
+  "player": "R. Okafor",
+  "from_zone": [7, 3],
+  "to_zone": [10, 4],
+  "outcome": "success",
+  "threat": 0.031
+}</pre>
+    <p class="muted small">球队和球员均为虚构名字。</p>
+  </div>
+
+  <div class="sub">
+    <h3>6.7 API</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td class="id">POST</td><td><code>/matches</code></td><td>创建并启动一场模拟比赛（seed、speed、可选植入）</td></tr>
+        <tr><td class="id">GET</td><td><code>/matches/{id}</code></td><td>比赛状态与比分</td></tr>
+        <tr><td class="id">GET</td><td><code>/matches/{id}/metrics</code></td><td>逐分钟指标</td></tr>
+        <tr><td class="id">GET</td><td><code>/matches/{id}/turning-points</code></td><td>转折点列表（含解释与证据）</td></tr>
+        <tr><td class="id">GET</td><td><code>/events/{id}</code></td><td>单个事件详情</td></tr>
+        <tr><td class="id">POST</td><td><code>/turning-points/{id}/scenarios</code></td><td>发起推演（自然语言或结构化参数）</td></tr>
+        <tr><td class="id">GET</td><td><code>/scenarios/{id}</code></td><td>推演进度与结果</td></tr>
+        <tr><td class="id">GET</td><td><code>/traces?chain_id=</code></td><td>Agent 轨迹</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted">Demo 阶段不做用户鉴权，写接口加简单的访问令牌与速率限制（每分钟 10 次推演），防止公网滥用。</p>
+  </div>
+
+  <div class="sub">
+    <h3>6.8 推演的统计方法</h3>
+    <ul class="tight prose">
+      <li>原始组与反事实组各跑 N 次（默认 500），都从同一状态快照出发，只在场景参数上不同</li>
+      <li>两组使用相同的种子序列（公共随机数），降低方差，让差异更多来自场景本身</li>
+      <li>胜平负比例的 95% 置信区间用 Wilson 区间计算</li>
+      <li>界面上只在置信区间不重叠时使用“显著提高或降低”这类措辞，否则显示“差异不明显”，这条规则也由核查 Agent 执行</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2><span class="sec">07</span>AI 评测与指标</h2>
+  <div class="prose"><p>合成数据带来一个独特优势：转折点是我们植入的，有标准答案。评测集为 20 场比赛，每场植入 1 到 2 个已知转折点，种子固定，放进仓库。</p></div>
+  <div class="scroll"><table>
+    <thead><tr><th>指标</th><th>定义</th><th>目标</th><th>工具</th></tr></thead>
+    <tbody>
+      <tr><td>转折点检出率</td><td>植入转折点在 ±3 分钟内被检出的比例</td><td class="num">≥ 80%</td><td>自写脚本</td></tr>
+      <tr><td>误报</td><td>每场检出的非植入转折点数量（人工复核后仍认为无意义的）</td><td class="num">≤ 2 / 场</td><td>人工抽查</td></tr>
+      <tr><td>数字准确率</td><td>上屏解释中数字与确定性计算一致的比例</td><td class="num">100%</td><td>核查 Agent 日志</td></tr>
+      <tr><td>证据覆盖率</td><td>带至少 1 个有效事件 ID 的解释句比例</td><td class="num">≥ 95%</td><td>自写脚本</td></tr>
+      <tr><td>忠实度</td><td>解释内容能被所引事件支持</td><td class="num">≥ 4 / 5</td><td>Foundry Groundedness 评测</td></tr>
+      <tr><td>首次核查通过率</td><td>解释 Agent 第一次输出即通过核查的比例</td><td class="num">≥ 70%</td><td>轨迹统计</td></tr>
+      <tr><td>场景解析准确率</td><td>30 条测试语句解析为正确参数的比例</td><td class="num">≥ 90%</td><td>自写脚本</td></tr>
+      <tr><td>端到端延迟</td><td>见非功能需求</td><td>达标</td><td>Application Insights</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><b>赛后产品指标（写进 Pitch 的愿景部分）：</b>北极星指标为“每周被引用的转折点数”，即被分析师导出、被平台通过 API 拉取或被球迷分享的转折点总数。辅助指标：复盘定位耗时、API 调用量、推演分享率。</div>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2><span class="sec">08</span>风险与对策</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>风险</th><th>概率</th><th>影响</th><th>对策</th><th>触发后的动作</th></tr></thead>
+    <tbody>
+      <tr><td>范围过大，做不完</td><td><span class="tag p0">高</span></td><td><span class="tag p0">高</span></td><td>严格 P0 / P1 / P2；每晚 15 分钟站会对照清单</td><td>10/24 晚推演闭环未通 → 砍掉推演，交付 ④+⑧</td></tr>
+      <tr><td>模拟器不“像足球”</td><td><span class="tag p1">中</span></td><td><span class="tag p0">高</span></td><td>D1 用 200 场统计量标定</td><td>先用固定参数交付，标定放到 D5</td></tr>
+      <tr><td>三条线接口对不上</td><td><span class="tag p1">中</span></td><td><span class="tag p0">高</span></td><td>D1 定死 schema 并写成 Pydantic / TypeScript 类型共享</td><td>改接口必须三人同意</td></tr>
+      <tr><td>LLM 编造数字</td><td><span class="tag p1">中</span></td><td><span class="tag p1">中</span></td><td>计算与生成分离 + 核查 Agent</td><td>降级为模板解释</td></tr>
+      <tr><td>Agent Framework 学习成本</td><td><span class="tag p1">中</span></td><td><span class="tag p1">中</span></td><td>D1 跑通官方示例；先写顺序工作流</td><td>必要时先用普通函数串联，D5 再迁移</td></tr>
+      <tr><td>Container Apps Jobs 并行没跑通</td><td><span class="tag p1">中</span></td><td><span class="tag p2">低</span></td><td>先做进程内版本</td><td>保留进程内版本，架构图标注扩展方式</td></tr>
+      <tr><td>转折点误报太多</td><td><span class="tag p1">中</span></td><td><span class="tag p1">中</span></td><td>评测集调阈值；每场最多显示 5 个</td><td>Demo 用表现好的固定种子</td></tr>
+      <tr><td>Azure 配额或费用</td><td><span class="tag p2">低</span></td><td><span class="tag p1">中</span></td><td>Serverless 优先；设预算告警</td><td>提交后立刻缩容</td></tr>
+      <tr><td>Demo 现场或录制出错</td><td><span class="tag p2">低</span></td><td><span class="tag p0">高</span></td><td>固定种子 + 预热；录多遍</td><td>使用备用录像</td></tr>
+      <tr><td>版权或商标问题</td><td><span class="tag p2">低</span></td><td><span class="tag p0">高</span></td><td>虚构队名；无版权音乐；不用英超标识</td><td>提交前逐帧检查视频</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2><span class="sec">09</span>排期与分工</h2>
+  <div class="prose"><p>四人分工的关键是把原来最重的“智能”一条线拆成两条：B 负责模拟器和确定性计算，D 负责所有 Agent 和评测。两人之间只通过“比赛状态 + 指标”这一个接口交接，可以并行开发。</p></div>
+  <div class="grid2">
+    <div class="panel"><span class="tag">A · 平台</span><h3>云与数据流</h3><p>Event Hubs、Functions、Cosmos DB、SignalR、Container Apps Jobs、API、部署、运维看板、CI/CD</p></div>
+    <div class="panel"><span class="tag">B · 模拟</span><h3>模拟器与指标</h3><p>模拟器（生成、续跑、植入）、标定、威胁网格、势头与压迫指标、变点检测、推演统计、评测集</p></div>
+    <div class="panel"><span class="tag">C · 体验</span><h3>前端与可视化</h3><p>四个页面、球场回放、势头曲线、分布图、轨迹面板、Demo 录制</p></div>
+    <div class="panel"><span class="tag">D · Agent</span><h3>Agent 与评测</h3><p>五个 Agent、Agent Framework 编排、Foundry 模型与评测、Content Safety、Pitch 文案与竞品叙事</p></div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>日期</th><th>A · 平台</th><th>B · 模拟</th><th>C · 体验</th><th>D · Agent</th><th>当日里程碑</th></tr></thead>
+    <tbody>
+      <tr><td class="num">10/21 二</td><td>开通资源组、Event Hubs、Cosmos DB；仓库与 CI</td><td>模拟器跑完一整场；统计量标定</td><td>线框定稿；前端脚手架</td><td>Foundry 项目；跑通 Agent Framework 示例；共享类型</td><td><b>接口冻结</b></td></tr>
+      <tr><td class="num">10/22 三</td><td>模拟器 → Event Hubs → Functions 指标</td><td>状态续跑；植入转折点；变点检测</td><td>球场组件；势头曲线（假数据）</td><td>侦测 Agent、解释 Agent（用离线数据）</td><td>指标进库</td></tr>
+      <tr><td class="num">10/23 四</td><td>SignalR 推送；API 前四个接口</td><td>推演批量运行；Wilson 区间；20 场评测集</td><td>S1 接实时数据；S2 详情页</td><td>核查 Agent；重试与降级；接入实时链路</td><td><b>Detect + Explain 跑通</b></td></tr>
+      <tr><td class="num">10/24 五</td><td>推演接口；进程内并行</td><td>推演结果摘要；协助联调</td><td>S3 实验室；分布图</td><td>场景翻译、对比分析 Agent</td><td><b>止损点：推演闭环跑通</b></td></tr>
+      <tr><td class="num">10/25 六</td><td>Container Apps Jobs；全量部署；运维看板</td><td>跑评测、调阈值；写评测报告</td><td>S4 轨迹面板；视觉打磨</td><td>Foundry 评测；Content Safety；Demo 脚本与 Pitch</td><td>公网版本冻结</td></tr>
+      <tr><td class="num">10/26 日</td><td>README、架构图、清理密钥、公开仓库</td><td>评测结果写入 README</td><td>录制剪辑视频</td><td>Pitch 定稿；逐帧检查视频版权</td><td><b>提交</b></td></tr>
+      <tr><td class="num">10/27 一</td><td colspan="4">缓冲：只修阻断性问题，不加功能</td><td>截止</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2><span class="sec">10</span>提交与 Demo</h2>
+  <div class="grid2">
+    <div class="panel">
+      <h3>提交清单</h3>
+      <ul class="tight">
+        <li>☐ 新建的项目（10/6 后开发）</li>
+        <li>☐ Pitch：做了什么、用了哪些微软技术、解决什么问题</li>
+        <li>☐ 2 分钟以内的 Demo 视频，公开链接（YouTube / Vimeo）</li>
+        <li>☐ 视频展示真实运行画面，无第三方商标与版权音乐</li>
+        <li>☐ 公开 GitHub 仓库，无密钥</li>
+        <li>☐ README：架构图、运行方式、评测结果、Copilot 使用说明</li>
+        <li>☐ 公网 Demo 地址</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Demo 脚本（120 秒）</h3>
+      <div class="scroll" style="border:0"><table>
+        <tr><td class="num">0–15″</td><td>一句话痛点：“比赛由几个瞬间决定，但没人告诉你是哪几个，更没人告诉你假如。”</td></tr>
+        <tr><td class="num">15–40″</td><td>模拟比赛实时流入，势头曲线跳动；第 63 分钟自动标出转折点</td></tr>
+        <tr><td class="num">40–65″</td><td>球场回放 + 三句解释；点证据标签，事件高亮</td></tr>
+        <tr><td class="num">65–95″</td><td>输入“如果 63 分钟没换人？”，500 次模拟展开，分布变化</td></tr>
+        <tr><td class="num">95–110″</td><td>轨迹面板：核查 Agent 拦下错误数字，解释 Agent 重写</td></tr>
+        <tr><td class="num">110–120″</td><td>架构图 + 延迟指标；结尾口号</td></tr>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <h2><span class="sec">11</span>赛后路线</h2>
+  <div class="prose"><p>这一节用于 Pitch 的“真实影响”部分，说明产品不止是 Demo。</p></div>
+  <div class="scroll"><table>
+    <thead><tr><th>阶段</th><th>目标客户</th><th>形态</th><th>商业模式假设</th></tr></thead>
+    <tbody>
+      <tr><td>1 · 平台 API</td><td>转播方、OTT 平台</td><td>接入授权数据源后提供转折点与解释 API</td><td>按比赛场次或调用量计费</td></tr>
+      <tr><td>2 · 分析师工作台</td><td>俱乐部、青训学院、战术内容创作者</td><td>SaaS，加入多场对比与报告导出</td><td>按席位订阅</td></tr>
+      <tr><td>3 · 球迷互动</td><td>转播方和平台的 C 端产品</td><td>白标 What-If 组件，嵌入 App 与直播间</td><td>与平台分成或授权费</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">以上为假设，没有做市场规模测算；真实落地需要接入授权的比赛数据。</p>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <h2><span class="sec">12</span>待定问题与假设</h2>
+  <div class="grid2">
+    <div class="panel">
+      <h3>待定问题</h3>
+      <ul class="tight">
+        <li>Challenge 页是否提供官方合成数据集或 schema？若有，模拟器需要兼容其格式</li>
+        <li>一个作品能否同时获得大奖和专项奖？</li>
+        <li>提交截止的时区是什么？</li>
+        <li>每人可投入时间，以及谁熟悉 Azure 事件驱动服务？</li>
+        <li>Azure 额度来源：个人订阅还是主办方提供？</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>当前假设</h3>
+      <ul class="tight">
+        <li>团队 4 人，每人每天可投入 8 小时以上</li>
+        <li>至少一人熟悉 Azure 事件驱动服务</li>
+        <li>自行生成合成数据，不依赖官方数据集</li>
+        <li>Demo 只需桌面端</li>
+        <li>评委会访问公网 Demo，但主要依据视频打分</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted">来源：Innovation Studio 的 Inside the Game: Developer Hackathon 赛事页（About 页）；竞品资料见 2.2 节末尾。文中所有性能和评测目标均为团队自设目标，不是主办方要求。</p>
+</section>
+</main>
+</div>

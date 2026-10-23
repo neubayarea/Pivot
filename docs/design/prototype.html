@@ -1,0 +1,816 @@
+<title>Pivot 产品原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 产品规格在上（窄正文 + 宽表格），可点击线框原型在下（固定 1100×720 画框 + 右侧标注栏） */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --line:#D5DDD3; --fg:#17231C; --muted:#5A6A5F;
+  --pitch:#1E6B45; --pitch-soft:#E1EEE5; --plum:#4A1D57; --plum-soft:#EFE6F2;
+  --warn:#9A5B00; --warn-soft:#FBF0DC; --crit:#A3302A; --crit-soft:#F8E3E1;
+  --wf-bg:#F7F8F6; --wf-surface:#FFFFFF; --wf-line:#C3CAC1; --wf-ink:#26302A; --wf-ink2:#6B756E; --wf-fill:#E8ECE6; --wf-home:#4F5A53; --wf-away:#A2ACA4;
+  --display:"Barlow Condensed","Noto Sans SC",system-ui,sans-serif;
+  --body:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33;
+  --warn:#F0B451; --warn-soft:#33281A; --crit:#F08A80; --crit-soft:#3A1F1D;
+  --wf-bg:#151B17; --wf-surface:#1C241F; --wf-line:#3A463E; --wf-ink:#DDE5DF; --wf-ink2:#94A298; --wf-fill:#28322C; --wf-home:#C9D3CC; --wf-away:#6E7B72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33;
+  --warn:#F0B451; --warn-soft:#33281A; --crit:#F08A80; --crit-soft:#3A1F1D;
+  --wf-bg:#151B17; --wf-surface:#1C241F; --wf-line:#3A463E; --wf-ink:#DDE5DF; --wf-ink2:#94A298; --wf-fill:#28322C; --wf-home:#C9D3CC; --wf-away:#6E7B72; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}
+.wrap{max-width:1500px;margin:0 auto}
+.narrow{max-width:1080px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(40px,6.5vw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.01em}
+h2{font-size:30px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+h2 .sec{font-family:var(--mono);font-size:14px;color:var(--pitch);margin-right:10px;vertical-align:middle;letter-spacing:0}
+h3{font-size:21px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+.muted{color:var(--muted)} .small{font-size:13.5px}
+header.page{padding-block:44px 24px;display:grid;gap:14px}
+nav.top{display:flex;flex-wrap:wrap;gap:8px}
+nav.top a{font-family:var(--display);font-weight:700;font-size:16px;text-decoration:none;color:var(--fg);border:1.5px solid var(--line);padding:3px 12px;background:var(--surface)}
+nav.top a:hover,nav.top a:focus-visible{border-color:var(--pitch);color:var(--pitch);outline:none}
+section.part{display:grid;gap:16px;padding-block:40px;border-top:2px solid var(--line)}
+.sub{display:grid;gap:12px;padding-top:6px}
+.prose{max-width:72ch;display:grid;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:16px 18px;display:grid;gap:8px;align-content:start;min-width:0}
+.panel h3{font-size:18px}
+.callout{border-left:3px solid var(--pitch);background:var(--pitch-soft);padding:12px 16px;display:grid;gap:6px}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+ul.tight{margin:0;padding-left:1.15em;display:grid;gap:4px}
+.tag{display:inline-block;font-family:var(--mono);font-size:11.5px;line-height:1.6;padding:1px 7px;border-radius:3px;white-space:nowrap}
+.t-must{background:var(--crit-soft);color:var(--crit)} .t-should{background:var(--warn-soft);color:var(--warn)}
+.t-could{background:var(--plum-soft);color:var(--plum)} .t-wont{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.t-pre{background:var(--pitch-soft);color:var(--pitch)}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.8px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--bg)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td code,li code,p code{font-family:var(--mono);font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:3px}
+.mm{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto}
+.mm pre{margin:0}
+.load{display:grid;grid-template-columns:5em 1fr 6.5em;gap:10px;align-items:center;font-size:13.5px}
+.bar{height:12px;background:var(--bg);border:1px solid var(--line);position:relative;overflow:hidden}
+.bar span{position:absolute;inset:0 auto 0 0;background:var(--pitch)}
+.bar span.over{background:var(--warn)}
+.bar i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);left:calc(100% * 13 / 16)}
+
+/* ---------- 原型 ---------- */
+.proto{display:grid;gap:14px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--body);font-size:13.5px;padding:4px 12px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;border-radius:3px}
+.chip[aria-pressed="true"]{border-color:var(--pitch);background:var(--pitch-soft);color:var(--pitch);font-weight:700}
+.chip:focus-visible{outline:2px solid var(--pitch);outline-offset:2px}
+.ctl-label{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.proto-body{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:1520px){.proto-body{grid-template-columns:1fr}}
+.frame-scroll{overflow-x:auto;padding-bottom:6px}
+.frame{width:1100px;height:720px;background:var(--wf-bg);border:1px solid var(--wf-line);position:relative;overflow:hidden;
+  font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:13px;line-height:1.45;color:var(--wf-ink)}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.screen[hidden]{display:none!important}
+.tb{height:52px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--wf-line);background:var(--wf-surface)}
+.logo{font-weight:800;font-size:17px;letter-spacing:.02em}
+.logo::before{content:"◆ ";color:var(--wf-ink2)}
+.grow{flex:1}
+.score{font-weight:800;font-size:16px;padding:0 6px;font-variant-numeric:tabular-nums}
+.clock{font-variant-numeric:tabular-nums;font-weight:600}
+.live{font-style:normal;font-size:10.5px;font-weight:700;border:1px solid var(--wf-ink);padding:0 5px;margin-left:6px;border-radius:2px}
+.wseg{display:inline-flex;border:1px solid var(--wf-line);border-radius:3px;overflow:hidden}
+.wseg b{font-weight:500;padding:3px 9px;border-right:1px solid var(--wf-line);font-size:12px}
+.wseg b:last-child{border-right:0}
+.wseg b.on{background:var(--wf-ink);color:var(--wf-surface)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--wf-ink2);padding:4px 11px;border-radius:3px;background:var(--wf-surface);color:var(--wf-ink);font:inherit;font-size:12.5px}
+.btn.primary{background:var(--wf-ink);color:var(--wf-surface);border-color:var(--wf-ink)}
+.btn.ghost{border-style:dashed;color:var(--wf-ink2)}
+.btn.off{opacity:.45}
+.box{border:1px solid var(--wf-line);background:var(--wf-surface);border-radius:4px;padding:12px 14px;min-width:0}
+.box h4{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--wf-ink2)}
+.rel{position:relative}
+.hot{outline:2px dashed var(--pitch);outline-offset:2px;cursor:pointer}
+.hot:hover{outline-style:solid}
+.pin{position:absolute;top:-9px;left:-9px;z-index:5;width:20px;height:20px;border-radius:50%;background:var(--plum);color:var(--surface);
+  font:700 11px/20px var(--mono);text-align:center;font-style:normal;box-shadow:0 0 0 2px var(--wf-bg)}
+.pin.hl{transform:scale(1.35);box-shadow:0 0 0 4px var(--plum-soft)}
+.frame.nopins .pin{display:none}
+.frame [hidden]{display:none!important}
+.banner{flex:none;padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--wf-line);background:var(--wf-fill);display:flex;gap:12px;align-items:center}
+.banner.warn{background:var(--wf-ink);color:var(--wf-surface)}
+.ph{background:repeating-linear-gradient(135deg,var(--wf-fill) 0 8px,transparent 8px 16px);border:1px dashed var(--wf-line);border-radius:3px;color:var(--wf-ink2);display:grid;place-items:center;font-size:12px}
+.sk{height:10px;background:var(--wf-fill);border-radius:2px;margin:6px 0}
+.sev{letter-spacing:1px;font-size:11px}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;border:1px solid var(--wf-ink2);padding:0 6px;border-radius:2px;color:var(--wf-ink2);white-space:nowrap}
+.badge.ok{border-color:var(--wf-ink);color:var(--wf-ink)}
+.ev{font-family:var(--mono);font-size:11px;border:1px solid var(--wf-ink2);border-radius:2px;padding:0 4px;margin-left:3px;white-space:nowrap}
+.num{border-bottom:1.5px dotted var(--wf-ink);font-weight:700}
+.row{display:flex;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px}
+.list > div{padding:7px 0;border-bottom:1px solid var(--wf-line)}
+.list > div:last-child{border-bottom:0}
+.field{display:grid;gap:3px;font-size:12px;color:var(--wf-ink2)}
+.input{border:1px solid var(--wf-line);background:var(--wf-surface);padding:6px 9px;border-radius:3px;color:var(--wf-ink);font-size:13px}
+.dim{position:absolute;inset:0;background:var(--wf-ink);opacity:.35}
+svg text{fill:var(--wf-ink2);font-size:10px;font-family:inherit}
+.stack{display:flex;height:26px;border:1px solid var(--wf-line);border-radius:3px;overflow:hidden;font-size:11px;font-weight:700}
+.stack span{display:grid;place-items:center;border-right:1px solid var(--wf-surface)}
+.stack .h{background:var(--wf-home);color:var(--wf-surface)}
+.stack .d{background:var(--wf-fill);color:var(--wf-ink)}
+.stack .a{background:var(--wf-away);color:var(--wf-surface)}
+.notes{background:var(--surface);border:1px solid var(--line);padding:14px 16px;display:grid;gap:10px;align-content:start}
+.notes h3{font-size:19px}
+.notes ol{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.notes li{display:grid;grid-template-columns:24px 1fr;gap:8px;font-size:13.5px;line-height:1.6}
+.notes li .k{width:20px;height:20px;border-radius:50%;background:var(--plum);color:var(--surface);font:700 11px/20px var(--mono);text-align:center;margin-top:2px}
+.notes li b{display:block}
+.notes .fr{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.notes .states{border-top:1px solid var(--line);padding-top:10px;font-size:13px;display:grid;gap:4px}
+a{color:var(--pitch)}
+@media (prefers-reduced-motion: reduce){.pin{transition:none}}
+</style>
+
+<div class="wrap">
+<header class="page">
+  <p class="eyebrow">Pivot · 产品细化 v1.1 + 可点击原型 · 2026-10-23</p>
+  <h1>Pivot 产品原型</h1>
+  <p class="prose" style="font-size:16px">在 PRD 的基础上补齐了按剩余时间重新排定的优先级（RICE）、业务规则、场景目录、状态矩阵、界面文案和埋点。下半部分是 5 个页面的低保真可点击原型，每个页面都有编号标注说明交互和边界。原型只定结构和交互，视觉风格单独出一份让你挑。</p>
+  <nav class="top" aria-label="页面导航">
+    <a href="#refine">A 产品细化</a><a href="#rules">B 业务规则</a><a href="#proto">C 可点击原型</a><a href="#copy">D 文案与埋点</a>
+  </nav>
+</header>
+
+<!-- ================= A 产品细化 ================= -->
+<section class="part narrow" id="refine">
+  <h2><span class="sec">A</span>重新排定优先级</h2>
+  <div class="callout warn">
+    <b>时间重估</b>
+    <span>PRD 原计划从 10/21 开工，现在是 10/23，可用时间只剩 3.5 天。容量按每人每天有效开发 10 小时、25% 留给联调和录制计算：4 人 × 3.5 天 × 10 小时 × 75% ≈ 105 小时 ≈ <b>52 个单位</b>（1 单位 = 2 小时）。</span>
+  </div>
+
+  <div class="sub">
+    <h3>A1 RICE 排序（product-manager-toolkit 的 RICE 脚本）</h3>
+    <p class="small muted">口径：R = 演示曝光（100 = 出现在 2 分钟主线里，60 = 短暂出现，30 = 只在 README 里，10 = 看不见）；I = 对评审得分的影响；C = 按时完成的把握；E = 工作量，xs=1、s=3、m=5、l=8 个单位。脚本按容量 52 单位贪心装箱，前 14 项正好装满，没有余量。“决定”一列是在分数基础上叠加依赖关系后的人工判断。</p>
+    <div class="scroll"><table>
+      <thead><tr><th>#</th><th>功能</th><th>R</th><th>I</th><th>C</th><th>E</th><th>RICE</th><th>决定</th><th>负责人</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td class="n">—</td><td>F00 脚手架、契约、BFF API</td><td class="n">—</td><td>—</td><td>—</td><td class="n">5</td><td class="n">—</td><td><span class="tag t-pre">前置</span></td><td>全员</td><td>不参与打分，所有功能都依赖它</td></tr>
+        <tr><td class="n">1</td><td>F03 势头 + CUSUM 候选检测</td><td class="n">100</td><td>massive</td><td>high</td><td class="n">3</td><td class="n">100.0</td><td><span class="tag t-must">Must</span></td><td>B（D 调阈值）</td><td>依赖项</td></tr>
+        <tr><td class="n">2</td><td>F02 快照续跑 + 公共随机数</td><td class="n">100</td><td>massive</td><td>medium</td><td class="n">3</td><td class="n">80.0</td><td><span class="tag t-must">Must</span></td><td>B</td><td>推演的前提</td></tr>
+        <tr><td class="n">3</td><td>F08 场景按钮 + 本地批量推演</td><td class="n">100</td><td>massive</td><td>medium</td><td class="n">3</td><td class="n">80.0</td><td><span class="tag t-must">Must</span></td><td>B + D</td><td>10/25 18:00 决定去留</td></tr>
+        <tr><td class="n">4</td><td>F09 推演结果页（含置信区间）</td><td class="n">100</td><td>high</td><td>high</td><td class="n">3</td><td class="n">66.7</td><td><span class="tag t-must">Must</span></td><td>C</td><td></td></tr>
+        <tr><td class="n">5</td><td>F01 整场模拟 + 种子确定性</td><td class="n">100</td><td>massive</td><td>high</td><td class="n">5</td><td class="n">60.0</td><td><span class="tag t-must">Must</span></td><td>B</td><td>依赖项，关键路径起点</td></tr>
+        <tr><td class="n">6</td><td>F13 自然语言场景解析</td><td class="n">60</td><td>medium</td><td>high</td><td class="n">1</td><td class="n">60.0</td><td><span class="tag t-should">Should ①</span></td><td>D</td><td>最便宜的 Should</td></tr>
+        <tr><td class="n">7</td><td>F05 核查 + 重写循环 + 模板降级</td><td class="n">100</td><td>high</td><td>medium</td><td class="n">3</td><td class="n">53.3</td><td><span class="tag t-must">Must</span></td><td>D</td><td></td></tr>
+        <tr><td class="n">8</td><td>F04 Judge 与 Explainer</td><td class="n">100</td><td>massive</td><td>medium</td><td class="n">5</td><td class="n">48.0</td><td><span class="tag t-must">Must</span></td><td>D</td><td></td></tr>
+        <tr><td class="n">9</td><td>F06 S1 实时看板 + 推送</td><td class="n">100</td><td>massive</td><td>medium</td><td class="n">5</td><td class="n">48.0</td><td><span class="tag t-must">Must</span></td><td>C（A 协助）</td><td></td></tr>
+        <tr><td class="n">10</td><td>F07 S2 静态球场图 + 证据</td><td class="n">100</td><td>massive</td><td>medium</td><td class="n">5</td><td class="n">48.0</td><td><span class="tag t-must">Must</span></td><td>C</td><td>动画回放拆成 F15</td></tr>
+        <tr><td class="n">11</td><td>F12 S4 Agent 轨迹面板</td><td class="n">60</td><td>high</td><td>high</td><td class="n">3</td><td class="n">40.0</td><td><span class="tag t-should">Should ②</span></td><td>D</td><td>从 C 移给 D，给 C 减负</td></tr>
+        <tr><td class="n">12</td><td>F10 azd + Bicep 云端部署</td><td class="n">60</td><td>high</td><td>medium</td><td class="n">5</td><td class="n">19.2</td><td><span class="tag t-must">Must</span></td><td>A</td><td>分数低，但公网 Demo 离不开它</td></tr>
+        <tr><td class="n">13</td><td>F11 Event Hubs + Functions</td><td class="n">60</td><td>high</td><td>medium</td><td class="n">5</td><td class="n">19.2</td><td><span class="tag t-should">Should ③</span></td><td>A</td><td>C2 形态，冲 Cloud Native 奖</td></tr>
+        <tr><td class="n">14</td><td>F14 20 个种子评测 + Foundry 评测</td><td class="n">30</td><td>high</td><td>medium</td><td class="n">3</td><td class="n">16.0</td><td><span class="tag t-should">Should ④</span></td><td>B + D</td><td>落后时第一个砍</td></tr>
+        <tr><td class="n">15</td><td>F15 球场动画回放</td><td class="n">60</td><td>medium</td><td>medium</td><td class="n">3</td><td class="n">16.0</td><td><span class="tag t-could">Could</span></td><td>C</td><td></td></tr>
+        <tr><td class="n">16</td><td>F17 公开 REST API + OpenAPI</td><td class="n">30</td><td>low</td><td>high</td><td class="n">1</td><td class="n">15.0</td><td><span class="tag t-could">Could</span></td><td>A</td><td>FastAPI 自动生成，几乎零成本</td></tr>
+        <tr><td class="n">17</td><td>F18 运维延迟看板</td><td class="n">30</td><td>low</td><td>medium</td><td class="n">3</td><td class="n">4.0</td><td><span class="tag t-wont">Won't</span></td><td>—</td><td>用 App Insights 自带视图代替</td></tr>
+        <tr><td class="n">18</td><td>F16 Container Apps Jobs 分片</td><td class="n">30</td><td>medium</td><td>low</td><td class="n">5</td><td class="n">3.0</td><td><span class="tag t-could">Could</span></td><td>A / B</td><td>架构上已预留</td></tr>
+        <tr><td class="n">19</td><td>F21 “不是转折点”反馈</td><td class="n">10</td><td>minimal</td><td>high</td><td class="n">1</td><td class="n">2.5</td><td><span class="tag t-wont">Won't</span></td><td>—</td><td>接口预留</td></tr>
+        <tr><td class="n">20</td><td>F20 压迫热区图</td><td class="n">10</td><td>low</td><td>medium</td><td class="n">3</td><td class="n">1.3</td><td><span class="tag t-wont">Won't</span></td><td>—</td><td></td></tr>
+        <tr><td class="n">21</td><td>F19 分享卡片 PNG</td><td class="n">10</td><td>minimal</td><td>medium</td><td class="n">3</td><td class="n">0.7</td><td><span class="tag t-wont">Won't</span></td><td>—</td><td></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>A2 每个人的负载</h3>
+    <p class="small muted">每人容量 13 个单位（竖线处）。实色条是 Must 负载，橙色是加上 Should 之后的负载。这是 10/23 下午的估算；拆到任务级之后的最新分工，以《Pivot 开发手册》为准。</p>
+    <div class="panel" style="gap:10px">
+      <div class="load"><b>A 平台</b><div class="bar"><span class="over" style="width:100%"></span><span style="width:68.75%"></span><i></i></div><span class="small">11 → 16</span></div>
+      <div class="load"><b>B 模拟</b><div class="bar"><span class="over" style="width:81.25%"></span><span style="width:68.75%"></span><i></i></div><span class="small">11 → 13</span></div>
+      <div class="load"><b>C 体验</b><div class="bar"><span style="width:81.25%"></span><i></i></div><span class="small">13 满载</span></div>
+      <div class="load"><b>D Agent</b><div class="bar"><span class="over" style="width:93.75%"></span><span style="width:62.5%"></span><i></i></div><span class="small">10 → 15</span></div>
+    </div>
+    <ul class="tight prose small">
+      <li>Must 一共 45 个单位，占容量的 87%，可以完成。Should 加进来以后超出约 5 个单位，所以 F14 和 F11 最可能被砍。</li>
+      <li><b>C 的余量为零。</b>这直接影响下一步选哪种 UI 风格：选实现成本低的风格（只靠 CSS 变量和标准组件就能做出来），不要选需要大量自定义图形和动画的风格。</li>
+      <li>轨迹面板（F12）的前后端都交给 D：它本质上是一个列表，数据由 D 自己产出。</li>
+    </ul>
+  </div>
+
+  <div class="sub">
+    <h3>A3 核心用户流程</h3>
+    <div class="mm"><pre class="mermaid">
+flowchart LR
+  s0["S0 大厅"] -->|"Start match 或 Demo preset"| s1["S1 实时看板"]
+  s1 -->|"点击转折点标记或卡片"| s2["S2 转折点详情"]
+  s2 -->|"What if"| s3a["S3 选择或输入场景"]
+  s3a -->|"场景按钮"| s3b["确认参数"]
+  s3a -->|"Parse 成功"| s3b
+  s3a -.->|"Parse 失败"| s3e["给出 3 个示例"]
+  s3e --> s3b
+  s3b -->|"Run"| s3c["运行中"]
+  s3c --> s3d["结果"]
+  s3d -->|"Try another"| s3a
+  s1 -->|"Agent trace"| s4["S4 Agent 轨迹"]
+  s2 -->|"Agent trace"| s4
+    </pre></div>
+  </div>
+
+  <div class="sub">
+    <h3>A4 转折点状态</h3>
+    <div class="grid2">
+      <div class="mm"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> pending: CUSUM 报警
+  pending --> confirmed: Judge 判定成立且核查通过
+  pending --> rejected: Judge 判定不成立
+  pending --> degraded: 超时或核查两次失败
+  confirmed --> [*]
+  degraded --> [*]
+  rejected --> [*]
+      </pre></div>
+      <div class="scroll"><table>
+        <thead><tr><th>状态</th><th>界面表现</th></tr></thead>
+        <tbody>
+          <tr><td><code>pending</code></td><td>卡片显示 “Analysing 74′…”，曲线上的标记为空心</td></tr>
+          <tr><td><code>confirmed</code></td><td>卡片显示标题、严重程度和 “Verified ✓”</td></tr>
+          <tr><td><code>degraded</code></td><td>卡片显示 “Auto summary” 标记；解释为模板生成</td></tr>
+          <tr><td><code>rejected</code></td><td>界面上不显示，只在 Agent 轨迹里可见</td></tr>
+          <tr><td>超时兜底</td><td><code>pending</code> 超过 60 秒自动转为 <code>degraded</code></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= B 业务规则 ================= -->
+<section class="part narrow" id="rules">
+  <h2><span class="sec">B</span>业务规则</h2>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>B1 比赛与回放</h3>
+      <ul class="tight small">
+        <li>比赛 90 分钟，两个半场各 45 分钟，不计伤停补时</li>
+        <li>回放速度可选 1×、5×、20×、60×，默认 20×（整场 4.5 分钟）；60× 时整场 90 秒，用于录制</li>
+        <li>可以暂停和继续；比赛结束前不能拖动时间轴（P1 再做赛后拖动）</li>
+        <li>种子取值 0 到 999999；同一个种子加同样的植入，结果逐事件一致</li>
+        <li>主客队必须不同；只能从虚构球队列表里选</li>
+        <li>演示预设 <code>demo-1021</code>：Harbour City 对 Northvale Rovers，植入 38′ 客队红牌和 63′ 主队换人</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>B2 势头与转折点</h3>
+      <ul class="tight small">
+        <li>势头取值在 −1 到 +1 之间，正值表示主队占优；半衰期 5 分钟；每个半场开始时重置</li>
+        <li>每个半场的前 5 分钟不检测转折点（数据不够）</li>
+        <li>两个转折点之间至少间隔 8 分钟；每场最多 5 个</li>
+        <li>严重程度：Δ ≥ 0.6 或伴随进球、红牌时为 ●●●；Δ ≥ 0.45 或伴随换人时为 ●●○；其余为 ●○○</li>
+        <li>标记颜色表示势头转向哪一方</li>
+        <li>标题不超过 8 个英文单词，<b>不能含数字</b>，因为标题里的数字不经过核查</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>B3 解释</h3>
+      <ul class="tight small">
+        <li>1 到 3 句，每句不超过 30 个英文单词，每句 1 到 4 个证据</li>
+        <li>证据必须落在转折点前 8 分钟到后 5 分钟之间（检测时，转折点之后只过了约 5 分钟）</li>
+        <li>前后对比窗口：<code>[m−5, m)</code> 对比 <code>[m, m+5)</code></li>
+        <li>数字带虚线下划线，悬停显示统计引用，例如 <code>passes_final_third · HCY · 58–63′</code></li>
+        <li>措辞：因果用 “followed / coincided with”；“significant” 只能在置信区间不重叠时使用；禁用博彩用语和绝对化措辞</li>
+        <li>降级时显示 “Auto summary”，文字来自模板，数字同样经过核查</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>B4 推演结果展示</h3>
+      <ul class="tight small">
+        <li>每个结果都是一条主胜、平局、客胜的堆叠条；占比 ≥ 8% 的段才在条内显示数字</li>
+        <li>每个结果都标出 95% Wilson 区间，例如 <code>34% (30–38)</code></li>
+        <li>某个结果的两组区间不重叠时，才显示 “Significant” 徽标；否则显示 “Within noise”</li>
+        <li>大标题取变化最大的那个结果，例如 “+18 pts Harbour City win”</li>
+        <li>基线组的名称叫 “As played (from 63′)”，它是从同一时刻出发的模拟分布，<b>不是</b>实际比分</li>
+        <li>免责声明始终可见：“Simulated from a synthetic match model. Not a prediction.”</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>B5 场景目录</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>type</th><th>界面文案</th><th>适用条件</th><th>参数</th><th>从哪一刻续跑</th><th>优先级</th></tr></thead>
+      <tbody>
+        <tr><td><code>cancel_substitution</code></td><td>Cancel 63′ substitution</td><td>比赛中已经发生的换人</td><td>target_event_id</td><td>换人发生的那一分钟</td><td><span class="tag t-must">Must</span></td></tr>
+        <tr><td><code>remove_red_card</code></td><td>Remove 38′ red card</td><td>已经发生的红牌</td><td>target_event_id</td><td>红牌发生的那一分钟</td><td><span class="tag t-must">Must</span></td></tr>
+        <tr><td><code>move_substitution</code></td><td>Move substitution to 75′</td><td>已经发生的换人；新时间在 46′ 到 85′ 之间</td><td>target_event_id, new_minute</td><td>原时间和新时间中较早的一个</td><td><span class="tag t-should">Should</span></td></tr>
+        <tr><td><code>remove_goal</code></td><td>Disallow 71′ goal</td><td>已经发生的进球</td><td>target_event_id</td><td>进球发生的那一分钟</td><td><span class="tag t-should">Should</span></td></tr>
+        <tr><td><code>change_press</code></td><td>Press higher from 63′</td><td>任意转折点</td><td>team, delta ±1, from_minute</td><td>from_minute</td><td><span class="tag t-could">Could</span></td></tr>
+      </tbody>
+    </table></div>
+    <ul class="tight prose small">
+      <li>运行次数 N 可选 200、500、1000，默认 500。基线组和反事实组各跑 N 次，第 i 次共用同一个种子（成对运行）。</li>
+      <li>基线组强制保留原事件，反事实组替换成修改后的事件；其余随机过程完全相同，所以两组的差异只来自这个改动。</li>
+      <li>不适用的场景按钮置灰，并在悬停时说明原因，例如 “No red card in this match”。</li>
+    </ul>
+  </div>
+
+  <div class="sub">
+    <h3>B6 演示数据（种子 1021）</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>时间</th><th>事件</th><th>预期效果</th></tr></thead>
+      <tbody>
+        <tr><td class="n">12′</td><td>HCY 进球（A. Moreau，11 号边锋）</td><td>1–0</td></tr>
+        <tr><td class="n">38′</td><td>NVR 红牌（K. Doyle）<span class="tag t-pre">植入</span></td><td>转折点 1，转向 HCY，●●●</td></tr>
+        <tr><td class="n">45′</td><td>半场结束，势头重置</td><td>—</td></tr>
+        <tr><td class="n">63′</td><td>HCY 换人：A. Moreau 下，J. Kessler（6 号后腰）上 <span class="tag t-pre">植入</span></td><td>转折点 2，转向 NVR，●●●</td></tr>
+        <tr><td class="n">71′</td><td>NVR 进球（R. Ibe）</td><td>1–1</td></tr>
+        <tr><td class="n">74′</td><td>原型和风格稿都截在这一刻</td><td>看板状态</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted">原型里的推演数字（HCY 胜率从 34% 升到 52%）只是占位，真实数字以模拟器的输出为准。所有球队和球员都是虚构的。</p>
+  </div>
+</section>
+
+<!-- ================= C 原型 ================= -->
+<section class="part" id="proto">
+  <div class="narrow" style="display:grid;gap:10px">
+    <h2><span class="sec">C</span>可点击原型</h2>
+    <p class="prose small">先选页面，再切换状态。绿色虚线框是可以点的热区，点击会跳转页面或推进流程。紫色编号对应右侧标注。界面文案用英文（面向国际评委），标注用中文。</p>
+  </div>
+  <div class="proto">
+    <div class="controls">
+      <span class="ctl-label">页面</span>
+      <div class="seg" id="screenTabs"></div>
+      <span class="ctl-label">状态</span>
+      <div class="seg" id="stateTabs"></div>
+      <label class="small"><input type="checkbox" id="pinToggle" checked> 显示标注编号</label>
+    </div>
+    <div class="proto-body">
+      <div class="frame-scroll">
+      <div class="frame" id="frame">
+
+        <!-- S0 大厅 -->
+        <section class="screen" data-screen="s0">
+          <header class="tb"><span class="logo">Pivot</span><span class="grow"></span><span class="badge">Synthetic data</span></header>
+          <div style="flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:16px;padding:22px">
+            <div class="box rel col" style="gap:12px"><i class="pin">1</i>
+              <h4>Start a simulated match</h4>
+              <div class="row" style="gap:12px">
+                <label class="field" style="flex:1">Home team<span class="input">Harbour City ▾</span></label>
+                <label class="field" style="flex:1">Away team<span class="input">Northvale Rovers ▾</span></label>
+              </div>
+              <div class="row" style="gap:12px">
+                <label class="field" style="flex:1">Seed<span class="input">1021 &nbsp; ⟳</span></label>
+                <label class="field" style="flex:1">Speed<span class="wseg"><b>1×</b><b>5×</b><b class="on">20×</b><b>60×</b></span></label>
+              </div>
+              <div class="box rel" style="background:var(--wf-bg)"><i class="pin">3</i>
+                <div class="row"><b>▸ Plant events (evaluation)</b><span class="grow"></span><span class="badge">0 / 3</span></div>
+              </div>
+              <div class="row" style="margin-top:6px">
+                <button class="btn primary hot" data-go="s1">Start match</button>
+                <span class="rel"><i class="pin">2</i><button class="btn hot" data-go="s1">Load demo preset · 1021</button></span>
+              </div>
+            </div>
+            <div class="box rel"><i class="pin">4</i>
+              <h4>Recent matches</h4>
+              <div class="list" data-show="default">
+                <div class="row hot" data-go="s1"><b>HCY 1–1 NVR</b><span class="badge ok">LIVE 74′</span><span class="grow"></span><span>2 pivots</span></div>
+                <div class="row"><b>KST 2–0 BRW</b><span class="badge">FINISHED</span><span class="grow"></span><span>3 pivots</span></div>
+                <div class="row"><b>ODN 0–0 FLX</b><span class="badge">FINISHED</span><span class="grow"></span><span>1 pivot</span></div>
+                <div class="row"><b>MRL 1–2 HCY</b><span class="badge">INTERRUPTED</span><span class="grow"></span><span>Resume from 52′</span></div>
+              </div>
+              <div data-show="empty" class="ph" style="height:220px;text-align:center">No matches yet.<br>Start the demo match to see Pivot in action.<br><br><button class="btn primary hot" data-go="s1">Start demo match</button></div>
+            </div>
+          </div>
+          <div class="rel" style="padding:0 22px 16px;color:var(--wf-ink2);font-size:12px"><i class="pin">5</i>All teams, players and matches are synthetic. Not affiliated with any league or club.</div>
+        </section>
+
+        <!-- S1 实时看板 -->
+        <section class="screen" data-screen="s1" hidden>
+          <header class="tb">
+            <span class="logo hot" data-go="s0">Pivot</span>
+            <span class="rel"><i class="pin">1</i><b>Harbour City</b><span class="score">1 – 1</span><b>Northvale Rovers</b></span>
+            <span class="clock">74:12<em class="live">LIVE</em></span>
+            <span class="rel"><i class="pin">2</i><span class="wseg"><b>1×</b><b>5×</b><b class="on">20×</b><b>60×</b><b>❚❚</b></span></span>
+            <span class="grow"></span>
+            <span class="rel"><i class="pin">9</i><button class="btn hot" data-go="s4">Agent trace · 3 active</button></span>
+          </header>
+          <div class="banner warn" data-show="error">Live connection lost. Reconnecting… (attempt 2) <button class="btn">Retry now</button><span class="grow"></span>Data paused at 74:12</div>
+          <div class="banner" data-show="degraded">AI explanations delayed. Showing automatic summaries.</div>
+          <div style="flex:1;display:grid;grid-template-columns:1fr 300px;grid-template-rows:auto auto 1fr;gap:12px;padding:14px 16px;min-height:0">
+            <div class="box rel" style="grid-row:1/3"><i class="pin">3</i>
+              <div class="row"><h4 style="margin:0">Momentum</h4><span class="grow"></span><span style="font-size:11px">■ Harbour City &nbsp; □ Northvale Rovers</span></div>
+              <svg viewBox="0 0 660 200" width="100%" height="270" data-show="default error degraded" aria-label="Momentum chart wireframe">
+                <line x1="40" y1="90" x2="640" y2="90" stroke="var(--wf-line)"/>
+                <line x1="340" y1="18" x2="340" y2="170" stroke="var(--wf-line)" stroke-dasharray="3 3"/>
+                <text x="344" y="178">HT</text>
+                <text x="40" y="196">0′</text><text x="333" y="196">45′</text><text x="626" y="196">90′</text>
+                <text x="8" y="40">HCY</text><text x="8" y="146">NVR</text>
+                <polyline fill="none" stroke="var(--wf-ink)" stroke-width="2" points="40,90 73,83 107,72 120,58 140,69 173,80 207,86 240,97 273,93 293,76 320,58 340,55 347,90 373,72 407,63 440,61 460,65 473,90 493,112 513,125 533,114"/>
+                <line x1="533" y1="18" x2="533" y2="170" stroke="var(--wf-ink)" stroke-width="1"/>
+                <text x="537" y="26">74′</text>
+                <g font-size="11"><text x="114" y="14">⚽</text><text x="287" y="14">▮</text><text x="454" y="14">⇄</text><text x="507" y="14">⚽</text></g>
+                <path d="M293 152 l-7 -10 h14 z" fill="var(--wf-home)"/>
+                <path d="M460 152 l-7 -10 h14 z" fill="var(--wf-away)" class="hot" data-go="s2" style="outline:none"/>
+                <circle cx="460" cy="146" r="14" fill="none" stroke="var(--pitch)" stroke-dasharray="3 3"/>
+              </svg>
+              <div data-show="loading" style="height:270px" class="ph">Connecting to live feed…</div>
+              <div data-show="empty" style="height:270px" class="ph">Kick-off pending · <button class="btn primary">Start match</button></div>
+              <span class="rel" style="position:absolute;left:300px;top:220px"><i class="pin">4</i></span>
+              <span class="rel" style="position:absolute;left:470px;top:250px"><i class="pin">5</i></span>
+            </div>
+            <div class="box rel" style="grid-row:1/4;display:flex;flex-direction:column;gap:8px"><i class="pin">6</i>
+              <h4>Pivots</h4>
+              <div data-show="default error degraded" class="col">
+                <div class="box" style="padding:9px 10px;background:var(--wf-bg)"><div class="row"><b>74′</b><span class="badge">ANALYSING…</span></div><div class="sk" style="width:80%"></div></div>
+                <div class="box hot" data-go="s2" style="padding:9px 10px"><div class="row"><b>63′</b><span class="sev">●●●</span><span class="grow"></span><span class="badge ok" data-show="default error">VERIFIED ✓</span><span class="badge" data-show="degraded">AUTO SUMMARY</span></div><div>Substitution flipped the left flank</div><div style="color:var(--wf-ink2);font-size:12px">Momentum → Northvale Rovers</div></div>
+                <div class="box" style="padding:9px 10px"><div class="row"><b>38′</b><span class="sev">●●●</span><span class="grow"></span><span class="badge ok">VERIFIED ✓</span></div><div>Red card tilted control to Harbour City</div><div style="color:var(--wf-ink2);font-size:12px">Momentum → Harbour City</div></div>
+              </div>
+              <div data-show="loading" class="col"><div class="sk"></div><div class="sk" style="width:70%"></div><div class="sk"></div></div>
+              <div data-show="empty" class="ph" style="height:120px">No pivots yet</div>
+              <div class="grow"></div>
+              <div class="rel" style="border-top:1px solid var(--wf-line);padding-top:8px"><i class="pin">8</i>
+                <h4>Events</h4>
+                <div data-show="default error degraded" style="font-size:12px;display:grid;gap:4px;font-variant-numeric:tabular-nums">
+                  <div>74:05 · NVR · Pass · R. Ibe → T. Marsh ✓</div>
+                  <div>73:51 · HCY · Tackle · J. Kessler ✓</div>
+                  <div>73:40 · NVR · Shot · T. Marsh · xG 0.08</div>
+                  <div>73:22 · NVR · Pressure · K. Ansah</div>
+                  <div>73:10 · HCY · Pass · L. Varga ✗</div>
+                </div>
+                <div data-show="loading empty" class="sk"></div>
+              </div>
+            </div>
+            <div class="box rel" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center"><i class="pin">7</i>
+              <div><h4>Possession</h4><b>54% · 46%</b></div>
+              <div><h4>Shots</h4><b>11 · 9</b></div>
+              <div><h4>xG</h4><b>1.21 · 0.94</b></div>
+              <div><h4>Pressures</h4><b>38 · 51</b></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- S2 转折点详情 -->
+        <section class="screen" data-screen="s2" hidden>
+          <header class="tb">
+            <span class="logo">Pivot</span>
+            <span class="rel hot" data-go="s1"><i class="pin">1</i>← Live · HCY 1–1 NVR</span>
+            <span class="grow"></span>
+            <button class="btn hot" data-go="s4">Agent trace</button>
+          </header>
+          <div class="banner" data-show="degraded">AI explanation unavailable. Showing a rule-based summary.</div>
+          <div class="rel" style="padding:14px 16px 0;display:flex;gap:12px;align-items:baseline;flex:none"><i class="pin">2</i>
+            <span style="font-size:22px;font-weight:800">63′ · Substitution flipped the left flank</span>
+            <span class="sev">●●●</span><span>Momentum → Northvale Rovers</span>
+            <span class="grow"></span>
+            <span class="badge ok" data-show="default">VERIFIED ✓ · 3 claims · 6 evidence</span>
+            <span class="badge" data-show="degraded">AUTO SUMMARY</span>
+            <span class="badge" data-show="loading">GENERATING…</span>
+          </div>
+          <div style="flex:1;display:grid;grid-template-columns:520px 1fr;gap:14px;padding:12px 16px 14px;min-height:0">
+            <div class="box rel col"><i class="pin">3</i>
+              <h4>Pitch · 55′–68′</h4>
+              <svg viewBox="0 0 480 310" width="100%" aria-label="Pitch wireframe">
+                <rect x="4" y="4" width="472" height="302" fill="none" stroke="var(--wf-line)" stroke-width="2"/>
+                <line x1="240" y1="4" x2="240" y2="306" stroke="var(--wf-line)" stroke-width="2"/>
+                <circle cx="240" cy="155" r="40" fill="none" stroke="var(--wf-line)" stroke-width="2"/>
+                <rect x="4" y="80" width="70" height="150" fill="none" stroke="var(--wf-line)" stroke-width="2"/>
+                <rect x="406" y="80" width="70" height="150" fill="none" stroke="var(--wf-line)" stroke-width="2"/>
+                <g stroke="var(--wf-ink2)" stroke-width="2" fill="none">
+                  <path d="M300 60 L370 48"/><path d="M330 90 L392 70"/>
+                </g>
+                <g stroke="var(--wf-ink)" stroke-width="2.5" fill="none">
+                  <path d="M250 70 L170 52"/><path d="M215 95 L140 80"/><path d="M190 40 L120 46"/>
+                </g>
+                <circle cx="170" cy="52" r="7" fill="var(--wf-ink)"/><circle cx="140" cy="80" r="7" fill="var(--wf-ink)"/>
+                <circle cx="120" cy="46" r="7" fill="none" stroke="var(--pitch)" stroke-width="3"/>
+                <text x="128" y="36">#2324</text>
+                <text x="12" y="300">← Northvale attack</text>
+              </svg>
+              <div class="rel row" style="font-size:12px"><i class="pin">4</i><span class="btn">▶</span><div style="flex:1;height:6px;background:var(--wf-fill);position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:62%;background:var(--wf-ink2)"></div><div style="position:absolute;left:61.5%;top:-5px;width:2px;height:16px;background:var(--wf-ink)"></div></div><span>55′</span><b>63′</b><span>68′</span></div>
+            </div>
+            <div class="col" style="min-width:0">
+              <div class="box rel"><i class="pin">5</i>
+                <h4>Why it turned</h4>
+                <div data-show="default degraded" class="col" style="gap:10px;font-size:13.5px">
+                  <p class="rel" style="margin:0">After the change, Harbour City's final-third passes fell from <span class="num">9</span> to <span class="num">3</span>.<span class="ev hot">#2311</span><span class="ev">#2318</span></p>
+                  <p style="margin:0">Northvale won <span class="num">6</span> of <span class="num">8</span> duels on their right flank, where Moreau had been the outlet.<span class="ev">#2324</span><span class="ev">#2330</span></p>
+                  <p style="margin:0">Northvale's pressures rose from <span class="num">6</span> to <span class="num">12</span>, and their equaliser followed.<span class="ev">#2336</span><span class="ev">#2391</span></p>
+                </div>
+                <div data-show="loading" class="col" style="gap:4px">
+                  <div class="row" style="font-size:12px;color:var(--wf-ink2)">Judge ✓ · Explainer … · Verifier —</div>
+                  <div class="sk"></div><div class="sk" style="width:85%"></div><div class="sk" style="width:70%"></div>
+                </div>
+                <span class="rel" style="position:absolute;right:20px;top:46px"><i class="pin">6</i></span>
+              </div>
+              <div class="box rel"><i class="pin">7</i>
+                <h4>Before / after</h4>
+                <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:4px 10px;font-size:12.5px;font-variant-numeric:tabular-nums">
+                  <span style="color:var(--wf-ink2)">Metric</span><span style="color:var(--wf-ink2)">58–63′</span><span style="color:var(--wf-ink2)">63–68′</span>
+                  <span>HCY final-third passes</span><b>9</b><b>3</b>
+                  <span>NVR pressures</span><b>6</b><b>12</b>
+                  <span>Momentum (avg)</span><b>+0.42</b><b>−0.31</b>
+                </div>
+              </div>
+              <div class="row">
+                <span class="rel"><i class="pin">8</i><button class="btn primary hot" data-go="s3:confirm">What if…</button></span>
+                <span class="rel"><i class="pin">9</i><button class="btn ghost off">Not a turning point</button></span>
+                <span class="rel"><i class="pin">10</i><button class="btn">Copy API link</button></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- S3 What-if 实验室 -->
+        <section class="screen" data-screen="s3" hidden>
+          <header class="tb">
+            <span class="logo">Pivot</span>
+            <span class="rel hot" data-go="s2"><i class="pin">1</i>← Pivot 63′ · Substitution flipped the left flank</span>
+            <span class="grow"></span><b>What-if Lab</b>
+          </header>
+          <div style="flex:1;display:grid;grid-template-columns:420px 1fr;gap:14px;padding:14px 16px;min-height:0">
+            <div class="col">
+              <div class="box rel col"><i class="pin">2</i>
+                <h4>Ask a what-if</h4>
+                <div class="row"><span class="input" style="flex:1">What if Harbour City kept Moreau on at 63′?</span><button class="btn hot" data-go="s3:confirm">Parse</button></div>
+                <div data-show="parsefail" style="font-size:12.5px;padding:6px 8px;background:var(--wf-fill)">Couldn't map that to a scenario. Try one of these:</div>
+              </div>
+              <div class="box rel col"><i class="pin">3</i>
+                <h4>Or pick a scenario</h4>
+                <div class="col" style="gap:6px">
+                  <button class="btn hot" data-go="s3:confirm">Cancel 63′ substitution</button>
+                  <button class="btn">Remove 38′ red card</button>
+                  <button class="btn">Move substitution to 75′</button>
+                  <button class="btn">Disallow 71′ goal</button>
+                  <button class="btn off" title="Could">Press higher from 63′</button>
+                </div>
+              </div>
+              <div class="box rel col" data-show="confirm running result nosig"><i class="pin">4</i>
+                <h4>Confirm change</h4>
+                <div style="font-size:12.5px;display:grid;gap:3px">
+                  <div><b>Change</b> Cancel substitution #2302 · Kessler ⇄ Moreau · HCY · 63′</div>
+                  <div><b>Resume from</b> 63:00 snapshot</div>
+                  <div class="row"><b>Runs</b><span class="wseg"><b>200</b><b class="on">500</b><b>1000</b></span><span>paired</span></div>
+                </div>
+                <div class="row"><button class="btn primary hot" data-go="s3:running">Run simulation</button><button class="btn">Edit</button></div>
+              </div>
+            </div>
+            <div class="box rel col" style="gap:12px">
+              <h4>Result</h4>
+              <div data-show="input confirm parsefail" class="ph" style="flex:1">Pick or describe a change to see how the match could have gone.</div>
+              <div data-show="running" class="col rel" style="flex:1;justify-content:center;gap:10px"><i class="pin">5</i>
+                <b>Simulating 640 / 1,000 runs · 4.1 s</b>
+                <div style="height:10px;background:var(--wf-fill)"><div style="height:10px;width:64%;background:var(--wf-ink)"></div></div>
+                <span style="color:var(--wf-ink2);font-size:12px">Baseline and counterfactual share seeds · local pool · 2 workers</span>
+                <button class="btn hot" data-go="s3:result" style="align-self:start">Skip to result (prototype)</button>
+              </div>
+              <div data-show="result nosig" class="col" style="gap:12px">
+                <div class="row rel"><i class="pin">7</i><span style="font-size:20px;font-weight:800" data-show="result">+18 pts Harbour City win</span><span style="font-size:20px;font-weight:800" data-show="nosig">No clear difference</span><span class="badge ok" data-show="result">SIGNIFICANT</span><span class="badge" data-show="nosig">WITHIN NOISE</span></div>
+                <div class="rel col" style="gap:8px"><i class="pin">6</i>
+                  <div style="font-size:12px;color:var(--wf-ink2)">As played (from 63′)</div>
+                  <div class="stack"><span class="h" style="width:34%">HCY 34%</span><span class="d" style="width:41%">Draw 41%</span><span class="a" style="width:25%">NVR 25%</span></div>
+                  <div style="font-size:11.5px;color:var(--wf-ink2)">34% (30–38) · 41% (37–45) · 25% (21–29)</div>
+                  <div style="font-size:12px;color:var(--wf-ink2)" data-show="result">If the substitution is cancelled</div>
+                  <div class="stack" data-show="result"><span class="h" style="width:52%">HCY 52%</span><span class="d" style="width:31%">Draw 31%</span><span class="a" style="width:17%">NVR 17%</span></div>
+                  <div style="font-size:11.5px;color:var(--wf-ink2)" data-show="result">52% (48–56) · 31% (27–35) · 17% (14–21)</div>
+                  <div style="font-size:12px;color:var(--wf-ink2)" data-show="nosig">If Northvale press higher from 63′</div>
+                  <div class="stack" data-show="nosig"><span class="h" style="width:32%">HCY 32%</span><span class="d" style="width:41%">Draw 41%</span><span class="a" style="width:27%">NVR 27%</span></div>
+                </div>
+                <div class="rel" style="font-size:13px"><i class="pin">8</i>Keeping Moreau on preserved Harbour City's left-side outlet: simulated final-third entries rose by <span class="num">38%</span> after 63′.<span class="ev">sim</span></div>
+                <div class="rel" style="font-size:11.5px;color:var(--wf-ink2)"><i class="pin">9</i>Simulated from a synthetic match model. Not a prediction. 500 paired runs · seeds 1021000–1021499.</div>
+                <div class="row"><span class="rel"><i class="pin">10</i><button class="btn ghost off">Share card</button></span><button class="btn hot" data-go="s3:input">Try another</button></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- S4 Agent 轨迹 -->
+        <section class="screen" data-screen="s4" hidden>
+          <header class="tb"><span class="logo">Pivot</span><span>← Pivot 63′</span><span class="grow"></span></header>
+          <div style="flex:1;position:relative">
+            <div class="ph" style="position:absolute;inset:14px 500px 14px 16px">S2 page behind the drawer</div>
+            <div class="dim"></div>
+            <aside class="box" style="position:absolute;top:0;right:0;bottom:0;width:480px;border-radius:0;display:flex;flex-direction:column;gap:10px;padding:16px">
+              <div class="row rel"><i class="pin">1</i><b style="font-size:16px">Agent trace · Pivot 63′</b><span class="grow"></span><span class="ev">chain 7f3a…c21</span><button class="btn hot" data-go="s2">✕</button></div>
+              <div class="rel list" style="font-size:12.5px"><i class="pin">2</i>
+                <div class="row"><span style="width:52px;color:var(--wf-ink2)">63:40</span><b style="width:150px">Rule · CUSUM alarm</b><span class="grow">swing −0.73</span><span>12 ms ✓</span></div>
+                <div class="row"><span style="width:52px;color:var(--wf-ink2)">+0.3s</span><b style="width:150px">PivotJudge · mini</b><span class="grow">confirmed · severity 3</span><span>0.9 s ✓</span></div>
+                <div class="row"><span style="width:52px;color:var(--wf-ink2)">+1.2s</span><b style="width:150px">Explainer · standard</b><span class="grow">draft v1 · 3 sentences</span><span>3.8 s</span></div>
+                <div class="row rel" style="background:var(--wf-fill);padding-left:6px"><i class="pin">3</i><span style="width:46px;color:var(--wf-ink2)">+5.0s</span><b style="width:150px">Verifier</b><span class="grow">✗ claim 1: wrote 4, computed 3</span><span>41 ms</span></div>
+                <div class="row"><span style="width:52px;color:var(--wf-ink2)">+5.1s</span><b style="width:150px">Explainer · standard</b><span class="grow">draft v2 · feedback applied</span><span>3.1 s</span></div>
+                <div class="row" data-show="default"><span style="width:52px;color:var(--wf-ink2)">+8.2s</span><b style="width:150px">Verifier</b><span class="grow">✓ 3 claims · 6 evidence</span><span>38 ms</span></div>
+                <div class="row" data-show="fallback" style="background:var(--wf-fill);padding-left:6px"><span style="width:46px;color:var(--wf-ink2)">+8.2s</span><b style="width:150px">Verifier</b><span class="grow">✗ evidence #2402 outside window</span><span>35 ms</span></div>
+                <div class="row" data-show="fallback"><span style="width:52px;color:var(--wf-ink2)">+8.3s</span><b style="width:150px">TemplateExplainer</b><span class="grow">auto summary · status degraded</span><span>6 ms</span></div>
+                <div class="row rel"><i class="pin">5</i><span style="width:52px;color:var(--wf-ink2)">+9.6s</span><b style="width:150px">Publish</b><span class="grow" data-show="default">pivot.confirmed</span><span class="grow" data-show="fallback">pivot.degraded</span><span>total 9.6 s</span></div>
+              </div>
+              <div class="box rel" style="background:var(--wf-bg);font-family:var(--mono);font-size:11.5px;line-height:1.5;flex:1"><i class="pin">4</i>
+                <div style="color:var(--wf-ink2)">Step 4 · Verifier · input → output</div>
+                {"claim": 1, "stat_ref": {"metric": "passes_final_third", "team": "home", "window": [63, 68]},<br>
+                &nbsp;"wrote": 4, "computed": 3, "verdict": "reject"}<br><br>
+                <span style="color:var(--wf-ink2)">tokens 2,941 in / 388 out · prompt 9c41e0 · model standard</span>
+              </div>
+              <div class="row rel"><i class="pin">6</i><button class="btn">Open in Foundry tracing ↗</button><span class="grow"></span><span style="font-size:12px;color:var(--wf-ink2)">Verifier first-pass rate today: 72%</span></div>
+            </aside>
+          </div>
+        </section>
+
+      </div>
+      </div>
+
+      <aside class="notes" id="notes">
+        <h3 id="notesTitle">标注</h3>
+
+        <ol data-notes="s0">
+          <li><span class="k">1</span><div><b>新建比赛表单</b>主客队必须不同，只能选虚构球队；种子默认随机生成，可以手动输入（0–999999）；速度默认 20×。<span class="fr">FR-01 · FR-04</span></div></li>
+          <li><span class="k">2</span><div><b>演示预设</b>一键创建 <code>demo-1021</code>：固定种子，植入 38′ 红牌和 63′ 换人。录视频时只用这个预设。</div></li>
+          <li><span class="k">3</span><div><b>植入事件（评测用）</b>默认折叠；最多 3 条，每条包含分钟、类型和球队；只给团队评测使用。<span class="fr">FR-03</span></div></li>
+          <li><span class="k">4</span><div><b>最近比赛</b>最多 10 条；状态分为 Live、Finished、Interrupted（可以从最后一个整分钟恢复）；点击进入 S1。</div></li>
+          <li><span class="k">5</span><div><b>合规声明</b>每个页面底部或顶栏都要声明使用合成数据，与任何联赛、俱乐部无关。</div></li>
+          <li class="states"><div style="grid-column:1/3"><b>状态</b>默认：有比赛记录。空：显示引导卡片，提供一个主按钮。</div></li>
+        </ol>
+
+        <ol data-notes="s1" hidden>
+          <li><span class="k">1</span><div><b>比分</b>收到 <code>match.status</code> 推送就更新；比分变化时闪一下（不超过 600 毫秒，尊重减少动效设置）。<span class="fr">FR-09</span></div></li>
+          <li><span class="k">2</span><div><b>速度与暂停</b>切换后立即生效；暂停时时钟停住，LIVE 标记变灰。<span class="fr">FR-04</span></div></li>
+          <li><span class="k">3</span><div><b>势头曲线</b>取值 −1 到 +1，正值表示主队占优；45′ 处画半场分隔并重置；悬停显示该分钟的数值；从事件产生到曲线更新 p95 ≤ 2 秒。<span class="fr">US-01</span></div></li>
+          <li><span class="k">4</span><div><b>关键事件图标</b>进球、红牌、换人；悬停显示球员和时间。</div></li>
+          <li><span class="k">5</span><div><b>转折点标记 ▼</b>颜色表示转向哪一方；空心表示 pending；点击进入 S2；每场最多 5 个。<span class="fr">US-02</span></div></li>
+          <li><span class="k">6</span><div><b>转折点列表</b>最新的在最上面；每张卡片包含分钟、严重程度、标题（不含数字）、转向方和状态徽标（Analysing、Verified、Auto summary）。</div></li>
+          <li><span class="k">7</span><div><b>统计条</b>控球率、射门、xG、压迫，全部由 StatCalculator 计算；每分钟刷新一次。</div></li>
+          <li><span class="k">8</span><div><b>事件流</b>显示最近 10 条，新事件从顶部进入；鼠标悬停时暂停滚动。</div></li>
+          <li><span class="k">9</span><div><b>Agent 轨迹入口</b>显示当前正在运行的 Agent 数量；点击打开 S4。<span class="fr">US-08</span></div></li>
+          <li class="states"><div style="grid-column:1/3"><b>状态</b>加载中：显示骨架屏，文案 “Connecting…”。空：比赛还没开始，显示开始按钮。连接异常：顶部深色横幅、显示重连次数，数据冻结在断线时刻，恢复后用 <code>sinceSeq</code> 补齐。降级：Agent 不可用，转折点卡片显示 “Auto summary”。</div></li>
+        </ol>
+
+        <ol data-notes="s2" hidden>
+          <li><span class="k">1</span><div><b>返回</b>回到 S1，并保留原来的滚动位置。</div></li>
+          <li><span class="k">2</span><div><b>标题区</b>包含分钟、标题、严重程度、转向方，以及核查摘要（几个 claim、几个证据）。</div></li>
+          <li><span class="k">3</span><div><b>球场图</b>12×8 区域级位置；箭头表示传球或带球，实心点表示证据事件，绿圈表示当前高亮的证据。Must 版本是静态图，动画回放属于 F15（Could）。<span class="fr">US-04</span></div></li>
+          <li><span class="k">4</span><div><b>时间轴</b>范围是 m−8′ 到 m+5′（55′–68′），可以拖动；静态版本只用它来筛选球场图上显示的事件。</div></li>
+          <li><span class="k">5</span><div><b>解释</b>1 到 3 句，每句不超过 30 个单词；数字带虚线下划线，悬停显示统计引用；不通过核查的内容不会上屏。<span class="fr">US-03 · ADR-0005</span></div></li>
+          <li><span class="k">6</span><div><b>证据标签</b>点击后在球场图上高亮对应事件，同时在侧边展开原始事件 JSON。</div></li>
+          <li><span class="k">7</span><div><b>前后对比</b>窗口是 <code>[m−5, m)</code> 和 <code>[m, m+5)</code>；指标与解释中引用的一致。</div></li>
+          <li><span class="k">8</span><div><b>What if…</b>进入 S3，自动带上这个转折点，并默认选中最相关的场景。<span class="fr">US-05</span></div></li>
+          <li><span class="k">9</span><div><b>不是转折点</b>本轮不做（Won't），按钮隐藏；接口已预留。</div></li>
+          <li><span class="k">10</span><div><b>复制 API 链接</b>复制 <code>/api/matches/{id}/pivots/{pivotId}</code>，提示 “Copied”。<span class="fr">US-07</span></div></li>
+          <li class="states"><div style="grid-column:1/3"><b>状态</b>加载中：逐步显示 Judge、Explainer、Verifier 的进度，正文用骨架屏占位。降级：显示横幅和 “Auto summary” 徽标，解释由模板生成。</div></li>
+        </ol>
+
+        <ol data-notes="s3" hidden>
+          <li><span class="k">1</span><div><b>来源转折点</b>点击返回 S2；从 S2 进入时，场景已经预先选好。</div></li>
+          <li><span class="k">2</span><div><b>自然语言输入</b>不超过 200 个字符；先过内容安全再解析；解析失败时给出 3 个示例。<span class="fr">F13 · Should</span></div></li>
+          <li><span class="k">3</span><div><b>场景按钮</b>从场景目录（B5）生成；不适用的置灰，悬停时说明原因。<span class="fr">F08 · Must</span></div></li>
+          <li><span class="k">4</span><div><b>确认</b>必须确认之后才能运行；N 可选 200、500、1000；可以编辑参数。</div></li>
+          <li><span class="k">5</span><div><b>进度</b>由 <code>scenario.progress</code> 推送；30 秒以内完成；不能取消（P1 再做）。</div></li>
+          <li><span class="k">6</span><div><b>分布对比</b>主胜、平局、客胜堆叠条；标出 95% Wilson 区间；基线组叫 “As played”，不是实际比分。</div></li>
+          <li><span class="k">7</span><div><b>结论与徽标</b>取变化最大的那个结果；只有区间不重叠时才显示 “Significant”。</div></li>
+          <li><span class="k">8</span><div><b>差异解释</b>由 Comparator 生成，同样要通过 Verifier。</div></li>
+          <li><span class="k">9</span><div><b>免责声明</b>一直显示，并给出运行次数和种子范围，方便复现。</div></li>
+          <li><span class="k">10</span><div><b>分享卡片</b>本轮不做（Won't）。</div></li>
+          <li class="states"><div style="grid-column:1/3"><b>状态</b>输入 → 确认 → 运行中 → 结果；另有“差异不显著”和“解析失败”两个分支。</div></li>
+        </ol>
+
+        <ol data-notes="s4" hidden>
+          <li><span class="k">1</span><div><b>链路 ID</b>等于 OpenTelemetry 的 trace id，点击复制，可以拿到 Foundry 追踪视图里检索。</div></li>
+          <li><span class="k">2</span><div><b>步骤时间线</b>每次交接一行，包含时间偏移、Agent 和模型档位、结果摘要、耗时；被拒的步骤用底色标出。<span class="fr">US-08</span></div></li>
+          <li><span class="k">3</span><div><b>核查拒绝</b>直接显示“写的是多少、算出来是多少”。这是 Demo 中“Agent 互相纠错”的那一幕。</div></li>
+          <li><span class="k">4</span><div><b>步骤详情</b>包含输入和输出摘要、tokens、prompt 哈希、模型档位。</div></li>
+          <li><span class="k">5</span><div><b>总耗时</b>对应 SLI <code>pivot_publish_ms</code>，目标 p95 ≤ 10 秒。</div></li>
+          <li><span class="k">6</span><div><b>外链</b>打开 Foundry 追踪视图；右侧显示当天的核查首次通过率。</div></li>
+          <li class="states"><div style="grid-column:1/3"><b>状态</b>默认：一次被拒后重写通过。降级：两次被拒后由 TemplateExplainer 接手，转折点状态变为 degraded。</div></li>
+        </ol>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ================= D 文案与埋点 ================= -->
+<section class="part narrow" id="copy">
+  <h2><span class="sec">D</span>文案、错误提示与埋点</h2>
+  <div class="sub">
+    <h3>D1 术语表（界面用英文）</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>界面用词</th><th>含义</th><th>中文</th></tr></thead>
+      <tbody>
+        <tr><td>Pivot</td><td>A detected turning point in match momentum</td><td>转折点</td></tr>
+        <tr><td>Momentum</td><td>Weighted difference in attacking threat, from −1 to +1</td><td>势头</td></tr>
+        <tr><td>Pressure</td><td>Defensive actions in the opponent's final third</td><td>压迫</td></tr>
+        <tr><td>Evidence</td><td>Match events that support a sentence</td><td>证据</td></tr>
+        <tr><td>Verified</td><td>Every number recomputed from match events</td><td>已核查</td></tr>
+        <tr><td>Auto summary</td><td>Rule-based fallback explanation</td><td>自动摘要</td></tr>
+        <tr><td>What-if Lab</td><td>Workspace for counterfactual simulations</td><td>推演实验室</td></tr>
+        <tr><td>As played</td><td>Simulations from the same moment with nothing changed</td><td>按原走势</td></tr>
+        <tr><td>Paired runs</td><td>Both groups share random seeds</td><td>成对运行</td></tr>
+        <tr><td>95% interval</td><td>Wilson confidence interval</td><td>95% 区间</td></tr>
+        <tr><td>Agent trace</td><td>Step-by-step record of agent handoffs</td><td>Agent 轨迹</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="sub">
+    <h3>D2 错误与状态提示</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>情况</th><th>文案</th><th>出现位置</th></tr></thead>
+      <tbody>
+        <tr><td>实时连接断开</td><td>Live connection lost. Reconnecting… (attempt n)</td><td>S1 顶部横幅</td></tr>
+        <tr><td>Agent 降级</td><td>AI explanations delayed. Showing automatic summaries.</td><td>S1、S2 横幅</td></tr>
+        <tr><td>比赛恢复</td><td>Match resumed from 63:00.</td><td>S1 提示条</td></tr>
+        <tr><td>推演繁忙</td><td>The lab is busy. Try again in 20 seconds.</td><td>S3 结果区</td></tr>
+        <tr><td>输入被拦截</td><td>We can't run that request. Try one of the examples below.</td><td>S3 输入区</td></tr>
+        <tr><td>解析失败</td><td>Couldn't map that to a scenario. Try one of these:</td><td>S3 输入区</td></tr>
+        <tr><td>场景不适用</td><td>No red card in this match.</td><td>按钮悬停提示</td></tr>
+        <tr><td>复制成功</td><td>Copied</td><td>按钮旁</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="sub">
+    <h3>D3 埋点（Application Insights 自定义事件）</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>事件</th><th>触发时机</th><th>属性</th><th>回答的问题</th></tr></thead>
+      <tbody>
+        <tr><td><code>match_started</code></td><td>新建比赛</td><td>seed, speed, preset</td><td>用了多少场，是否用预设</td></tr>
+        <tr><td><code>live_connected</code></td><td>实时连接建立</td><td>connect_ms</td><td>连接质量</td></tr>
+        <tr><td><code>event_to_ui_ms</code></td><td>每次推送</td><td>value, type</td><td>实时性 SLI</td></tr>
+        <tr><td><code>pivot_viewed</code></td><td>打开 S2</td><td>pivot_id, severity, status</td><td>哪些转折点被关注</td></tr>
+        <tr><td><code>evidence_clicked</code></td><td>点击证据标签</td><td>pivot_id, event_id</td><td>证据功能有没有人用</td></tr>
+        <tr><td><code>whatif_parsed</code></td><td>解析完成</td><td>mode（chip 或 nl）, ok</td><td>自然语言解析的成功率</td></tr>
+        <tr><td><code>whatif_completed</code></td><td>结果展示</td><td>type, n_runs, duration_ms, significant</td><td>推演耗时与价值</td></tr>
+        <tr><td><code>trace_opened</code></td><td>打开 S4</td><td>chain_id</td><td>Agent 透明度功能的使用情况</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+</div>
+
+<script>
+const SCREENS = [
+  {id:'s0', name:'S0 大厅', states:['default','empty']},
+  {id:'s1', name:'S1 实时看板', states:['default','loading','empty','error','degraded']},
+  {id:'s2', name:'S2 转折点详情', states:['default','loading','degraded']},
+  {id:'s3', name:'S3 What-if 实验室', states:['input','confirm','running','result','nosig','parsefail']},
+  {id:'s4', name:'S4 Agent 轨迹', states:['default','fallback']}
+];
+const LABELS = {default:'默认', empty:'空', loading:'加载中', error:'连接异常', degraded:'降级', input:'输入', confirm:'确认',
+  running:'运行中', result:'结果', nosig:'差异不显著', parsefail:'解析失败', fallback:'降级'};
+const frame = document.getElementById('frame');
+const screenTabs = document.getElementById('screenTabs');
+const stateTabs = document.getElementById('stateTabs');
+let current = 's0', state = 'default', runTimer = null;
+
+function render() {
+  const def = SCREENS.find(s => s.id === current);
+  if (!def.states.includes(state)) state = def.states[0];
+  frame.querySelectorAll('.screen').forEach(sc => sc.toggleAttribute('hidden', sc.dataset.screen !== current));
+  const active = frame.querySelector(`.screen[data-screen="${current}"]`);
+  // toggleAttribute (not .hidden) so SVG elements hide too
+  active.querySelectorAll('[data-show]').forEach(el => el.toggleAttribute('hidden', !el.dataset.show.split(' ').includes(state)));
+  screenTabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === current));
+  stateTabs.innerHTML = '';
+  def.states.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = LABELS[s]; b.setAttribute('aria-pressed', s === state);
+    b.addEventListener('click', () => { state = s; render(); });
+    stateTabs.appendChild(b);
+  });
+  document.querySelectorAll('[data-notes]').forEach(ol => ol.toggleAttribute('hidden', ol.dataset.notes !== current));
+  document.getElementById('notesTitle').textContent = '标注 · ' + def.name;
+  clearTimeout(runTimer);
+  if (current === 's3' && state === 'running') runTimer = setTimeout(() => { state = 'result'; render(); }, 1800);
+}
+
+SCREENS.forEach(s => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = s.name; b.dataset.id = s.id;
+  b.addEventListener('click', () => { current = s.id; state = s.states[0]; render(); });
+  screenTabs.appendChild(b);
+});
+
+frame.addEventListener('click', e => {
+  const t = e.target.closest('[data-go]');
+  if (!t) return;
+  const [scr, st] = t.dataset.go.split(':');
+  current = scr; state = st || SCREENS.find(s => s.id === scr).states[0];
+  render();
+});
+
+document.getElementById('pinToggle').addEventListener('change', e => frame.classList.toggle('nopins', !e.target.checked));
+
+document.querySelectorAll('[data-notes] li').forEach(li => {
+  const k = li.querySelector('.k'); if (!k) return;
+  const n = k.textContent.trim();
+  const pins = () => [...frame.querySelectorAll(`.screen[data-screen="${current}"] .pin`)].filter(p => p.textContent.trim() === n);
+  li.addEventListener('mouseenter', () => pins().forEach(p => p.classList.add('hl')));
+  li.addEventListener('mouseleave', () => pins().forEach(p => p.classList.remove('hl')));
+});
+
+render();
+</script>

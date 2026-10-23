@@ -1,0 +1,608 @@
+<title>Pivot 视觉风格</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&family=Saira+Condensed:wght@600;700;800&family=Saira:wght@400;500;600&family=Cabin+Sketch:wght@700&family=Caveat:wght@500;700&family=Rubik:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Open+Sans:wght@400;600;700&family=Alfa+Slab+One&family=Archivo:wght@400;500;700;800&family=Archivo+Narrow:wght@500;700&display=swap">
+<style>
+/* Layout: 页面外壳跟随系统明暗；每个风格稿都是刻意固定的单一视觉（1200×780 画布，按容器宽度等比缩放） */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --line:#D5DDD3; --fg:#17231C; --muted:#5A6A5F;
+  --pitch:#1E6B45; --pitch-soft:#E1EEE5; --plum:#4A1D57; --plum-soft:#EFE6F2; --warn:#9A5B00; --warn-soft:#FBF0DC;
+  --display:"Barlow Condensed","Noto Sans SC",system-ui,sans-serif;
+  --body:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33; --warn:#F0B451; --warn-soft:#33281A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33; --warn:#F0B451; --warn-soft:#33281A; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}
+.page{max-width:1260px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(40px,6.5vw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.01em}
+h2{font-size:32px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+.muted{color:var(--muted)} .small{font-size:13.5px}
+header.top{padding-block:44px 24px;display:grid;gap:14px}
+.prose{max-width:74ch;display:grid;gap:10px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,370px),1fr));gap:16px;padding-block:8px 36px}
+.thumb{display:grid;gap:8px;text-align:left;text-decoration:none;background:var(--surface);border:1px solid var(--line);padding:10px;cursor:pointer;color:inherit;font:inherit}
+.thumb:hover,.thumb:focus-visible{border-color:var(--pitch);outline:none}
+.thumb .meta{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.thumb b{font-family:var(--display);font-size:20px}
+.cost{font-family:var(--mono);font-size:11.5px;padding:1px 7px;border-radius:3px;background:var(--pitch-soft);color:var(--pitch);white-space:nowrap}
+.cost.mid{background:var(--warn-soft);color:var(--warn)}
+.cost.high{background:var(--plum-soft);color:var(--plum)}
+.fit{position:relative;overflow:hidden;width:100%}
+.fit > .stage{position:absolute;top:0;left:0;transform-origin:0 0}
+.thumb .fit{pointer-events:none}
+.style-sec{display:grid;gap:16px;padding-block:40px;border-top:2px solid var(--line);scroll-margin-top:8px}
+.style-head{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px}
+@media (max-width:860px){.style-head{grid-template-columns:1fr}}
+.facts{display:grid;gap:8px;font-size:14px}
+.facts dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--muted)}
+.facts dd{margin:0 0 6px}
+.sw{display:flex;flex-wrap:wrap;gap:6px}
+.sw span{display:grid;gap:2px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.sw i{display:block;width:44px;height:30px;border:1px solid var(--line)}
+.rec-badge{font-family:var(--mono);font-size:11.5px;padding:2px 8px;background:var(--pitch);color:var(--surface);border-radius:3px;margin-left:8px;vertical-align:middle}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--bg)}
+td.dots{font-family:var(--mono);letter-spacing:2px;color:var(--pitch);white-space:nowrap}
+.callout{border-left:3px solid var(--pitch);background:var(--pitch-soft);padding:14px 18px;display:grid;gap:8px}
+a{color:var(--pitch)}
+
+/* ================= 风格稿：结构 ================= */
+.stage{width:1200px;height:780px;overflow:hidden;background:var(--s-bg);color:var(--s-text);font-family:var(--s-body);font-size:13.5px;line-height:1.45;display:flex;flex-direction:column;text-align:left}
+.stage *{box-sizing:border-box}
+.st-top{height:64px;flex:none;display:flex;align-items:center;gap:18px;padding:0 20px;background:var(--s-top-bg,var(--s-surface));color:var(--s-top-fg,var(--s-text));border-bottom:var(--s-top-border,1px solid var(--s-line))}
+.st-brand{font-family:var(--s-display);font-weight:800;font-size:22px;display:flex;align-items:center;gap:9px;letter-spacing:.01em}
+.st-mark{width:13px;height:13px;background:var(--s-accent);transform:rotate(45deg)}
+.st-score{display:flex;align-items:center;gap:10px;font-family:var(--s-display);font-size:17px;font-weight:700;margin-left:10px}
+.st-team{display:flex;align-items:center;gap:8px}
+.st-crest{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--s-home)}
+.st-team.away .st-crest{background:var(--s-away)}
+.st-sc{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;padding:1px 12px;background:var(--s-score-bg,transparent);color:var(--s-score-fg,inherit)}
+.st-sc em{font-style:normal;opacity:.55;padding:0 4px}
+.st-clock{font-family:var(--s-num);font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px}
+.st-live{font-size:10.5px;font-weight:700;letter-spacing:.08em;padding:2px 7px;background:var(--s-live);color:#fff;border-radius:var(--s-radius-sm)}
+.st-speed{display:inline-flex;border:1px solid var(--s-top-line,var(--s-line));border-radius:var(--s-radius-sm);overflow:hidden;margin-left:auto}
+.st-speed b{font-weight:500;padding:5px 11px;font-size:12px;border-right:1px solid var(--s-top-line,var(--s-line))}
+.st-speed b:last-child{border-right:0}
+.st-speed b.on{background:var(--s-accent);color:var(--s-on-accent)}
+.st-btn{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:var(--s-radius-sm);border:1px solid var(--s-top-line,var(--s-line));background:var(--s-btn-bg,transparent);color:var(--s-btn-fg,inherit);display:inline-flex;gap:8px;align-items:center}
+.st-count{background:var(--s-accent);color:var(--s-on-accent);border-radius:99px;padding:0 7px;font-size:11px}
+.st-headline{display:none}
+.st-grid{flex:1;min-height:0;display:grid;gap:var(--s-gap);padding:var(--s-pad);background:var(--s-grid-bg,transparent);grid-template-columns:minmax(0,1fr) 340px}
+.st-main{display:grid;grid-template-rows:var(--s-mom-h,250px) minmax(0,1fr);gap:var(--s-gap);min-height:0;background:var(--s-grid-bg,transparent)}
+.st-lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:var(--s-gap);min-height:0;background:var(--s-grid-bg,transparent)}
+.st-side{display:flex;flex-direction:column;gap:var(--s-gap);min-height:0;background:var(--s-grid-bg,transparent)}
+.st-side .st-card{flex:none}
+.st-side .st-trace{flex:1}
+.st-card{background:var(--s-surface);border:var(--s-card-border);border-radius:var(--s-radius);box-shadow:var(--s-shadow,none);padding:14px 16px;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+.st-card h3{margin:0;display:flex;align-items:center;gap:8px;font-family:var(--s-h3-font,var(--s-display));font-size:var(--s-h3,13px);font-weight:700;letter-spacing:var(--s-h3-ls,.06em);text-transform:var(--s-h3-tt,uppercase);color:var(--s-h3-color,var(--s-muted))}
+.st-card h3 kbd{display:none}
+.st-legend{margin-left:auto;display:flex;gap:12px;font-size:11.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--s-muted);font-family:var(--s-body)}
+.st-legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;background:var(--s-home)}
+.st-legend i.a{background:var(--s-away)}
+.st-pv{padding:9px 11px;border-radius:var(--s-radius-sm);border:1px solid var(--s-line);display:grid;gap:2px}
+.st-pv .t{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--s-muted)}
+.st-pv .m{font-family:var(--s-display);font-weight:800;font-size:17px;color:var(--s-text)}
+.st-pv .h{font-weight:600;color:var(--s-text)}
+.st-pv .t .h{font-weight:500;color:var(--s-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.st-dir{font-size:11px;font-weight:700;color:var(--s-home);white-space:nowrap} .st-dir.a{color:var(--s-away)}
+.st-pv.active{border-color:var(--s-accent);background:var(--s-active-bg)}
+.st-pv.pending .h{color:var(--s-muted);font-weight:500}
+.st-sev{letter-spacing:1px;color:var(--s-sev,var(--s-accent))}
+.st-badge{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:var(--s-radius-sm);background:var(--s-ok-bg);color:var(--s-ok-fg);white-space:nowrap}
+.st-badge.wait{background:transparent;color:var(--s-muted);border:1px dashed var(--s-muted)}
+.st-why p{margin:0;font-size:var(--s-why-size,14px);line-height:var(--s-why-lh,1.55);font-family:var(--s-why-font,inherit)}
+.st-num{font-weight:700;border-bottom:1.5px dotted currentColor;background:var(--s-num-bg,transparent)}
+.st-ev{font-family:var(--s-num);font-size:10.5px;font-weight:600;padding:1px 5px;margin-left:4px;border-radius:var(--s-radius-sm);background:var(--s-ev-bg);color:var(--s-ev-fg);white-space:nowrap;vertical-align:1px}
+.st-ai{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:0;text-transform:none;padding:1px 8px;border-radius:var(--s-radius-sm);background:var(--s-ok-bg);color:var(--s-ok-fg);font-family:var(--s-body)}
+.st-ba{display:grid;grid-template-columns:1.7fr 1fr 1fr;gap:3px 10px;font-size:12px;margin-top:auto;padding-top:9px;border-top:1px solid var(--s-line);font-variant-numeric:tabular-nums}
+.st-ba span:nth-child(-n+3){color:var(--s-muted);font-size:11px}
+.st-lab .q{font-family:var(--s-display);font-weight:700;font-size:15px;color:var(--s-text)}
+.st-row{display:grid;gap:4px}
+.st-row .l{font-size:11px;color:var(--s-muted)}
+.st-bar{display:flex;height:22px;border-radius:var(--s-radius-sm);overflow:hidden;font-size:10.5px;font-weight:700}
+.st-bar span{display:grid;place-items:center}
+.st-bar .h{background:var(--s-home);color:var(--s-on-home)} .st-bar .d{background:var(--s-draw);color:var(--s-text)} .st-bar .a{background:var(--s-away);color:var(--s-on-away)}
+.st-delta{display:flex;align-items:center;gap:8px;font-family:var(--s-display);font-weight:800;font-size:18px}
+.st-sig{font-family:var(--s-body);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:var(--s-radius-sm);background:var(--s-ok-bg);color:var(--s-ok-fg)}
+.st-disc{font-size:10.5px;color:var(--s-muted);margin:0}
+.st-trace ol{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:11.5px;font-family:var(--s-num)}
+.st-trace li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:2px 6px;border-radius:var(--s-radius-sm)}
+.st-trace li.rej{background:var(--s-rej-bg);color:var(--s-rej-fg)}
+.st-trace li span:last-child{color:var(--s-muted)}
+.st-trace li.rej span:last-child{color:inherit}
+.st-ticker,.st-status{display:none}
+.st-chart{width:100%;flex:1;min-height:0;display:block}
+.st-pitchsvg{width:100%;flex:1;min-height:0;display:block}
+.mc-grid line,.mc-fine line{stroke:var(--s-line)}
+.mc-fine{display:none}
+.mc-lbl{fill:var(--s-muted);font-family:var(--s-num);font-size:10px}
+.mc-zero{stroke:var(--s-muted);stroke-opacity:.6}
+.mc-ah{fill:var(--s-home);fill-opacity:var(--s-area-op,.35)}
+.mc-aa{fill:var(--s-away);fill-opacity:var(--s-area-op,.35)}
+.mc-line{fill:none;stroke:var(--s-line-c,var(--s-text));stroke-width:var(--s-line-w,2);stroke-linejoin:round}
+.mc-bars{display:none}
+.mc-bars .bh{fill:var(--s-home)} .mc-bars .ba{fill:var(--s-away)}
+.mc-ht{stroke:var(--s-muted);stroke-dasharray:3 4}
+.mc-now{stroke:var(--s-accent);stroke-width:2}
+.mc-nowl{fill:var(--s-accent);font-family:var(--s-num);font-size:11px;font-weight:700}
+.mc-goal-h{fill:none;stroke:var(--s-home);stroke-width:2.5} .mc-goal-a{fill:none;stroke:var(--s-away);stroke-width:2.5}
+.mc-card{fill:var(--s-redcard,#E5484D)}
+.mc-sub{fill:var(--s-text);font-size:13px;font-weight:700}
+.mc-pv-h{fill:var(--s-home)} .mc-pv-a{fill:var(--s-away)}
+.mc-pv-sel{fill:none;stroke:var(--s-accent);stroke-width:2}
+.pf{fill:var(--s-pitch-fill)}
+.pz line{stroke:var(--s-pitch-zone);stroke-width:1}
+.pl{fill:none;stroke:var(--s-pitch-line);stroke-width:2}
+.pa-a{stroke:var(--s-away);stroke-width:2.5;fill:none;stroke-linecap:round}
+.pa-h{stroke:var(--s-home);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-dasharray:6 5}
+.pd-a{fill:var(--s-away)} .pd-h{fill:var(--s-home)}
+.pd-n{font-family:var(--s-num);font-size:10px;font-weight:700;text-anchor:middle}
+.pd-n.a{fill:var(--s-on-away)} .pd-n.h{fill:var(--s-on-home)}
+.pe-hl{fill:none;stroke:var(--s-accent);stroke-width:3}
+.pe-lbl{fill:var(--s-text);font-family:var(--s-num);font-size:11px;font-weight:700}
+
+/* ================= Matchnight 转播之夜 ================= */
+.stage[data-style="broadcast"]{
+  --s-bg:#0A0F1E; --s-surface:#111A2E; --s-line:#24304B; --s-text:#EEF2FA; --s-muted:#8D98B3;
+  --s-home:#1FC6B4; --s-away:#FF6A4D; --s-draw:#2A3550; --s-on-home:#03201C; --s-on-away:#2A0C05;
+  --s-accent:#F6C344; --s-on-accent:#1A1406; --s-live:#FF3D57;
+  --s-display:"Saira Condensed","Barlow Condensed",sans-serif; --s-body:"Saira",system-ui,sans-serif; --s-num:"Saira Condensed",sans-serif;
+  --s-radius:0; --s-radius-sm:2px; --s-gap:10px; --s-pad:12px 16px 10px; --s-card-border:0;
+  --s-active-bg:#18243F; --s-ok-bg:#F6C344; --s-ok-fg:#1A1406; --s-ev-bg:#1D2A47; --s-ev-fg:#CFE0FF;
+  --s-rej-bg:#3B1A24; --s-rej-fg:#FFB4A6; --s-h3:15px; --s-h3-color:#EEF2FA; --s-h3-ls:.1em;
+  --s-pitch-fill:#0D1527; --s-pitch-line:#33416A; --s-pitch-zone:#141E35;
+  --s-area-op:.75; --s-line-w:0; --s-top-bg:#050913; --s-top-line:#24304B; --s-redcard:#FF3D57;
+}
+.stage[data-style="broadcast"] .st-team{padding:6px 14px;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);font-size:16px;letter-spacing:.04em;text-transform:uppercase}
+.stage[data-style="broadcast"] .st-team.home{background:var(--s-home);color:var(--s-on-home)}
+.stage[data-style="broadcast"] .st-team.away{background:var(--s-away);color:var(--s-on-away)}
+.stage[data-style="broadcast"] .st-crest{display:none}
+.stage[data-style="broadcast"] .st-sc{background:#EEF2FA;color:#0A0F1E;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);padding:1px 20px}
+.stage[data-style="broadcast"] .st-card h3{align-self:flex-start;background:#1C2846;padding:3px 16px 3px 12px;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);margin:-14px 0 2px -16px}
+.stage[data-style="broadcast"] .st-legend{position:absolute;right:16px}
+.stage[data-style="broadcast"] .st-momentum{position:relative}
+.stage[data-style="broadcast"] .st-headline{display:flex;order:3;align-items:stretch;margin:0 16px 8px;height:46px;font-family:var(--s-display);text-transform:uppercase}
+.stage[data-style="broadcast"] .st-headline .k{background:var(--s-accent);color:var(--s-on-accent);font-weight:800;font-size:22px;padding:0 18px;display:grid;place-items:center;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%)}
+.stage[data-style="broadcast"] .st-headline .x{background:#EEF2FA;color:#0A0F1E;font-weight:700;font-size:22px;letter-spacing:.03em;padding:0 26px 0 22px;display:grid;place-items:center;margin-left:-6px;clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%)}
+.stage[data-style="broadcast"] .st-grid{order:2;--s-mom-h:226px}
+.stage[data-style="broadcast"] .st-ticker{display:flex;order:4;height:32px;flex:none;align-items:center;gap:26px;padding:0 16px 0 0;background:#050913;font-size:12px;white-space:nowrap;overflow:hidden;color:#C6CFE3}
+.stage[data-style="broadcast"] .st-ticker b{background:var(--s-live);color:#fff;height:100%;display:grid;place-items:center;padding:0 14px;font-family:var(--s-display);letter-spacing:.08em}
+.stage[data-style="broadcast"] .mc-zero{stroke:#3A4A70}
+
+/* ================= Chalkboard 战术板 ================= */
+.stage[data-style="tactics"]{
+  --s-bg:#1D3B2C; --s-surface:rgba(255,255,255,.035); --s-line:rgba(240,244,230,.26); --s-text:#F1F4E6; --s-muted:#B5C6AF;
+  --s-home:#F3D35B; --s-away:#EF7A6C; --s-draw:rgba(241,244,230,.2); --s-on-home:#2A2306; --s-on-away:#2C0D08;
+  --s-accent:#FFFFFF; --s-on-accent:#1D3B2C; --s-live:#D9584A;
+  --s-display:"Cabin Sketch","Barlow Condensed",cursive; --s-body:"Rubik",system-ui,sans-serif; --s-num:"Rubik",system-ui,sans-serif;
+  --s-radius:16px 10px 18px 9px / 9px 16px 10px 15px; --s-radius-sm:7px; --s-gap:14px; --s-pad:12px 18px 16px;
+  --s-card-border:2px dashed rgba(240,244,230,.34); --s-active-bg:rgba(255,255,255,.08);
+  --s-ok-bg:transparent; --s-ok-fg:#F3D35B; --s-ev-bg:rgba(255,255,255,.12); --s-ev-fg:#F1F4E6;
+  --s-rej-bg:rgba(239,122,108,.2); --s-rej-fg:#FFD8D2; --s-h3:21px; --s-h3-tt:none; --s-h3-ls:0; --s-h3-color:#F1F4E6;
+  --s-why-font:"Caveat",cursive; --s-why-size:22px; --s-why-lh:1.2;
+  --s-pitch-fill:transparent; --s-pitch-line:rgba(241,244,230,.8); --s-pitch-zone:transparent;
+  --s-area-op:0; --s-line-w:3.5; --s-line-c:#F6F7EE; --s-top-bg:transparent; --s-top-border:2px dashed rgba(240,244,230,.3); --s-redcard:#EF7A6C;
+  background:radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.07),transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(255,255,255,.05),transparent 50%),radial-gradient(ellipse at 60% 10%,rgba(0,0,0,.18),transparent 60%),#1D3B2C;
+}
+.stage[data-style="tactics"] .st-brand{font-size:28px}
+.stage[data-style="tactics"] .st-mark{border-radius:50%;transform:none;background:var(--s-home);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.stage[data-style="tactics"] .st-sc{font-family:"Cabin Sketch",cursive;font-size:30px}
+.stage[data-style="tactics"] .st-badge{border:1.5px solid #F3D35B;font-family:"Caveat",cursive;font-size:15px;font-weight:700;letter-spacing:0;padding:0 8px}
+.stage[data-style="tactics"] .st-pv .m{font-family:"Caveat",cursive;font-size:21px;line-height:1}
+.stage[data-style="tactics"] .st-pv .h{font-family:"Caveat",cursive;font-size:19px;font-weight:700;line-height:1.05}
+.stage[data-style="tactics"] .st-pv .t .h{font-size:17px}
+.stage[data-style="tactics"] .st-card h3{font-size:18px}
+.stage[data-style="tactics"] .st-pv{border-style:dashed}
+.stage[data-style="tactics"] .st-pv.active{border-color:#fff;border-width:2px}
+.stage[data-style="tactics"] .st-num{border-bottom:0;background:linear-gradient(transparent 62%,rgba(243,211,91,.55) 62%)}
+.stage[data-style="tactics"] .mc-line,.stage[data-style="tactics"] .pl,.stage[data-style="tactics"] .pa-a,.stage[data-style="tactics"] .pa-h{filter:url(#chalk)}
+.stage[data-style="tactics"] .mc-grid line{stroke:rgba(240,244,230,.12)}
+.stage[data-style="tactics"] .pd-a,.stage[data-style="tactics"] .pd-h{stroke:rgba(0,0,0,.35);stroke-width:2}
+.stage[data-style="tactics"] .st-delta{font-family:"Caveat",cursive;font-size:24px}
+.stage[data-style="tactics"] .st-lab .q{font-family:"Caveat",cursive;font-size:19px;line-height:1.05}
+.stage[data-style="tactics"] .st-card{padding:11px 14px;gap:6px}
+.stage[data-style="tactics"] .st-pv{padding:6px 10px}
+
+/* ================= Analyst Terminal 分析终端 ================= */
+.stage[data-style="terminal"]{
+  --s-bg:#F7F8FA; --s-surface:#FFFFFF; --s-line:#D7DDE3; --s-text:#0E1621; --s-muted:#5C6A78;
+  --s-home:#1E5BC6; --s-away:#C8541B; --s-draw:#E4E8EC; --s-on-home:#FFFFFF; --s-on-away:#FFFFFF;
+  --s-accent:#0E1621; --s-on-accent:#FFFFFF; --s-live:#C8241B;
+  --s-display:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif; --s-body:"IBM Plex Sans",system-ui,sans-serif; --s-num:"IBM Plex Mono",ui-monospace,monospace;
+  --s-radius:0; --s-radius-sm:2px; --s-gap:1px; --s-pad:0; --s-card-border:0; --s-grid-bg:#D7DDE3;
+  --s-active-bg:#FFF5C2; --s-ok-bg:#E2F2E6; --s-ok-fg:#14652F; --s-ev-bg:#EAF0FA; --s-ev-fg:#1E5BC6;
+  --s-rej-bg:#FDE9E4; --s-rej-fg:#9B2C14; --s-h3:10.5px; --s-h3-ls:.12em; --s-h3-font:"IBM Plex Mono",monospace;
+  --s-pitch-fill:#F4F7F9; --s-pitch-line:#AEB9C4; --s-pitch-zone:#E3E8ED; --s-area-op:.14; --s-line-w:1.6;
+  --s-top-bg:#0E1621; --s-top-fg:#E8EDF2; --s-top-line:#2B3846; --s-top-border:0; --s-btn-bg:#1B2633;
+}
+.stage[data-style="terminal"] .st-top{height:46px;gap:16px}
+.stage[data-style="terminal"] .st-brand{font-size:17px}
+.stage[data-style="terminal"] .st-mark{background:#E8EDF2;width:10px;height:10px}
+.stage[data-style="terminal"] .st-score{font-size:14px;font-family:var(--s-num)}
+.stage[data-style="terminal"] .st-sc{font-size:18px;font-family:var(--s-num)}
+.stage[data-style="terminal"] .st-speed b.on{background:#E8EDF2;color:#0E1621}
+.stage[data-style="terminal"] .st-card{padding:10px 12px;gap:6px}
+.stage[data-style="terminal"] .st-card h3{border-bottom:1px solid var(--s-line);padding-bottom:6px;margin:0 -12px 2px;padding-left:12px;padding-right:12px}
+.stage[data-style="terminal"] .st-card h3 kbd{display:inline-block;margin-left:auto;font-family:var(--s-num);font-size:10px;border:1px solid var(--s-line);padding:0 5px;border-radius:2px;color:var(--s-muted);letter-spacing:0}
+.stage[data-style="terminal"] .st-legend{margin-left:0}
+.stage[data-style="terminal"] .st-grid{--s-mom-h:262px}
+.stage[data-style="terminal"] .mc-fine{display:inline}
+.stage[data-style="terminal"] .mc-grid line{stroke:#C3CCD5}
+.stage[data-style="terminal"] .st-pv{border:0;border-bottom:1px solid var(--s-line);border-radius:0;padding:7px 4px}
+.stage[data-style="terminal"] .st-pv .m{font-family:var(--s-num);font-size:14px}
+.stage[data-style="terminal"] .st-why p{font-size:13px}
+.stage[data-style="terminal"] .st-delta{font-family:var(--s-num);font-size:16px}
+.stage[data-style="terminal"] .st-status{display:flex;height:26px;flex:none;align-items:center;gap:22px;padding:0 14px;background:#0E1621;color:#AEBBC8;font-family:var(--s-num);font-size:11px}
+.stage[data-style="terminal"] .st-status b{color:#7EE2A8;font-weight:500}
+
+/* ================= Fluent Studio 微软原生 ================= */
+.stage[data-style="fluent"]{
+  --s-bg:#F3F3F3; --s-surface:#FFFFFF; --s-line:#E0E0E0; --s-text:#242424; --s-muted:#616161;
+  --s-home:#038387; --s-away:#CA5010; --s-draw:#EBEBEB; --s-on-home:#FFFFFF; --s-on-away:#FFFFFF;
+  --s-accent:#0F6CBD; --s-on-accent:#FFFFFF; --s-live:#C50F1F;
+  --s-display:"Segoe UI Variable Display","Segoe UI","Open Sans",system-ui,sans-serif; --s-body:"Segoe UI Variable Text","Segoe UI","Open Sans",system-ui,sans-serif; --s-num:"Segoe UI Variable Text","Segoe UI","Open Sans",system-ui,sans-serif;
+  --s-radius:8px; --s-radius-sm:4px; --s-gap:12px; --s-pad:14px 16px; --s-card-border:1px solid #E8E8E8;
+  --s-shadow:0 0 2px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.14);
+  --s-active-bg:#EBF3FC; --s-ok-bg:#F1FAF1; --s-ok-fg:#0E700E; --s-ev-bg:#EBF3FC; --s-ev-fg:#115EA3;
+  --s-rej-bg:#FDF3F4; --s-rej-fg:#B10E1C; --s-h3:14px; --s-h3-tt:none; --s-h3-ls:0; --s-h3-color:#242424;
+  --s-pitch-fill:#EEF6F2; --s-pitch-line:#A9CFC0; --s-pitch-zone:transparent; --s-area-op:.24; --s-line-w:2; --s-line-c:#424242;
+  --s-btn-bg:#0F6CBD; --s-btn-fg:#FFFFFF;
+  background:linear-gradient(180deg,#E9EFF6 0,#F3F3F3 220px);
+}
+.stage[data-style="fluent"] .st-top{background:rgba(255,255,255,.72)}
+.stage[data-style="fluent"] .st-brand{font-weight:700;font-size:19px}
+.stage[data-style="fluent"] .st-mark{border-radius:3px;transform:rotate(45deg) scale(.9)}
+.stage[data-style="fluent"] .st-score{font-weight:600}
+.stage[data-style="fluent"] .st-sc{font-weight:700}
+.stage[data-style="fluent"] .st-speed{background:#F5F5F5;border-color:#E0E0E0;padding:2px;gap:2px;border-radius:6px}
+.stage[data-style="fluent"] .st-speed b{border:0;border-radius:4px}
+.stage[data-style="fluent"] .st-btn{border-color:#0F6CBD}
+.stage[data-style="fluent"] .st-count{background:#fff;color:#0F6CBD}
+.stage[data-style="fluent"] .st-card h3{font-weight:600}
+.stage[data-style="fluent"] .st-pv{border-radius:6px}
+.stage[data-style="fluent"] .st-pv.active{border-color:#0F6CBD;box-shadow:inset 0 0 0 1px #0F6CBD}
+.stage[data-style="fluent"] .st-pv .m{font-weight:700;font-size:16px}
+.stage[data-style="fluent"] .st-sev{color:#0F6CBD}
+.stage[data-style="fluent"] .st-bar{border-radius:4px}
+.stage[data-style="fluent"] .st-side,.stage[data-style="fluentnight"] .st-side{gap:8px}
+
+/* ================= Fluent Night（推荐的混合方案） ================= */
+.stage[data-style="fluentnight"]{
+  --s-bg:#0E1424; --s-surface:#161E33; --s-line:#28334E; --s-text:#EEF2FA; --s-muted:#99A3BD;
+  --s-home:#1FC6B4; --s-away:#FF6A4D; --s-draw:#26304A; --s-on-home:#03201C; --s-on-away:#2A0C05;
+  --s-accent:#F6C344; --s-on-accent:#1A1406; --s-live:#FF3D57;
+  --s-display:"Segoe UI Variable Display","Segoe UI","Open Sans",system-ui,sans-serif; --s-body:"Segoe UI Variable Text","Segoe UI","Open Sans",system-ui,sans-serif; --s-num:"Segoe UI Variable Text","Segoe UI","Open Sans",system-ui,sans-serif;
+  --s-radius:8px; --s-radius-sm:4px; --s-gap:12px; --s-pad:14px 16px; --s-card-border:1px solid #232D47;
+  --s-shadow:0 0 2px rgba(0,0,0,.4),0 4px 10px rgba(0,0,0,.35);
+  --s-active-bg:#1D2844; --s-ok-bg:#1E3A2E; --s-ok-fg:#8FE3B4; --s-ev-bg:#22304F; --s-ev-fg:#BFD6FF;
+  --s-rej-bg:#3B1C25; --s-rej-fg:#FFB4A6; --s-h3:14px; --s-h3-tt:none; --s-h3-ls:0; --s-h3-color:#EEF2FA;
+  --s-pitch-fill:#12203A; --s-pitch-line:#2F4468; --s-pitch-zone:transparent; --s-area-op:.55; --s-line-w:0;
+  --s-top-bg:#0A0F1C; --s-top-line:#28334E; --s-btn-bg:#F6C344; --s-btn-fg:#1A1406; --s-redcard:#FF3D57;
+  background:linear-gradient(180deg,#121A30 0,#0E1424 240px);
+}
+.stage[data-style="fluentnight"] .st-brand{font-weight:700;font-size:19px}
+.stage[data-style="fluentnight"] .st-mark{border-radius:3px}
+.stage[data-style="fluentnight"] .st-score{font-weight:600}
+.stage[data-style="fluentnight"] .st-speed{background:#161E33;padding:2px;gap:2px;border-radius:6px}
+.stage[data-style="fluentnight"] .st-speed b{border:0;border-radius:4px}
+.stage[data-style="fluentnight"] .st-btn{border-color:#F6C344}
+.stage[data-style="fluentnight"] .st-count{background:#1A1406;color:#F6C344}
+.stage[data-style="fluentnight"] .st-card h3{font-weight:600}
+.stage[data-style="fluentnight"] .st-pv{border-radius:6px}
+.stage[data-style="fluentnight"] .st-pv.active{border-color:#F6C344;box-shadow:inset 0 0 0 1px #F6C344}
+.stage[data-style="fluentnight"] .st-bar{border-radius:4px}
+
+/* ================= Matchday Programme 赛日刊物 ================= */
+.stage[data-style="programme"]{
+  --s-bg:#E7EAE4; --s-surface:#F7F8F4; --s-line:#121A3A; --s-text:#121A3A; --s-muted:#4A5272;
+  --s-home:#1C2C6E; --s-away:#D22B3C; --s-draw:#C8CEC4; --s-on-home:#FFFFFF; --s-on-away:#FFFFFF;
+  --s-accent:#FFC53A; --s-on-accent:#121A3A; --s-live:#D22B3C;
+  --s-display:"Alfa Slab One",Georgia,serif; --s-body:"Archivo",system-ui,sans-serif; --s-num:"Archivo Narrow","Archivo",sans-serif;
+  --s-radius:0; --s-radius-sm:0; --s-gap:12px; --s-pad:10px 18px 12px; --s-card-border:3px solid #121A3A;
+  --s-active-bg:#FFE6A3; --s-ok-bg:#121A3A; --s-ok-fg:#FFC53A; --s-ev-bg:#121A3A; --s-ev-fg:#FFFFFF;
+  --s-rej-bg:#F6D2D6; --s-rej-fg:#8E1220; --s-h3:13px; --s-h3-ls:.14em; --s-h3-color:#121A3A; --s-h3-font:"Archivo Narrow",sans-serif;
+  --s-num-bg:linear-gradient(transparent 55%,#FFC53A 55%);
+  --s-pitch-fill:#D9DFD5; --s-pitch-line:#121A3A; --s-pitch-zone:transparent; --s-area-op:0; --s-line-w:0;
+  --s-top-bg:#121A3A; --s-top-fg:#F7F8F4; --s-top-line:#3A4570; --s-top-border:0; --s-redcard:#D22B3C;
+  background:radial-gradient(circle,rgba(18,26,58,.09) 1.1px,transparent 1.4px) 0 0/7px 7px,#E7EAE4;
+}
+.stage[data-style="programme"] .st-brand{font-family:"Alfa Slab One",serif;font-weight:400;font-size:24px}
+.stage[data-style="programme"] .st-mark{background:#FFC53A;transform:none;border-radius:50%}
+.stage[data-style="programme"] .st-score{font-family:"Alfa Slab One",serif;font-weight:400}
+.stage[data-style="programme"] .st-sc{background:#FFC53A;color:#121A3A;font-weight:400}
+.stage[data-style="programme"] .st-speed b.on{background:#FFC53A}
+.stage[data-style="programme"] .st-headline{display:flex;align-items:baseline;gap:16px;padding:9px 20px 0;flex:none}
+.stage[data-style="programme"] .st-headline .k{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;background:#D22B3C;color:#fff;padding:3px 10px}
+.stage[data-style="programme"] .st-headline .x{font-family:"Alfa Slab One",serif;font-size:26px;line-height:1.05;text-transform:uppercase;color:#121A3A}
+.stage[data-style="programme"] .st-grid{--s-mom-h:206px;grid-template-columns:minmax(0,1fr) 330px}
+.stage[data-style="programme"] .st-lower{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+.stage[data-style="programme"] .st-why{order:-1}
+.stage[data-style="programme"] .st-card h3{font-weight:700;border-bottom:3px solid #121A3A;padding-bottom:3px}
+.stage[data-style="programme"] .mc-bars{display:inline}
+.stage[data-style="programme"] .mc-line,.stage[data-style="programme"] .mc-ah,.stage[data-style="programme"] .mc-aa{display:none}
+.stage[data-style="programme"] .st-pv{border:0;border-top:2px solid #121A3A;border-radius:0;padding:4px 2px}
+.stage[data-style="programme"] .st-pv .m{font-family:"Alfa Slab One",serif;font-weight:400;font-size:17px}
+.stage[data-style="programme"] .st-card{padding:11px 14px;gap:6px}
+.stage[data-style="programme"] .st-delta{font-size:19px}
+.stage[data-style="programme"] .st-pv.active{background:#FFE6A3}
+.stage[data-style="programme"] .st-why p{font-size:15px}
+.stage[data-style="programme"] .st-why p:first-of-type::first-letter{font-family:"Alfa Slab One",serif;font-size:40px;float:left;line-height:.9;padding:4px 8px 0 0;color:#D22B3C}
+.stage[data-style="programme"] .st-delta{font-family:"Alfa Slab One",serif;font-weight:400}
+.stage[data-style="programme"] .st-bar{border:2px solid #121A3A}
+</style>
+
+<div class="page">
+<header class="top">
+  <p class="eyebrow">Pivot · UI 风格提案 · 2026-10-23</p>
+  <h1>Pivot 视觉风格</h1>
+  <p class="prose" style="font-size:16px">六种风格画的是同一个画面：Harbour City 对 Northvale Rovers，第 74 分钟，第 63 分钟的转折点处于选中状态，右侧是 What-if 推演结果。内容和布局基本相同，区别只在视觉，方便直接比较。其中五种是独立方向，第六种 Fluent Night 是我推荐的混合方案。</p>
+  <p class="prose small muted">挑选时注意：前端负责人 C 在 Must 范围内已经满载，风格的实现成本会直接影响能不能按时交付。每种风格都标了相对于“朴素实现”的额外工时。</p>
+</header>
+
+<div class="thumbs" id="thumbs"></div>
+<div id="sections"></div>
+
+<section class="style-sec" id="compare">
+  <h2>横向对比</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>风格</th><th>视频冲击力</th><th>可读性与信息密度</th><th>分析师契合度</th><th>微软生态契合度</th><th>C 的额外工时</th><th>明暗</th></tr></thead>
+    <tbody>
+      <tr><td>Matchnight 转播之夜</td><td class="dots">●●●●●</td><td class="dots">●●●●○</td><td class="dots">●●●○○</td><td class="dots">●●●○○</td><td>+4 小时</td><td>深色</td></tr>
+      <tr><td>Chalkboard 战术板</td><td class="dots">●●●●●</td><td class="dots">●●○○○</td><td class="dots">●●●○○</td><td class="dots">●●○○○</td><td>+8 小时</td><td>深绿</td></tr>
+      <tr><td>Analyst Terminal 分析终端</td><td class="dots">●●●○○</td><td class="dots">●●●●●</td><td class="dots">●●●●●</td><td class="dots">●●●○○</td><td>+2 小时</td><td>浅色</td></tr>
+      <tr><td>Fluent Studio 微软原生</td><td class="dots">●●●○○</td><td class="dots">●●●●●</td><td class="dots">●●●●○</td><td class="dots">●●●●●</td><td>约 −4 小时（用组件库）</td><td>浅色，深色免费</td></tr>
+      <tr><td>Matchday Programme 赛日刊物</td><td class="dots">●●●●○</td><td class="dots">●●●○○</td><td class="dots">●●○○○</td><td class="dots">●●○○○</td><td>+6 小时</td><td>浅色</td></tr>
+      <tr><td><b>Fluent Night（推荐）</b></td><td class="dots">●●●●●</td><td class="dots">●●●●○</td><td class="dots">●●●●○</td><td class="dots">●●●●●</td><td>约 −3 小时（用组件库）</td><td>深色，浅色免费</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <b>我的推荐：Fluent Night</b>
+    <span>组件用 Fluent UI React v9（按钮、徽标、抽屉、分段控件、进度条都是现成的），主题换成 Matchnight 的深色配色：青色代表主队，珊瑚色代表客队，金色作为交互色。</span>
+    <span>理由有三：组件库能直接省下 C 约半天，C 是现在最紧的人；Fluent 自带深浅两套主题，我们只需提供一组品牌色；深色画面在 2 分钟视频里更醒目，同时整体看起来就是一个能放进微软生态的产品。</span>
+    <span>如果你更看重让评委记住，选 Chalkboard，但需要再从 Should 里砍掉一项，给 C 腾出 8 小时。</span>
+  </div>
+  <p class="prose small">回复风格名称即可，也可以混搭，例如“Terminal 的密度 + Matchnight 的配色”。选定后，我会把它整理成设计令牌（CSS 变量和 Fluent 主题）和组件规范，交给 C 直接使用。选 Fluent 系方案的话，还需要在 ADR-0012 中补一条：组件库采用 Fluent UI React v9。</p>
+</section>
+</div>
+
+<template id="stageTpl">
+<div class="stage">
+  <div class="st-top">
+    <div class="st-brand"><span class="st-mark"></span>Pivot</div>
+    <div class="st-score">
+      <span class="st-team home"><i class="st-crest"></i>Harbour City</span>
+      <span class="st-sc">1<em>–</em>1</span>
+      <span class="st-team away">Northvale Rovers<i class="st-crest"></i></span>
+    </div>
+    <div class="st-clock">74:12 <span class="st-live">LIVE</span></div>
+    <div class="st-speed"><b>1×</b><b>5×</b><b class="on">20×</b><b>60×</b></div>
+    <span class="st-btn">Agent trace <span class="st-count">3</span></span>
+  </div>
+  <div class="st-headline"><span class="k">Pivot 63′</span><span class="x">The substitution that flipped the left flank</span></div>
+  <div class="st-grid">
+   <div class="st-main">
+    <section class="st-card st-momentum">
+      <h3>Momentum <span class="st-legend"><span><i></i>Harbour City</span><span><i class="a"></i>Northvale Rovers</span></span><kbd>M</kbd></h3>
+      <svg class="st-chart" viewBox="0 0 700 200" aria-label="Momentum chart"></svg>
+    </section>
+    <div class="st-lower">
+    <section class="st-card st-pitch">
+      <h3>Pitch · 55′–68′ <kbd>G</kbd></h3>
+      <svg class="st-pitchsvg" viewBox="0 0 480 300" aria-label="Pitch with evidence events">
+        <rect class="pf" x="0" y="0" width="480" height="300"/>
+        <g class="pz"><line x1="40" y1="0" x2="40" y2="300"/><line x1="80" y1="0" x2="80" y2="300"/><line x1="120" y1="0" x2="120" y2="300"/><line x1="160" y1="0" x2="160" y2="300"/><line x1="200" y1="0" x2="200" y2="300"/><line x1="280" y1="0" x2="280" y2="300"/><line x1="320" y1="0" x2="320" y2="300"/><line x1="360" y1="0" x2="360" y2="300"/><line x1="400" y1="0" x2="400" y2="300"/><line x1="440" y1="0" x2="440" y2="300"/><line x1="0" y1="37.5" x2="480" y2="37.5"/><line x1="0" y1="75" x2="480" y2="75"/><line x1="0" y1="112.5" x2="480" y2="112.5"/><line x1="0" y1="187.5" x2="480" y2="187.5"/><line x1="0" y1="225" x2="480" y2="225"/><line x1="0" y1="262.5" x2="480" y2="262.5"/></g>
+        <g class="pl"><rect x="5" y="5" width="470" height="290"/><line x1="240" y1="5" x2="240" y2="295"/><circle cx="240" cy="150" r="38"/><rect x="5" y="78" width="62" height="144"/><rect x="413" y="78" width="62" height="144"/><rect x="5" y="118" width="22" height="64"/><rect x="453" y="118" width="22" height="64"/></g>
+        <g class="pa-a"><path d="M318 64 L232 46"/><path d="M268 92 L178 62"/><path d="M216 46 L132 38"/><path d="M178 62 L118 96"/></g>
+        <g class="pa-h"><path d="M150 168 L214 120"/><path d="M214 120 L268 150"/></g>
+        <circle class="pe-hl" cx="132" cy="38" r="15"/>
+        <text class="pe-lbl" x="152" y="26">#2324</text>
+        <circle class="pd-a" cx="232" cy="46" r="10"/><text class="pd-n a" x="232" y="49.5">7</text>
+        <circle class="pd-a" cx="178" cy="62" r="10"/><text class="pd-n a" x="178" y="65.5">9</text>
+        <circle class="pd-a" cx="132" cy="38" r="10"/><text class="pd-n a" x="132" y="41.5">11</text>
+        <circle class="pd-a" cx="118" cy="96" r="10"/><text class="pd-n a" x="118" y="99.5">10</text>
+        <circle class="pd-h" cx="214" cy="120" r="10"/><text class="pd-n h" x="214" y="123.5">6</text>
+        <circle class="pd-h" cx="268" cy="150" r="10"/><text class="pd-n h" x="268" y="153.5">8</text>
+        <circle class="pd-h" cx="150" cy="168" r="10"/><text class="pd-n h" x="150" y="171.5">4</text>
+        <text class="mc-lbl" x="12" y="288">← Northvale attack</text>
+      </svg>
+    </section>
+    <section class="st-card st-why">
+      <h3>Why it turned <span class="st-ai">AI · Verified ✓</span><kbd>W</kbd></h3>
+      <p>After the change, Harbour City's final-third passes fell from <span class="st-num">9</span> to <span class="st-num">3</span>.<span class="st-ev">#2311</span><span class="st-ev">#2318</span></p>
+      <p>Northvale won <span class="st-num">6</span> of <span class="st-num">8</span> duels on their right flank, where Moreau had been the outlet.<span class="st-ev">#2324</span><span class="st-ev">#2330</span></p>
+      <p>Northvale's pressures rose from <span class="st-num">6</span> to <span class="st-num">12</span>, and their equaliser followed.<span class="st-ev">#2336</span><span class="st-ev">#2391</span></p>
+      <div class="st-ba"><span>Metric</span><span>58–63′</span><span>63–68′</span><span>HCY final-third passes</span><b>9</b><b>3</b><span>NVR pressures</span><b>6</b><b>12</b><span>Momentum (avg)</span><b>+0.42</b><b>−0.31</b></div>
+    </section>
+    </div>
+   </div>
+   <div class="st-side">
+    <section class="st-card st-pivots">
+      <h3>Pivots <kbd>P</kbd></h3>
+      <article class="st-pv pending"><div class="t"><span class="m">74′</span><span class="h">Checking a new swing…</span><span class="st-badge wait">ANALYSING</span></div></article>
+      <article class="st-pv active"><div class="t"><span class="m">63′</span><span class="st-sev">●●●</span><span class="st-dir a">→ NVR</span><span class="st-badge">VERIFIED ✓</span></div><div class="h">Substitution flipped the left flank</div></article>
+      <article class="st-pv"><div class="t"><span class="m">38′</span><span class="st-sev">●●●</span><span class="st-dir">→ HCY</span><span class="st-badge">VERIFIED ✓</span></div><div class="h">Red card tilted control to Harbour City</div></article>
+    </section>
+    <section class="st-card st-lab">
+      <h3>What-if Lab <kbd>L</kbd></h3>
+      <div class="q">What if Harbour City kept Moreau on at 63′?</div>
+      <div class="st-row"><span class="l">As played (from 63′)</span><div class="st-bar"><span class="h" style="width:34%">34%</span><span class="d" style="width:41%">41%</span><span class="a" style="width:25%">25%</span></div></div>
+      <div class="st-row"><span class="l">Substitution cancelled</span><div class="st-bar"><span class="h" style="width:52%">52%</span><span class="d" style="width:31%">31%</span><span class="a" style="width:17%">17%</span></div></div>
+      <div class="st-delta">+18 pts Harbour City win <span class="st-sig">SIGNIFICANT</span></div>
+      <p class="st-disc">500 paired runs · Simulated, not a prediction.</p>
+    </section>
+    <section class="st-card st-trace">
+      <h3>Agent trace <kbd>T</kbd></h3>
+      <ol>
+        <li><span>Explainer · draft v1</span><span>3.8 s</span></li>
+        <li class="rej"><span>Verifier ✗ wrote 4, computed 3</span><span>41 ms</span></li>
+        <li><span>Rewrite → Verifier ✓ 3 claims</span><span>3.1 s</span></li>
+      </ol>
+    </section>
+   </div>
+  </div>
+  <div class="st-ticker"><b>LIVE</b><span>74:05 NVR pass R. Ibe → T. Marsh</span><span>73:51 HCY tackle J. Kessler</span><span>73:40 NVR shot T. Marsh · xG 0.08</span><span>73:22 NVR pressure K. Ansah</span><span>71:02 GOAL NVR R. Ibe 1–1</span></div>
+  <div class="st-status"><span>CONN <b>●</b> 112 ms</span><span>EVENTS 1,184</span><span>PIVOTS 2 · 1 pending</span><span>AGENTS 3 active</span><span>event→ui p95 1.4 s</span><span>pivot p95 9.6 s</span><span style="margin-left:auto">J/K next pivot · W why · L lab</span></div>
+</div>
+</template>
+
+<script>
+const STYLES = [
+  {id:'broadcast', name:'Matchnight 转播之夜', cost:['+4 小时','mid'],
+   concept:'像电视转播的图文包装：深色底、倾斜的比分条、下三分之一位置的标题条，底部是滚动事件条。',
+   fit:'Demo 视频；对应赛题点名的转播和流媒体用户。',
+   pros:'视频里最抓眼；深色背景让势头曲线和球队色非常醒目；直接呼应 broadcasters / streaming。',
+   risks:'斜切形状和标题条要额外写 CSS；长时间做分析容易视觉疲劳；只有深色一套主题。',
+   type:'Saira Condensed（标题和比分）· Saira（正文）',
+   swatches:[['#0A0F1E','底色'],['#111A2E','面板'],['#1FC6B4','主队'],['#FF6A4D','客队'],['#F6C344','强调'],['#EEF2FA','文字']]},
+  {id:'tactics', name:'Chalkboard 战术板', cost:['+8 小时','high'],
+   concept:'更衣室里的战术板：绿色毛毡底、粉笔线条、手写批注、磁贴式球员。',
+   fit:'想让评委记住；教练和球迷。',
+   pros:'辨识度最高，一眼就是足球；解释像教练的手写笔记，强化“可解释”这一点。',
+   risks:'手写体可读性差，信息密度低；粉笔滤镜有性能和跨浏览器问题；企业感弱。',
+   type:'Cabin Sketch（标题）· Caveat（手写批注）· Rubik（界面）',
+   swatches:[['#1D3B2C','毛毡'],['#F1F4E6','粉笔'],['#F3D35B','主队'],['#EF7A6C','客队'],['#B5C6AF','次要']]},
+  {id:'terminal', name:'Analyst Terminal 分析终端', cost:['+2 小时','low'],
+   concept:'面向分析师的数据终端：发丝线分栏、等宽数字、快捷键提示，底部是运行状态栏。',
+   fit:'主用户分析师；Enterprise 奖。',
+   pros:'信息密度最高，最像专业工具；没有阴影和圆角，实现最简单；状态栏顺便展示了 SLI。',
+   risks:'视频里的冲击力一般；对球迷不够友好。',
+   type:'IBM Plex Sans / Sans Condensed（界面）· IBM Plex Mono（数字和标签）',
+   swatches:[['#F7F8FA','底色'],['#0E1621','墨色'],['#1E5BC6','主队'],['#C8541B','客队'],['#FFF5C2','选中'],['#D7DDE3','分隔线']]},
+  {id:'fluent', name:'Fluent Studio 微软原生', cost:['约 −4 小时','low'],
+   concept:'遵循 Fluent 2 设计语言：中性浅灰、8px 圆角卡片、柔和的层级阴影、品牌蓝作为交互色。',
+   fit:'微软评委；企业部署的叙事。',
+   pros:'可以直接使用 Fluent UI React v9 组件，给 C 省时间；自带深浅两套主题；看起来就能放进微软生态。',
+   risks:'视觉辨识度最低，容易像模板；要靠球队色和图表把足球感找回来。',
+   type:'Segoe UI Variable（Windows 系统字体，其他系统回退到 Open Sans）',
+   swatches:[['#F3F3F3','底色'],['#FFFFFF','卡片'],['#0F6CBD','品牌蓝'],['#038387','主队'],['#CA5010','客队'],['#242424','文字']]},
+  {id:'programme', name:'Matchday Programme 赛日刊物', cost:['+6 小时','mid'],
+   concept:'复古的赛日刊物：粗墨线、Slab 衬线大标题、网点印刷、蓝红黄三色套印。势头曲线改成每分钟一根的柱子。',
+   fit:'球迷分享和社媒传播。',
+   pros:'叙事感最强，像在读一篇比赛特写；大标题适合截图传播。',
+   risks:'网点和粗线会抢走图表的注意力；用在分析师场景时信息密度偏低。',
+   type:'Alfa Slab One（标题）· Archivo（正文）· Archivo Narrow（标签）',
+   swatches:[['#E7EAE4','纸张'],['#121A3A','墨色'],['#1C2C6E','主队'],['#D22B3C','客队'],['#FFC53A','高亮']]},
+  {id:'fluentnight', name:'Fluent Night', rec:true, cost:['约 −3 小时','low'],
+   concept:'推荐的混合方案：Fluent 2 的结构、圆角和组件，配上 Matchnight 的深色和球队色。金色只用于交互和选中状态。',
+   fit:'同时照顾视频效果、微软评委和 C 的工时。',
+   pros:'组件库省时间；深色画面在视频里醒目；Fluent 的浅色主题可以直接拿来用（演示时换浅色投影也没问题）。',
+   risks:'需要把 Fluent 的品牌色梯度换成金色，并检查对比度（金底配深字已经验证过）。',
+   type:'Segoe UI Variable（回退到 Open Sans）',
+   swatches:[['#0E1424','底色'],['#161E33','卡片'],['#1FC6B4','主队'],['#FF6A4D','客队'],['#F6C344','交互'],['#EEF2FA','文字']]}
+];
+
+/* ---- 势头曲线数据（第 0–74 分钟，45′ 重置） ---- */
+const KEY = [[0,0],[5,.1],[10,.25],[12,.45],[15,.3],[20,.15],[25,.05],[30,-.1],[35,-.05],[38,.2],[42,.45],[45,.5],[46,0],[50,.25],[55,.38],[60,.42],[63,.35],[65,0],[68,-.31],[71,-.5],[74,-.35]];
+function mom(t){
+  for (let i = 0; i < KEY.length - 1; i++) {
+    const [a, va] = KEY[i], [b, vb] = KEY[i + 1];
+    if (t >= a && t <= b) return va + (vb - va) * (t - a) / (b - a) + 0.035 * Math.sin(t * 1.7) + 0.02 * Math.sin(t * 3.3);
+  }
+  return 0;
+}
+const X0 = 34, X1 = 688, Y0 = 104, AMP = 78;
+const x = m => X0 + (X1 - X0) * m / 90, y = v => Y0 - v * AMP;
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent, text){
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  parent.appendChild(n); return n;
+}
+function seg(from, to){ const pts = []; for (let m = from; m <= to + 1e-9; m += 0.5) pts.push([m, mom(m)]); return pts; }
+function drawChart(svg){
+  const defs = el('defs', {}, svg);
+  const f = el('filter', {id:'chalk'}, defs);
+  el('feTurbulence', {type:'fractalNoise', baseFrequency:'0.8', numOctaves:'2', result:'n'}, f);
+  el('feDisplacementMap', {in:'SourceGraphic', in2:'n', scale:'2.6'}, f);
+  const fine = el('g', {class:'mc-fine'}, svg);
+  for (let m = 5; m < 90; m += 5) if (m % 15) el('line', {x1:x(m), y1:18, x2:x(m), y2:186, 'stroke-dasharray':'1 3'}, fine);
+  const grid = el('g', {class:'mc-grid'}, svg);
+  [0,15,30,45,60,75,90].forEach(m => { el('line', {x1:x(m), y1:18, x2:x(m), y2:186}, grid); el('text', {class:'mc-lbl', x:x(m) - 6, y:198}, grid, m + '′'); });
+  el('line', {class:'mc-zero', x1:X0, y1:Y0, x2:X1, y2:Y0}, svg);
+  el('line', {class:'mc-ht', x1:x(45.5), y1:18, x2:x(45.5), y2:186}, svg);
+  const bars = el('g', {class:'mc-bars'}, svg);
+  for (let m = 0; m < 74; m++) {
+    const v = m === 45 ? 0 : mom(m + .5), w = x(1) - x(0) - 2;
+    if (Math.abs(v) < .01) continue;
+    el('rect', {class: v > 0 ? 'bh' : 'ba', x:x(m) + 1, width:w, y: v > 0 ? y(v) : Y0, height: Math.abs(v) * AMP}, bars);
+  }
+  [[0,45],[46,74]].forEach(([a, b]) => {
+    const pts = seg(a, b);
+    const area = (fn) => 'M' + x(a) + ' ' + Y0 + ' ' + pts.map(([m, v]) => 'L' + x(m).toFixed(1) + ' ' + y(fn(v)).toFixed(1)).join(' ') + ' L' + x(b) + ' ' + Y0 + ' Z';
+    el('path', {class:'mc-ah', d:area(v => Math.max(v, 0))}, svg);
+    el('path', {class:'mc-aa', d:area(v => Math.min(v, 0))}, svg);
+    el('path', {class:'mc-line', d:'M' + pts.map(([m, v]) => x(m).toFixed(1) + ' ' + y(v).toFixed(1)).join(' L')}, svg);
+  });
+  el('circle', {class:'mc-goal-h', cx:x(12), cy:10, r:5}, svg);
+  el('rect', {class:'mc-card', x:x(38) - 3.5, y:4, width:7, height:11, rx:1}, svg);
+  el('text', {class:'mc-sub', x:x(63) - 6, y:15}, svg, '⇄');
+  el('circle', {class:'mc-goal-a', cx:x(71), cy:10, r:5}, svg);
+  const tri = (m, cls) => el('path', {class:cls, d:`M${x(m)} 186 l-7 -11 h14 z`}, svg);
+  tri(38, 'mc-pv-h'); tri(63, 'mc-pv-a');
+  el('circle', {class:'mc-pv-sel', cx:x(63), cy:180, r:12}, svg);
+  el('line', {class:'mc-now', x1:x(74), y1:18, x2:x(74), y2:186}, svg);
+  el('text', {class:'mc-nowl', x:x(74) + 5, y:28}, svg, '74′');
+}
+
+function makeStage(styleId){
+  const node = document.getElementById('stageTpl').content.firstElementChild.cloneNode(true);
+  node.dataset.style = styleId;
+  drawChart(node.querySelector('.st-chart'));
+  return node;
+}
+function fitAll(){
+  document.querySelectorAll('.fit').forEach(f => {
+    const s = Math.min(f.dataset.max ? +f.dataset.max : 1, f.clientWidth / 1200);
+    f.firstElementChild.style.transform = `scale(${s})`;
+    f.style.height = (780 * s) + 'px';
+  });
+}
+
+const thumbs = document.getElementById('thumbs');
+const sections = document.getElementById('sections');
+STYLES.forEach(st => {
+  const t = document.createElement('a');
+  t.href = '#style-' + st.id; t.className = 'thumb';
+  t.innerHTML = `<div class="fit"></div><div class="meta"><b>${st.name}${st.rec ? '<span class="rec-badge">推荐</span>' : ''}</b><span class="cost ${st.cost[1]}">${st.cost[0]}</span></div><span class="small muted">${st.fit}</span>`;
+  t.querySelector('.fit').appendChild(makeStage(st.id));
+  t.addEventListener('click', e => { e.preventDefault(); document.getElementById('style-' + st.id).scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'}); });
+  thumbs.appendChild(t);
+
+  const s = document.createElement('section');
+  s.className = 'style-sec'; s.id = 'style-' + st.id;
+  s.innerHTML = `
+    <div class="style-head">
+      <div style="display:grid;gap:10px;align-content:start">
+        <h2>${st.name}${st.rec ? '<span class="rec-badge">推荐</span>' : ''}</h2>
+        <p>${st.concept}</p>
+        <div class="sw">${st.swatches.map(([c, n]) => `<span><i style="background:${c}"></i>${n}<br>${c}</span>`).join('')}</div>
+      </div>
+      <dl class="facts">
+        <dt>适合</dt><dd>${st.fit}</dd>
+        <dt>优点</dt><dd>${st.pros}</dd>
+        <dt>风险</dt><dd>${st.risks}</dd>
+        <dt>字体</dt><dd>${st.type}</dd>
+        <dt>C 的额外工时</dt><dd><span class="cost ${st.cost[1]}">${st.cost[0]}</span></dd>
+      </dl>
+    </div>
+    <div class="fit" data-max="1"></div>`;
+  s.querySelector('.fit').appendChild(makeStage(st.id));
+  sections.appendChild(s);
+});
+fitAll();
+addEventListener('resize', fitAll);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+</script>

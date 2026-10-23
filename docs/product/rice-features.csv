@@ -1,0 +1,22 @@
+name,reach,impact,confidence,effort,description
+F01 Simulator full match + seed determinism,100,massive,high,m,模拟器生成整场比赛；同种子结果一致（依赖项）
+F02 Snapshot resume + common random numbers,100,massive,medium,s,从任意状态续跑；推演的前提（依赖项）
+F03 Momentum + CUSUM candidate detection,100,massive,high,s,势头指标与变点初筛（依赖项）
+F04 Pivot judge + explainer agents,100,massive,medium,m,侦测判定与带证据解释
+F05 Verifier + rewrite loop + template fallback,100,high,medium,s,数字核查、打回重写、降级
+F06 Live dashboard S1 + realtime push,100,massive,medium,m,比分时钟、势头曲线、转折点卡片
+F07 Pivot detail S2 with static pitch + evidence,100,massive,medium,m,球场事件图、证据高亮（回放动画降为 P1）
+F08 What-if via scenario chips + local batch sim,100,massive,medium,s,按钮选场景，进程内并行模拟
+F09 What-if result S3 with CI,100,high,high,s,胜平负分布、置信区间、差异解释
+F10 Azure deploy via azd + Bicep,60,high,medium,m,公网可访问的部署
+F11 Event Hubs + Functions metrics pipeline,60,high,medium,m,云原生事件流（Cloud Native 奖）
+F12 Agent trace panel S4,60,high,high,s,评委可见的 Agent 协作过程
+F13 NL scenario translator agent,60,medium,high,xs,自然语言转场景参数
+F14 Eval harness 20 seeds + Foundry eval,30,high,medium,s,检出率与忠实度评测，写入 README
+F15 Animated pitch replay,60,medium,medium,s,转折点前后事件动画回放
+F16 Container Apps Jobs fan-out,30,medium,low,m,大规模推演分片
+F17 Public REST API + OpenAPI docs,30,low,high,xs,FastAPI 自动生成文档
+F18 Ops latency dashboard,30,low,medium,s,端到端延迟与吞吐
+F19 Share card PNG,10,minimal,medium,s,推演结果分享图
+F20 Pressure heatmap,10,low,medium,s,压迫热区图
+F21 Not-a-pivot feedback,10,minimal,high,xs,转折点误报反馈

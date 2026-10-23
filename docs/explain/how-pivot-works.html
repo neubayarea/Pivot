@@ -1,0 +1,388 @@
+<title>Pivot 是怎么运转的？</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@600&display=swap">
+<style>
+/* Layout: 一页图解 —— 每节一张大图 + 一两句说明，图在自己的横向滚动容器里，手机上不挤压文字 */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --line:#D5DDD3; --fg:#17231C; --muted:#5A6A5F;
+  --pitch:#1E6B45; --pitch-soft:#E1EEE5; --plum:#4A1D57; --plum-soft:#EFE6F2; --warn:#9A5B00; --warn-soft:#FBF0DC;
+  --display:"Barlow Condensed","Noto Sans SC",system-ui,sans-serif;
+  --body:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33; --warn:#F0B451; --warn-soft:#33281A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33; --warn:#F0B451; --warn-soft:#33281A; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}
+.page{max-width:1080px;margin:0 auto}
+header{padding-block:48px 12px;display:grid;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+h1,h2{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:clamp(42px,7vw,72px);font-weight:800}
+h2{font-size:clamp(28px,4vw,38px);font-weight:700}
+p{margin:0}
+.lead{font-size:clamp(18px,2.2vw,22px);max-width:40ch;line-height:1.6}
+.lead b{color:var(--pitch)}
+.small{font-size:14px;color:var(--muted)}
+a{color:var(--pitch)}
+section{display:grid;gap:14px;padding-block:44px 8px;border-top:2px solid var(--line);margin-top:28px}
+figure{margin:0;display:grid;gap:12px}
+.fig-scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fig-scroll svg{display:block;width:100%;min-width:760px;height:auto}
+figcaption{font-size:17px;max-width:58ch;line-height:1.7}
+.who{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:15px}
+.who span{display:inline-flex;align-items:center;gap:8px}
+.who i{font-style:normal;font-family:var(--mono);font-size:13px;font-weight:600;background:var(--plum);color:var(--surface);width:24px;height:24px;border-radius:50%;display:grid;place-items:center}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15.5px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--bg);white-space:nowrap}
+td:first-child{font-family:var(--mono);font-size:13.5px;white-space:nowrap;color:var(--muted)}
+td b{color:var(--pitch)}
+
+/* 图里的元素：线和字跟随主题前景色，只有表达含义的部分用强调色 */
+.dia{color:var(--fg)}
+.dia text{font-family:var(--body);fill:currentColor}
+.dia .t{font-size:17px;font-weight:700;text-anchor:middle}
+.dia .s{font-size:13.5px;fill:var(--muted);text-anchor:middle}
+.dia .l{font-size:13.5px;text-anchor:middle}
+.dia .tiny{font-size:12.5px;fill:var(--muted);text-anchor:middle}
+.dia .start{text-anchor:start} .dia .end{text-anchor:end}
+.dia .ink{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dia .thin{fill:none;stroke:var(--muted);stroke-width:1.2}
+.dia .dash{fill:none;stroke:currentColor;stroke-width:1.6;stroke-dasharray:5 5}
+.dia .frame{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:8 7}
+.dia .frame-t{font-size:15px;font-weight:700;fill:var(--pitch)}
+.dia .card{fill:var(--surface);stroke:currentColor;stroke-width:2}
+.dia .soft{fill:var(--pitch-soft);stroke:var(--pitch);stroke-width:2}
+.dia .pline{fill:none;stroke:var(--pitch);stroke-width:1.5}
+.dia .plumsoft{fill:var(--plum-soft);stroke:var(--plum);stroke-width:2}
+.dia .cloud{fill:var(--plum-soft)}
+.dia .cloud-t{font-size:15px;font-weight:700;fill:var(--plum);text-anchor:middle}
+.dia .acc{fill:var(--pitch)}
+.dia .accline{fill:none;stroke:var(--pitch);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.dia .plum{fill:var(--plum)}
+.dia .fgfill{fill:currentColor}
+.dia .grid{stroke:var(--line);stroke-width:1.5}
+.dia .badge{fill:var(--plum)}
+.dia .badge-t{font-family:var(--mono);font-size:13px;font-weight:600;fill:var(--surface);text-anchor:middle}
+.dia .warnbox{fill:var(--warn-soft);stroke:var(--warn);stroke-width:2}
+.dia .xmark{stroke:var(--warn);stroke-width:3;stroke-linecap:round}
+.dia .check{fill:none;stroke:var(--surface);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.dia .drawseg{fill:var(--line)}
+.dia .seg-on{font-size:13px;font-weight:700;fill:var(--surface);text-anchor:middle}
+.dia .seg-off{font-size:13px;font-weight:700;text-anchor:middle}
+.dia .big{font-family:var(--display);font-size:48px;font-weight:800;fill:var(--pitch);text-anchor:middle}
+.dia .mid{font-family:var(--display);font-size:32px;font-weight:800;text-anchor:middle}
+.dia .accfill{fill:var(--pitch)}
+</style>
+
+<div class="page">
+<header>
+  <p class="eyebrow">Pivot · 给队友的一页图解</p>
+  <h1>Pivot 是怎么运转的？</h1>
+  <p class="lead">我们先造一场假比赛，让电脑<b>找出比赛在哪一刻变了</b>，再让 AI <b>用证据讲清楚为什么</b>，最后让你问一句<b>「如果当时不是这样呢？」</b></p>
+  <p class="small">四张图看完就懂。工程细节在 <a href="https://claude.ai/artifact/7YrS4ZZZWHFkjVZ5ckYLJA">Pivot 架构设计</a>。</p>
+</header>
+
+<!-- ============ 图 1：整条流水线 ============ -->
+<section>
+  <h2>整条流水线</h2>
+  <figure>
+    <div class="fig-scroll">
+    <svg class="dia" viewBox="0 0 1040 500" role="img" aria-label="比赛动作从模拟球场经传送带到势头计，势头计发现转折后递任务单给 AI 解说团，解说团借用 Foundry 的 AI 大脑写解释并核对，通过广播喇叭推到屏幕；在屏幕上点假如会进入推演实验室；势头计和解说团的结果都存进档案柜；全部运行在微软 Azure 云上。">
+      <defs>
+        <marker id="f1a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+      </defs>
+      <rect class="frame" x="12" y="46" width="1016" height="440" rx="18"/>
+      <text class="frame-t start" x="28" y="34">全部跑在微软 Azure 云上</text>
+
+      <!-- AI 大脑 -->
+      <circle class="cloud" cx="616" cy="96" r="20"/><circle class="cloud" cx="642" cy="84" r="26"/><circle class="cloud" cx="668" cy="96" r="20"/>
+      <rect class="cloud" x="596" y="96" width="92" height="22" rx="11"/>
+      <text class="cloud-t" x="642" y="100">AI 大脑</text>
+      <text class="tiny" x="642" y="134">Foundry</text>
+      <line class="dash" x1="642" y1="140" x2="642" y2="158" marker-end="url(#f1a)"/>
+
+      <!-- 模拟球场 -->
+      <rect class="soft" x="50" y="146" width="140" height="90" rx="6"/>
+      <line class="pline" x1="120" y1="146" x2="120" y2="236"/>
+      <circle class="pline" cx="120" cy="191" r="15"/>
+      <rect class="pline" x="50" y="170" width="22" height="42"/>
+      <rect class="pline" x="168" y="170" width="22" height="42"/>
+      <circle class="plum" cx="94" cy="176" r="5"/><circle class="plum" cx="146" cy="208" r="5"/><circle class="fgfill" cx="152" cy="180" r="4.5"/>
+      <text class="t" x="120" y="268">模拟球场</text>
+      <text class="s" x="120" y="290">按规则踢出一场假比赛</text>
+      <circle class="badge" cx="190" cy="146" r="13"/><text class="badge-t" x="190" y="151">B</text>
+
+      <!-- 传送带 -->
+      <line class="ink" x1="204" y1="191" x2="290" y2="191" marker-end="url(#f1a)"/>
+      <rect class="plum" x="214" y="174" width="12" height="12" rx="2"/><rect class="plum" x="234" y="174" width="12" height="12" rx="2"/><rect class="plum" x="254" y="174" width="12" height="12" rx="2"/>
+      <text class="l" x="247" y="162">一条条动作</text>
+      <text class="tiny" x="247" y="214">传送带</text>
+
+      <!-- 势头计 -->
+      <rect class="card" x="305" y="150" width="130" height="82" rx="6"/>
+      <line class="grid" x1="315" y1="191" x2="425" y2="191"/>
+      <polyline class="accline" points="315,191 330,180 345,172 360,168 375,175 390,194 405,210 420,216"/>
+      <circle class="plum" cx="391" cy="196" r="6"/>
+      <text class="t" x="370" y="268">势头计</text>
+      <text class="s" x="370" y="290">看比赛往哪边倒</text>
+      <circle class="badge" cx="435" cy="150" r="13"/><text class="badge-t" x="435" y="155">A</text>
+
+      <!-- 任务单 -->
+      <line class="ink" x1="448" y1="191" x2="554" y2="191" marker-end="url(#f1a)"/>
+      <rect class="card" x="486" y="179" width="32" height="24" rx="3"/>
+      <line class="grid" x1="492" y1="187" x2="512" y2="187"/><line class="grid" x1="492" y1="195" x2="506" y2="195"/>
+      <text class="l" x="502" y="166">发现转折</text>
+      <text class="tiny" x="502" y="222">递一张任务单</text>
+
+      <!-- AI 解说团 -->
+      <circle class="soft" cx="597" cy="178" r="13"/><path class="soft" d="M577 220 q20 -34 40 0 z"/>
+      <circle class="soft" cx="640" cy="178" r="13"/><path class="soft" d="M620 220 q20 -34 40 0 z"/>
+      <circle class="soft" cx="683" cy="178" r="13"/><path class="soft" d="M663 220 q20 -34 40 0 z"/>
+      <text class="tiny" x="597" y="238">判定</text><text class="tiny" x="640" y="238">写稿</text><text class="tiny" x="683" y="238">核对</text>
+      <text class="t" x="640" y="268">AI 解说团</text>
+      <text class="s" x="640" y="290">判定 · 写稿 · 核对数字</text>
+      <circle class="badge" cx="708" cy="154" r="13"/><text class="badge-t" x="708" y="159">D</text>
+
+      <!-- 广播喇叭 -->
+      <line class="ink" x1="722" y1="191" x2="830" y2="191" marker-end="url(#f1a)"/>
+      <rect class="card" x="760" y="184" width="9" height="15" rx="1"/>
+      <path class="card" d="M769 184 L790 172 L790 211 L769 199 Z"/>
+      <text class="l" x="776" y="160">通过核对的解释</text>
+      <text class="tiny" x="776" y="232">广播喇叭</text>
+
+      <!-- 屏幕 -->
+      <rect class="card" x="845" y="148" width="130" height="84" rx="6"/>
+      <line class="ink" x1="910" y1="232" x2="910" y2="244"/><line class="ink" x1="888" y1="244" x2="932" y2="244"/>
+      <polyline class="accline" points="855,200 875,190 895,194 915,176 935,186"/>
+      <rect class="plumsoft" x="903" y="198" width="62" height="24" rx="4"/>
+      <text class="t" x="910" y="270">屏幕</text>
+      <text class="s" x="910" y="290">你看到的界面</text>
+      <circle class="badge" cx="975" cy="148" r="13"/><text class="badge-t" x="975" y="153">C</text>
+
+      <!-- 档案柜 -->
+      <path class="dash" d="M370 300 L476 346" marker-end="url(#f1a)"/>
+      <path class="dash" d="M640 300 L534 346" marker-end="url(#f1a)"/>
+      <text class="tiny end" x="412" y="338">存档</text>
+      <text class="tiny start" x="598" y="338">存档</text>
+      <rect class="card" x="470" y="350" width="70" height="84" rx="4"/>
+      <line class="ink" x1="470" y1="378" x2="540" y2="378"/><line class="ink" x1="470" y1="406" x2="540" y2="406"/>
+      <rect class="fgfill" x="498" y="361" width="14" height="4" rx="2"/><rect class="fgfill" x="498" y="389" width="14" height="4" rx="2"/><rect class="fgfill" x="498" y="417" width="14" height="4" rx="2"/>
+      <text class="t" x="505" y="458">档案柜</text>
+      <text class="s" x="505" y="478">每场比赛一个抽屉</text>
+
+      <!-- 推演实验室 -->
+      <line class="ink" x1="888" y1="300" x2="888" y2="348" marker-end="url(#f1a)"/>
+      <line class="ink" x1="932" y1="350" x2="932" y2="302" marker-end="url(#f1a)"/>
+      <text class="l end" x="878" y="330">点「假如」</text>
+      <text class="l start" x="942" y="330">结果</text>
+      <circle class="fgfill" cx="868" cy="392" r="5"/>
+      <path class="ink" d="M868 392 C 888 392 892 368 912 368 L 942 368"/>
+      <path class="ink" d="M868 392 C 888 392 892 416 912 416 L 942 416"/>
+      <rect class="acc" x="946" y="361" width="22" height="14" rx="2"/>
+      <rect class="acc" x="946" y="409" width="36" height="14" rx="2"/>
+      <text class="t" x="910" y="458">推演实验室</text>
+      <text class="s" x="910" y="478">同一个球场，重踢 1,000 次</text>
+      <rect class="badge" x="806" y="380" width="44" height="24" rx="12"/><text class="badge-t" x="828" y="397">B·D</text>
+    </svg>
+    </div>
+    <figcaption>比赛动作从左往右流：球场造出动作，势头计发现转折，AI 解说团写好解释并核对数字，最后推到屏幕上。在屏幕上点「假如」，比赛会被送进实验室重踢。</figcaption>
+    <div class="who">
+      <span><i>A</i>平台：传送带、势头计、档案柜、喇叭、上云</span>
+      <span><i>B</i>模拟：球场、实验室里的重踢</span>
+      <span><i>C</i>前端：屏幕</span>
+      <span><i>D</i>AI：解说团、实验室里的解释</span>
+    </div>
+  </figure>
+</section>
+
+<!-- ============ 图 2：一个转折点是怎么来的 ============ -->
+<section>
+  <h2>一个转折点是怎么来的</h2>
+  <figure>
+    <div class="fig-scroll">
+    <svg class="dia" viewBox="0 0 1040 320" role="img" aria-label="五步：63 分钟主队换人；势头计发现曲线一路往下并报警；判定员确认这是转折点；写稿员写解释，核对员发现数字不对就打回重写；解释出现在屏幕上，从报警到上屏约 10 秒。">
+      <defs>
+        <marker id="f2a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+      </defs>
+      <rect class="card" x="16" y="34" width="186" height="214" rx="14"/>
+      <rect class="card" x="222" y="34" width="186" height="214" rx="14"/>
+      <rect class="card" x="428" y="34" width="186" height="214" rx="14"/>
+      <rect class="card" x="634" y="34" width="186" height="214" rx="14"/>
+      <rect class="card" x="840" y="34" width="186" height="214" rx="14"/>
+      <g>
+        <circle class="badge" cx="40" cy="58" r="14"/><text class="badge-t" x="40" y="63">1</text>
+        <circle class="badge" cx="246" cy="58" r="14"/><text class="badge-t" x="246" y="63">2</text>
+        <circle class="badge" cx="452" cy="58" r="14"/><text class="badge-t" x="452" y="63">3</text>
+        <circle class="badge" cx="658" cy="58" r="14"/><text class="badge-t" x="658" y="63">4</text>
+        <circle class="badge" cx="864" cy="58" r="14"/><text class="badge-t" x="864" y="63">5</text>
+      </g>
+      <path class="ink" d="M207 132 L216 141 L207 150"/>
+      <path class="ink" d="M413 132 L422 141 L413 150"/>
+      <path class="ink" d="M619 132 L628 141 L619 150"/>
+      <path class="ink" d="M825 132 L834 141 L825 150"/>
+
+      <!-- 1 换人 -->
+      <circle class="soft" cx="82" cy="132" r="22"/><text class="l" x="82" y="137">11</text>
+      <circle class="plumsoft" cx="136" cy="132" r="22"/><text class="l" x="136" y="137">6</text>
+      <path class="ink" d="M86 104 q23 -18 46 0" marker-end="url(#f2a)"/>
+      <path class="ink" d="M132 160 q-23 18 -46 0" marker-end="url(#f2a)"/>
+      <text class="t" x="109" y="210">主队换人</text>
+      <text class="s" x="109" y="232">第 63 分钟</text>
+
+      <!-- 2 报警 -->
+      <rect class="card" x="255" y="94" width="120" height="76" rx="6"/>
+      <line class="grid" x1="265" y1="132" x2="365" y2="132"/>
+      <polyline class="accline" points="265,132 280,120 295,114 310,112 325,122 340,140 355,152 365,156"/>
+      <circle class="plum" cx="339" cy="138" r="6"/>
+      <text class="t" x="315" y="210">势头计报警</text>
+      <text class="s" x="315" y="232">曲线一路往下</text>
+
+      <!-- 3 判定 -->
+      <circle class="soft" cx="521" cy="112" r="18"/><path class="soft" d="M493 170 q28 -46 56 0 z"/>
+      <circle class="acc" cx="549" cy="94" r="12"/><path class="check" d="M543 94 l4 4 l8 -8"/>
+      <text class="t" x="521" y="210">判定员：是</text>
+      <text class="s" x="521" y="232">这是个转折点</text>
+
+      <!-- 4 写稿与核对 -->
+      <circle class="soft" cx="697" cy="118" r="15"/><path class="soft" d="M674 166 q23 -38 46 0 z"/>
+      <circle class="soft" cx="757" cy="118" r="15"/><path class="soft" d="M734 166 q23 -38 46 0 z"/>
+      <path class="ink" d="M710 100 q17 -16 34 0" marker-end="url(#f2a)"/>
+      <path class="ink" d="M744 176 q-17 14 -34 0" marker-end="url(#f2a)"/>
+      <circle class="warnbox" cx="727" cy="80" r="10"/>
+      <line class="xmark" x1="723" y1="76" x2="731" y2="84"/><line class="xmark" x1="731" y1="76" x2="723" y2="84"/>
+      <circle class="acc" cx="783" cy="100" r="11"/><path class="check" d="M778 100 l3.5 3.5 l7 -7"/>
+      <text class="t" x="727" y="210">写稿 → 核对</text>
+      <text class="s" x="727" y="232">数字不对就重写</text>
+
+      <!-- 5 上屏 -->
+      <rect class="card" x="878" y="92" width="110" height="72" rx="6"/>
+      <line class="ink" x1="933" y1="164" x2="933" y2="174"/><line class="ink" x1="913" y1="174" x2="953" y2="174"/>
+      <rect class="plumsoft" x="890" y="104" width="86" height="26" rx="4"/>
+      <line class="grid" x1="890" y1="142" x2="976" y2="142"/><line class="grid" x1="890" y1="152" x2="950" y2="152"/>
+      <text class="t" x="933" y="210">出现在屏幕上</text>
+      <text class="s" x="933" y="232">报警后约 10 秒</text>
+
+      <path class="ink" d="M232 266 L232 278 L1016 278 L1016 266"/>
+      <text class="l" x="624" y="304">从报警到上屏：约 10 秒</text>
+    </svg>
+    </div>
+    <figcaption>核对员如果两次都不放行，就改用模板写一段，卡片上标「自动摘要」。所以屏幕上出现的数字，都是电脑重新算过的。</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 图 3：假如 ============ -->
+<section>
+  <h2>「假如」是怎么算的</h2>
+  <figure>
+    <div class="fig-scroll">
+    <svg class="dia" viewBox="0 0 1040 350" role="img" aria-label="从第 63 分钟拍快照，分成两条路：照原样换人和不换人，各重踢 500 次，两边用同一批运气。照原样时主队赢 34%，不换人时主队赢 52%，多了 18 个百分点。这是模拟，不是预测。">
+      <circle class="soft" cx="110" cy="176" r="48"/>
+      <text class="mid" x="110" y="188">63′</text>
+      <text class="s" x="110" y="252">从这一刻拍快照</text>
+
+      <path class="ink" d="M156 162 C 220 136 250 110 320 110"/>
+      <path class="ink" d="M156 190 C 220 216 250 246 320 246"/>
+      <text class="l" x="236" y="98">照原样：换人</text>
+      <text class="l accfill" x="236" y="282">改一下：不换人</text>
+
+      <g>
+        <line class="thin" x1="320" y1="110" x2="500" y2="70"/><line class="thin" x1="320" y1="110" x2="500" y2="80"/><line class="thin" x1="320" y1="110" x2="500" y2="90"/>
+        <line class="thin" x1="320" y1="110" x2="500" y2="100"/><line class="thin" x1="320" y1="110" x2="500" y2="110"/><line class="thin" x1="320" y1="110" x2="500" y2="120"/>
+        <line class="thin" x1="320" y1="110" x2="500" y2="130"/><line class="thin" x1="320" y1="110" x2="500" y2="140"/><line class="thin" x1="320" y1="110" x2="500" y2="150"/>
+        <line class="thin" x1="320" y1="246" x2="500" y2="206"/><line class="thin" x1="320" y1="246" x2="500" y2="216"/><line class="thin" x1="320" y1="246" x2="500" y2="226"/>
+        <line class="thin" x1="320" y1="246" x2="500" y2="236"/><line class="thin" x1="320" y1="246" x2="500" y2="246"/><line class="thin" x1="320" y1="246" x2="500" y2="256"/>
+        <line class="thin" x1="320" y1="246" x2="500" y2="266"/><line class="thin" x1="320" y1="246" x2="500" y2="276"/><line class="thin" x1="320" y1="246" x2="500" y2="286"/>
+      </g>
+      <text class="tiny" x="410" y="58">重踢 500 次</text>
+      <text class="tiny" x="410" y="312">重踢 500 次</text>
+
+      <line class="dash" x1="410" y1="152" x2="410" y2="162"/>
+      <line class="dash" x1="410" y1="194" x2="410" y2="206"/>
+      <rect class="card" x="394" y="162" width="32" height="32" rx="6"/>
+      <circle class="fgfill" cx="403" cy="171" r="3"/><circle class="fgfill" cx="410" cy="178" r="3"/><circle class="fgfill" cx="417" cy="185" r="3"/>
+      <text class="l start" x="436" y="183">两边用同一批运气</text>
+
+      <text class="tiny start" x="540" y="86">照原样</text>
+      <rect class="acc" x="540" y="94" width="116" height="32"/><rect class="drawseg" x="656" y="94" width="139" height="32"/><rect class="plum" x="795" y="94" width="85" height="32"/>
+      <text class="seg-on" x="598" y="115">赢 34%</text><text class="seg-off" x="725" y="115">平 41%</text><text class="seg-on" x="837" y="115">输 25%</text>
+
+      <text class="tiny start" x="540" y="224">不换人</text>
+      <rect class="acc" x="540" y="232" width="177" height="32"/><rect class="drawseg" x="717" y="232" width="105" height="32"/><rect class="plum" x="822" y="232" width="58" height="32"/>
+      <text class="seg-on" x="628" y="253">赢 52%</text><text class="seg-off" x="769" y="253">平 31%</text><text class="seg-on" x="851" y="253">输 17%</text>
+
+      <text class="big" x="962" y="184">+18</text>
+      <text class="s" x="962" y="210">个百分点</text>
+      <text class="tiny" x="962" y="232">主队赢的机会</text>
+      <text class="tiny" x="962" y="300">模拟，不是预测</text>
+    </svg>
+    </div>
+    <figcaption>从同一秒出发，一边照原样，一边只改一个决定，各踢 500 次。两边用的是同一批随机数，所以结果的差别只来自这个决定。图里的数字只是示意。</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 图 4：三道保险 ============ -->
+<section>
+  <h2>出问题时的三道保险</h2>
+  <figure>
+    <div class="fig-scroll">
+    <svg class="dia" viewBox="0 0 1040 290" role="img" aria-label="三道保险：AI 太慢或出错时改用模板写一段；数字写错时打回重写，最多两次；云上完整版出问题时依次换成简化版和本地版。">
+      <defs>
+        <marker id="f4a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+      </defs>
+      <rect class="warnbox" x="40" y="24" width="280" height="76" rx="12"/>
+      <text class="t" x="180" y="58">AI 太慢或出错</text><text class="s" x="180" y="82">比如被限流、超时</text>
+      <line class="ink" x1="180" y1="106" x2="180" y2="144" marker-end="url(#f4a)"/>
+      <rect class="soft" x="40" y="150" width="280" height="110" rx="12"/>
+      <text class="t" x="180" y="194">改用模板写一段</text><text class="s" x="180" y="220">卡片上标「自动摘要」</text>
+
+      <rect class="warnbox" x="380" y="24" width="280" height="76" rx="12"/>
+      <text class="t" x="520" y="58">数字写错了</text><text class="s" x="520" y="82">核对员算出来不一样</text>
+      <line class="ink" x1="520" y1="106" x2="520" y2="144" marker-end="url(#f4a)"/>
+      <rect class="soft" x="380" y="150" width="280" height="110" rx="12"/>
+      <text class="t" x="520" y="194">打回去重写</text><text class="s" x="520" y="220">最多 2 次，还不行就用模板</text>
+
+      <rect class="warnbox" x="720" y="24" width="280" height="76" rx="12"/>
+      <text class="t" x="860" y="58">云上的完整版出问题</text><text class="s" x="860" y="82">某个服务没跑起来</text>
+      <line class="ink" x1="860" y1="106" x2="860" y2="144" marker-end="url(#f4a)"/>
+      <rect class="soft" x="720" y="150" width="280" height="110" rx="12"/>
+      <text class="t" x="860" y="190">换成更简单的版本</text>
+      <rect class="card" x="733" y="214" width="70" height="28" rx="14"/><text class="l" x="768" y="233">完整版</text>
+      <line class="ink" x1="806" y1="228" x2="822" y2="228" marker-end="url(#f4a)"/>
+      <rect class="card" x="825" y="214" width="70" height="28" rx="14"/><text class="l" x="860" y="233">简化版</text>
+      <line class="ink" x1="898" y1="228" x2="914" y2="228" marker-end="url(#f4a)"/>
+      <rect class="card" x="917" y="214" width="70" height="28" rx="14"/><text class="l" x="952" y="233">本地版</text>
+    </svg>
+    </div>
+    <figcaption>目标只有一个：录 Demo 和评委打开网页的时候，页面不报错、不卡死。</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 黑话对照表 ============ -->
+<section>
+  <h2>听不懂的词，查这里</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>工程师说的</th><th>在图里是</th><th>一句话解释</th></tr></thead>
+    <tbody>
+      <tr><td>Simulator</td><td><b>模拟球场</b></td><td>用规则和随机数“踢”出一场假比赛。比赛规定不能用真实数据</td></tr>
+      <tr><td>Event Hubs</td><td><b>传送带</b></td><td>把比赛动作按先后顺序一条条送过去</td></tr>
+      <tr><td>CUSUM</td><td><b>势头计里的报警器</b></td><td>曲线持续往一边跑，它就会响</td></tr>
+      <tr><td>Service Bus</td><td><b>任务单</b></td><td>活儿排队等着做；谁没做完，单子会自动回到队里</td></tr>
+      <tr><td>Agent</td><td><b>解说团里的一个人</b></td><td>判定员、写稿员、核对员，各管一件事</td></tr>
+      <tr><td>Foundry</td><td><b>AI 大脑</b></td><td>我们向微软借用的 AI 模型，附带考试和监控工具</td></tr>
+      <tr><td>Cosmos DB</td><td><b>档案柜</b></td><td>每场比赛的东西放进一个抽屉</td></tr>
+      <tr><td>Web PubSub</td><td><b>广播喇叭</b></td><td>有新消息，就同时推到所有人的屏幕</td></tr>
+      <tr><td>Container Apps · Functions</td><td><b>工位</b></td><td>我们的程序在微软机房里干活的地方</td></tr>
+      <tr><td>azd · Bicep</td><td><b>一键搭建</b></td><td>一条命令就把所有工位和设备搭好；比赛结束也能一条命令全部拆掉</td></tr>
+    </tbody>
+  </table></div>
+</section>
+</div>

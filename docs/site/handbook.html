@@ -1,0 +1,361 @@
+<title>Pivot 开发手册</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 执行手册 —— 左侧粘性目录 + 右侧正文；任务表按里程碑分组，四条线用四种颜色标记 */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --line:#D5DDD3; --fg:#17231C; --muted:#5A6A5F;
+  --pitch:#1E6B45; --pitch-soft:#E1EEE5; --plum:#4A1D57; --plum-soft:#EFE6F2; --warn:#9A5B00; --warn-soft:#FBF0DC; --crit:#A3302A; --crit-soft:#F8E3E1;
+  --ln-a:#1F5FB8; --ln-b:#1E6B45; --ln-c:#B5560F; --ln-d:#6B3A86; --ln-t:#4B5560;
+  --display:"Barlow Condensed","Noto Sans SC",system-ui,sans-serif;
+  --body:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33; --warn:#F0B451; --warn-soft:#33281A; --crit:#F08A80; --crit-soft:#3A1F1D;
+  --ln-a:#7FB2F5; --ln-b:#5CC38C; --ln-c:#F2A65A; --ln-d:#C99BE0; --ln-t:#AEB8C2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33; --warn:#F0B451; --warn-soft:#33281A; --crit:#F08A80; --crit-soft:#3A1F1D;
+  --ln-a:#7FB2F5; --ln-b:#5CC38C; --ln-c:#F2A65A; --ln-d:#C99BE0; --ln-t:#AEB8C2; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}
+.layout{max-width:1220px;margin:0 auto;display:grid;grid-template-columns:200px minmax(0,1fr);gap:44px}
+aside{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-top:40px;max-height:100vh;overflow:auto}
+aside p{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+aside ol{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:13.5px}
+aside a{color:var(--muted);text-decoration:none;display:block;padding:3px 0 3px 10px;border-left:2px solid var(--line)}
+aside a:hover,aside a:focus-visible{color:var(--pitch);border-left-color:var(--pitch);outline:none}
+main{min-width:0}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(40px,6.5vw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.01em}
+h2{font-size:30px;font-weight:700}
+h3{font-size:21px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+.muted{color:var(--muted)} .small{font-size:13.5px}
+header{padding-block:44px 24px;display:grid;gap:16px}
+section{display:grid;gap:16px;padding-block:40px;border-top:2px solid var(--line);scroll-margin-top:12px}
+.sub{display:grid;gap:12px;padding-top:6px}
+.prose{max-width:72ch;display:grid;gap:10px}
+p.prose{display:block}
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.sum div{background:var(--surface);border:1px solid var(--line);padding:14px 16px;display:grid;gap:4px;align-content:start}
+.sum b{font-family:var(--display);font-size:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:16px 18px;display:grid;gap:8px;align-content:start;min-width:0}
+.panel h3{font-size:19px}
+.callout{border-left:3px solid var(--pitch);background:var(--pitch-soft);padding:12px 16px;display:grid;gap:6px}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)}
+ul.tight,ol.tight{margin:0;padding-left:1.2em;display:grid;gap:5px}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.8px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--bg)}
+td.id{font-family:var(--mono);font-size:12.5px;font-weight:600;white-space:nowrap}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+td.dep{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+td code,li code,p code{font-family:var(--mono);font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:3px}
+.ln{display:inline-block;font-family:var(--mono);font-size:11.5px;font-weight:600;padding:0 7px;border-radius:3px;border:1.5px solid currentColor;white-space:nowrap}
+.ln-A{color:var(--ln-a)} .ln-B{color:var(--ln-b)} .ln-C{color:var(--ln-c)} .ln-D{color:var(--ln-d)} .ln-T{color:var(--ln-t)}
+tr.row-A td.id{color:var(--ln-a)} tr.row-B td.id{color:var(--ln-b)} tr.row-C td.id{color:var(--ln-c)} tr.row-D td.id{color:var(--ln-d)} tr.row-T td.id{color:var(--ln-t)}
+.ms-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.ms-head .when{font-family:var(--mono);font-size:13px;color:var(--pitch)}
+.tag{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:1px 7px;border-radius:3px;white-space:nowrap}
+.t-should{background:var(--warn-soft);color:var(--warn)} .t-could{background:var(--plum-soft);color:var(--plum)}
+.roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:1180px){.roles,.sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.roles,.sum{grid-template-columns:1fr}}
+.role{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--rc);padding:14px 16px;display:grid;gap:8px;align-content:start}
+.role h3{font-size:20px;color:var(--rc)}
+.role .acct{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.load{display:grid;grid-template-columns:7.5em minmax(0,1fr) 5.5em;gap:12px;align-items:center;font-size:13.5px}
+.bar{height:14px;background:var(--bg);border:1px solid var(--line);position:relative}
+.bar span{position:absolute;inset:0 auto 0 0}
+.bar i{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg)}
+.mm{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto}
+.mm pre{margin:0}
+.steps{counter-reset:s;list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
+.steps li::before{content:counter(s);width:28px;height:28px;border-radius:50%;background:var(--pitch);color:var(--surface);font:700 13px/28px var(--mono);text-align:center}
+.steps .who{font-family:var(--mono);font-size:12px;color:var(--muted)}
+a{color:var(--pitch)}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;gap:0}
+  aside{position:static;max-height:none;padding-top:24px}
+  aside ol{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .load{grid-template-columns:6em minmax(0,1fr) 5em}
+}
+</style>
+
+<div class="layout">
+<aside>
+  <p>目录</p>
+  <ol>
+    <li><a href="#now">现在就做</a></li>
+    <li><a href="#tools">用什么管理</a></li>
+    <li><a href="#roles">分工</a></li>
+    <li><a href="#tasks">任务清单</a></li>
+    <li><a href="#path">关键路径与里程碑</a></li>
+    <li><a href="#flow">开发流程</a></li>
+    <li><a href="#rhythm">每天的节奏</a></li>
+  </ol>
+</aside>
+
+<main>
+<header>
+  <p class="eyebrow">Pivot · 分工与开发流程 · 2026-10-23</p>
+  <h1>Pivot 开发手册</h1>
+  <p class="prose" style="font-size:16px">把架构拆成 47 个任务点，每个 1 到 6 小时，都有负责人、依赖和验收标准；同时约定好怎么管任务、怎么写代码、每天怎么对齐。时间一律按你们的当地时间。</p>
+  <div class="sum">
+    <div><span class="small muted">管理</span><b>GitHub 管开发，Asana 管日程</b><span class="small">开发任务只放 GitHub，两边不重复记</span></div>
+    <div><span class="small muted">分工</span><b>4 条线，每人约 32 小时</b><span class="small">D 线交给英文写作好、懂足球战术的同学</span></div>
+    <div><span class="small muted">容量</span><b>Must 已占满 90% 以上</b><span class="small">Should 放进公共池，谁先做完谁按顺序拉</span></div>
+    <div><span class="small muted">节奏</span><b>每天两次 15 分钟站会</b><span class="small">6 个里程碑；卡住 45 分钟就喊人</span></div>
+  </div>
+</header>
+
+<!-- ============ 现在就做 ============ -->
+<section id="now">
+  <h2>现在就做</h2>
+  <ol class="steps">
+    <li><div><b>把现有文档作为第一次提交推到 <code>main</code></b><br><span class="small">远端仓库还是空的，第一个推上去的分支会成为默认分支，所以要先推 <code>main</code>。</span><br><span class="who">Claude 可以做，需要你点头</span></div></li>
+    <li><div><b>把第 4 位队友加进仓库</b><br><span class="small">现在只有 Carry3、momomojun、Avril131 三个账号。</span><br><span class="who">仓库管理员</span></div></li>
+    <li><div><b>认领四条线，填 <code>docs/plan/owners.json</code></b><br><span class="small">填好之后，建 issue 时会自动指派负责人。</span><br><span class="who">开工会（T01）</span></div></li>
+    <li><div><b>建标签、里程碑和 47 个 issue</b><br><span class="small">运行 <code>python3 scripts/github_setup.py --apply</code>。已经试跑过预览，重复运行也不会产生重复的 issue。</span><br><span class="who">Claude 可以做，需要你点头（仓库成员会收到通知）</span></div></li>
+    <li><div><b>建 Project 看板</b><br><span class="small">需要 project 权限：先运行 <code>gh auth refresh -s project</code>（会打开浏览器授权），然后由 Claude 来建；也可以直接在网页上新建。</span><br><span class="who">你授权，Claude 执行</span></div></li>
+    <li><div><b>选定 UI 风格</b><br><span class="small">C01 前端脚手架要用选定的风格生成主题。</span><br><span class="who">全员</span></div></li>
+    <li><div><b>B01 契约立刻开工，20:00 冻结</b><br><span class="small">它是关键路径的起点：A03、C02、D03 都在等它。</span><br><span class="who">B</span></div></li>
+  </ol>
+</section>
+
+<!-- ============ 工具 ============ -->
+<section id="tools">
+  <h2>用什么管理</h2>
+  <div class="sub">
+    <h3>除了飞书多维表格，还有这些选择</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>工具</th><th>擅长什么</th><th>和代码的关系</th><th>对你们</th></tr></thead>
+      <tbody>
+        <tr><td><b>GitHub Projects</b></td><td>开发任务看板、里程碑、时间线视图</td><td>原生：PR 写 <code>Closes #12</code>，合并后 issue 自动关闭，卡片自动移到 Done</td><td><b>推荐作为唯一的任务来源。</b>公开仓库里的 issue、PR 和 CI 本身就展示了“规范的开发实践”，这是评审的第一项</td></tr>
+        <tr><td><b>Asana</b></td><td>日程、里程碑、非开发事项</td><td>有 GitHub 集成，也可以手动贴 PR 链接</td><td>可以用，但只放日程类事项，不放开发任务</td></tr>
+        <tr><td>Azure Boards</td><td>微软系的敏捷看板</td><td>原生集成：提交信息里写 <code>AB#编号</code></td><td>和赛事主题契合，但配置比 GitHub 多，3 天里不划算</td></tr>
+        <tr><td>Linear</td><td>研发任务，体验好</td><td>好：PR 能自动关单</td><td>又多一个账号和一套概念</td></tr>
+        <tr><td>Notion</td><td>文档、会议记录</td><td>弱</td><td>适合写站会记录，不适合追踪代码</td></tr>
+        <tr><td>Trello</td><td>最简单的看板</td><td>弱</td><td>没有依赖和里程碑，不够用</td></tr>
+        <tr><td>飞书多维表格</td><td>中文、手机好用</td><td>不连通，状态要手动同步</td><td>适合做群通知和站会打卡</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>GitHub + Asana 怎么分工</h3>
+      <p class="small muted">我理解你说的“as 啥的”是 Asana。如果指的是 Azure Boards，分法一样。</p>
+      <ul class="tight small">
+        <li><b>GitHub 管“怎么做”</b>：47 个任务都是 issue，代码、PR、CI 都挂在上面。任务状态只看 GitHub。</li>
+        <li><b>Asana 管“什么时候交”</b>：6 个里程碑和 6 个全员事项（开工会、两次集成检查、录视频、提交）。已经导出成 <code>docs/plan/asana-schedule.csv</code>，在 Asana 里用 CSV 导入就行。</li>
+        <li><b>不重复记录</b>：同一件事只在一边出现。Asana 的里程碑描述里贴上对应的 GitHub milestone 链接。</li>
+      </ul>
+      <p class="small">说实话，3 天的冲刺用一个工具最省事：GitHub Projects 自带时间线视图，也能放日程。Asana 是可选项，喜欢看日历视图再加。</p>
+    </div>
+    <div class="panel">
+      <h3>看板怎么设</h3>
+      <ul class="tight small">
+        <li><b>列</b>：Backlog → Ready（依赖已完成）→ In progress → In review → Done</li>
+        <li><b>字段</b>：负责线（A/B/C/D）、里程碑（M0 到 M5）、预估小时、优先级</li>
+        <li><b>视图</b>：按状态的看板；按负责人的表格；按里程碑的时间线</li>
+        <li><b>在制品上限</b>：每人同时最多 2 张卡在 In progress</li>
+        <li><b>标签</b>：<code>must</code> <code>should</code> <code>could</code> <code>team</code> <code>area:*</code> <code>blocked</code> <code>contract</code> <code>demo-critical</code> <code>bug</code></li>
+        <li><b>自动化</b>：PR 合并后，关联的 issue 自动关闭并移到 Done</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 分工 ============ -->
+<section id="roles">
+  <h2>分工</h2>
+  <p class="prose">四个人都写代码。按特长分成四条线：每条线有清楚的边界和一位固定的 Review 搭档。GitHub 账号在开工会上认领后填进 <code>docs/plan/owners.json</code>。</p>
+  <div class="roles">
+    <div class="role" style="--rc:var(--ln-a)"><h3>A · 平台与编排</h3><span class="acct">账号：待认领</span>
+      <ul class="tight small"><li>脚手架、CI、API</li><li>Worker 骨架、实时推送</li><li>云资源、部署、成本护栏</li><li>推演链路接线</li></ul>
+      <span class="small muted">适合：后端和运维最熟的同学 · Review 搭档 B</span></div>
+    <div class="role" style="--rc:var(--ln-b)"><h3>B · 模拟与分析</h3><span class="acct">账号：待认领</span>
+      <ul class="tight small"><li>契约（领域模型）</li><li>模拟器、快照续跑、批量推演</li><li>统计计算、势头与变点、标定</li><li>阈值调校、提交清单</li></ul>
+      <span class="small muted">适合：Python 和数值计算最强的同学 · Review 搭档 A</span></div>
+    <div class="role" style="--rc:var(--ln-c)"><h3>C · 前端</h3><span class="acct">账号：待认领</span>
+      <ul class="tight small"><li>主题与脚手架</li><li>S1 看板、S2 详情、S3 实验室</li><li>状态处理、视觉打磨</li><li>录屏</li></ul>
+      <span class="small muted">适合：React 最熟的同学 · 交互和文案由 D 审</span></div>
+    <div class="role" style="--rc:var(--ln-d)"><h3>D · AI 内容与质量</h3><span class="acct">账号：待认领</span>
+      <ul class="tight small"><li>Foundry 部署、统计词表</li><li>Judge、Explainer、Comparator 提示词</li><li>核查规则、模板解释</li><li>轨迹列表、Pitch、README、配音</li></ul>
+      <span class="small muted">适合：英文写作好、懂足球战术的同学。提示词和核查规则以写作和足球判断为主，Python 部分和 A 结对 · Python 由 A 审，前端由 C 审</span></div>
+  </div>
+  <div class="sub">
+    <h3>每个人的负载</h3>
+    <p class="small muted">按今天 17:00 开工、每天 9:00 到 23:00 算，每人可用约 39 小时，扣掉沟通和切换后，专注时间约 33 小时（竖线）。条形图是 Must 加全员任务的工时。</p>
+    <div class="panel" style="gap:10px">
+      <div class="load"><b>A 平台</b><div class="bar"><span style="width:80.0%;background:var(--ln-a)"></span><i style="left:82.5%"></i></div><span class="small">32 / 33 h</span></div>
+      <div class="load"><b>B 模拟</b><div class="bar"><span style="width:82.5%;background:var(--ln-b)"></span><i style="left:82.5%"></i></div><span class="small">33 / 33 h</span></div>
+      <div class="load"><b>C 前端</b><div class="bar"><span style="width:81.2%;background:var(--ln-c)"></span><i style="left:82.5%"></i></div><span class="small">32.5 / 33 h</span></div>
+      <div class="load"><b>D AI 内容</b><div class="bar"><span style="width:80.0%;background:var(--ln-d)"></span><i style="left:82.5%"></i></div><span class="small">32 / 33 h</span></div>
+    </div>
+    <ul class="tight small prose">
+      <li>四个人都在 90% 到 100% 之间。也就是说，Should 只能在 Must 提前完成时去拉，不能提前排。</li>
+      <li>如果 UI 选 Fluent Night，C 能用组件库省下约 3 小时，可以接手 D10 轨迹列表，给 D 减负。</li>
+      <li>B 的负载最高：模拟器（B03）晚半天，后面的 B04、B08、A09、C05 都会被推迟。站会上要优先盯住 B。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 任务清单 ============ -->
+<section id="tasks">
+  <h2>任务清单</h2>
+  <p class="prose">按里程碑分组：每组都要在该里程碑的时间点之前完成。ID 的颜色对应负责的线。原始清单在 <code>docs/plan/tasks.csv</code>，建 issue 的脚本也读这个文件，以后只改它。</p>
+<div class="sub"><div class="ms-head"><h3>M0 契约冻结</h3><span class="when">10/23 20:00</span><span class="small muted">9 个任务 · 16 小时</span></div><div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-T"><td class="id">T01</td><td>开工会：确认分工、工具、Review 搭档<br><span class="small muted">Kickoff: owners, tools, review pairs</span></td><td><span class="ln ln-T">全员</span></td><td class="n">0.5 h</td><td class="dep">—</td><td>每个 Must 任务都有负责人；看板可用</td></tr><tr class="row-T"><td class="id">T02</td><td>权限与本地环境：第 4 位队友进仓库，Azure 权限，本地工具<br><span class="small muted">Access and local setup for all four</span></td><td><span class="ln ln-T">全员</span></td><td class="n">1 h</td><td class="dep">T01</td><td>4 人都能 clone 并跑起空项目，都能访问 Azure 订阅</td></tr><tr class="row-A"><td class="id">A01</td><td>仓库脚手架<br><span class="small muted">Repo scaffold: uv workspace, pnpm, Dockerfile, ruff, pytest</span></td><td><span class="ln ln-A">A</span></td><td class="n">3 h</td><td class="dep">T01</td><td>新人 clone 后三条命令能跑起空项目；目录与架构文档 13.1 一致</td></tr><tr class="row-A"><td class="id">A02</td><td>CI：代码检查、单测、契约一致性、密钥扫描<br><span class="small muted">CI: lint, unit tests, contract drift, secret scan</span></td><td><span class="ln ln-A">A</span></td><td class="n">1.5 h</td><td class="dep">A01</td><td>每个 PR 自动运行，任何一项失败都不能合并</td></tr><tr class="row-B"><td class="id">B01</td><td>领域模型与契约导出<br><span class="small muted">Domain models and contract export (Pydantic, JSON Schema, TS)</span></td><td><span class="ln ln-B">B</span></td><td class="n">3 h</td><td class="dep">T01</td><td>契约冻结 PR 已合并；前端能用生成的类型</td></tr><tr class="row-B"><td class="id">B02</td><td>临时夹具 v0（手写）<br><span class="small muted">Fixture v0: hand-written demo-1021.json for the frontend</span></td><td><span class="ln ln-B">B</span></td><td class="n">1 h</td><td class="dep">B01</td><td>前端不用等后端，就能开发 S1 和 S2</td></tr><tr class="row-C"><td class="id">C01</td><td>前端脚手架与主题<br><span class="small muted">Web scaffold and theme tokens for the chosen UI style</span></td><td><span class="ln ln-C">C</span></td><td class="n">2 h</td><td class="dep">A01</td><td>选定的 UI 风格已做成主题变量，深浅两套都能用</td></tr><tr class="row-D"><td class="id">D01</td><td>Foundry 模型部署与配额测试<br><span class="small muted">Foundry deployments (standard and mini) and quota test</span></td><td><span class="ln ln-D">D</span></td><td class="n">2 h</td><td class="dep">T02</td><td>两个部署都能调用；10 个并发请求不被限流</td></tr><tr class="row-D"><td class="id">D02</td><td>统计词表与解释风格指南<br><span class="small muted">Stat vocabulary (15) and explanation style guide (English)</span></td><td><span class="ln ln-D">D</span></td><td class="n">2 h</td><td class="dep">T01</td><td>与 B05 一一对应；风格指南包含 5 个好例子和 5 个坏例子</td></tr></tbody></table></div></div>
+<div class="sub"><div class="ms-head"><h3>M1 本地发现与解释跑通</h3><span class="when">10/24 22:00</span><span class="small muted">16 个任务 · 53 小时</span></div><div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-T"><td class="id">T03</td><td>集成检查 1：本地端到端<br><span class="small muted">Integration check 1: local end-to-end</span></td><td><span class="ln ln-T">全员</span></td><td class="n">1 h</td><td class="dep">A05、C03、D06</td><td>本地形态下，演示种子会自动出现一个已核查的转折点</td></tr><tr class="row-A"><td class="id">A03</td><td>本地适配器与组合根<br><span class="small muted">Local adapters and composition root (PIVOT_PROFILE=local)</span></td><td><span class="ln ln-A">A</span></td><td class="n">3 h</td><td class="dep">B01</td><td>单进程内的内存总线、存储、WebSocket 可用；每个端口都有契约测试</td></tr><tr class="row-A"><td class="id">A04</td><td>API 接口<br><span class="small muted">API: matches, timeline, pivots, events, negotiate</span></td><td><span class="ln ln-A">A</span></td><td class="n">3.5 h</td><td class="dep">A03</td><td>接口符合架构文档 7.3；/api/docs 可以打开</td></tr><tr class="row-A"><td class="id">A05</td><td>Worker 骨架：队列消费、幂等、轨迹、推送<br><span class="small muted">Worker shell: queue consumer, lock renewal, idempotency, traces, push</span></td><td><span class="ln ln-A">A</span></td><td class="n">3 h</td><td class="dep">A03</td><td>同一个候选重复投递只产生一个转折点；每一步都写轨迹</td></tr><tr class="row-A"><td class="id">A06</td><td>实时推送<br><span class="small muted">Realtime push: local WebSocket and Web PubSub adapter</span></td><td><span class="ln ln-A">A</span></td><td class="n">2.5 h</td><td class="dep">A04</td><td>统一消息信封；断线后用 sinceSeq 补齐</td></tr><tr class="row-B"><td class="id">B03</td><td>模拟器整场比赛与确定性<br><span class="small muted">Simulator: full match with seed determinism</span></td><td><span class="ln ln-B">B</span></td><td class="n">6 h</td><td class="dep">B01</td><td>同一个种子跑两次，结果逐事件一致；单场模拟不超过 100 毫秒</td></tr><tr class="row-B"><td class="id">B04</td><td>快照续跑、植入事件、演示预设<br><span class="small muted">Snapshots, resume, plant API, demo-1021 preset</span></td><td><span class="ln ln-B">B</span></td><td class="n">3.5 h</td><td class="dep">B03</td><td>从任意整分钟续跑结果一致；预设里出现 38 分钟红牌和 63 分钟换人</td></tr><tr class="row-B"><td class="id">B05</td><td>威胁网格与统计计算<br><span class="small muted">Threat grid and StatCalculator (15 stats, unit-tested)</span></td><td><span class="ln ln-B">B</span></td><td class="n">4 h</td><td class="dep">B03</td><td>15 项统计都有单测，并与 D02 的词表一一对应</td></tr><tr class="row-B"><td class="id">B06</td><td>势头与变点检测<br><span class="small muted">Momentum EWMA and CUSUM change points</span></td><td><span class="ln ln-B">B</span></td><td class="n">3 h</td><td class="dep">B05</td><td>演示种子在 63 分钟附近出现候选点</td></tr><tr class="row-B"><td class="id">B07</td><td>标定与夹具 v1<br><span class="small muted">Calibration on 200 matches and fixture v1 from the simulator</span></td><td><span class="ln ln-B">B</span></td><td class="n">2 h</td><td class="dep">B04、B05</td><td>场均进球 2.5 到 3.0、射门 20 到 28；夹具换成真实的模拟输出</td></tr><tr class="row-C"><td class="id">C02</td><td>S1 实时看板（用夹具数据）<br><span class="small muted">S1 live board on fixtures: top bar, momentum, pivots, stats, feed</span></td><td><span class="ln ln-C">C</span></td><td class="n">6 h</td><td class="dep">B02、C01</td><td>与原型 S1 一致；势头曲线在 45 分钟处重置</td></tr><tr class="row-C"><td class="id">C03</td><td>接入实时数据<br><span class="small muted">Live data: REST, WebSocket client, gap recovery</span></td><td><span class="ln ln-C">C</span></td><td class="n">3 h</td><td class="dep">A04、A06、C02</td><td>20 倍速回放时曲线 2 秒内更新；断线自动重连并补齐</td></tr><tr class="row-D"><td class="id">D03</td><td>Judge 提示词<br><span class="small muted">PivotJudge prompt, output schema, few-shot examples</span></td><td><span class="ln ln-D">D</span></td><td class="n">2.5 h</td><td class="dep">D02、B02</td><td>演示种子的 38 分钟和 63 分钟判定为是；随机候选大多判定为否</td></tr><tr class="row-D"><td class="id">D04</td><td>Explainer 提示词<br><span class="small muted">Explainer prompt, headline rules, few-shot examples</span></td><td><span class="ln ln-D">D</span></td><td class="n">3.5 h</td><td class="dep">D02、B02</td><td>输出通过 Schema 校验；标题不含数字；每句话都有证据</td></tr><tr class="row-D"><td class="id">D05</td><td>核查规则与模板解释<br><span class="small muted">Verifier rules and TemplateExplainer (unit-tested)</span></td><td><span class="ln ln-D">D</span></td><td class="n">4 h</td><td class="dep">B05、D02</td><td>6 类规则都有单测；模板解释永远不会失败</td></tr><tr class="row-D"><td class="id">D06</td><td>发现链工作流（与 A 结对）<br><span class="small muted">Detect workflow in Agent Framework (pair with A)</span></td><td><span class="ln ln-D">D</span></td><td class="n">2.5 h</td><td class="dep">A05、D03、D04、D05</td><td>核查不通过时重写，最多 2 次，然后降级</td></tr></tbody></table></div></div>
+<div class="sub"><div class="ms-head"><h3>M2 推演去留</h3><span class="when">10/25 18:00</span><span class="small muted">6 个任务 · 22 小时</span></div><div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-A"><td class="id">A09</td><td>推演链路接线<br><span class="small muted">What-if wiring: enqueue, batch call, progress push</span></td><td><span class="ln ln-A">A</span></td><td class="n">2 h</td><td class="dep">B08、D07</td><td>从点击按钮到结果上屏不超过 30 秒</td></tr><tr class="row-B"><td class="id">B08</td><td>批量推演<br><span class="small muted">Batch simulation: process pool, paired seeds, Wilson CI</span></td><td><span class="ln ln-B">B</span></td><td class="n">4 h</td><td class="dep">B04</td><td>1,000 次续跑不超过 6 秒；同一种子结果一致</td></tr><tr class="row-B"><td class="id">B09</td><td>严重程度与阈值调校（D 用足球常识把关）<br><span class="small muted">Severity rules and CUSUM tuning (D reviews football sense)</span></td><td><span class="ln ln-B">B</span></td><td class="n">2 h</td><td class="dep">B06、B07</td><td>演示种子只出现 2 到 3 个转折点，每个都说得通</td></tr><tr class="row-C"><td class="id">C04</td><td>S2 转折点详情<br><span class="small muted">S2 pivot detail: static pitch, evidence highlight, before/after</span></td><td><span class="ln ln-C">C</span></td><td class="n">6 h</td><td class="dep">C02</td><td>点击证据标签，球场图上高亮对应事件；数字悬停显示统计引用</td></tr><tr class="row-C"><td class="id">C05</td><td>S3 推演实验室<br><span class="small muted">S3 What-if Lab: scenario buttons, confirm, progress, distribution</span></td><td><span class="ln ln-C">C</span></td><td class="n">5 h</td><td class="dep">A09、C04</td><td>状态与原型 S3 一致；免责声明一直可见</td></tr><tr class="row-D"><td class="id">D07</td><td>场景目录、界面文案、Comparator 提示词<br><span class="small muted">Scenario catalog, UI copy (English), Comparator prompt</span></td><td><span class="ln ln-D">D</span></td><td class="n">3 h</td><td class="dep">D04</td><td>5 种场景都有文案和适用条件；对比解释通过核查</td></tr></tbody></table></div></div>
+<div class="sub"><div class="ms-head"><h3>M3 云端端到端</h3><span class="when">10/25 23:00</span><span class="small muted">4 个任务 · 11 小时</span></div><div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-T"><td class="id">T04</td><td>集成检查 2：云端端到端<br><span class="small muted">Integration check 2: cloud end-to-end</span></td><td><span class="ln ln-T">全员</span></td><td class="n">1 h</td><td class="dep">A10、C05</td><td>公网地址能完整跑一遍 Demo 脚本</td></tr><tr class="row-A"><td class="id">A07</td><td>一键开通云资源（含 Foundry）<br><span class="small muted">azd + Bicep: provision C1 resources with managed identity</span></td><td><span class="ln ln-A">A</span></td><td class="n">5 h</td><td class="dep">A01</td><td>azd provision 一次成功；没有连接字符串；预算告警 50 美元</td></tr><tr class="row-A"><td class="id">A08</td><td>Azure 适配器<br><span class="small muted">Azure adapters: Cosmos DB, Service Bus, Web PubSub</span></td><td><span class="ln ln-A">A</span></td><td class="n">3.5 h</td><td class="dep">A07、A03</td><td>契约测试在云端通过</td></tr><tr class="row-A"><td class="id">A10</td><td>部署与冒烟测试<br><span class="small muted">Deploy and smoke test (azd deploy)</span></td><td><span class="ln ln-A">A</span></td><td class="n">1.5 h</td><td class="dep">A08</td><td>公网地址可以访问；冒烟脚本通过</td></tr></tbody></table></div></div>
+<div class="sub"><div class="ms-head"><h3>M4 功能冻结</h3><span class="when">10/26 14:00</span><span class="small muted">4 个任务 · 10 小时</span></div><div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-C"><td class="id">C06</td><td>加载、错误、降级状态<br><span class="small muted">States: loading, error, degraded, Start demo button</span></td><td><span class="ln ln-C">C</span></td><td class="n">2 h</td><td class="dep">C03</td><td>断网或 Agent 降级时界面不报错</td></tr><tr class="row-C"><td class="id">C07</td><td>视觉打磨与截图<br><span class="small muted">Visual polish and screenshots for README and video</span></td><td><span class="ln ln-C">C</span></td><td class="n">2 h</td><td class="dep">C05</td><td>README 用的 3 张截图；1080p 录屏画面没有错位</td></tr><tr class="row-D"><td class="id">D09</td><td>Pitch 与 README<br><span class="small muted">Pitch and README (English)</span></td><td><span class="ln ln-D">D</span></td><td class="n">4 h</td><td class="dep">C07</td><td>README 包含架构图、运行方式、评测结果和 Copilot 使用说明</td></tr><tr class="row-D"><td class="id">D10</td><td>S4 Agent 轨迹（简版列表）<br><span class="small muted">S4 Agent trace list (simple)</span></td><td><span class="ln ln-D">D</span></td><td class="n">2 h</td><td class="dep">A05、C02</td><td>能看到“核查拒绝 → 重写 → 通过”的完整记录</td></tr></tbody></table></div></div>
+<div class="sub"><div class="ms-head"><h3>M5 提交</h3><span class="when">10/26 20:00</span><span class="small muted">2 个任务 · 4 小时</span></div><div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-C"><td class="id">T05</td><td>录制 2 分钟 Demo 视频<br><span class="small muted">Record the 2-minute demo video</span></td><td><span class="ln ln-C">C</span> <span class="ln ln-D">D</span></td><td class="n">3 h</td><td class="dep">T04、C07</td><td>短于 2 分钟；没有版权音乐和第三方标识；已上传并公开</td></tr><tr class="row-B"><td class="id">T06</td><td>提交清单检查与提交<br><span class="small muted">Final submission checklist</span></td><td><span class="ln ln-B">B</span></td><td class="n">1 h</td><td class="dep">T05、D09、A10</td><td>仓库已公开且没有密钥；视频链接、Pitch、README 都已填写</td></tr></tbody></table></div></div>
+  <div class="sub">
+    <h3>公共池（Should 和 Could）</h3>
+    <p class="small muted">按顺序拉：谁先做完自己的 Must，谁就去拉最上面的那一条。M4 功能冻结之后不再拉。</p>
+<div class="scroll"><table><thead><tr><th>ID</th><th>任务</th><th>负责</th><th>优先级</th><th>预估</th><th>依赖</th><th>验收标准</th></tr></thead><tbody><tr class="row-D"><td class="id">S1</td><td>自然语言场景解析<br><span class="small muted">NL scenario parsing (Translator)</span></td><td><span class="ln ln-D">D</span> <span class="ln ln-A">A</span></td><td><span class="tag t-should">Should</span></td><td class="n">3 h</td><td class="dep">D07、A09</td><td>解析失败时给出 3 个示例</td></tr><tr class="row-A"><td class="id">S2</td><td>事件流与函数计算（C2 形态）<br><span class="small muted">Event Hubs and Functions metrics (C2 profile)</span></td><td><span class="ln ln-A">A</span></td><td><span class="tag t-should">Should</span></td><td class="n">8 h</td><td class="dep">A10</td><td>切换部署形态后业务代码不需要改</td></tr><tr class="row-B"><td class="id">S3</td><td>20 个种子的检出率与忠实度评测<br><span class="small muted">Detection eval on 20 planted seeds and Foundry eval</span></td><td><span class="ln ln-B">B</span> <span class="ln ln-D">D</span></td><td><span class="tag t-should">Should</span></td><td class="n">5 h</td><td class="dep">B07、B09</td><td>检出率和忠实度写进 README</td></tr><tr class="row-C"><td class="id">S4</td><td>球场动画回放<br><span class="small muted">Animated pitch replay</span></td><td><span class="ln ln-C">C</span></td><td><span class="tag t-could">Could</span></td><td class="n">4 h</td><td class="dep">C04</td><td>—</td></tr><tr class="row-C"><td class="id">S5</td><td>独立的大厅页<br><span class="small muted">Separate S0 lobby page</span></td><td><span class="ln ln-C">C</span></td><td><span class="tag t-could">Could</span></td><td class="n">2 h</td><td class="dep">C06</td><td>—</td></tr><tr class="row-A"><td class="id">S6</td><td>大规模推演分片<br><span class="small muted">Container Apps Jobs sharding for large N</span></td><td><span class="ln ln-A">A</span> <span class="ln ln-B">B</span></td><td><span class="tag t-could">Could</span></td><td class="n">8 h</td><td class="dep">S2</td><td>—</td></tr></tbody></table></div>
+  </div>
+</section>
+
+<!-- ============ 关键路径 ============ -->
+<section id="path">
+  <h2>关键路径与里程碑</h2>
+  <div class="mm"><pre class="mermaid">
+flowchart LR
+  B01["B01 契约"] --> B02["B02 夹具 v0"] --> C02["C02 S1 看板"]
+  B01 --> A03["A03 本地适配器"] --> A05["A05 Worker"]
+  B01 --> B03["B03 模拟器"] --> B04["B04 快照续跑"] --> B08["B08 批量推演"] --> A09["A09 推演接线"] --> C05["C05 S3 实验室"]
+  B03 --> B05["B05 统计计算"] --> B06["B06 势头与变点"]
+  B05 --> D05["D05 核查规则"]
+  D02["D02 词表"] --> D04["D04 Explainer"]
+  A05 --> D06["D06 发现链"]
+  D04 --> D06
+  D05 --> D06
+  B06 --> D06
+  C02 --> C03["C03 接实时数据"]
+  D06 --> M1(["M1 本地跑通"])
+  C03 --> M1
+  C05 --> M2(["M2 推演去留"])
+  A01["A01 脚手架"] --> A07["A07 开通云资源"] --> A08["A08 Azure 适配器"] --> A10["A10 部署"] --> M3(["M3 云端跑通"])
+  </pre></div>
+  <p class="small muted">最长的一条是 B01 → B03 → B04 → B08 → A09 → C05。模拟器每晚一小时，推演就晚一小时。</p>
+  <div class="scroll"><table>
+    <thead><tr><th>里程碑</th><th>时间</th><th>完成的标志</th><th>没达成怎么办</th></tr></thead>
+    <tbody>
+      <tr><td><b>M0 契约冻结</b></td><td class="n">10/23 20:00</td><td>契约 PR 已合并；脚手架和 CI 可用；夹具 v0 交给前端</td><td>当晚加班补齐，否则第二天四个人互相等</td></tr>
+      <tr><td><b>M1 本地发现与解释</b></td><td class="n">10/24 22:00</td><td>本地形态下，演示种子自动出现一个已核查的转折点（T03 通过）</td><td>暂停所有 Should；第二天上午全员帮最慢的那一块</td></tr>
+      <tr><td><b>M2 推演去留</b></td><td class="n">10/25 18:00</td><td>点击场景按钮后，30 秒内出现分布对比</td><td>推演移出 Demo 主线，只保留发现和解释，视频脚本相应调整</td></tr>
+      <tr><td><b>M3 云端端到端</b></td><td class="n">10/25 23:00</td><td>公网地址能完整跑一遍 Demo 脚本（T04 通过）</td><td>录屏改用本地形态，README 说明云端部署方式</td></tr>
+      <tr><td><b>M4 功能冻结</b></td><td class="n">10/26 14:00</td><td>只修阻断性问题；截图和 README 定稿</td><td>不再加任何功能，没做完的从视频里拿掉</td></tr>
+      <tr><td><b>M5 提交</b></td><td class="n">10/26 20:00</td><td>视频、Pitch、仓库链接都已提交</td><td>10/27 是缓冲日，只用于补交，不用来开发</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">仓库组织名看起来在湾区。如果你们在太平洋时间，请按赛事页面标注的时区再核对一次截止时间。</p>
+</section>
+
+<!-- ============ 开发流程 ============ -->
+<section id="flow">
+  <h2>开发流程</h2>
+  <div class="mm"><pre class="mermaid">
+flowchart LR
+  i["Issue 在 Ready"] -->|"认领并建分支"| p["In progress"]
+  p -->|"提 PR 写 Closes #编号"| r["In review"]
+  r --> ci{"CI 通过"}
+  ci -->|"否"| p
+  ci -->|"是"| rv{"搭档 Review"}
+  rv -->|"要改"| p
+  rv -->|"通过"| m["Squash 合并到 main"]
+  m -->|"自动关闭 issue"| d["Done"]
+  m -->|"每天 13:00"| dev["部署到开发环境"]
+  </pre></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>分支、提交、PR</h3>
+      <ul class="tight small">
+        <li>分支名：<code>b/B03-simulator-core</code>（线 / 任务 ID / 简述）</li>
+        <li>提交信息：<code>B03: add possession-chain step</code></li>
+        <li>不直接推 <code>main</code>；一个 PR 只做一个任务，尽量少于 400 行，当天合并</li>
+        <li>PR 模板已经放在 <code>.github/</code>：关联任务、验证方式、契约勾选</li>
+        <li>统一用 Squash 合并，<code>main</code> 的历史一个任务一行</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Review 与 CI</h3>
+      <ul class="tight small">
+        <li>A 和 B 互审；D 的 Python 由 A 审；C 的前端由 D 审交互和文案；D 的前端由 C 审</li>
+        <li>收到 Review 请求后 30 分钟内响应；看不完就先回一句“晚点看”</li>
+        <li>CI 检查四项：代码风格、单测、契约导出是否同步、密钥扫描</li>
+        <li>私有仓库的分支保护需要付费计划，所以先靠约定执行；转公开后立刻打开保护</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>契约变更</h3>
+      <ul class="tight small">
+        <li>领域模型由 B 负责，是前后端共用的唯一来源</li>
+        <li>M0 之后只允许新增可选字段</li>
+        <li>改动契约的 PR 标题加 <code>[contract]</code>，在群里 @ 全员</li>
+        <li>生成的 JSON Schema 和 TS 类型要一并提交，CI 会检查有没有漏</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>完成定义</h3>
+      <ul class="tight small">
+        <li>符合冻结的契约</li>
+        <li>确定性逻辑（模拟器、指标、核查）有单元测试</li>
+        <li>在本地形态下跑通，部署后冒烟测试通过</li>
+        <li>对应的 Demo 步骤可以现场演示</li>
+        <li>在轨迹和遥测里能看到这项功能的记录</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted">这些约定也写进了仓库根目录的 <code>CONTRIBUTING.md</code>，新人只看那一个文件就够了。</p>
+</section>
+
+<!-- ============ 节奏 ============ -->
+<section id="rhythm">
+  <h2>每天的节奏</h2>
+  <div class="grid2">
+    <div class="scroll"><table>
+      <thead><tr><th>时间</th><th>做什么</th></tr></thead>
+      <tbody>
+        <tr><td class="n">09:30</td><td><b>早站会，15 分钟</b>：对着看板过一遍，只说今天要合并什么、被什么卡住</td></tr>
+        <tr><td class="n">09:45–12:45</td><td>专注开发；群里只回 @ 自己的消息</td></tr>
+        <tr><td class="n">13:00</td><td>合并窗口：从 10/25 起，<code>main</code> 部署到开发环境</td></tr>
+        <tr><td class="n">13:15–18:30</td><td>专注开发</td></tr>
+        <tr><td class="n">18:30</td><td>当天有里程碑时做检查：每条线报绿、黄或红</td></tr>
+        <tr><td class="n">21:30</td><td><b>晚站会，15 分钟</b>：更新看板，决定要不要砍需求，定好明天的第一件事</td></tr>
+      </tbody>
+    </table></div>
+    <div class="panel">
+      <h3>站会每人三句话</h3>
+      <ol class="tight small">
+        <li>上次站会以来合并了什么（报 PR 编号）</li>
+        <li>下次站会前要合并什么</li>
+        <li>被什么卡住、需要谁帮忙</li>
+      </ol>
+      <h3 style="margin-top:8px">卡住了怎么办</h3>
+      <ul class="tight small">
+        <li>卡住 45 分钟：在群里 @ 相关的人</li>
+        <li>卡住 2 小时：issue 加 <code>blocked</code>，到站会上重新排</li>
+        <li>里程碑亮红灯：按下面的顺序砍需求</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn">
+    <b>砍需求的顺序（落后时从上往下砍）</b>
+    <span>S3 评测 → S2 Event Hubs 与 Functions → S1 自然语言解析 → D10 轨迹列表（改为展示 Foundry 追踪视图）→ M2 时如果推演没跑通，整段推演移出 Demo。</span>
+  </div>
+</section>
+</main>
+</div>

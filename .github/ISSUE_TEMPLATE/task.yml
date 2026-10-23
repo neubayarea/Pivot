@@ -1,0 +1,52 @@
+name: 任务
+description: 一个 2 到 6 小时能做完的开发任务
+title: "XNN · "
+body:
+  - type: input
+    id: task-id
+    attributes:
+      label: 任务 ID
+      description: 按所属线编号，例如 B10、C08
+      placeholder: B10
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 所属线
+      options:
+        - A 平台与编排
+        - B 模拟与分析
+        - C 前端
+        - D AI 内容与质量
+        - 全员
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      options:
+        - Must
+        - Should
+        - Could
+    validations:
+      required: true
+  - type: input
+    id: estimate
+    attributes:
+      label: 预估小时数
+      placeholder: "3"
+  - type: input
+    id: depends
+    attributes:
+      label: 依赖的任务
+      placeholder: B05、D02
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 写成别人能直接检查的结果
+      value: "- [ ] "
+    validations:
+      required: true

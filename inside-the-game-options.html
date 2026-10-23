@@ -1,0 +1,704 @@
+<title>Inside the Game 选题板</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 球场战术板 —— 窄正文列 + 宽表格/思维导图，按“赛道 → 用户 → 8 个选项 → 评分 → 推荐”顺序往下读 */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --line:#D5DDD3; --fg:#17231C; --muted:#5A6A5F;
+  --pitch:#1E6B45; --pitch-soft:#E1EEE5; --plum:#4A1D57; --plum-soft:#EFE6F2;
+  --warn:#9A5B00; --warn-soft:#FBF0DC;
+  --display:"Barlow Condensed","Noto Sans SC",system-ui,sans-serif;
+  --body:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33;
+  --warn:#F0B451; --warn-soft:#33281A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201B; --line:#2C3830; --fg:#E4EBE5; --muted:#9AAA9F;
+  --pitch:#5CC38C; --pitch-soft:#1B3125; --plum:#D7A6E6; --plum-soft:#2D1F33;
+  --warn:#F0B451; --warn-soft:#33281A; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(40px,7vw,68px);font-weight:800;letter-spacing:.01em;text-transform:uppercase}
+h2{font-size:30px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+h3{font-size:22px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+.muted{color:var(--muted)}
+section{display:grid;gap:18px;padding-block:44px;border-top:2px solid var(--line)}
+.prose{max-width:68ch;display:grid;gap:12px}
+
+/* hero: 中圈线 */
+header{padding-block:48px 36px;display:grid;gap:18px;position:relative}
+header::after{content:"";position:absolute;right:0;top:36px;width:180px;height:180px;border:2px solid var(--line);border-radius:50%;z-index:-1}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.fact{background:var(--surface);border:1px solid var(--line);padding:12px 14px;display:grid;gap:2px}
+.fact b{font-family:var(--display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.fact span{font-size:13px;color:var(--muted)}
+.fact.alert{border-color:var(--warn);background:var(--warn-soft)}
+.fact.alert b{color:var(--warn)}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:18px;display:grid;gap:10px;align-content:start;min-width:0}
+.panel h3{font-size:19px}
+ul.tight{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.tag{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:3px;background:var(--pitch-soft);color:var(--pitch);white-space:nowrap}
+.tag.plum{background:var(--plum-soft);color:var(--plum)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:center}
+td.tot{font-family:var(--display);font-size:20px;font-weight:700;text-align:center;color:var(--pitch)}
+tr.best td{background:var(--pitch-soft)}
+
+.mm{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto}
+.mm pre{margin:0}
+
+nav.jump{display:flex;flex-wrap:wrap;gap:8px}
+nav.jump a{font-family:var(--display);font-size:16px;font-weight:700;text-decoration:none;color:var(--fg);border:1.5px solid var(--line);padding:4px 12px;background:var(--surface)}
+nav.jump a:hover,nav.jump a:focus-visible{border-color:var(--pitch);color:var(--pitch);outline:none}
+
+/* 单个选项 */
+.opt{display:grid;gap:16px;padding-block:32px;border-top:1px dashed var(--line)}
+.opt-head{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:baseline}
+.num{font-family:var(--display);font-size:56px;font-weight:800;line-height:.9;color:var(--pitch);grid-row:span 2;font-variant-numeric:tabular-nums}
+.opt-head h3{font-size:28px}
+.pitchline{font-size:16px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:7.5em 1fr;gap:8px 14px;font-size:14.5px}
+.kv dt{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--muted);padding-top:2px}
+.kv dd{margin:0;min-width:0}
+.demo{border-left:3px solid var(--plum);padding:6px 0 6px 14px;font-size:14.5px}
+.demo b{color:var(--plum)}
+
+.rec{background:var(--surface);border:2px solid var(--pitch);padding:22px;display:grid;gap:14px}
+ol.days{margin:0;padding-left:0;list-style:none;display:grid;gap:8px}
+ol.days li{display:grid;grid-template-columns:7.5em 1fr;gap:12px}
+ol.days li b{font-family:var(--mono);font-size:13px;color:var(--pitch);font-weight:600}
+a{color:var(--pitch)}
+@media (max-width:560px){
+  .kv,ol.days li{grid-template-columns:1fr;gap:2px}
+  .kv dd{margin-bottom:8px}
+  header::after{display:none}
+  .num{font-size:44px}
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Microsoft × Premier League · Developer Hackathon · 赛道分析与选题</p>
+  <h1>Inside the Game<br>选题板</h1>
+  <p class="prose" style="font-size:16.5px">用 AI 把合成的足球事件数据变成<strong>可解释的比赛情报、实时叙事、自动集锦和个性化体验</strong>。这份选题板按“谁在用”拆出 8 个方向，每个都配了用户画像、Agent 架构、技术栈、Demo 设计和思维导图，最后给出评分和 6 天冲刺计划。</p>
+  <div class="facts">
+    <div class="fact alert"><b>10 月 27 日</b><span>提交截止 · 距今 6 天</span></div>
+    <div class="fact"><b>1,695 / 450</b><span>报名人数 / 已建项目</span></div>
+    <div class="fact"><b>5 × 20%</b><span>五项评审标准等权重</span></div>
+    <div class="fact"><b>6 个奖项</b><span>2 个大奖 + 4 个专项奖</span></div>
+    <div class="fact"><b>&lt; 2 分钟</b><span>Demo 视频上限</span></div>
+  </div>
+</header>
+
+<!-- ============ 赛道分析 ============ -->
+<section id="track">
+  <p class="eyebrow">01 · 赛道分析</p>
+  <h2>评委到底想看什么</h2>
+  <div class="prose">
+    <p>主办方在描述里反复出现的词是 <strong>explainable（可解释）</strong>、<strong>narratives（叙事）</strong>、<strong>personalized（个性化）</strong>，面向的人群点名了四类：<strong>球迷、制作方（studios）、转播方、流媒体平台</strong>。数据硬约束是只能用合成但贴近真实的足球数据，主办方不分发任何英超真实比赛数据。</p>
+    <p>450 个项目里，最常见的做法大概率是“一个能聊比赛的聊天机器人”。想脱颖而出，要在三个地方和这类项目拉开差距：AI 的每一句结论都能追溯到具体事件；多个 Agent 各有分工，而不是一个大 prompt；产品对准一个具体角色的具体工作流。</p>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>评审标准拆解</h3>
+      <div class="scroll" style="border:0">
+      <table>
+        <tr><th>标准</th><th>怎么拿分</th></tr>
+        <tr><td>技术实现 20%</td><td>代码结构清晰、有文档；真正用上“hero 技术”（Foundry、Agent Framework、Azure）</td></tr>
+        <tr><td>Agentic 设计 20%</td><td>多 Agent 分工、共享状态、交接、失败恢复；有新意</td></tr>
+        <tr><td>真实影响 20%</td><td>解决的问题够重要；能上生产；对开发者、企业或终端用户有价值</td></tr>
+        <tr><td>UX 与呈现 20%</td><td>界面直观；2 分钟视频讲清价值；前后端都有分量</td></tr>
+        <tr><td>赛道契合 20%</td><td>紧扣“合成事件 → 可解释的比赛情报”</td></tr>
+      </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>奖项与对应打法</h3>
+      <ul class="tight">
+        <li><span class="tag">大奖 1st / 2nd</span> 完整度 + 可解释性 + 多人群个性化。一等奖每人约 $4,000 现金，另有英超球赛门票和官方商店代金券</li>
+        <li><span class="tag plum">Best Foundry</span> 模型目录、Prompt Flow、评测（evaluations）、追踪全部走 Foundry</li>
+        <li><span class="tag plum">Best Enterprise</span> 人工审核、审计日志、内容安全、权限，能直接卖给俱乐部或媒体</li>
+        <li><span class="tag plum">Best Multi-Agent</span> Agent Framework / A2A，角色清晰，有交接和失败恢复</li>
+        <li><span class="tag plum">Best Azure Cloud Native</span> 事件驱动：Event Hubs → Functions / Container Apps → Cosmos DB，自动扩缩</li>
+      </ul>
+      <p class="muted" style="font-size:13.5px">专项奖每人约 $1,500。规则里没写一个项目能不能同时拿大奖和专项奖，最好去 Hackathon Rules 里确认。</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>获胜公式</h3>
+      <ul class="tight">
+        <li><strong>证据链</strong>：每条洞察挂上事件 ID，点开能看到是哪几次传球、哪次抢断支撑了这个结论</li>
+        <li><strong>确定性计算交给代码，叙事交给 LLM</strong>：控球率、压迫强度、势头曲线用 Python 算，LLM 只负责解释和改写，这样能压住幻觉</li>
+        <li><strong>一个角色，一条工作流，一个惊艳瞬间</strong>：Demo 前 15 秒就要让人看到“哇”的地方</li>
+        <li><strong>合成数据生成器本身也是亮点</strong>：可复现的比赛模拟器能当测试夹具，体现工程素养</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>风险与雷区</h3>
+      <ul class="tight">
+        <li><span class="tag warn">时间</span> 只剩 6 天，范围必须砍到一个核心闭环</li>
+        <li><span class="tag warn">版权</span> 视频里不能出现第三方商标或受版权保护的音乐；球队和球员全部用虚构名字</li>
+        <li><span class="tag warn">数据</span> 先看 Challenge 页面有没有给官方合成数据集或 schema；没有就自己写生成器</li>
+        <li><span class="tag warn">博彩</span> 避开投注和赔率方向，和英超的品牌调性冲突</li>
+        <li><span class="tag warn">仓库</span> GitHub 仓库必须公开，记得删掉密钥</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 用户地图 ============ -->
+<section id="users">
+  <p class="eyebrow">02 · 用户地图</p>
+  <h2>8 类用户，8 个方向</h2>
+  <p class="prose">先按“谁从比赛数据里拿走价值”分成三大圈：球迷、媒体与平台、专业人士。每一类用户对应一个选项，编号和下文一致。</p>
+  <div class="mm"><pre class="mermaid">
+mindmap
+  root((Inside the Game))
+    球迷
+      新手和泛球迷
+        ① 第二屏伴看 Agent
+      铁杆和战术迷
+        ⑥ What-if 推演实验室
+      视障和听障球迷
+        ⑤ 无障碍比赛播报
+    媒体与平台
+      解说和转播团队
+        ② 解说备稿台
+      俱乐部和工作室内容团队
+        ③ 自动集锦工厂
+      流媒体和 OTT 平台
+        ⑧ 高光事件流水线
+    专业人士
+      数据分析师和教练
+        ④ 战术透镜
+      青训和草根教练
+        ⑦ 比赛课堂
+  </pre></div>
+  <nav class="jump" aria-label="跳转到选项">
+    <a href="#o1">① 伴看</a><a href="#o2">② 备稿台</a><a href="#o3">③ 集锦工厂</a><a href="#o4">④ 战术透镜</a>
+    <a href="#o5">⑤ 无障碍</a><a href="#o6">⑥ What-if</a><a href="#o7">⑦ 课堂</a><a href="#o8">⑧ 事件流</a><a href="#combo">④+⑥+⑧ 组合</a>
+  </nav>
+</section>
+
+<!-- ============ 8 个选项 ============ -->
+<section id="options">
+  <p class="eyebrow">03 · 8 个选项</p>
+  <h2>选项详解</h2>
+
+  <!-- 1 -->
+  <article class="opt" id="o1">
+    <div class="opt-head"><span class="num">1</span><h3>MatchMate · 第二屏伴看 Agent</h3><p class="pitchline">按你懂球的程度讲比赛，随时问“刚才为什么换人”。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>新手球迷、陪看家属、海外非英语球迷</dd>
+        <dt>JTBD</dt><dd>看比赛时，我想看懂场上发生了什么，又不想被术语劝退</dd>
+        <dt>痛点</dt><dd>解说太专业或语速太快；数据面板看不懂；跨语言观赛门槛高</dd>
+        <dt>MVP 功能</dt><dd>三档讲解深度（新手 / 球迷 / 战术）；实时事件流 + 自然语言问答；每个回答附事件证据；多语言</dd>
+        <dt>Agent 架构</dt><dd>事件解析 Agent → 洞察 Agent → 个性化讲述 Agent；问答时用 RAG 检索比赛状态</dd>
+        <dt>微软技术</dt><dd>Foundry 模型 + Agent Service，Azure AI Search，Azure AI Translator，Static Web Apps</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span><span class="tag plum">Foundry</span></span></dd>
+        <dt>风险</dt><dd>和大量聊天机器人项目同质化，必须靠“分层讲解 + 证据链”拉开差距</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((① MatchMate))
+    用户
+      新手球迷
+      陪看家属
+      非英语球迷
+    痛点
+      术语太多
+      数据看不懂
+    功能
+      三档讲解深度
+      实时问答
+      事件证据卡片
+      多语言
+    Agents
+      事件解析
+      洞察生成
+      个性化讲述
+    Demo 瞬间
+      同一个进球三种讲法
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>同一个进球，切换“新手 / 战术迷”档位，讲解实时改写；点开证据卡，高亮出导致进球的 5 次传球。</p>
+  </article>
+
+  <!-- 2 -->
+  <article class="opt" id="o2">
+    <div class="opt-head"><span class="num">2</span><h3>Booth Copilot · 解说备稿台</h3><p class="pitchline">给解说员的实时“副驾驶”：话题卡、数据点、事实核查，一屏搞定。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>解说员、转播导播、赛事数据编辑</dd>
+        <dt>JTBD</dt><dd>直播中，我需要在 10 秒内拿到一个准确、有故事性的数据点</dd>
+        <dt>痛点</dt><dd>数据团队人手不够；口播出错代价高；赛前准备耗时</dd>
+        <dt>MVP 功能</dt><dd>实时“话题卡”推送（势头变化、个人里程碑、战术调整）；口播草稿一键核查；赛前备稿包自动生成</dd>
+        <dt>Agent 架构</dt><dd>统计 Agent、叙事 Agent、事实核查 Agent、编排 Agent；核查不通过时打回叙事 Agent 重写（失败恢复）</dd>
+        <dt>微软技术</dt><dd>Microsoft Agent Framework + A2A，Foundry 评测，Event Hubs，SignalR</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span><span class="tag plum">Multi-Agent</span><span class="tag plum">Enterprise</span></span></dd>
+        <dt>风险</dt><dd>多 Agent 编排调试耗时；需要做一个可信的“直播模拟”节奏</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((② Booth Copilot))
+    用户
+      解说员
+      导播
+      数据编辑
+    痛点
+      10 秒内要数据
+      口播出错代价高
+    功能
+      实时话题卡
+      口播事实核查
+      赛前备稿包
+    Agents
+      统计
+      叙事
+      事实核查
+      编排与重试
+    Demo 瞬间
+      核查 Agent 拦下错误数据
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>叙事 Agent 写出“本赛季第 10 球”，核查 Agent 对照事件数据发现其实是第 9 球，自动打回改写，屏幕上能看到 Agent 之间的交接记录。</p>
+  </article>
+
+  <!-- 3 -->
+  <article class="opt" id="o3">
+    <div class="opt-head"><span class="num">3</span><h3>Recap Studio · 自动集锦工厂</h3><p class="pitchline">终场哨响 60 秒后，社媒帖、短视频脚本、Newsletter、多语言版本同时出稿。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>俱乐部媒体部、体育内容工作室、品牌社媒运营</dd>
+        <dt>JTBD</dt><dd>比赛一结束，我要在各个渠道第一时间发出符合品牌语气的内容</dd>
+        <dt>痛点</dt><dd>赛后内容高峰期人手紧张；多平台多语言重复劳动；品牌口径要统一</dd>
+        <dt>MVP 功能</dt><dd>一场比赛生成 4 种格式；品牌语气配置；人工审核看板（通过 / 修改 / 驳回）；审计日志</dd>
+        <dt>Agent 架构</dt><dd>比赛摘要 Agent → 渠道改写 Agent（并行）→ 品牌与安全审查 Agent → 人工审核</dd>
+        <dt>微软技术</dt><dd>Foundry（模型 + Content Safety + 评测），Logic Apps 审批流，Cosmos DB，Container Apps</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span><span class="tag plum">Enterprise</span><span class="tag plum">Foundry</span></span></dd>
+        <dt>风险</dt><dd>内容生成本身不新鲜，要靠工作流完整度和可控性取胜</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((③ Recap Studio))
+    用户
+      俱乐部媒体部
+      内容工作室
+      社媒运营
+    痛点
+      赛后高峰人手紧
+      多平台重复劳动
+      品牌口径难统一
+    功能
+      一场比赛四种格式
+      品牌语气配置
+      人工审核看板
+      审计日志
+    Agents
+      摘要
+      渠道改写
+      品牌与安全审查
+    Demo 瞬间
+      终场哨到全渠道出稿 60 秒
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>倒计时 60 秒，看板上 4 张卡片依次生成；编辑点“驳回”并写一句意见，Agent 按意见重写，审计日志同步记录。</p>
+  </article>
+
+  <!-- 4 -->
+  <article class="opt" id="o4">
+    <div class="opt-head"><span class="num">4</span><h3>Tactical Lens · 战术透镜</h3><p class="pitchline">回答“比赛是在哪一刻变的”，并把理由画在球场上。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>俱乐部数据分析师、教练组、战术内容创作者</dd>
+        <dt>JTBD</dt><dd>赛后复盘时，我要快速定位转折点，并拿出能说服教练的证据</dd>
+        <dt>痛点</dt><dd>原始事件数据量大；专业工具贵且学习曲线陡；报告写作耗时</dd>
+        <dt>MVP 功能</dt><dd>势头曲线 + 压迫热区；自动标注 3 个转折点；点击转折点在球场图上回放事件序列；一键导出复盘报告</dd>
+        <dt>Agent 架构</dt><dd>指标计算（确定性代码）→ 转折点检测 Agent → 解释 Agent → 报告 Agent</dd>
+        <dt>微软技术</dt><dd>Microsoft Fabric 或 Azure Functions 做指标计算，Foundry，Power BI 嵌入（可选）</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span><span class="tag plum">Foundry</span></span></dd>
+        <dt>风险</dt><dd>需要足球分析领域知识（xT、PPDA 等）；前端可视化工作量大</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((④ Tactical Lens))
+    用户
+      数据分析师
+      教练组
+      战术博主
+    痛点
+      事件数据量大
+      专业工具贵
+      报告耗时
+    功能
+      势头曲线
+      压迫热区
+      转折点自动标注
+      球场回放
+      复盘报告导出
+    Agents
+      指标计算
+      转折点检测
+      解释与报告
+    Demo 瞬间
+      点击转折点 球场动画回放
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>势头曲线在第 63 分钟陡降，点一下，球场上回放对手换人后左路压迫加强的 8 个事件，旁边是一段三句话的解释。</p>
+  </article>
+
+  <!-- 5 -->
+  <article class="opt" id="o5">
+    <div class="opt-head"><span class="num">5</span><h3>Every Fan · 无障碍比赛播报</h3><p class="pitchline">给视障球迷的空间化音频描述，给听障球迷的易读字幕和触觉提示。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>视障球迷、听障球迷、认知障碍或阅读困难的球迷</dd>
+        <dt>JTBD</dt><dd>我想和其他球迷一样实时感受比赛的紧张感</dd>
+        <dt>痛点</dt><dd>电视解说默认观众看得见画面；字幕延迟大、信息密度高；很少有产品认真做这个群体</dd>
+        <dt>MVP 功能</dt><dd>“球在哪里”空间化语音描述（左 / 右 / 禁区）；简明语言字幕；关键事件震动提示；可调播报节奏</dd>
+        <dt>Agent 架构</dt><dd>事件优先级 Agent（决定播什么）→ 描述生成 Agent → 语音 / 字幕渲染</dd>
+        <dt>微软技术</dt><dd>Azure AI Speech（神经语音 + SSML），Foundry，Azure Functions</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span><span class="tag plum">Foundry</span></span></dd>
+        <dt>风险</dt><dd>最好能找到真实用户反馈；音频在 Demo 视频里要录得清楚</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((⑤ Every Fan))
+    用户
+      视障球迷
+      听障球迷
+      阅读困难球迷
+    痛点
+      解说默认看得见
+      字幕延迟密度高
+      长期被忽视
+    功能
+      空间化语音描述
+      简明语言字幕
+      震动提示
+      可调节奏
+    Agents
+      事件优先级
+      描述生成
+      语音渲染
+    Demo 瞬间
+      闭眼听一次反击
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>画面变黑，只留音频：“球从右路推进……传中……头球！进了！”，观众闭着眼也能跟上一次反击。情感冲击力在 8 个选项里最强。</p>
+  </article>
+
+  <!-- 6 -->
+  <article class="opt" id="o6">
+    <div class="opt-head"><span class="num">6</span><h3>What-If Lab · 反事实推演实验室</h3><p class="pitchline">“如果那张红牌没出？”用合成数据重新模拟剩余比赛。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>铁杆球迷、足球播客和评论员、球迷社区</dd>
+        <dt>JTBD</dt><dd>赛后争论时，我想用有依据的推演来支持我的观点</dd>
+        <dt>痛点</dt><dd>球迷争论只能靠感觉；没有工具能做可信的“假如”分析</dd>
+        <dt>MVP 功能</dt><dd>选一个关键事件并修改（取消红牌、换人提前）；模拟器重跑 N 次给出结果分布；Agent 解释差异；生成可分享卡片</dd>
+        <dt>Agent 架构</dt><dd>场景解析 Agent → 模拟器（代码）→ 对比分析 Agent → 叙事 Agent</dd>
+        <dt>微软技术</dt><dd>Azure Container Apps Jobs 并行模拟，Foundry，Cosmos DB</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span><span class="tag plum">Cloud Native</span></span></dd>
+        <dt>风险</dt><dd>模拟器可信度难以证明；6 天内工作量最大</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((⑥ What-If Lab))
+    用户
+      铁杆球迷
+      播客评论员
+      球迷社区
+    痛点
+      争论只靠感觉
+      没有推演工具
+    功能
+      修改关键事件
+      蒙特卡洛重跑
+      结果分布对比
+      分享卡片
+    Agents
+      场景解析
+      模拟器
+      对比分析
+      叙事
+    Demo 瞬间
+      取消红牌 胜率从 22% 到 51%
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>拖动时间轴，把第 38 分钟的红牌删掉，1,000 次模拟后胜率分布实时变化，Agent 用一段话解释原因。这个方向和“合成数据”主题契合得最自然。</p>
+  </article>
+
+  <!-- 7 -->
+  <article class="opt" id="o7">
+    <div class="opt-head"><span class="num">7</span><h3>Match Classroom · 比赛课堂</h3><p class="pitchline">把一场比赛拆成 5 节战术小课，给青训教练和想入门的球迷。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>青训和草根教练、体育老师、想系统学懂战术的球迷</dd>
+        <dt>JTBD</dt><dd>我想用真实感的比赛片段给孩子们讲清一个战术概念</dd>
+        <dt>痛点</dt><dd>找合适的教学片段费时间；战术概念抽象；缺少互动练习</dd>
+        <dt>MVP 功能</dt><dd>自动识别教学时刻（如高位逼抢、三角传递）；生成图解 + 讲解；小测验；教案导出</dd>
+        <dt>Agent 架构</dt><dd>模式识别 Agent → 课程设计 Agent → 出题 Agent → 难度适配 Agent</dd>
+        <dt>微软技术</dt><dd>Foundry，Azure AI Search，Static Web Apps</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag">大奖</span></span></dd>
+        <dt>风险</dt><dd>和主办方“转播、流媒体”的商业语境距离较远，赛道契合分偏低</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((⑦ Match Classroom))
+    用户
+      青训教练
+      体育老师
+      入门球迷
+    痛点
+      找片段费时
+      概念抽象
+      缺少互动
+    功能
+      教学时刻识别
+      图解讲解
+      小测验
+      教案导出
+    Agents
+      模式识别
+      课程设计
+      出题
+      难度适配
+    Demo 瞬间
+      一场比赛变成五节课
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>上传一场合成比赛，30 秒后得到“什么是高位逼抢”一课：3 个片段、球场图解、3 道选择题。</p>
+  </article>
+
+  <!-- 8 -->
+  <article class="opt" id="o8">
+    <div class="opt-head"><span class="num">8</span><h3>Moment Stream · 高光事件流水线</h3><p class="pitchline">给流媒体平台的事件驱动后端：实时识别高光，自动打标签、分章节、推送。</p></div>
+    <div class="grid2">
+      <dl class="kv">
+        <dt>目标用户</dt><dd>OTT 和流媒体平台工程团队、转播技术方、App 推送运营</dd>
+        <dt>JTBD</dt><dd>我需要一个稳定的 API，实时告诉我“现在发生了值得推送的事”</dd>
+        <dt>痛点</dt><dd>高光识别靠人工打点；元数据格式不统一；推送时机把握不好</dd>
+        <dt>MVP 功能</dt><dd>事件流摄入；高光评分与分类；自动生成章节标题和推送文案；Webhook 和 API 输出；运维看板（延迟、吞吐）</dd>
+        <dt>Agent 架构</dt><dd>高光评分（规则 + 模型）→ 元数据 Agent → 推送文案 Agent；用 Durable Functions 重试</dd>
+        <dt>微软技术</dt><dd>Event Hubs，Azure Functions / Container Apps，Event Grid，Cosmos DB，API Management，Application Insights</dd>
+        <dt>冲击奖项</dt><dd><span class="tags"><span class="tag plum">Cloud Native</span><span class="tag plum">Enterprise</span></span></dd>
+        <dt>风险</dt><dd>偏后端，UX 分难拿；Demo 需要把“看不见的管道”可视化</dd>
+      </dl>
+      <div class="mm"><pre class="mermaid">
+mindmap
+  root((⑧ Moment Stream))
+    用户
+      OTT 平台
+      转播技术方
+      推送运营
+    痛点
+      人工打点
+      元数据不统一
+      推送时机难把握
+    功能
+      事件流摄入
+      高光评分
+      章节和推送文案
+      Webhook 和 API
+      运维看板
+    Agents
+      高光评分
+      元数据
+      推送文案
+    Demo 瞬间
+      进球后 800 毫秒手机收到推送
+  </pre></div>
+    </div>
+    <p class="demo"><b>Demo 钩子：</b>左边是模拟比赛的事件流，右边是一部手机；进球发生，800 毫秒后手机弹出推送，下方运维看板显示端到端延迟。</p>
+  </article>
+</section>
+
+<!-- ============ 评分 ============ -->
+<section id="score">
+  <p class="eyebrow">04 · 评分矩阵</p>
+  <h2>按评审标准打分</h2>
+  <p class="prose">前五列对应官方五项评审标准，最后一列是 6 天内能否做完。每项 1 到 5 分，满分 30。这是我基于赛题描述的主观估计，你可以按团队技能调整。</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>选项</th><th>技术</th><th>Agentic</th><th>影响</th><th>UX</th><th>契合</th><th>6 天可行</th><th>总分</th><th>最适合的专项奖</th></tr></thead>
+    <tbody>
+      <tr class="best"><td>④+⑥+⑧ Pivot</td><td class="n">5</td><td class="n">5</td><td class="n">4</td><td class="n">5</td><td class="n">5</td><td class="n">2</td><td class="tot">26</td><td>Multi-Agent · Cloud Native</td></tr>
+      <tr class="best"><td>③ Recap Studio</td><td class="n">4</td><td class="n">4</td><td class="n">5</td><td class="n">4</td><td class="n">5</td><td class="n">4</td><td class="tot">26</td><td>Enterprise · Foundry</td></tr>
+      <tr class="best"><td>② Booth Copilot</td><td class="n">4</td><td class="n">5</td><td class="n">4</td><td class="n">4</td><td class="n">5</td><td class="n">3</td><td class="tot">25</td><td>Multi-Agent</td></tr>
+      <tr><td>① MatchMate</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">5</td><td class="n">5</td><td class="n">4</td><td class="tot">25</td><td>Foundry</td></tr>
+      <tr><td>⑤ Every Fan</td><td class="n">4</td><td class="n">3</td><td class="n">5</td><td class="n">4</td><td class="n">4</td><td class="n">4</td><td class="tot">24</td><td>Foundry</td></tr>
+      <tr><td>④ Tactical Lens</td><td class="n">4</td><td class="n">3</td><td class="n">3</td><td class="n">4</td><td class="n">5</td><td class="n">3</td><td class="tot">22</td><td>Foundry</td></tr>
+      <tr><td>⑧ Moment Stream</td><td class="n">5</td><td class="n">3</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">3</td><td class="tot">22</td><td>Cloud Native</td></tr>
+      <tr><td>⑥ What-If Lab</td><td class="n">4</td><td class="n">4</td><td class="n">3</td><td class="n">5</td><td class="n">4</td><td class="n">2</td><td class="tot">22</td><td>Cloud Native</td></tr>
+      <tr><td>⑦ Match Classroom</td><td class="n">3</td><td class="n">3</td><td class="n">4</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="tot">21</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 推荐 ============ -->
+<section id="pick">
+  <p class="eyebrow">05 · 推荐</p>
+  <h2>选哪个，怎么在 6 天内做完</h2>
+  <div class="rec">
+    <h3>首选：③ Recap Studio，借用 ② 的事实核查 Agent</h3>
+    <div class="prose">
+      <p>理由有三点。第一，它直接对应赛题点名的“自动集锦”和“studios / 流媒体”，赛道契合没有争议。第二，审核看板、审计日志、内容安全让它天然具备企业级可信度，大奖和 Enterprise 奖可以一起冲。第三，工作流是线性的，6 天里风险最小。</p>
+      <p>再把 ② 的“事实核查 Agent”嵌进流水线：任何生成内容里的数字都要和事件数据对一遍，错了就打回重写。这样能补足 Agentic 分，Demo 里也多了一个看得见的“Agent 互相纠错”瞬间。</p>
+      <p>如果团队前端较强、想要更强的情感冲击，⑤ Every Fan 是第二选择，差异化最明显。</p>
+    </div>
+    <ol class="days">
+      <li><b>10/21 周二</b><span>读 Challenge 页的数据要求；定事件 schema；写合成比赛生成器（虚构球队和球员）；搭好 Foundry 项目</span></li>
+      <li><b>10/22 周三</b><span>确定性指标层：比分、控球、射门、势头曲线、关键事件，每条都带事件 ID</span></li>
+      <li><b>10/23 周四</b><span>Agent Framework 编排：摘要 → 渠道改写 → 事实核查 → 品牌审查，接上失败重试</span></li>
+      <li><b>10/24 周五</b><span>前端审核看板 + 证据卡片；Logic Apps 审批流；审计日志写入 Cosmos DB</span></li>
+      <li><b>10/25 周六</b><span>部署到 Container Apps；跑 Foundry 评测；写 README 和架构图；清理仓库并公开</span></li>
+      <li><b>10/26 周日</b><span>录制 2 分钟以内 Demo（无版权音乐）；写 Pitch；提交</span></li>
+      <li><b>10/27 周一</b><span>截止日，只留作缓冲，不要计划任何开发</span></li>
+    </ol>
+  </div>
+  <p class="muted" style="font-size:13.5px">另有一个组合方案 ④+⑥+⑧，见下一节。</p>
+  <p class="muted" style="font-size:13.5px">来源：Innovation Studio 赛事页面（Inside the Game: Developer Hackathon）。我只读到了 About 页，没看到 Challenge 页的完整赛题和数据说明，开工前请先补读那一页。</p>
+</section>
+
+<!-- ============ 组合方案 ============ -->
+<section id="combo">
+  <p class="eyebrow">06 · 组合方案</p>
+  <h2>④ + ⑥ + ⑧ Pivot · 支点</h2>
+  <p class="prose" style="font-size:16px">一句话：<strong>实时发现比赛转折点，解释它为什么发生，再推演“如果当时不是这样”。</strong>三个选项正好构成一条闭环：⑧ 负责实时感知，④ 负责解释，⑥ 负责推演。</p>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>为什么这三个能合</h3>
+      <ul class="tight">
+        <li><strong>模拟器复用</strong>：合成数据生成器本来就要写。只要它能“从任意比赛状态继续往下模拟”，⑥ 的反事实推演几乎是顺带完成的。整个组合靠这一点成立。</li>
+        <li><strong>转折点是公共接口</strong>：④ 找出的转折点就是 ⑥ 的推演入口，也是 ⑧ 推送给平台的高光。</li>
+        <li><strong>每个模块补另一个的短板</strong>：⑧ 单独做 UX 弱，④ 单独做 Agentic 弱，⑥ 单独做可信度弱。合在一起，评审五项都有抓手。</li>
+        <li><strong>故事完整</strong>：Detect → Explain → Simulate，2 分钟 Demo 有起承转合。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>代价</h3>
+      <ul class="tight">
+        <li><span class="tag warn">范围</span> 6 天可行性只有 2 分，是所有方案里最低的</li>
+        <li><span class="tag warn">集成</span> 三个子系统的接口要第一天就定死，否则联调会吃掉两天</li>
+        <li><span class="tag warn">可信度</span> 推演结果必须标明“基于合成模拟”，不能包装成预测</li>
+        <li><span class="tag warn">人力</span> 至少 3 人：后端流水线、Agent 与模拟器、前端各一人；1 到 2 人不建议做</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mm"><pre class="mermaid">
+mindmap
+  root((Pivot))
+    用户
+      主用户 分析师和教练
+      分发方 转播和 OTT 平台
+      传播方 铁杆球迷和播客
+    Detect 来自 ⑧
+      模拟比赛事件流
+      Event Hubs 摄入
+      实时势头和压迫指标
+    Explain 来自 ④
+      转折点检测
+      球场回放
+      证据链解释
+    Simulate 来自 ⑥
+      自然语言改场景
+      并行蒙特卡洛
+      结果分布对比
+      分享卡片
+    Agents
+      转折点侦测
+      解释
+      场景翻译
+      对比分析
+      数字核查
+    奖项
+      大奖
+      Multi-Agent
+      Cloud Native
+  </pre></div>
+
+  <h3>架构</h3>
+  <div class="mm"><pre class="mermaid">
+flowchart LR
+  SIM["比赛模拟器<br>Container Apps Job"] --> EH["Event Hubs"]
+  EH --> FN["Functions<br>势头 / 压迫指标"]
+  FN --> TP["转折点侦测 Agent"]
+  TP --> EX["解释 Agent<br>附事件 ID"]
+  EX --> CK["数字核查 Agent"]
+  CK -->|"不通过"| EX
+  CK --> DB[("Cosmos DB")]
+  DB --> UI["Web 界面<br>SignalR 实时推送"]
+  UI -->|"如果当时..."| SC["场景翻译 Agent"]
+  SC -->|"参数化状态"| SIM2["模拟器 × N 并行"]
+  SIM2 --> CMP["对比分析 Agent"]
+  CMP --> CK
+  </pre></div>
+  <p class="muted" style="font-size:13.5px">模拟器是同一份代码，用了两次：一次生成“现实”比赛流，一次从转折点开始重跑 N 次。Agent 统一用 Microsoft Agent Framework 编排，模型和评测走 Foundry。</p>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>范围取舍（MoSCoW）</h3>
+      <ul class="tight">
+        <li><span class="tag">Must</span> 可从任意状态续跑的模拟器；事件流 + 势头曲线；转折点检测和证据链解释；一个 what-if 场景（取消红牌或提前换人）；核查 Agent</li>
+        <li><span class="tag plum">Should</span> 自然语言输入场景；Container Apps Jobs 并行扩缩；分享卡片</li>
+        <li><span class="tag plum">Could</span> 压迫热区；对外 Webhook 和 API</li>
+        <li><span class="tag warn">Won't</span> 手机推送、API Management、复盘报告导出、多场比赛管理</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>2 分钟 Demo 脚本</h3>
+      <ul class="tight">
+        <li><b>0:00–0:20</b> 模拟比赛实时流入，势头曲线在跳动</li>
+        <li><b>0:20–0:50</b> 第 63 分钟自动标出转折点，球场回放 8 个事件，旁边是带证据的三句解释</li>
+        <li><b>0:50–1:25</b> 输入“如果 63 分钟没换人？”，500 次模拟并行展开，胜率分布从 34% 变到 52%</li>
+        <li><b>1:25–1:45</b> 核查 Agent 拦下一个错误数字并打回重写</li>
+        <li><b>1:45–2:00</b> 架构图 + 端到端延迟看板，收尾</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rec">
+    <h3>6 天计划（3 人并行）</h3>
+    <ol class="days">
+      <li><b>10/21 周二</b><span>定事件 schema 和“比赛状态”结构，三条线的接口今天定死；模拟器能跑完一整场</span></li>
+      <li><b>10/22 周三</b><span>A：Event Hubs → Functions 指标。B：模拟器支持从状态续跑。C：球场组件和势头曲线</span></li>
+      <li><b>10/23 周四</b><span>A：Cosmos DB + SignalR。B：转折点侦测和解释 Agent。C：接实时数据</span></li>
+      <li><b>10/24 周五</b><span>what-if 闭环跑通，先在进程内跑 N 次；核查 Agent 接入。<strong>这天结束时闭环没跑通，就砍掉 ⑥，退回 ④+⑧</strong></span></li>
+      <li><b>10/25 周六</b><span>并行模拟上 Container Apps Jobs；部署；Foundry 评测；README 和架构图</span></li>
+      <li><b>10/26 周日</b><span>录 Demo，写 Pitch，提交</span></li>
+      <li><b>10/27 周一</b><span>缓冲</span></li>
+    </ol>
+  </div>
+
+  <div class="prose">
+    <p><strong>和 ③ 怎么选：</strong>这个组合的天花板更高，技术和 Agentic 分能拿满，Demo 也更有记忆点，适合冲一等奖和 Multi-Agent 奖。③ 的下限更稳，适合人少或想确保交付的队伍。判断标准很简单：有 3 个人，并且至少一人熟悉 Azure 事件驱动架构，就选组合；否则选 ③。</p>
+  </div>
+</section>
+
+</div>
