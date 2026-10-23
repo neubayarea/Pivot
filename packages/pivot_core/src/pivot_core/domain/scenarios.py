@@ -13,6 +13,7 @@ Probability = Annotated[float, Field(ge=0, le=1)]
 
 ScenarioType = Literal[
     "cancel_substitution", "move_substitution", "remove_red_card", "remove_goal", "change_press",
+    "change_formation",
 ]
 
 
@@ -30,7 +31,7 @@ class PlantSpec(Model):
     """Force an event at a given minute. Used by the eval seeds and the demo preset."""
 
     minute: Minute
-    type: Literal["red_card", "substitution", "goal", "press_change"]
+    type: Literal["red_card", "substitution", "goal", "press_change", "formation_change"]
     team: Side
     params: dict[str, int | str] = {}
 

@@ -9,7 +9,7 @@ from pydantic import Field
 from .common import Model
 
 MessageType = Literal[
-    "match.status", "event.batch", "metric.updated",
+    "match.status", "event.batch", "tracking.frame", "metric.updated",
     "pivot.pending", "pivot.confirmed", "pivot.degraded", "pivot.rejected",
     "scenario.progress", "scenario.completed", "trace.appended", "recap.ready",
 ]

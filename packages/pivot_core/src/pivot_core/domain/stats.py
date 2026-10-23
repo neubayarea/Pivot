@@ -6,7 +6,8 @@ from typing import Literal
 
 from .common import MinuteWindow, Model, Side
 
-# First version of the 15-stat vocabulary. D02 owns the wording and B05 owns the
+# First version of the stat vocabulary: 15 event stats plus 4 shape stats that
+# come from the tracking frames. D02 owns the wording and B05 owns the
 # calculation; both must match this list exactly.
 StatMetric = Literal[
     "possession_pct",
@@ -24,9 +25,13 @@ StatMetric = Literal[
     "duels_won",
     "turnovers",
     "momentum_avg",
+    "line_height_m",          # mean distance of the back line from its own goal
+    "team_width_m",           # mean spread of the outfield players across the pitch
+    "press_distance_m",       # mean distance from the ball carrier to the nearest opponent
+    "distance_covered_km",
 ]
 
-StatUnit = Literal["count", "pct", "xg", "index"]
+StatUnit = Literal["count", "pct", "xg", "index", "m", "km"]
 
 STAT_UNITS: dict[str, StatUnit] = {
     "possession_pct": "pct",
@@ -44,6 +49,10 @@ STAT_UNITS: dict[str, StatUnit] = {
     "duels_won": "count",
     "turnovers": "count",
     "momentum_avg": "index",
+    "line_height_m": "m",
+    "team_width_m": "m",
+    "press_distance_m": "m",
+    "distance_covered_km": "km",
 }
 
 

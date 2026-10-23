@@ -19,7 +19,9 @@ from pivot_core.domain import (
     StatMetric,
     StatRef,
     Team,
+    TrackingFrame,
     ViewerPrefs,
+    zone_of,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -34,7 +36,7 @@ def validate(name: str, data: dict) -> None:
 def team(side: str, name: str, short: str) -> Team:
     prefix = side[0]
     return Team(
-        side=side, name=name, short_name=short, color="#1E6B45",
+        side=side, name=name, short_name=short, color="#1E6B45", formation="4-3-3",
         players=[Player(player_id=f"{prefix}{n}", name=f"Player {n}", team=side,
                         shirt_number=n, position="MF") for n in (7, 9)],
     )
@@ -61,18 +63,49 @@ def pivot() -> Pivot:
     )
 
 
-def test_stat_vocabulary_has_15_metrics_each_with_a_unit():
+def test_stat_vocabulary_has_19_metrics_each_with_a_unit():
     metrics = typing.get_args(StatMetric)
-    assert len(metrics) == 15
+    assert len(metrics) == 19
     assert set(STAT_UNITS) == set(metrics)
 
 
-def test_event_minute_is_derived_from_the_clock():
+def test_event_minute_and_zones_are_derived():
     e = MatchEvent(match_id="M", seq=1042, event_id="m062-s01042", t=3750, period=2,
-                   type="pass", team="home", from_zone=(7, 3), to_zone=(10, 4), outcome="success")
-    assert e.minute == 62
-    assert e.model_dump()["minute"] == 62
+                   type="pass", team="home", player_id="h07", receiver_id="h09",
+                   location=(64.2, 30.1), end_location=(88.0, 34.5), outcome="success",
+                   ball_speed_kmh=52.0, under_pressure=True, possession_id=118,
+                   play_pattern="counter")
+    data = e.model_dump(mode="json")
+    assert (data["minute"], data["from_zone"], data["to_zone"]) == (62, [7, 3], [10, 4])
+    validate("MatchEvent", data)
+
+
+def test_zone_of_clamps_the_far_touchline_and_goal_line():
+    assert zone_of((0.0, 0.0)) == (0, 0)
+    assert zone_of((105.0, 68.0)) == (11, 7)
+
+
+def test_a_goal_is_a_shot_with_outcome_goal():
+    e = MatchEvent(match_id="M", seq=7, event_id="m038-s00007", t=2290, period=1, type="shot",
+                   team="away", player_id="a09", location=(14.0, 33.0), end_location=(0.0, 34.2),
+                   shot_outcome="goal", xg=0.31, ball_speed_kmh=96.5)
     validate("MatchEvent", e.model_dump(mode="json"))
+    with pytest.raises(ValidationError):
+        MatchEvent(match_id="M", seq=8, event_id="x", t=1, period=1, type="goal", team="home")
+
+
+def test_tracking_frame_holds_at_most_22_players_inside_the_pitch():
+    frame = TrackingFrame(
+        match_id="M", t=3750, period=2, possession="home",
+        ball={"x": 64.2, "y": 30.1, "owner_id": "h07"},
+        players=[{"player_id": f"h{n}", "x": 50.0 + n, "y": 30.0, "speed_ms": 4.2} for n in range(1, 12)],
+    )
+    validate("TrackingFrame", frame.model_dump(mode="json"))
+    with pytest.raises(ValidationError):
+        TrackingFrame(match_id="M", t=1, period=1, possession=None, ball={"x": 106.0, "y": 0.0}, players=[])
+    with pytest.raises(ValidationError):
+        TrackingFrame(match_id="M", t=1, period=1, possession=None, ball={"x": 52.5, "y": 34.0},
+                      players=[{"player_id": f"p{n}", "x": 1.0, "y": 1.0} for n in range(23)])
 
 
 def test_full_time_event_stays_in_minute_89():

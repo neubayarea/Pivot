@@ -499,8 +499,9 @@ FastAPI 会自动生成 OpenAPI 文档，地址是 `/api/docs`（对应 F17，�
 | 文件 | 模型 |
 |---|---|
 | `match.py` | `Match`、`Team`、`Player`、`Score` |
-| `events.py` | `MatchEvent`（`minute` 由 `t` 推出，会随 JSON 一起输出） |
-| `stats.py` | 统计词表 `StatMetric`（15 项）、`STAT_UNITS`、`StatRef`、`Claim` |
+| `events.py` | `MatchEvent`（`minute`、`from_zone`、`to_zone` 由 `t` 和坐标推出，会随 JSON 一起输出） |
+| `tracking.py` | `TrackingFrame`、`PlayerPosition`、`BallPosition`（每秒一帧） |
+| `stats.py` | 统计词表 `StatMetric`（19 项）、`STAT_UNITS`、`StatRef`、`Claim` |
 | `narrative.py` | `ViewerPrefs`、`ExplanationSentence`、`Narrative` |
 | `pivots.py` | `MinuteMetric`、`PivotCandidate`、`Pivot` |
 | `scenarios.py` | `ScenarioSpec`、`PlantSpec`、`OutcomeDist`、`SimResult`、`Scenario` |
@@ -513,6 +514,8 @@ FastAPI 会自动生成 OpenAPI 文档，地址是 `/api/docs`（对应 F17，�
 - **个性化**：新增 `ViewerPrefs{audience, language, focus_team, focus_player_id}`。AI 写的文字统一放进 `Narrative{prefs, headline, sentences, source, verifier_attempts, chain_id}`；`Pivot.narrative`、`SimResult.narrative`、`Recap.narrative` 存默认版本（analyst、en），其他版本按 `ViewerPrefs` 另外生成。原来 `Pivot` 上的 `headline`、`explanation`、`verifier_attempts` 挪进了 `Narrative`。
 - **球员级统计**：`StatRef` 加了可选的 `player_id`，供关注球员模式使用。
 - **传球接球人**：`MatchEvent` 加了可选的 `receiver_id`。
+- **对齐真实事件数据**（参考 StatsBomb、Opta、SPADL）：事件改用连续坐标 `location` / `end_location`（105 × 68 米，主队始终向 x = 105 进攻），`from_zone` / `to_zone` 改为由坐标推出；新增 `shot_outcome`、`ball_speed_kmh`、`under_pressure`、`possession_id`、`play_pattern`；事件类型补上 dribble、save、duel、clearance、block、ball_recovery、offside、tactical_shift；进球不再是单独的事件类型，而是 `shot_outcome = "goal"` 的射门；`Team` 加了 `formation`。
+- **全员位置**（[ADR-0014](adr/0014-per-second-positional-simulator.md)）：新增 `TrackingFrame` / `PlayerPosition` / `BallPosition`，每秒一帧；推送消息新增 `tracking.frame`；统计词表新增 4 项阵型数据（防线高度、阵型宽度、压迫距离、跑动距离），共 19 项。
 - **新输出**：`OverlayItem` / `OverlayFeed`（转播叠加层）和 `Recap`（终场报道）。
 - **新增模型**：`Match`、`Team`、`Player`、`Scenario`、`PlantSpec`、`Verdict`、`AgentTrace`、`Envelope`，原来只在表格里提到，现在都有了正式定义。
 - **字段命名统一用 snake_case**：推送信封里的 `matchId` 改成了 `match_id`。
@@ -623,6 +626,7 @@ flowchart TB
 | [0011](adr/0011-functions-stream-metrics.md) | Functions 计算流式指标 | Stream Analytics；Fabric 实时智能 |
 | [0012](adr/0012-frontend-react-vite-d3.md) | React + Vite + D3，部署在 Static Web Apps | Next.js；Streamlit；Power BI |
 | [0013](adr/0013-platform-baseline-azd-bicep-identity.md) | azd + Bicep、OIDC、托管身份 | Terraform；门户手工创建 |
+| [0014](adr/0014-per-second-positional-simulator.md) | 模拟器每秒一步，生成全员位置，位置影响动作成功率（部分取代 0008） | 只有区域；事后补位置；25 帧物理模拟 |
 
 ## 13. 实施指南
 

@@ -106,6 +106,46 @@
       "title": "AgentTrace",
       "type": "object"
     },
+    "BallPosition": {
+      "additionalProperties": false,
+      "properties": {
+        "owner_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "x": {
+          "maximum": 105.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "y": {
+          "maximum": 68.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "maximum": 30,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z",
+        "owner_id"
+      ],
+      "title": "BallPosition",
+      "type": "object"
+    },
     "Claim": {
       "additionalProperties": false,
       "properties": {
@@ -117,7 +157,9 @@
             "count",
             "pct",
             "xg",
-            "index"
+            "index",
+            "m",
+            "km"
           ],
           "type": "string"
         },
@@ -154,6 +196,7 @@
           "enum": [
             "match.status",
             "event.batch",
+            "tracking.frame",
             "metric.updated",
             "pivot.pending",
             "pivot.confirmed",
@@ -292,6 +335,45 @@
     "MatchEvent": {
       "additionalProperties": false,
       "properties": {
+        "ball_speed_kmh": {
+          "anyOf": [
+            {
+              "maximum": 150,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "end_location": {
+          "anyOf": [
+            {
+              "additionalItems": false,
+              "items": [
+                {
+                  "maximum": 105.0,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "maximum": 68.0,
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "event_id": {
           "type": "string"
         },
@@ -301,14 +383,37 @@
               "additionalItems": false,
               "items": [
                 {
-                  "maximum": 11,
-                  "minimum": 0,
                   "type": "integer"
                 },
                 {
-                  "maximum": 7,
-                  "minimum": 0,
                   "type": "integer"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Threat-grid zone of `location`.",
+          "readOnly": true
+        },
+        "location": {
+          "anyOf": [
+            {
+              "additionalItems": false,
+              "items": [
+                {
+                  "maximum": 105.0,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "maximum": 68.0,
+                  "minimum": 0,
+                  "type": "number"
                 }
               ],
               "maxItems": 2,
@@ -358,10 +463,43 @@
           ],
           "type": "integer"
         },
+        "play_pattern": {
+          "anyOf": [
+            {
+              "enum": [
+                "open_play",
+                "counter",
+                "corner",
+                "free_kick",
+                "throw_in",
+                "goal_kick",
+                "kick_off",
+                "penalty"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "player_id": {
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "possession_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
             },
             {
               "type": "null"
@@ -389,6 +527,24 @@
           "minimum": 0,
           "type": "integer"
         },
+        "shot_outcome": {
+          "anyOf": [
+            {
+              "enum": [
+                "goal",
+                "saved",
+                "off_target",
+                "blocked",
+                "post"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "t": {
           "maximum": 5400,
           "minimum": 0,
@@ -411,13 +567,9 @@
               "additionalItems": false,
               "items": [
                 {
-                  "maximum": 11,
-                  "minimum": 0,
                   "type": "integer"
                 },
                 {
-                  "maximum": 7,
-                  "minimum": 0,
                   "type": "integer"
                 }
               ],
@@ -429,24 +581,36 @@
               "type": "null"
             }
           ],
-          "default": null
+          "description": "Threat-grid zone of `end_location`.",
+          "readOnly": true
         },
         "type": {
           "enum": [
             "pass",
             "carry",
+            "dribble",
             "shot",
-            "goal",
+            "save",
+            "pressure",
+            "duel",
             "tackle",
             "interception",
-            "pressure",
+            "clearance",
+            "block",
+            "ball_recovery",
             "foul",
             "card",
+            "offside",
             "substitution",
+            "tactical_shift",
             "kickoff",
             "period_end"
           ],
           "type": "string"
+        },
+        "under_pressure": {
+          "default": false,
+          "type": "boolean"
         },
         "xg": {
           "anyOf": [
@@ -473,13 +637,20 @@
         "team",
         "player_id",
         "receiver_id",
-        "from_zone",
-        "to_zone",
+        "location",
+        "end_location",
         "outcome",
+        "shot_outcome",
         "xg",
+        "ball_speed_kmh",
+        "under_pressure",
+        "possession_id",
+        "play_pattern",
         "threat",
         "meta",
-        "minute"
+        "minute",
+        "from_zone",
+        "to_zone"
       ],
       "title": "MatchEvent",
       "type": "object"
@@ -935,7 +1106,8 @@
             "red_card",
             "substitution",
             "goal",
-            "press_change"
+            "press_change",
+            "formation_change"
           ],
           "type": "string"
         }
@@ -988,6 +1160,38 @@
         "position"
       ],
       "title": "Player",
+      "type": "object"
+    },
+    "PlayerPosition": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "type": "string"
+        },
+        "speed_ms": {
+          "default": 0.0,
+          "maximum": 12,
+          "minimum": 0,
+          "type": "number"
+        },
+        "x": {
+          "maximum": 105.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "y": {
+          "maximum": 68.0,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "player_id",
+        "x",
+        "y",
+        "speed_ms"
+      ],
+      "title": "PlayerPosition",
       "type": "object"
     },
     "Recap": {
@@ -1121,7 +1325,8 @@
             "move_substitution",
             "remove_red_card",
             "remove_goal",
-            "change_press"
+            "change_press",
+            "change_formation"
           ],
           "type": "string"
         }
@@ -1238,7 +1443,11 @@
             "interceptions",
             "duels_won",
             "turnovers",
-            "momentum_avg"
+            "momentum_avg",
+            "line_height_m",
+            "team_width_m",
+            "press_distance_m",
+            "distance_covered_km"
           ],
           "type": "string"
         },
@@ -1295,6 +1504,10 @@
           "pattern": "^#[0-9A-Fa-f]{6}$",
           "type": "string"
         },
+        "formation": {
+          "pattern": "^\\d(-\\d){2,4}$",
+          "type": "string"
+        },
         "name": {
           "type": "string"
         },
@@ -1321,9 +1534,64 @@
         "name",
         "short_name",
         "color",
+        "formation",
         "players"
       ],
       "title": "Team",
+      "type": "object"
+    },
+    "TrackingFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "ball": {
+          "$ref": "#/$defs/BallPosition"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "period": {
+          "enum": [
+            1,
+            2
+          ],
+          "type": "integer"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerPosition"
+          },
+          "maxItems": 22,
+          "type": "array"
+        },
+        "possession": {
+          "anyOf": [
+            {
+              "enum": [
+                "home",
+                "away"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "t": {
+          "maximum": 5400,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "t",
+        "period",
+        "possession",
+        "ball",
+        "players"
+      ],
+      "title": "TrackingFrame",
       "type": "object"
     },
     "Verdict": {

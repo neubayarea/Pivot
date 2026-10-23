@@ -25,6 +25,7 @@ class Team(Model):
     name: str                                 # fictional, e.g. "Harbour City"
     short_name: Annotated[str, Field(max_length=4)]   # "HBC", shown in the top bar
     color: Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
+    formation: Annotated[str, Field(pattern=r"^\d(-\d){2,4}$")]   # starting shape, e.g. "4-3-3"
     players: list[Player]                     # starters first, then the bench
 
 

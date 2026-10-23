@@ -53,11 +53,21 @@ export interface VerifierIssue {
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "BallPosition".
+ */
+export interface BallPosition {
+  owner_id: string | null;
+  x: number;
+  y: number;
+  z: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "Claim".
  */
 export interface Claim {
   stat_ref: StatRef;
-  unit: "count" | "pct" | "xg" | "index";
+  unit: "count" | "pct" | "xg" | "index" | "m" | "km";
   value: number;
 }
 /**
@@ -80,7 +90,11 @@ export interface StatRef {
     | "interceptions"
     | "duels_won"
     | "turnovers"
-    | "momentum_avg";
+    | "momentum_avg"
+    | "line_height_m"
+    | "team_width_m"
+    | "press_distance_m"
+    | "distance_covered_km";
   player_id: string | null;
   team: "home" | "away";
   /**
@@ -103,6 +117,7 @@ export interface Envelope {
   type:
     | "match.status"
     | "event.batch"
+    | "tracking.frame"
     | "metric.updated"
     | "pivot.pending"
     | "pivot.confirmed"
@@ -148,6 +163,7 @@ export interface Match {
  */
 export interface Team {
   color: string;
+  formation: string;
   name: string;
   players: Player[];
   short_name: string;
@@ -173,8 +189,14 @@ export interface Score {
  * via the `definition` "MatchEvent".
  */
 export interface MatchEvent {
+  ball_speed_kmh: number | null;
+  end_location: [number, number] | null;
   event_id: string;
+  /**
+   * Threat-grid zone of `location`.
+   */
   from_zone: [number, number] | null;
+  location: [number, number] | null;
   match_id: string;
   meta: {
     [k: string]: string;
@@ -185,27 +207,42 @@ export interface MatchEvent {
   minute: number;
   outcome: ("success" | "fail") | null;
   period: 1 | 2;
+  play_pattern:
+    ("open_play" | "counter" | "corner" | "free_kick" | "throw_in" | "goal_kick" | "kick_off" | "penalty") | null;
   player_id: string | null;
+  possession_id: number | null;
   receiver_id: string | null;
   schema_version: 1;
   seq: number;
+  shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post") | null;
   t: number;
   team: "home" | "away";
   threat: number;
+  /**
+   * Threat-grid zone of `end_location`.
+   */
   to_zone: [number, number] | null;
   type:
     | "pass"
     | "carry"
+    | "dribble"
     | "shot"
-    | "goal"
+    | "save"
+    | "pressure"
+    | "duel"
     | "tackle"
     | "interception"
-    | "pressure"
+    | "clearance"
+    | "block"
+    | "ball_recovery"
     | "foul"
     | "card"
+    | "offside"
     | "substitution"
+    | "tactical_shift"
     | "kickoff"
     | "period_end";
+  under_pressure: boolean;
   xg: number | null;
 }
 /**
@@ -337,7 +374,17 @@ export interface PlantSpec {
     [k: string]: number | string;
   };
   team: "home" | "away";
-  type: "red_card" | "substitution" | "goal" | "press_change";
+  type: "red_card" | "substitution" | "goal" | "press_change" | "formation_change";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerPosition".
+ */
+export interface PlayerPosition {
+  player_id: string;
+  speed_ms: number;
+  x: number;
+  y: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -397,5 +444,26 @@ export interface ScenarioSpec {
   pivot_id: string;
   seed_base: number;
   target_event_id: string | null;
-  type: "cancel_substitution" | "move_substitution" | "remove_red_card" | "remove_goal" | "change_press";
+  type:
+    | "cancel_substitution"
+    | "move_substitution"
+    | "remove_red_card"
+    | "remove_goal"
+    | "change_press"
+    | "change_formation";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TrackingFrame".
+ */
+export interface TrackingFrame {
+  ball: BallPosition;
+  match_id: string;
+  period: 1 | 2;
+  /**
+   * @maxItems 22
+   */
+  players: PlayerPosition[];
+  possession: ("home" | "away") | null;
+  t: number;
 }
