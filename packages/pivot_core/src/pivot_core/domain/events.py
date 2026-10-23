@@ -28,6 +28,13 @@ PlayPattern = Literal[
     "open_play", "counter", "corner", "free_kick", "throw_in", "goal_kick", "kick_off", "penalty",
 ]
 
+PassType = Literal[
+    "regular", "cross", "through_ball", "switch", "cutback", "long_ball", "back_pass",
+    "corner", "free_kick", "throw_in", "goal_kick", "kick_off",
+]
+PassHeight = Literal["ground", "low", "high"]   # low = off the grass but below shoulder height
+BodyPart = Literal["left_foot", "right_foot", "head", "other"]
+
 
 class MatchEvent(Model):
     schema_version: Literal[1] = 1
@@ -43,12 +50,21 @@ class MatchEvent(Model):
     location: Point | None = None
     end_location: Point | None = None         # passes, carries, shots
     outcome: Literal["success", "fail"] | None = None
+    # Probability the simulator gave this action of succeeding when it was attempted
+    # (passes, dribbles, tackles, duels). Pass difficulty = 1 - success_prob.
+    success_prob: Annotated[float, Field(ge=0, le=1)] | None = None
     shot_outcome: ShotOutcome | None = None   # shots only; a goal is a shot with outcome "goal"
     xg: Annotated[float, Field(ge=0, le=1)] | None = None   # shots only
+    pass_type: PassType | None = None         # passes only
+    pass_height: PassHeight | None = None     # passes only
+    body_part: BodyPart | None = None         # passes, shots, clearances
     ball_speed_kmh: Annotated[float, Field(ge=0, le=150)] | None = None   # passes and shots
     under_pressure: bool = False              # an opponent was within pressing distance
     possession_id: Annotated[int, Field(ge=0)] | None = None   # increases each time possession changes
     play_pattern: PlayPattern | None = None
+    # Linked events: pass and the shot it set up, pressure and the action it hit,
+    # foul and the card that followed, tackle and the duel it won.
+    related_event_ids: list[str] = []
     threat: float = 0.0                       # threat added by this event, from the threat grid
     meta: dict[str, str] = {}                 # card colour, players on and off, new formation, ...
 

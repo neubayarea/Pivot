@@ -4,12 +4,44 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, computed_field
 
 from .common import ClockSeconds, Model, Side
 
 Position = Literal["GK", "DF", "MF", "FW"]
+
+# Detailed role, close to what event providers use. It sets the player's anchor
+# point in the formation and which actions they tend to choose.
+Role = Literal[
+    "GK",
+    "LB", "CB", "RB", "LWB", "RWB",
+    "DM", "CM", "AM", "LM", "RM",
+    "LW", "RW", "ST",
+]
+
+ROLE_POSITION: dict[str, Position] = {
+    "GK": "GK",
+    "LB": "DF", "CB": "DF", "RB": "DF", "LWB": "DF", "RWB": "DF",
+    "DM": "MF", "CM": "MF", "AM": "MF", "LM": "MF", "RM": "MF",
+    "LW": "FW", "RW": "FW", "ST": "FW",
+}
+
 MatchStatus = Literal["scheduled", "live", "paused", "finished"]
+
+Rating = Annotated[int, Field(ge=1, le=99)]
+
+
+class PlayerAttributes(Model):
+    """Ability ratings the simulator uses, so players differ from one another."""
+
+    pace: Rating                              # top speed and acceleration
+    passing: Rating                           # pass success and range
+    dribbling: Rating                         # carrying and beating a man
+    shooting: Rating                          # shot accuracy and power
+    defending: Rating                         # tackles, interceptions, positioning
+    physical: Rating                          # duels and aerial balls
+    stamina: Rating                           # how fast fitness drops over the match
+    goalkeeping: Rating = 10                  # only meaningful for keepers
 
 
 class Player(Model):
@@ -17,7 +49,15 @@ class Player(Model):
     name: str                                 # fictional, e.g. "R. Okafor"
     team: Side
     shirt_number: Annotated[int, Field(ge=1, le=99)]
-    position: Position
+    role: Role
+    preferred_foot: Literal["left", "right", "both"] = "right"
+    attributes: PlayerAttributes
+
+    @computed_field
+    @property
+    def position(self) -> Position:
+        """Broad position group derived from `role`."""
+        return ROLE_POSITION[self.role]
 
 
 class Team(Model):

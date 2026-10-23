@@ -16,6 +16,7 @@ from pivot_core.domain import (
     Narrative,
     Pivot,
     Player,
+    PlayerAttributes,
     StatMetric,
     StatRef,
     Team,
@@ -33,12 +34,16 @@ def validate(name: str, data: dict) -> None:
     jsonschema.validate(data, {**SCHEMA, "$ref": f"#/$defs/{name}"})
 
 
+ATTRS = PlayerAttributes(pace=78, passing=72, dribbling=70, shooting=65, defending=40,
+                         physical=66, stamina=80)
+
+
 def team(side: str, name: str, short: str) -> Team:
     prefix = side[0]
     return Team(
         side=side, name=name, short_name=short, color="#1E6B45", formation="4-3-3",
-        players=[Player(player_id=f"{prefix}{n}", name=f"Player {n}", team=side,
-                        shirt_number=n, position="MF") for n in (7, 9)],
+        players=[Player(player_id=f"{prefix}{n}", name=f"Player {n}", team=side, shirt_number=n,
+                        role=role, attributes=ATTRS) for n, role in ((7, "RW"), (9, "ST"), (6, "DM"))],
     )
 
 
@@ -148,6 +153,30 @@ def test_fan_version_keeps_the_same_evidence_and_numbers(pivot: Pivot):
     claims = lambda n: [c for s in n.sentences for c in s.claims]  # noqa: E731
     assert claims(fan) == claims(analyst)
     assert fan.sentences[0].evidence_ids == analyst.sentences[0].evidence_ids
+
+
+def test_player_position_group_follows_the_role():
+    players = team("home", "Harbour City", "HBC").players
+    assert [p.position for p in players] == ["FW", "FW", "MF"]
+    assert players[0].model_dump()["position"] == "FW"
+
+
+def test_ratings_stay_between_1_and_99():
+    with pytest.raises(ValidationError):
+        PlayerAttributes(**{**ATTRS.model_dump(), "pace": 120})
+
+
+def test_pass_carries_difficulty_type_height_and_links():
+    e = MatchEvent(match_id="M", seq=1041, event_id="m062-s01041", t=3749, period=2, type="pass",
+                   team="home", player_id="h06", receiver_id="h09", location=(48.0, 34.0),
+                   end_location=(86.0, 30.0), outcome="success", success_prob=0.38,
+                   pass_type="through_ball", pass_height="ground", body_part="right_foot",
+                   ball_speed_kmh=61.0, related_event_ids=["m062-s01042"])
+    data = e.model_dump(mode="json")
+    assert data["related_event_ids"] == ["m062-s01042"]
+    validate("MatchEvent", data)
+    with pytest.raises(ValidationError):
+        MatchEvent(**{**e.model_dump(exclude={"minute", "from_zone", "to_zone"}), "success_prob": 1.2})
 
 
 def test_match_serializes_defaults():

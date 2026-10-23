@@ -21,6 +21,7 @@ class PlayerPosition(Model):
     x: X
     y: Y
     speed_ms: Annotated[float, Field(ge=0, le=12)] = 0.0   # metres per second over the last step
+    fitness: Annotated[float, Field(ge=0, le=1)] = 1.0     # 1 = fresh; drops over the match, resets for subs
 
 
 class BallPosition(Model):

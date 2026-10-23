@@ -174,11 +174,33 @@ export interface Team {
  * via the `definition` "Player".
  */
 export interface Player {
+  attributes: PlayerAttributes;
   name: string;
   player_id: string;
+  /**
+   * Broad position group derived from `role`.
+   */
   position: "GK" | "DF" | "MF" | "FW";
+  preferred_foot: "left" | "right" | "both";
+  role: "GK" | "LB" | "CB" | "RB" | "LWB" | "RWB" | "DM" | "CM" | "AM" | "LM" | "RM" | "LW" | "RW" | "ST";
   shirt_number: number;
   team: "home" | "away";
+}
+/**
+ * Ability ratings the simulator uses, so players differ from one another.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerAttributes".
+ */
+export interface PlayerAttributes {
+  defending: number;
+  dribbling: number;
+  goalkeeping: number;
+  pace: number;
+  passing: number;
+  physical: number;
+  shooting: number;
+  stamina: number;
 }
 export interface Score {
   away: number;
@@ -190,6 +212,7 @@ export interface Score {
  */
 export interface MatchEvent {
   ball_speed_kmh: number | null;
+  body_part: ("left_foot" | "right_foot" | "head" | "other") | null;
   end_location: [number, number] | null;
   event_id: string;
   /**
@@ -206,15 +229,34 @@ export interface MatchEvent {
    */
   minute: number;
   outcome: ("success" | "fail") | null;
+  pass_height: ("ground" | "low" | "high") | null;
+  pass_type:
+    | (
+        | "regular"
+        | "cross"
+        | "through_ball"
+        | "switch"
+        | "cutback"
+        | "long_ball"
+        | "back_pass"
+        | "corner"
+        | "free_kick"
+        | "throw_in"
+        | "goal_kick"
+        | "kick_off"
+      )
+    | null;
   period: 1 | 2;
   play_pattern:
     ("open_play" | "counter" | "corner" | "free_kick" | "throw_in" | "goal_kick" | "kick_off" | "penalty") | null;
   player_id: string | null;
   possession_id: number | null;
   receiver_id: string | null;
+  related_event_ids: string[];
   schema_version: 1;
   seq: number;
   shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post") | null;
+  success_prob: number | null;
   t: number;
   team: "home" | "away";
   threat: number;
@@ -381,6 +423,7 @@ export interface PlantSpec {
  * via the `definition` "PlayerPosition".
  */
 export interface PlayerPosition {
+  fitness: number;
   player_id: string;
   speed_ms: number;
   x: number;

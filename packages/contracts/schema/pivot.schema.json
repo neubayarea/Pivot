@@ -348,6 +348,23 @@
           ],
           "default": null
         },
+        "body_part": {
+          "anyOf": [
+            {
+              "enum": [
+                "left_foot",
+                "right_foot",
+                "head",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "end_location": {
           "anyOf": [
             {
@@ -456,6 +473,47 @@
           ],
           "default": null
         },
+        "pass_height": {
+          "anyOf": [
+            {
+              "enum": [
+                "ground",
+                "low",
+                "high"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pass_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "regular",
+                "cross",
+                "through_ball",
+                "switch",
+                "cutback",
+                "long_ball",
+                "back_pass",
+                "corner",
+                "free_kick",
+                "throw_in",
+                "goal_kick",
+                "kick_off"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "period": {
           "enum": [
             1,
@@ -518,6 +576,13 @@
           ],
           "default": null
         },
+        "related_event_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "schema_version": {
           "const": 1,
           "default": 1,
@@ -538,6 +603,19 @@
                 "post"
               ],
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "success_prob": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
             },
             {
               "type": "null"
@@ -640,12 +718,17 @@
         "location",
         "end_location",
         "outcome",
+        "success_prob",
         "shot_outcome",
         "xg",
+        "pass_type",
+        "pass_height",
+        "body_part",
         "ball_speed_kmh",
         "under_pressure",
         "possession_id",
         "play_pattern",
+        "related_event_ids",
         "threat",
         "meta",
         "minute",
@@ -1124,6 +1207,9 @@
     "Player": {
       "additionalProperties": false,
       "properties": {
+        "attributes": {
+          "$ref": "#/$defs/PlayerAttributes"
+        },
         "name": {
           "type": "string"
         },
@@ -1131,11 +1217,41 @@
           "type": "string"
         },
         "position": {
+          "description": "Broad position group derived from `role`.",
           "enum": [
             "GK",
             "DF",
             "MF",
             "FW"
+          ],
+          "readOnly": true,
+          "type": "string"
+        },
+        "preferred_foot": {
+          "default": "right",
+          "enum": [
+            "left",
+            "right",
+            "both"
+          ],
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "GK",
+            "LB",
+            "CB",
+            "RB",
+            "LWB",
+            "RWB",
+            "DM",
+            "CM",
+            "AM",
+            "LM",
+            "RM",
+            "LW",
+            "RW",
+            "ST"
           ],
           "type": "string"
         },
@@ -1157,14 +1273,82 @@
         "name",
         "team",
         "shirt_number",
+        "role",
+        "preferred_foot",
+        "attributes",
         "position"
       ],
       "title": "Player",
       "type": "object"
     },
+    "PlayerAttributes": {
+      "additionalProperties": false,
+      "description": "Ability ratings the simulator uses, so players differ from one another.",
+      "properties": {
+        "defending": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "dribbling": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "goalkeeping": {
+          "default": 10,
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "pace": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "passing": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "physical": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "shooting": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "stamina": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pace",
+        "passing",
+        "dribbling",
+        "shooting",
+        "defending",
+        "physical",
+        "stamina",
+        "goalkeeping"
+      ],
+      "title": "PlayerAttributes",
+      "type": "object"
+    },
     "PlayerPosition": {
       "additionalProperties": false,
       "properties": {
+        "fitness": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
         "player_id": {
           "type": "string"
         },
@@ -1189,7 +1373,8 @@
         "player_id",
         "x",
         "y",
-        "speed_ms"
+        "speed_ms",
+        "fitness"
       ],
       "title": "PlayerPosition",
       "type": "object"
