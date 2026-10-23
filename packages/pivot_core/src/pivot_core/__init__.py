@@ -1,0 +1,1 @@
+"""Pivot domain core."""

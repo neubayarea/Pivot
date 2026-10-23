@@ -428,10 +428,10 @@ verify(draft, match, pivot):
 
 ### 6.4 Prompt 与结构化输出约定
 
-- 系统提示包含：角色、受众（分析师，英文界面）、统计词表、禁用词表、输出 JSON Schema、2 个 few-shot 示例（取自评测种子）。
+- 系统提示包含：角色、受众（见下文“受众和语言”）、统计词表、禁用词表、输出 JSON Schema、2 个 few-shot 示例（取自评测种子）。
 - 模型输出一律使用结构化输出（JSON Schema 严格模式）；Pydantic 校验失败视同核查不通过。
 - 所有 prompt 放在 `apps/worker/prompts/*.md` 里做版本管理，trace 中记录 prompt 的哈希。
-- 语言：界面和解释都用英文，面向国际评委；文案集中管理，方便以后做多语言。
+- 受众和语言：系统提示按 `ViewerPrefs` 注入观看模式（analyst / fan）、主队、关注球员和语言（en / zh / es）。界面默认英文，面向国际评委。
 
 ## 7. 数据与契约
 
@@ -456,7 +456,7 @@ verify(draft, match, pivot):
 | `pivot-candidates` | `PivotCandidate{match_id, minute, direction, cusum_stat, swing, key_event_ids[], window}` | `{matchId}:{minute}` |
 | `scenario-runs` | `ScenarioRun{scenario_id, match_id, spec}` | `scenarioId` |
 
-**Web PubSub 信封** `{type, matchId, seq, ts, payload}`
+**Web PubSub 信封** `{type, match_id, seq, ts, payload}`
 
 | type | 发布方 | payload |
 |---|---|---|
@@ -492,77 +492,37 @@ verify(draft, match, pivot):
 
 FastAPI 会自动生成 OpenAPI 文档，地址是 `/api/docs`（对应 F17，几乎不额外花时间）。
 
-### 7.4 领域模型（契约源，节选）
+### 7.4 领域模型（数据格式的唯一来源）
 
-```python
-class MatchEvent(BaseModel):
-    schema_version: Literal[1] = 1
-    match_id: str
-    seq: int                                  # 同一场比赛内单调递增
-    event_id: str                             # "m063-s01042"，界面显示为 #1042
-    t: int                                    # 比赛时钟，单位秒，0–5400
-    period: Literal[1, 2]
-    type: EventType                           # pass carry shot goal tackle interception pressure foul card substitution kickoff period_end
-    team: Side                                # home | away
-    player_id: str | None
-    from_zone: tuple[int, int] | None         # 12×8 网格
-    to_zone: tuple[int, int] | None
-    outcome: Literal["success", "fail"] | None
-    xg: float | None                          # 只有射门才有
-    threat: float                             # 这个事件带来的威胁增量
-    meta: dict[str, str] = {}                 # 牌色、换人的上下场球员等
+源文件在 [`packages/pivot_core/src/pivot_core/domain/`](../packages/pivot_core/src/pivot_core/domain/)，以代码为准。导出的 JSON Schema 在 `packages/contracts/schema/pivot.schema.json`，前端类型在 `packages/contracts/ts/pivot.ts`，两者都由脚本生成，不要手改。
 
-class StatRef(BaseModel):
-    metric: StatMetric                        # 统计词表，初版 15 项
-    team: Side
-    window: tuple[int, int]                   # 左闭右开的分钟区间
+| 文件 | 模型 |
+|---|---|
+| `match.py` | `Match`、`Team`、`Player`、`Score` |
+| `events.py` | `MatchEvent`（`minute` 由 `t` 推出，会随 JSON 一起输出） |
+| `stats.py` | 统计词表 `StatMetric`（15 项）、`STAT_UNITS`、`StatRef`、`Claim` |
+| `narrative.py` | `ViewerPrefs`、`ExplanationSentence`、`Narrative` |
+| `pivots.py` | `MinuteMetric`、`PivotCandidate`、`Pivot` |
+| `scenarios.py` | `ScenarioSpec`、`PlantSpec`、`OutcomeDist`、`SimResult`、`Scenario` |
+| `outputs.py` | `OverlayItem`、`OverlayFeed`、`Recap` |
+| `traces.py` | `VerifierIssue`、`Verdict`、`AgentTrace` |
+| `realtime.py` | 推送信封 `Envelope` |
 
-class Claim(BaseModel):
-    value: float
-    unit: Literal["count", "pct", "xg", "index"]
-    stat_ref: StatRef
+**相对 v1.0 草稿的变化（10/23 B01）**
 
-class ExplanationSentence(BaseModel):
-    text: str                                 # 不超过 30 个英文单词
-    evidence_ids: list[str]                   # 1 到 4 个
-    claims: list[Claim]
+- **个性化**：新增 `ViewerPrefs{audience, language, focus_team, focus_player_id}`。AI 写的文字统一放进 `Narrative{prefs, headline, sentences, source, verifier_attempts, chain_id}`；`Pivot.narrative`、`SimResult.narrative`、`Recap.narrative` 存默认版本（analyst、en），其他版本按 `ViewerPrefs` 另外生成。原来 `Pivot` 上的 `headline`、`explanation`、`verifier_attempts` 挪进了 `Narrative`。
+- **球员级统计**：`StatRef` 加了可选的 `player_id`，供关注球员模式使用。
+- **传球接球人**：`MatchEvent` 加了可选的 `receiver_id`。
+- **新输出**：`OverlayItem` / `OverlayFeed`（转播叠加层）和 `Recap`（终场报道）。
+- **新增模型**：`Match`、`Team`、`Player`、`Scenario`、`PlantSpec`、`Verdict`、`AgentTrace`、`Envelope`，原来只在表格里提到，现在都有了正式定义。
+- **字段命名统一用 snake_case**：推送信封里的 `matchId` 改成了 `match_id`。
 
-class Pivot(BaseModel):
-    pivot_id: str
-    match_id: str
-    minute: int
-    direction: Side                           # 势头转向的一方
-    severity: Literal[1, 2, 3]
-    status: Literal["pending", "confirmed", "rejected", "degraded"]
-    trigger_event_ids: list[str]
-    headline: str                             # 卡片标题，≤ 8 个英文单词，不得含数字
-    explanation: list[ExplanationSentence]
-    verifier_attempts: int
-    chain_id: str                             # 与 OpenTelemetry trace id 相同
+改完模型后运行：
 
-class ScenarioSpec(BaseModel):
-    type: Literal["cancel_substitution", "move_substitution", "remove_red_card", "remove_goal", "change_press"]
-    pivot_id: str
-    target_event_id: str | None
-    at_minute: int                            # 从这一分钟的快照开始续跑
-    params: dict[str, int | str] = {}
-    n_runs: Literal[200, 500, 1000] = 500
-    seed_base: int
-
-class OutcomeDist(BaseModel):
-    home_win: float
-    draw: float
-    away_win: float
-    ci95: dict[str, tuple[float, float]]      # Wilson 区间
-
-class SimResult(BaseModel):
-    scenario_id: str
-    baseline: OutcomeDist
-    counterfactual: OutcomeDist
-    significant: dict[str, bool]              # 置信区间不重叠才为 True
-    explanation: list[ExplanationSentence]
-    runtime_ms: int
-    executor: Literal["local_pool", "aca_jobs"]
+```bash
+uv run scripts/export_contracts.py            # 重新生成 JSON Schema
+pnpm --filter @pivot/contracts gen:types      # 重新生成前端类型
+uv run pytest                                 # 包括检查 Schema 有没有过期
 ```
 
 ## 8. 可靠性与故障模式

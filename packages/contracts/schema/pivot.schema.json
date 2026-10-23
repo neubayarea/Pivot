@@ -1,0 +1,1451 @@
+{
+  "$defs": {
+    "AgentTrace": {
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "enum": [
+            "judge",
+            "explainer",
+            "verifier",
+            "template",
+            "translator",
+            "executor",
+            "comparator",
+            "recap"
+          ],
+          "type": "string"
+        },
+        "chain_id": {
+          "type": "string"
+        },
+        "input_ref": {
+          "type": "string"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "output_summary": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "rejected",
+            "retried",
+            "degraded",
+            "error"
+          ],
+          "type": "string"
+        },
+        "step": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tokens": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace_id": {
+          "type": "string"
+        },
+        "verdict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Verdict"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "trace_id",
+        "chain_id",
+        "step",
+        "match_id",
+        "agent",
+        "model",
+        "prompt_hash",
+        "input_ref",
+        "output_summary",
+        "latency_ms",
+        "tokens",
+        "status",
+        "verdict"
+      ],
+      "title": "AgentTrace",
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "properties": {
+        "stat_ref": {
+          "$ref": "#/$defs/StatRef"
+        },
+        "unit": {
+          "enum": [
+            "count",
+            "pct",
+            "xg",
+            "index"
+          ],
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "stat_ref"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "Envelope": {
+      "additionalProperties": false,
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ts": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "match.status",
+            "event.batch",
+            "metric.updated",
+            "pivot.pending",
+            "pivot.confirmed",
+            "pivot.degraded",
+            "pivot.rejected",
+            "scenario.progress",
+            "scenario.completed",
+            "trace.appended",
+            "recap.ready"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "match_id",
+        "seq",
+        "ts",
+        "payload"
+      ],
+      "title": "Envelope",
+      "type": "object"
+    },
+    "ExplanationSentence": {
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "evidence_ids",
+        "claims"
+      ],
+      "title": "ExplanationSentence",
+      "type": "object"
+    },
+    "Match": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "$ref": "#/$defs/Team"
+        },
+        "clock": {
+          "default": 0,
+          "maximum": 5400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "home": {
+          "$ref": "#/$defs/Team"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "period": {
+          "default": 1,
+          "enum": [
+            1,
+            2
+          ],
+          "type": "integer"
+        },
+        "preset": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "score": {
+          "$ref": "#/$defs/Score",
+          "default": {
+            "away": 0,
+            "home": 0
+          }
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "speed": {
+          "default": 1,
+          "enum": [
+            1,
+            5,
+            20,
+            60
+          ],
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "scheduled",
+            "live",
+            "paused",
+            "finished"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "match_id",
+        "seed",
+        "preset",
+        "home",
+        "away",
+        "status",
+        "speed",
+        "clock",
+        "period",
+        "score"
+      ],
+      "title": "Match",
+      "type": "object"
+    },
+    "MatchEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "type": "string"
+        },
+        "from_zone": {
+          "anyOf": [
+            {
+              "additionalItems": false,
+              "items": [
+                {
+                  "maximum": 11,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "maximum": 7,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "meta": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "minute": {
+          "description": "Match minute the event belongs to (0-based, so 62:30 is minute 62).",
+          "readOnly": true,
+          "type": "integer"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "enum": [
+                "success",
+                "fail"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "enum": [
+            1,
+            2
+          ],
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "receiver_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "type": "integer"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "t": {
+          "maximum": 5400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "threat": {
+          "default": 0.0,
+          "type": "number"
+        },
+        "to_zone": {
+          "anyOf": [
+            {
+              "additionalItems": false,
+              "items": [
+                {
+                  "maximum": 11,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "maximum": 7,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "type": {
+          "enum": [
+            "pass",
+            "carry",
+            "shot",
+            "goal",
+            "tackle",
+            "interception",
+            "pressure",
+            "foul",
+            "card",
+            "substitution",
+            "kickoff",
+            "period_end"
+          ],
+          "type": "string"
+        },
+        "xg": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "schema_version",
+        "match_id",
+        "seq",
+        "event_id",
+        "t",
+        "period",
+        "type",
+        "team",
+        "player_id",
+        "receiver_id",
+        "from_zone",
+        "to_zone",
+        "outcome",
+        "xg",
+        "threat",
+        "meta",
+        "minute"
+      ],
+      "title": "MatchEvent",
+      "type": "object"
+    },
+    "MinuteMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "minute": {
+          "maximum": 90,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "momentum": {
+          "maximum": 1,
+          "minimum": -1,
+          "type": "number"
+        },
+        "pressure_away": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pressure_home": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "threat_away": {
+          "type": "number"
+        },
+        "threat_home": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "match_id",
+        "minute",
+        "momentum",
+        "threat_home",
+        "threat_away",
+        "pressure_home",
+        "pressure_away"
+      ],
+      "title": "MinuteMetric",
+      "type": "object"
+    },
+    "Narrative": {
+      "additionalProperties": false,
+      "properties": {
+        "chain_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "headline": {
+          "type": "string"
+        },
+        "prefs": {
+          "$ref": "#/$defs/ViewerPrefs"
+        },
+        "sentences": {
+          "items": {
+            "$ref": "#/$defs/ExplanationSentence"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "llm",
+            "template"
+          ],
+          "type": "string"
+        },
+        "verifier_attempts": {
+          "default": 0,
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prefs",
+        "headline",
+        "sentences",
+        "source",
+        "verifier_attempts",
+        "chain_id"
+      ],
+      "title": "Narrative",
+      "type": "object"
+    },
+    "OutcomeDist": {
+      "additionalProperties": false,
+      "properties": {
+        "away_win": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "ci95": {
+          "additionalProperties": {
+            "additionalItems": false,
+            "items": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "propertyNames": {
+            "enum": [
+              "home_win",
+              "draw",
+              "away_win"
+            ]
+          },
+          "type": "object"
+        },
+        "draw": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "home_win": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "home_win",
+        "draw",
+        "away_win",
+        "ci95"
+      ],
+      "title": "OutcomeDist",
+      "type": "object"
+    },
+    "OverlayFeed": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/OverlayItem"
+          },
+          "type": "array"
+        },
+        "language": {
+          "enum": [
+            "en",
+            "zh",
+            "es"
+          ],
+          "type": "string"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "up_to_seq": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "language",
+        "up_to_seq",
+        "items"
+      ],
+      "title": "OverlayFeed",
+      "type": "object"
+    },
+    "OverlayItem": {
+      "additionalProperties": false,
+      "description": "One graphic that a broadcast renderer can place on top of the live feed.",
+      "properties": {
+        "headline": {
+          "maxLength": 60,
+          "type": "string"
+        },
+        "hide_at": {
+          "maximum": 5400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "pivot",
+            "goal",
+            "card",
+            "substitution"
+          ],
+          "type": "string"
+        },
+        "overlay_id": {
+          "type": "string"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ref_id": {
+          "type": "string"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "show_at": {
+          "maximum": 5400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "subline": {
+          "anyOf": [
+            {
+              "maxLength": 90,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "overlay_id",
+        "kind",
+        "ref_id",
+        "show_at",
+        "hide_at",
+        "team",
+        "player_id",
+        "headline",
+        "subline",
+        "severity"
+      ],
+      "title": "OverlayItem",
+      "type": "object"
+    },
+    "Pivot": {
+      "additionalProperties": false,
+      "properties": {
+        "chain_id": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "minute": {
+          "maximum": 90,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "narrative": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Narrative"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pivot_id": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "confirmed",
+            "rejected",
+            "degraded"
+          ],
+          "type": "string"
+        },
+        "trigger_event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pivot_id",
+        "match_id",
+        "minute",
+        "direction",
+        "severity",
+        "status",
+        "trigger_event_ids",
+        "narrative",
+        "chain_id"
+      ],
+      "title": "Pivot",
+      "type": "object"
+    },
+    "PivotCandidate": {
+      "additionalProperties": false,
+      "description": "CUSUM alarm, queued for the Judge. Message id is \"{match_id}:{minute}\".",
+      "properties": {
+        "cusum_stat": {
+          "type": "number"
+        },
+        "direction": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "key_event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "minute": {
+          "maximum": 90,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "swing": {
+          "type": "number"
+        },
+        "window": {
+          "additionalItems": false,
+          "items": [
+            {
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "match_id",
+        "minute",
+        "direction",
+        "cusum_stat",
+        "swing",
+        "key_event_ids",
+        "window"
+      ],
+      "title": "PivotCandidate",
+      "type": "object"
+    },
+    "PlantSpec": {
+      "additionalProperties": false,
+      "description": "Force an event at a given minute. Used by the eval seeds and the demo preset.",
+      "properties": {
+        "minute": {
+          "maximum": 90,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "default": {},
+          "type": "object"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "red_card",
+            "substitution",
+            "goal",
+            "press_change"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "minute",
+        "type",
+        "team",
+        "params"
+      ],
+      "title": "PlantSpec",
+      "type": "object"
+    },
+    "Player": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "position": {
+          "enum": [
+            "GK",
+            "DF",
+            "MF",
+            "FW"
+          ],
+          "type": "string"
+        },
+        "shirt_number": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "player_id",
+        "name",
+        "team",
+        "shirt_number",
+        "position"
+      ],
+      "title": "Player",
+      "type": "object"
+    },
+    "Recap": {
+      "additionalProperties": false,
+      "properties": {
+        "final_score": {
+          "$ref": "#/$defs/Score"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "narrative": {
+          "$ref": "#/$defs/Narrative"
+        },
+        "pivot_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "match_id",
+        "final_score",
+        "pivot_ids",
+        "narrative"
+      ],
+      "title": "Recap",
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "done": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SimResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "spec": {
+          "$ref": "#/$defs/ScenarioSpec"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "failed"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_id",
+        "match_id",
+        "spec",
+        "status",
+        "done",
+        "result"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    },
+    "ScenarioSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "at_minute": {
+          "maximum": 90,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "n_runs": {
+          "default": 500,
+          "enum": [
+            200,
+            500,
+            1000
+          ],
+          "type": "integer"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "default": {},
+          "type": "object"
+        },
+        "pivot_id": {
+          "type": "string"
+        },
+        "seed_base": {
+          "type": "integer"
+        },
+        "target_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "type": {
+          "enum": [
+            "cancel_substitution",
+            "move_substitution",
+            "remove_red_card",
+            "remove_goal",
+            "change_press"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "pivot_id",
+        "target_event_id",
+        "at_minute",
+        "params",
+        "n_runs",
+        "seed_base"
+      ],
+      "title": "ScenarioSpec",
+      "type": "object"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "home": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "home",
+        "away"
+      ],
+      "title": "Score",
+      "type": "object"
+    },
+    "SimResult": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/OutcomeDist"
+        },
+        "counterfactual": {
+          "$ref": "#/$defs/OutcomeDist"
+        },
+        "executor": {
+          "enum": [
+            "local_pool",
+            "aca_jobs"
+          ],
+          "type": "string"
+        },
+        "narrative": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Narrative"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "runtime_ms": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "significant": {
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "propertyNames": {
+            "enum": [
+              "home_win",
+              "draw",
+              "away_win"
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "scenario_id",
+        "baseline",
+        "counterfactual",
+        "significant",
+        "narrative",
+        "runtime_ms",
+        "executor"
+      ],
+      "title": "SimResult",
+      "type": "object"
+    },
+    "StatRef": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "enum": [
+            "possession_pct",
+            "passes",
+            "pass_accuracy_pct",
+            "passes_final_third",
+            "box_entries",
+            "shots",
+            "shots_on_target",
+            "xg",
+            "threat_total",
+            "pressures",
+            "tackles_won",
+            "interceptions",
+            "duels_won",
+            "turnovers",
+            "momentum_avg"
+          ],
+          "type": "string"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "window": {
+          "additionalItems": false,
+          "items": [
+            {
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "metric",
+        "team",
+        "window",
+        "player_id"
+      ],
+      "title": "StatRef",
+      "type": "object"
+    },
+    "Team": {
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/Player"
+          },
+          "type": "array"
+        },
+        "short_name": {
+          "maxLength": 4,
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "side",
+        "name",
+        "short_name",
+        "color",
+        "players"
+      ],
+      "title": "Team",
+      "type": "object"
+    },
+    "Verdict": {
+      "additionalProperties": false,
+      "properties": {
+        "issues": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/VerifierIssue"
+          },
+          "type": "array"
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "passed",
+        "issues"
+      ],
+      "title": "Verdict",
+      "type": "object"
+    },
+    "VerifierIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "sentence_count",
+            "too_long",
+            "evidence_count",
+            "evidence_invalid",
+            "number_mismatch",
+            "direction_mismatch",
+            "significance_unsupported",
+            "banned_term",
+            "schema_invalid"
+          ],
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "sentence_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "sentence_index"
+      ],
+      "title": "VerifierIssue",
+      "type": "object"
+    },
+    "ViewerPrefs": {
+      "additionalProperties": false,
+      "properties": {
+        "audience": {
+          "default": "analyst",
+          "enum": [
+            "analyst",
+            "fan"
+          ],
+          "type": "string"
+        },
+        "focus_player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "focus_team": {
+          "anyOf": [
+            {
+              "enum": [
+                "home",
+                "away"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "language": {
+          "default": "en",
+          "enum": [
+            "en",
+            "zh",
+            "es"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "audience",
+        "language",
+        "focus_team",
+        "focus_player_id"
+      ],
+      "title": "ViewerPrefs",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/neubayarea/Pivot/packages/contracts/schema/pivot.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Generated from packages/pivot_core/src/pivot_core/domain. Do not edit by hand.",
+  "title": "Pivot"
+}
