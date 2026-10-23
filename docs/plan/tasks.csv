@@ -1,48 +1,48 @@
-id,title_en,title_zh,owner,priority,milestone,estimate_h,depends,acceptance,refs
-T01,"Kickoff: owners, tools, review pairs",开工会：确认分工、工具、Review 搭档,ALL,Team,M0,0.5,,每个 Must 任务都有负责人；看板可用,
-T02,Access and local setup for all four,权限与本地环境：第 4 位队友进仓库，Azure 权限，本地工具,ALL,Team,M0,1,T01,4 人都能 clone 并跑起空项目，都能访问 Azure 订阅,
-T03,Integration check 1: local end-to-end,集成检查 1：本地端到端,ALL,Team,M1,1,A05 C03 D06,本地形态下，演示种子会自动出现一个已核查的转折点,
-T04,Integration check 2: cloud end-to-end,集成检查 2：云端端到端,ALL,Team,M3,1,A10 C05,公网地址能完整跑一遍 Demo 脚本,
-T05,Record the 2-minute demo video,录制 2 分钟 Demo 视频,C+D,Team,M5,3,T04 C07,短于 2 分钟；没有版权音乐和第三方标识；已上传并公开,
-T06,Final submission checklist,提交清单检查与提交,B,Team,M5,1,T05 D09 A10,仓库已公开且没有密钥；视频链接、Pitch、README 都已填写,
-A01,"Repo scaffold: uv workspace, pnpm, Dockerfile, ruff, pytest",仓库脚手架,A,Must,M0,3,T01,新人 clone 后三条命令能跑起空项目；目录与架构文档 13.1 一致,ADR-0001
-A02,"CI: lint, unit tests, contract drift, secret scan",CI：代码检查、单测、契约一致性、密钥扫描,A,Must,M0,1.5,A01,每个 PR 自动运行，任何一项失败都不能合并,ADR-0013
-A03,Local adapters and composition root (PIVOT_PROFILE=local),本地适配器与组合根,A,Must,M1,3,B01,单进程内的内存总线、存储、WebSocket 可用；每个端口都有契约测试,ADR-0001
-A04,"API: matches, timeline, pivots, events, negotiate",API 接口,A,Must,M1,3.5,A03,接口符合架构文档 7.3；/api/docs 可以打开,FR-17
-A05,"Worker shell: queue consumer, lock renewal, idempotency, traces, push",Worker 骨架：队列消费、幂等、轨迹、推送,A,Must,M1,3,A03,同一个候选重复投递只产生一个转折点；每一步都写轨迹,ADR-0003
-A06,Realtime push: local WebSocket and Web PubSub adapter,实时推送,A,Must,M1,2.5,A04,统一消息信封；断线后用 sinceSeq 补齐,ADR-0007
-A07,azd + Bicep: provision C1 resources with managed identity,一键开通云资源（含 Foundry）,A,Must,M3,5,A01,azd provision 一次成功；没有连接字符串；预算告警 50 美元,ADR-0013
-A08,"Azure adapters: Cosmos DB, Service Bus, Web PubSub",Azure 适配器,A,Must,M3,3.5,A07 A03,契约测试在云端通过,ADR-0006
-A09,"What-if wiring: enqueue, batch call, progress push",推演链路接线,A,Must,M2,2,B08 D07,从点击按钮到结果上屏不超过 30 秒,FR-11
-A10,Deploy and smoke test (azd deploy),部署与冒烟测试,A,Must,M3,1.5,A08,公网地址可以访问；冒烟脚本通过,FR-13
-B01,"Domain models and contract export (Pydantic, JSON Schema, TS)",领域模型与契约导出,B,Must,M0,3,T01,契约冻结 PR 已合并；前端能用生成的类型,架构 7.4
-B02,Fixture v0: hand-written demo-1021.json for the frontend,临时夹具 v0（手写）,B,Must,M0,1,B01,前端不用等后端，就能开发 S1 和 S2,
-B03,Simulator: full match with seed determinism,模拟器整场比赛与确定性,B,Must,M1,6,B01,同一个种子跑两次，结果逐事件一致；单场模拟不超过 100 毫秒,ADR-0008
-B04,"Snapshots, resume, plant API, demo-1021 preset",快照续跑、植入事件、演示预设,B,Must,M1,3.5,B03,从任意整分钟续跑结果一致；预设里出现 38 分钟红牌和 63 分钟换人,ADR-0008
-B05,"Threat grid and StatCalculator (15 stats, unit-tested)",威胁网格与统计计算,B,Must,M1,4,B03,15 项统计都有单测，并与 D02 的词表一一对应,ADR-0005
-B06,Momentum EWMA and CUSUM change points,势头与变点检测,B,Must,M1,3,B05,演示种子在 63 分钟附近出现候选点,ADR-0010
-B07,Calibration on 200 matches and fixture v1 from the simulator,标定与夹具 v1,B,Must,M1,2,B04 B05,场均进球 2.5 到 3.0、射门 20 到 28；夹具换成真实的模拟输出,
-B08,"Batch simulation: process pool, paired seeds, Wilson CI",批量推演,B,Must,M2,4,B04,"1,000 次续跑不超过 6 秒；同一种子结果一致",ADR-0009
-B09,Severity rules and CUSUM tuning (D reviews football sense),严重程度与阈值调校（D 用足球常识把关）,B,Must,M2,2,B06 B07,演示种子只出现 2 到 3 个转折点，每个都说得通,ADR-0010
-C01,Web scaffold and theme tokens for the chosen UI style,前端脚手架与主题,C,Must,M0,2,A01,选定的 UI 风格已做成主题变量，深浅两套都能用,ADR-0012
-C02,"S1 live board on fixtures: top bar, momentum, pivots, stats, feed",S1 实时看板（用夹具数据）,C,Must,M1,6,B02 C01,与原型 S1 一致；势头曲线在 45 分钟处重置,原型 S1
-C03,"Live data: REST, WebSocket client, gap recovery",接入实时数据,C,Must,M1,3,A04 A06 C02,20 倍速回放时曲线 2 秒内更新；断线自动重连并补齐,US-01
-C04,"S2 pivot detail: static pitch, evidence highlight, before/after",S2 转折点详情,C,Must,M2,6,C02,点击证据标签，球场图上高亮对应事件；数字悬停显示统计引用,原型 S2
-C05,"S3 What-if Lab: scenario buttons, confirm, progress, distribution",S3 推演实验室,C,Must,M2,5,A09 C04,状态与原型 S3 一致；免责声明一直可见,原型 S3
-C06,"States: loading, error, degraded, Start demo button",加载、错误、降级状态,C,Must,M4,2,C03,断网或 Agent 降级时界面不报错,原型状态矩阵
-C07,Visual polish and screenshots for README and video,视觉打磨与截图,C,Must,M4,2,C05,README 用的 3 张截图；1080p 录屏画面没有错位,
-D01,Foundry deployments (standard and mini) and quota test,Foundry 模型部署与配额测试,D,Must,M0,2,T02,两个部署都能调用；10 个并发请求不被限流,ADR-0004
-D02,Stat vocabulary (15) and explanation style guide (English),统计词表与解释风格指南,D,Must,M0,2,T01,与 B05 一一对应；风格指南包含 5 个好例子和 5 个坏例子,ADR-0005
-D03,"PivotJudge prompt, output schema, few-shot examples",Judge 提示词,D,Must,M1,2.5,D02 B02,演示种子的 38 分钟和 63 分钟判定为是；随机候选大多判定为否,
-D04,"Explainer prompt, headline rules, few-shot examples",Explainer 提示词,D,Must,M1,3.5,D02 B02,输出通过 Schema 校验；标题不含数字；每句话都有证据,
-D05,Verifier rules and TemplateExplainer (unit-tested),核查规则与模板解释,D,Must,M1,4,B05 D02,6 类规则都有单测；模板解释永远不会失败,ADR-0005
-D06,Detect workflow in Agent Framework (pair with A),发现链工作流（与 A 结对）,D,Must,M1,2.5,A05 D03 D04 D05,核查不通过时重写，最多 2 次，然后降级,ADR-0004
-D07,"Scenario catalog, UI copy (English), Comparator prompt",场景目录、界面文案、Comparator 提示词,D,Must,M2,3,D04,5 种场景都有文案和适用条件；对比解释通过核查,原型 B5
-D09,Pitch and README (English),Pitch 与 README,D,Must,M4,4,C07,README 包含架构图、运行方式、评测结果和 Copilot 使用说明,
-D10,S4 Agent trace list (simple),S4 Agent 轨迹（简版列表）,D,Must,M4,2,A05 C02,能看到“核查拒绝 → 重写 → 通过”的完整记录,US-08
-S1,NL scenario parsing (Translator),自然语言场景解析,D+A,Should,M4,3,D07 A09,解析失败时给出 3 个示例,F13
-S2,Event Hubs and Functions metrics (C2 profile),事件流与函数计算（C2 形态）,A,Should,M4,8,A10,切换部署形态后业务代码不需要改,ADR-0002 ADR-0011
-S3,Detection eval on 20 planted seeds and Foundry eval,20 个种子的检出率与忠实度评测,B+D,Should,M4,5,B07 B09,检出率和忠实度写进 README,F14
-S4,Animated pitch replay,球场动画回放,C,Could,M4,4,C04,,F15
-S5,Separate S0 lobby page,独立的大厅页,C,Could,M4,2,C06,,
-S6,Container Apps Jobs sharding for large N,大规模推演分片,A+B,Could,,8,S2,,F16
+id,title_en,title_zh,plain,owner,priority,milestone,estimate_h,depends,acceptance,refs
+T01,"Kickoff: owners, tools, review pairs",开工会：认领分工,四个人坐下来 30 分钟，确认谁负责哪条线、用哪些工具、谁帮谁检查代码。,ALL,Team,M0,0.5,,每个必做任务都有了负责人；看板大家都能打开,
+T02,Access and local setup for all four,把大家的账号和电脑都准备好,第 4 位队友加进 GitHub 仓库，每个人都能用微软云，电脑上装好开发要用的软件。,ALL,Team,M0,1,T01,4 个人都能下载代码并在自己电脑上跑起来，都能登录微软云,
+T03,Integration check 1: local end-to-end,第一次合体测试（在自己电脑上）,把四个人各自做的部分拼在一起，在一台电脑上从头跑一遍，看能不能自动找出转折点。,ALL,Team,M1,1,A05 C03 D06,用演示比赛跑一遍，屏幕上自动出现一个已核对过的转折点,
+T04,Integration check 2: cloud end-to-end,第二次合体测试（在云上）,和上一次一样，但这次跑在微软云上，用公网网址访问。,ALL,Team,M3,1,A10 C05,用公网网址能把 2 分钟演示从头到尾走一遍,
+T05,Record the 2-minute demo video,录 2 分钟演示视频,按演示脚本录屏、配音、剪辑，这是评委打分最主要看的东西。,C+D,Team,M5,3,T04 C07,视频不到 2 分钟；没有版权音乐和别人的商标；已经上传并公开,
+T06,Final submission checklist,最后检查并提交作品,按清单一项项核对后，在比赛网站上提交。,B,Team,M5,1,T05 D09 A10,仓库已公开且没有泄露密码；视频链接、项目介绍、说明文档都填好了,
+A01,"Repo scaffold: uv workspace, pnpm, Dockerfile, ruff, pytest",搭好项目的骨架,建好代码的文件夹结构和基础工具，让每个人都在同一套规矩下写代码。,A,Must,M0,3,T01,新人下载代码后，照着三条命令就能把空项目跑起来,ADR-0001
+A02,"CI: lint, unit tests, contract drift, secret scan",设置自动检查,每次有人提交代码，GitHub 自动检查格式、跑测试、查有没有不小心写进密码。,A,Must,M0,1.5,A01,每次提交代码都会自动检查，任何一项不通过就不能合并,ADR-0013
+A03,Local adapters and composition root (PIVOT_PROFILE=local),先在本机搭一个「迷你版」后台,在一台电脑里模拟传送带、档案柜、广播喇叭，大家不用等云准备好就能开发。,A,Must,M1,3,B01,一台电脑上就能把整套流程跑通；每个部件都有测试,ADR-0001
+A04,"API: matches, timeline, pivots, events, negotiate",做网页要用的数据接口,让网页能拿到比赛、比分、转折点、事件这些数据。,A,Must,M1,3.5,A03,网页需要的数据都能拿到；接口说明网页可以打开,FR-17
+A05,"Worker shell: queue consumer, lock renewal, idempotency, traces, push",搭 AI 小组的「工位」,AI 解说团在这里排队领任务、干活、记录每一步。同一个任务不会被重复做。,A,Must,M1,3,A03,同一个转折点不会出现两次；每一步都留下记录,ADR-0003
+A06,Realtime push: local WebSocket and Web PubSub adapter,做「广播喇叭」：实时推送,比赛一有新情况，就马上推到所有人的屏幕上，不用手动刷新。,A,Must,M1,2.5,A04,断网重连后能自动补上漏掉的消息,ADR-0007
+A07,azd + Bicep: provision C1 resources with managed identity,一键在微软云上开好所有设备,写一个脚本，一条命令就在微软云上把需要的服务全部建好，也能一条命令全删掉。,A,Must,M3,5,A01,一条命令就能建好；没有明文密码；花费超过 50 美元会报警,ADR-0013
+A08,"Azure adapters: Cosmos DB, Service Bus, Web PubSub",把后台从「本机版」切换到「云上版」,把迷你版里的传送带、档案柜、喇叭换成微软云上的真东西。,A,Must,M3,3.5,A07 A03,在云上运行时，所有部件的测试都通过,ADR-0006
+A09,"What-if wiring: enqueue, batch call, progress push",把「假如」按钮和重踢比赛连起来,用户点「假如」后，任务送去重踢比赛，进度实时显示，结果回到屏幕。,A,Must,M2,2,B08 D07,从点按钮到看到结果，不超过 30 秒,FR-11
+A10,Deploy and smoke test (azd deploy),上线并做一次冒烟测试,把整个系统放到公网上，再快速检查一遍主要功能能不能用。,A,Must,M3,1.5,A08,公网网址能打开；快速检查全部通过,FR-13
+B01,"Domain models and contract export (Pydantic, JSON Schema, TS)",定好大家共用的「数据格式」,先约定比赛、事件、转折点这些数据长什么样，前后端照这个格式写，就不会对不上。,B,Must,M0,3,T01,数据格式定稿并合并；前端能直接用,架构 7.4
+B02,Fixture v0: hand-written demo-1021.json for the frontend,先手写一份演示比赛数据,在模拟器做好之前，先手写一份假数据，让做网页的同学马上能开工。,B,Must,M0,1,B01,做网页的同学不用等，就能开始做看板和详情页,
+B03,Simulator: full match with seed determinism,做模拟球场：踢完整一场比赛,用规则和随机数「踢」出一场 90 分钟的比赛，记下每一次传球、射门、抢断。,B,Must,M1,6,B01,同一个随机种子踢两次，结果一模一样；一场比赛不到 0.1 秒踢完,ADR-0008
+B04,"Snapshots, resume, plant API, demo-1021 preset",让比赛能「存档、读档」,比赛每分钟存一次档，可以从任意一分钟接着往下踢；还能在指定时间安排红牌、换人。,B,Must,M1,3.5,B03,从任何一分钟接着踢结果都一致；演示比赛里有 38 分钟红牌和 63 分钟换人,ADR-0008
+B05,"Threat grid and StatCalculator (15 stats, unit-tested)",做统计员：算各种比赛数据,算出传球、射门、预期进球、压迫等 15 项数据，AI 写解释时用的数字都从这里来。,B,Must,M1,4,B03,15 项数据都有测试；和 D02 的统计词表一一对应,ADR-0005
+B06,Momentum EWMA and CUSUM change points,做势头计和报警器,把比赛走向画成一条曲线，曲线一直往一边倒时就「报警」，提示可能出现了转折点。,B,Must,M1,3,B05,演示比赛在 63 分钟附近会报警,ADR-0010
+B07,Calibration on 200 matches and fixture v1 from the simulator,检查假比赛像不像真比赛,跑 200 场模拟比赛，看进球数、射门数这些统计像不像真实足球，不像就调整。,B,Must,M1,2,B04 B05,平均每场 2.5 到 3 个进球、20 到 28 次射门；演示数据换成模拟器生成的,
+B08,"Batch simulation: process pool, paired seeds, Wilson CI",实现「重踢 1000 次」,从某一分钟开始，照原样和改一处各踢 500 次，统计胜平负的比例和可信范围。,B,Must,M2,4,B04,1000 次重踢不超过 6 秒；同样的设置结果一致,ADR-0009
+B09,Severity rules and CUSUM tuning (D reviews football sense),调整报警器的灵敏度,报警太多会刷屏，太少会漏掉。和懂足球的同学一起调到刚刚好。,B,Must,M2,2,B06 B07,演示比赛只出现 2 到 3 个转折点，而且每个都说得通,ADR-0010
+C01,Web scaffold and theme tokens for the chosen UI style,搭网页的骨架和配色,建好网页项目，把选定的 UI 风格做成统一的颜色和字体。,C,Must,M0,2,A01,选定的风格已经生效，深色和浅色都能用,ADR-0012
+C02,"S1 live board on fixtures: top bar, momentum, pivots, stats, feed",做实时看板（S1）,做主屏幕：比分、时间、势头曲线、转折点卡片、数据栏、事件滚动条。先用假数据。,C,Must,M1,6,B02 C01,和原型里的 S1 一样；势头曲线在第 45 分钟重新开始,原型 S1
+C03,"Live data: REST, WebSocket client, gap recovery",让看板接上真实数据,把看板从假数据换成后台推送的实时数据，断网后能自己恢复。,C,Must,M1,3,A04 A06 C02,比赛加速播放时，曲线 2 秒内更新；断网后能自动重连,US-01
+C04,"S2 pivot detail: static pitch, evidence highlight, before/after",做转折点详情页（S2）,点开一个转折点，看到球场图、三句解释、证据标签，以及前后对比。,C,Must,M2,6,C02,点证据标签，球场图上对应的动作会亮起来；数字悬停能看到出处,原型 S2
+C05,"S3 What-if Lab: scenario buttons, confirm, progress, distribution",做「假如」实验室（S3）,选一个改动，确认后开始重踢，最后用两条对比条展示结果。,C,Must,M2,5,A09 C04,和原型里的 S3 一样；「这是模拟，不是预测」的提示一直显示,原型 S3
+C06,"States: loading, error, degraded, Start demo button",处理加载、出错、降级这些情况,网络慢、断网、AI 暂时不可用时，页面要给出清楚的提示，不能白屏或报错。,C,Must,M4,2,C03,断网或 AI 不可用时，页面不会报错,原型状态矩阵
+C07,Visual polish and screenshots for README and video,美化界面并截图,最后打磨细节，给说明文档和视频准备好截图。,C,Must,M4,2,C05,说明文档用的 3 张截图；录屏时画面没有错位,
+D01,Foundry deployments (standard and mini) and quota test,开通 AI 大脑（Foundry 模型）,在微软 Foundry 上开好两个 AI 模型：一个聪明一点，一个快一点，并测试能不能同时处理多个请求。,D,Must,M0,2,T02,两个模型都能用；同时发 10 个请求不会被限流,ADR-0004
+D02,Stat vocabulary (15) and explanation style guide (English),写统计词表和解说风格指南,列出 AI 可以引用的 15 项统计，再写一份英文解说的写作规范，附好例子和坏例子。,D,Must,M0,2,T01,和 B05 的统计项一一对应；风格指南里有 5 个好例子、5 个坏例子,ADR-0005
+D03,"PivotJudge prompt, output schema, few-shot examples",教「判定员」判断是不是转折点,写给 AI 判定员的说明书（提示词），让它判断报警的那一刻算不算真正的转折点。,D,Must,M1,2.5,D02 B02,演示比赛的 38 和 63 分钟判定为「是」；随便找的时刻大多判定为「否」,
+D04,"Explainer prompt, headline rules, few-shot examples",教「写稿员」写解释,写给 AI 写稿员的说明书：用三句话讲清为什么转折，每句都要有证据，标题里不能有数字。,D,Must,M1,3.5,D02 B02,AI 的输出格式正确；标题不含数字；每句话都有证据,
+D05,Verifier rules and TemplateExplainer (unit-tested),制定「核对员」的检查规则,写下核对规则：数字对不对、证据在不在时间范围内、措辞有没有夸大。核对不通过时，用模板兜底。,D,Must,M1,4,B05 D02,6 类规则都有测试；模板解释永远不会出错,ADR-0005
+D06,Detect workflow in Agent Framework (pair with A),把判定、写稿、核对串成流水线,和 A 一起把三个 AI 角色接起来：写错就打回重写，最多 2 次，之后改用模板。,D,Must,M1,2.5,A05 D03 D04 D05,核对不通过会自动重写，重写 2 次后改用模板,ADR-0004
+D07,"Scenario catalog, UI copy (English), Comparator prompt",写「假如」的场景说明和对比解释,写清楚 5 种「假如」场景各自的界面文字和适用条件，再教 AI 解释两组结果为什么不同。,D,Must,M2,3,D04,5 种场景都有文案和适用条件；对比解释能通过核对,原型 B5
+D09,Pitch and README (English),写项目介绍（Pitch）和说明文档,用英文写给评委看的项目介绍，和仓库首页的说明文档。,D,Must,M4,4,C07,说明文档里有架构图、运行方法、评测结果和 Copilot 使用说明,
+D10,S4 Agent trace list (simple),做 AI 工作记录列表（S4）,做一个简单的列表，展示 AI 小组每一步做了什么，包括「被打回、重写、通过」的过程。,D,Must,M4,2,A05 C02,能看到一次「被拒绝、重写、通过」的完整记录,US-08
+S1,NL scenario parsing (Translator),用一句话提「假如」,让用户直接打字提问，比如「如果 63 分钟没换人呢」，AI 把这句话转成具体的场景设置。,D+A,Should,M4,3,D07 A09,看不懂时，给出 3 个示例让用户点,F13
+S2,Event Hubs and Functions metrics (C2 profile),升级成完整的云上「传送带」,把比赛数据改走微软云的事件流服务和函数计算，冲 Cloud Native 奖。,A,Should,M4,8,A10,切换之后，其他代码都不用改,ADR-0002 ADR-0011
+S3,Detection eval on 20 planted seeds and Foundry eval,给「找转折点」打分,用 20 场埋好转折点的比赛，统计找对了多少，把结果写进说明文档。,B+D,Should,M4,5,B07 B09,找对的比例和解释的可信度都写进了说明文档,F14
+S4,Animated pitch replay,球场动画回放,让转折点前后的动作在球场图上动起来。,C,Could,M4,4,C04,,F15
+S5,Separate S0 lobby page,单独的大厅页,做一个单独的首页，用来新建比赛和查看历史比赛。,C,Could,M4,2,C06,,
+S6,Container Apps Jobs sharding for large N,超大规模重踢,需要重踢上万次时，把任务分给多台云服务器一起做。,A+B,Could,,8,S2,,F16

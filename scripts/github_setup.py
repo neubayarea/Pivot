@@ -49,7 +49,7 @@ LABELS = {
     "bug": ("D73A4A", "缺陷"),
 }
 AREA = {"A": "area:platform", "B": "area:sim", "C": "area:web", "D": "area:ai"}
-ROLE = {"A": "A 平台与编排", "B": "B 模拟与分析", "C": "C 前端", "D": "D AI 内容与质量", "ALL": "全员"}
+ROLE = {"A": "A 后台与上云", "B": "B 模拟比赛与数据", "C": "C 网页界面", "D": "D AI 内容与质量", "ALL": "全员"}
 DEMO_CRITICAL = {"B03", "B04", "B06", "C02", "C04", "C05", "D04", "D05", "D06", "B08", "A09", "D10"}
 
 
@@ -80,21 +80,35 @@ def labels_for(task: dict) -> list[str]:
 
 def body_for(task: dict, assignees: list[str]) -> str:
     who = "、".join(ROLE.get(o, o) for o in ([task["owner"]] if task["owner"] == "ALL" else owners_of(task)))
-    deps = "、".join(task["depends"].split()) or "无"
+    names = {t["id"]: t["title_zh"] for t in load_tasks()}
+    deps = "；".join(f"{d} {names.get(d, '')}".strip() for d in task["depends"].split()) or "无，可以直接开始"
+    milestone = MILESTONES[task["milestone"]][2] if task["milestone"] else "不设截止时间"
     lines = [
-        f"**{task['title_zh']}**",
+        "### 这是在做什么",
+        task.get("plain") or task["title_zh"],
         "",
-        f"- 负责：{who}" + (f"（@{'、@'.join(assignees)}）" if assignees else "（待认领）"),
-        f"- 里程碑：{MILESTONES[task['milestone']][0] if task['milestone'] else '不设'}",
-        f"- 预估：{task['estimate_h']} 小时",
-        f"- 依赖：{deps}",
+        "### 做完是什么样",
+        f"- [ ] {task['acceptance'] or '由负责人补充'}",
+        "",
+        "### 基本信息",
+        f"- 谁来做：{who}" + (f"（@{'、@'.join(assignees)}）" if assignees else "（待认领）"),
+        f"- 截止：{milestone}",
+        f"- 大约要花：{task['estimate_h']} 小时",
+        f"- 要先等这些任务做完：{deps}",
+        "",
+        "<details><summary>给写代码的同学</summary>",
+        "",
+        f"- 技术名称：{task['title_en']}",
     ]
     if task["refs"]:
-        lines.append(f"- 参考：{task['refs']}")
-    lines += ["", "### 验收标准", f"- [ ] {task['acceptance'] or '由负责人补充'}", "",
-              "### 完成定义", "- [ ] 符合冻结的契约", "- [ ] 确定性逻辑有单元测试",
-              "- [ ] 本地形态（PIVOT_PROFILE=local）跑通", "- [ ] PR 描述里写了 `Closes #本 issue`"]
+        lines.append(f"- 参考：{task['refs']}（见 docs/architecture.md 和 docs/adr/）")
+    lines += ["- 完成定义：符合冻结的契约；确定性逻辑有单元测试；本地形态（PIVOT_PROFILE=local）跑通；"
+              "PR 描述里写了 `Closes #本 issue`", "", "</details>"]
     return "\n".join(lines)
+
+
+def issue_title(task: dict) -> str:
+    return f"{task['id']} · {task['title_zh']}"
 
 
 def export_asana(tasks: list[dict], out: Path) -> None:
@@ -125,7 +139,8 @@ def main() -> None:
 
     owners = {k: v for k, v in json.loads(OWNERS.read_text(encoding="utf-8")).items() if k in "ABCD" and v}
     existing_ms = {m["title"]: m["number"] for m in json.loads(gh("api", f"repos/{args.repo}/milestones?state=all&per_page=100"))}
-    existing_issues = {i["title"] for i in json.loads(gh("issue", "list", "-R", args.repo, "--state", "all", "--limit", "500", "--json", "title"))}
+    existing_issues = json.loads(gh("issue", "list", "-R", args.repo, "--state", "all", "--limit", "500", "--json", "title,number"))
+    by_id = {i["title"].split(" · ")[0]: i["number"] for i in existing_issues}
     mode = "APPLY" if args.apply else "DRY RUN"
     print(f"[{mode}] repo={args.repo} tasks={len(tasks)} existing milestones={len(existing_ms)} issues={len(existing_issues)}")
 
@@ -142,13 +157,18 @@ def main() -> None:
         if args.apply:
             gh("api", f"repos/{args.repo}/milestones", "-f", f"title={title}", "-f", f"due_on={due}T12:00:00Z", "-f", f"description={desc}")
 
-    created = 0
+    created = updated = 0
     for t in tasks:
-        title = f"{t['id']} · {t['title_en']}"
-        if title in existing_issues:
-            print(f"  skip    {title}")
-            continue
+        title = issue_title(t)
         assignees = [owners[o] for o in owners_of(t) if o in owners] if t["owner"] != "ALL" else []
+        if t["id"] in by_id:
+            # Already exists: refresh title and body so wording changes in tasks.csv reach GitHub.
+            num = by_id[t["id"]]
+            print(f"  update  #{num} {title}")
+            if args.apply:
+                gh("issue", "edit", str(num), "-R", args.repo, "--title", title, "--body", body_for(t, assignees))
+                updated += 1
+            continue
         cmd = ["issue", "create", "-R", args.repo, "--title", title, "--body", body_for(t, assignees)]
         for label in labels_for(t):
             cmd += ["--label", label]
@@ -160,11 +180,9 @@ def main() -> None:
         if args.apply:
             gh(*cmd)
             created += 1
-    print(f"done: {created} issues created" if args.apply else "dry run only; re-run with --apply to create")
+    print(f"done: {created} created, {updated} updated" if args.apply else "dry run only; re-run with --apply")
     if args.apply:
-        print("看板：GitHub Projects 需要 project 权限。运行 `gh auth refresh -s project` 后，"
-              "用 `gh project create --owner neubayarea --title \"Pivot Hackathon\"` 创建，"
-              "再在网页上把仓库的 issue 全部加入看板。")
+        print("看板：https://github.com/orgs/neubayarea/projects/1（新 issue 需要在看板设置里开启 Auto-add 才会自动加入）")
 
 
 if __name__ == "__main__":
