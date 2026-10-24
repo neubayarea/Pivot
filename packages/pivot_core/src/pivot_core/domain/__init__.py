@@ -7,13 +7,23 @@ from .common import (
     area_of, attacking_view, clock_label, lane_of, third_of, zone_of,
 )
 from .context import (
-    Competition, ContextEffect, MatchContext, OffFieldEvent, PreMatchCondition,
+    Competition, ContextEffect, HeadToHead, MatchContext, OffFieldEvent, PastMeeting,
+    PreMatchCondition, TeamForm,
 )
-from .events import BodyPart, EventType, MatchEvent, PassHeight, PassType, PlayPattern, ShotOutcome
-from .lineup import LineupSlot, PlayerInstruction, Substitution, TeamSheet, TeamTactics
+from .events import (
+    BodyPart, EventType, MatchEvent, PassHeight, PassTechnique, PassType, PlayPattern,
+    ShotOutcome, ShotTechnique,
+)
+from .lineup import (
+    LineupSlot, PlayerInstruction, SetPieceTactics, Substitution, TeamSheet, TeamTactics,
+)
 from .match import Match, PeriodInfo, Score, Team
 from .narrative import Audience, ExplanationSentence, Language, Narrative, ViewerPrefs
-from .outputs import OverlayFeed, OverlayItem, Recap
+from .officials import FoulDetail, InjuryInfo, Referee, VarReview
+from .outputs import (
+    OVERLAY_CARD_SECONDS, OverlayCard, OverlayFeed, OverlayFrame, OverlayItem, OverlayScoreboard,
+    OverlayTimeline, PlayerMatchStats, Recap,
+)
 from .people import (
     ROLE_POSITION, AttackingAttributes, AttributeSummary, CareerStint, Coach, CoachAttributes,
     DefendingAttributes, GoalkeepingAttributes, MentalityAttributes, MovementAttributes,
@@ -32,28 +42,33 @@ CONTRACT_MODELS = (
     Match, Team, Score, PeriodInfo,
     Player, PlayerAttributes, AttributeSummary, Personality, Coach, CoachAttributes,
     CareerStint, Relationship,
-    TeamSheet, LineupSlot, TeamTactics, PlayerInstruction, Substitution,
+    TeamSheet, LineupSlot, TeamTactics, SetPieceTactics, PlayerInstruction, Substitution,
     MatchContext, Competition, PreMatchCondition, OffFieldEvent, ContextEffect,
+    TeamForm, HeadToHead, PastMeeting,
+    Referee, FoulDetail, VarReview, InjuryInfo,
     MatchEvent, TrackingFrame, PlayerPosition, BallPosition, MinuteMetric,
     StatRef, Claim,
     ViewerPrefs, ExplanationSentence, Narrative,
     PivotCandidate, Pivot,
     ScenarioSpec, PlantSpec, OutcomeDist, SimResult, Scenario,
-    OverlayItem, OverlayFeed, Recap,
+    OverlayItem, OverlayFeed, OverlayCard, OverlayScoreboard, OverlayFrame, OverlayTimeline,
+    PlayerMatchStats, Recap,
     VerifierIssue, Verdict, AgentTrace,
     Envelope,
 )
 
 __all__ = [
-    "CONTRACT_MODELS", "FRAME_RATE_HZ", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
+    "CONTRACT_MODELS", "FRAME_RATE_HZ", "OVERLAY_CARD_SECONDS", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
     "ROLE_POSITION", "STAT_UNITS",
     "area_of", "attacking_view", "clock_label", "lane_of", "third_of", "zone_of",
     "AgentTrace", "Area", "AttackingAttributes", "AttributeSummary", "Audience", "BallPosition",
     "BodyPart", "CareerStint", "Claim", "Coach", "CoachAttributes", "Competition",
-    "ContextEffect", "DefendingAttributes", "Envelope", "EventType", "ExplanationSentence",
+    "ContextEffect", "DefendingAttributes", "FoulDetail", "HeadToHead", "InjuryInfo", "Envelope", "EventType", "ExplanationSentence",
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
     "MatchEvent", "MentalityAttributes", "MinuteMetric", "MovementAttributes", "Narrative",
-    "OffFieldEvent", "OutcomeDist", "OverlayFeed", "OverlayItem", "PassHeight", "PassType",
+    "OffFieldEvent", "OutcomeDist", "PastMeeting", "PlayerMatchStats", "Referee", "SetPieceTactics",
+    "TeamForm", "VarReview", "OverlayCard", "OverlayFeed", "OverlayFrame", "OverlayItem",
+    "OverlayScoreboard", "OverlayTimeline", "PassHeight", "PassTechnique", "PassType", "ShotTechnique",
     "Period", "PeriodInfo",
     "Personality", "Pivot", "PivotCandidate", "PlantSpec", "PlayPattern", "Player",
     "PlayerAttributes", "PlayerInstruction", "PlayerPosition", "Point", "PowerAttributes",
