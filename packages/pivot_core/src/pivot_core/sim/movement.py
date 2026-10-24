@@ -32,6 +32,10 @@ PRESS_PLAYERS = {"low": 1, "mid": 1, "high": 2}
 NEAR_OWN_BOX = 25.0                       # ball this close to our goal: at least two close down
 PRESS_ZONE = {"low": 45.0, "mid": 70.0, "high": PITCH_LENGTH}  # press when the ball is closer to our goal than this
 SPRINT_MS = 8.5
+_FAR_CORNER = np.array([PITCH_LENGTH, PITCH_WIDTH])
+_ON_PITCH_LO = np.array([0.5, 0.5])
+_ON_PITCH_HI = np.array([PITCH_LENGTH - 0.5, PITCH_WIDTH - 0.5])
+_OFFSET_SD = np.array([1.8, 1.5])          # personal drift around the target, x and y (metres)
 
 
 @dataclass
@@ -71,10 +75,19 @@ def to_view(p: np.ndarray, side: int) -> np.ndarray:
     """Absolute pitch coordinates to the team view of `side` (works on (..., 2) arrays)."""
     if side == 0:
         return p
-    return np.stack([PITCH_LENGTH - p[..., 0], PITCH_WIDTH - p[..., 1]], axis=-1)
+    return _FAR_CORNER - p
 
 
 from_view = to_view   # the transform is its own inverse
+
+
+def clip1(x: float, lo: float, hi: float) -> float:
+    """np.clip for a single number, without numpy's per-call cost. Same result in every case,
+    including a value equal to a bound (the value comes back, so -0.0 stays -0.0) and NaN."""
+    if x != x:
+        return x
+    x = x if x >= lo else lo
+    return x if x <= hi else hi
 
 
 @dataclass
@@ -89,7 +102,8 @@ class MovementModel:
         due = self.offset_until <= t
         n = int(due.sum())
         if n:
-            self.offsets[due] = self.rng.normal(0, [1.8, 1.5], size=(n, 2))
+            # = rng.normal(0, [1.8, 1.5], size=(n, 2)): same draws, same numbers, without its argument checks
+            self.offsets[due] = self.rng.standard_normal((n, 2)) * _OFFSET_SD
             self.offset_until[due] = t + self.rng.integers(10, 25, size=n)
 
     def targets(self, t: int, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, ball: np.ndarray,
@@ -97,34 +111,39 @@ class MovementModel:
                 last_loss_t: tuple[int, int], flight_target: tuple[int, int, np.ndarray] | None) -> np.ndarray:
         self._refresh_offsets(t)
         self.pressers = set()
-        out = np.zeros_like(pos)
+        out = np.empty_like(pos)
+        active = (shapes[0].active, shapes[1].active)
         for k, shape in enumerate(shapes):
-            out[k] = self._team_targets(t, k, shape, shapes[1 - k], pos, ball, possession, carrier,
+            out[k] = self._team_targets(t, k, shape, active[k], active[1 - k], pos, ball, possession, carrier,
                                         loose, last_loss_t[k])
         if flight_target is not None:
             k, i, end = flight_target
             out[k, i] = end
         return out
 
-    def _team_targets(self, t: int, k: int, shape: TeamShape, opp: TeamShape, pos: np.ndarray,
-                      ball: np.ndarray, possession: int | None, carrier: tuple[int, int] | None,
+    def _team_targets(self, t: int, k: int, shape: TeamShape, active: np.ndarray, opp_active: np.ndarray,
+                      pos: np.ndarray, ball: np.ndarray, possession: int | None, carrier: tuple[int, int] | None,
                       loose: bool, last_loss: int) -> np.ndarray:
+        # Runs twice every second of play. The per-player sums are done on plain floats: for 11
+        # numbers that is far cheaper than a numpy call each, and + - * / give exactly the same
+        # doubles, so every seed plays as before. Distances stay with np.hypot.
         tac = shape.tactics
         b = to_view(ball, k)
+        bx, by = float(b[0]), float(b[1])
         in_poss = possession == k
-        anchors = shape.anchors
-        rel_x = anchors[:, 0] - 26.0
 
         if in_poss:
-            line = np.clip(LINE_HEIGHT[tac.line_height] + 6 + 0.45 * (b[0] - 40), 15, 62)
+            line = clip1(LINE_HEIGHT[tac.line_height] + 6 + 0.45 * (bx - 40), 15.0, 62.0)
             depth, width, follow = 1.25, WIDTH_IN[tac.width], 0.2
         else:
             # even a deep block holds its line around the penalty spot, not on the six-yard box
-            line = np.clip(LINE_HEIGHT[tac.line_height] + 0.3 * (b[0] - 52.5), 11, 55)
+            line = clip1(LINE_HEIGHT[tac.line_height] + 0.3 * (bx - 52.5), 11.0, 55.0)
             depth, width, follow = 0.8, 0.72, 0.4
 
-        tx = line + rel_x * depth
-        ty = 34 + (anchors[:, 1] - 34) * width + follow * (b[1] - 34)
+        follow_y = follow * (by - 34)
+        anchors = shape.anchors.tolist()
+        tx = [line + (ax - 26.0) * depth for ax, _ in anchors]
+        ty = [34 + (ay - 34) * width + follow_y for _, ay in anchors]
 
         for i, instr in shape.instructions.items():
             if instr in ("get_forward", "overlap") and in_poss:
@@ -142,31 +161,25 @@ class MovementModel:
             for i in np.flatnonzero(starting):
                 if shape.roles[i] not in DEFENDER_ROLES or shape.roles[i] in WIDE_DEFENDERS:
                     self.run_until[k, i] = t + self.rng.integers(3, 7)
-            running = self.run_until[k] > t
-            tx = np.where(running, tx + 9, tx)
+            for i in np.flatnonzero(self.run_until[k] > t):
+                tx[i] += 9
 
         # Do not stand far beyond the opponents' last line.
-        opp_view = to_view(pos[1 - k], k)
-        opp_active = opp.active
-        opp_x = np.sort(opp_view[opp_active, 0])[::-1]
+        opp_x = sorted((x if k == 0 else PITCH_LENGTH - x
+                        for x, on in zip(pos[1 - k, :, 0].tolist(), opp_active.tolist()) if on), reverse=True)
         last_line = opp_x[1] if len(opp_x) > 1 else PITCH_LENGTH
-        cap = max(last_line, b[0]) + 0.5
-        tx = np.minimum(tx, cap)
-
-        target = np.stack([tx, ty], axis=-1) + self.offsets[k]
+        cap = max(last_line, bx) + 0.5
+        target = np.array([[min(x, cap) + ox, y + oy] for x, y, (ox, oy) in zip(tx, ty, self.offsets[k].tolist())])
 
         # Goalkeeper.
-        gk = [i for i, r in enumerate(shape.roles) if r == "GK"]
-        for i in gk:
-            target[i] = [np.clip(3 + 0.1 * b[0] * (1.5 if in_poss else 1.0), 2, 20), 34 + 0.2 * (b[1] - 34)]
-
-        own = to_view(pos[k], k)
-        active = shape.active
-        outfield = np.array([r != "GK" for r in shape.roles]) & active
+        for i, r in enumerate(shape.roles):
+            if r == "GK":
+                target[i, 0] = clip1(3 + 0.1 * bx * (1.5 if in_poss else 1.0), 2.0, 20.0)
+                target[i, 1] = 34 + 0.2 * (by - 34)
 
         # Pressing and chasing loose balls.
         if loose:
-            d = np.where(outfield, np.hypot(*(own - b).T), np.inf)
+            d = self._distances_to_ball(k, shape, active, pos, b)
             for i in np.argsort(d)[:2]:
                 target[i] = b
         elif not in_poss and carrier is not None:
@@ -174,17 +187,23 @@ class MovementModel:
             counter = t - last_loss <= 5
             if counter:
                 n += 1
-            if b[0] <= NEAR_OWN_BOX:
+            if bx <= NEAR_OWN_BOX:
                 n = max(n, 2)                      # every team closes down near its own box
-            if counter or b[0] <= PRESS_ZONE[tac.press]:
-                d = np.where(outfield, np.hypot(*(own - b).T), np.inf)
+            if counter or bx <= PRESS_ZONE[tac.press]:
+                d = self._distances_to_ball(k, shape, active, pos, b)
                 towards_goal = np.array([-2.5, 0.0])   # close down, do not run into him
                 for i in np.argsort(d)[:n]:
                     target[i] = b + towards_goal
                     self.pressers.add((k, int(i)))
-        target[:, 0] = np.clip(target[:, 0], 0.5, PITCH_LENGTH - 0.5)
-        target[:, 1] = np.clip(target[:, 1], 0.5, PITCH_WIDTH - 0.5)
+        np.minimum(np.maximum(target, _ON_PITCH_LO), _ON_PITCH_HI, out=target)
         return from_view(target, k)
+
+    @staticmethod
+    def _distances_to_ball(k: int, shape: TeamShape, active: np.ndarray, pos: np.ndarray, b: np.ndarray) -> np.ndarray:
+        """Each outfield player's distance to the ball (team view); inf for keepers and empty slots."""
+        own = to_view(pos[k], k)
+        outfield = np.array([r != "GK" for r in shape.roles]) & active
+        return np.where(outfield, np.hypot(*(own - b).T), np.inf)
 
     @staticmethod
     def step(pos: np.ndarray, target: np.ndarray, pace: np.ndarray, fitness: np.ndarray,

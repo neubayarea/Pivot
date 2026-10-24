@@ -32,7 +32,7 @@ from ..domain import (
 )
 from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_LENGTH, PITCH_WIDTH, zone_of
 from .formations import DEFENDER_ROLES, FORMATIONS, MIDFIELD_ROLES
-from .movement import MovementModel, TeamShape, from_view, to_view
+from .movement import MovementModel, TeamShape, clip1, from_view, to_view
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
 BOX_DEPTH, BOX_Y = 16.5, (13.84, 54.16)
@@ -192,6 +192,8 @@ class Engine:
         self.prev = np.zeros((2, 11, 2))
         self.speed = np.zeros((2, 11))
         self.fitness = np.ones((2, 11))
+        self._stamina_key: tuple | None = None
+        self._stamina_cache = np.zeros((2, 11))
         self.ball = np.array([PITCH_LENGTH / 2, PITCH_WIDTH / 2])
         self.ball_z = 0.0
         self.owner: tuple[int, int] | None = None
@@ -305,8 +307,8 @@ class Engine:
              "player_id": self._pid(k, i) if i is not None else None, "possession_id": self.pid or None}
         for key, value in fields.items():
             if isinstance(value, np.ndarray):          # a ball over the line is recorded on the line
-                value = (round(float(np.clip(value[0], 0, PITCH_LENGTH)), 1),
-                         round(float(np.clip(value[1], 0, PITCH_WIDTH)), 1))
+                value = (round(float(clip1(value[0], 0.0, PITCH_LENGTH)), 1),
+                         round(float(clip1(value[1], 0.0, PITCH_WIDTH)), 1))
             e[key] = value
         self.events.append(e)
         return e
@@ -322,7 +324,7 @@ class Engine:
     def _success(self, k: int, p: float) -> float:
         if k == 0:
             p *= 1 + (self.p.home_boost - 1) * self.crowd
-        return float(np.clip(p, 0.02, 0.99))
+        return float(clip1(p, 0.02, 0.99))
 
     # --- possession ------------------------------------------------------------------
 
@@ -594,7 +596,8 @@ class Engine:
             cand = [m for m in cand if mates[m, 0] < v[0] + 1] or cand
         gains = mates[cand, 0] - v[0]
         dists = np.hypot(*(mates[cand] - v).T)
-        open_ = np.array([np.min(np.hypot(*(opp[opp_act] - mates[m]).T)) for m in cand])
+        to_opp = opp[opp_act][None, :, :] - mates[cand][:, None, :]      # (candidates, opponents, 2)
+        open_ = np.hypot(to_opp[..., 0], to_opp[..., 1]).min(axis=1)
         offside = (mates[cand, 0] > back) & (mates[cand, 0] > max(v[0], PITCH_LENGTH / 2))
         style = self.tactics[k].passing
         long_pen = {"short": 1.4, "mixed": 1.0, "direct": 0.55}[style]
@@ -620,17 +623,20 @@ class Engine:
         seg = end_v - v
         seg_len2 = float(seg @ seg) or 1e-6
         lane = []
-        for idx in np.flatnonzero(opp_act):
-            u = float(np.clip((opp[idx] - v) @ seg / seg_len2, 0, 1))
-            if u <= 0.05:
-                continue
-            dseg = float(np.hypot(*(v + u * seg - opp[idx])))
-            if dseg < 2.5:
-                w = 0.22 * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
-                lane.append((idx, w, v + u * seg))
-                acc *= 1 - w
-        mark_d = float(np.min(np.hypot(*(opp[opp_act] - end_v).T)))
-        mark_j = int(np.flatnonzero(opp_act)[np.argmin(np.hypot(*(opp[opp_act] - end_v).T))])
+        opp_idx = np.flatnonzero(opp_act)
+        rel = opp[opp_idx] - v
+        # np.vecdot runs the same dot product per row as `rel[n] @ seg`, so every seed plays as before
+        us = np.clip(np.vecdot(rel, seg) / seg_len2, 0, 1)
+        points = v + us[:, None] * seg
+        dsegs = np.hypot(*(points - opp[opp_idx]).T)
+        for n in np.flatnonzero((us > 0.05) & (dsegs < 2.5)):
+            u, dseg = float(us[n]), float(dsegs[n])
+            w = 0.22 * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
+            lane.append((opp_idx[n], w, points[n].copy()))
+            acc *= 1 - w
+        marks = np.hypot(*(opp[opp_idx] - end_v).T)
+        mark_d = float(np.min(marks))
+        mark_j = int(opp_idx[np.argmin(marks)])
         if mark_d < 2.0:
             acc *= 1 - 0.18 * (1 - mark_d / 2.0)
         if under:
@@ -1192,11 +1198,18 @@ class Engine:
         self.pos, self.speed = MovementModel.step(self.pos, targets, pace, self.fitness, active)
         if carrier is not None:
             self.pos[carrier] = self.ball
-        stamina = np.array([[self._a(k, i, "stamina") for i in range(11)] for k in (0, 1)])
-        drain = (0.00003 + 0.000022 * self.speed + 0.00004 * (self.speed > 7)) * (1.45 - stamina)
+        drain = (0.00003 + 0.000022 * self.speed + 0.00004 * (self.speed > 7)) * (1.45 - self._stamina())
         self.fitness = np.clip(self.fitness - drain, 0, 1)
         self._record_frame()
         self._clock()
+
+    def _stamina(self) -> np.ndarray:
+        """(2, 11) stamina of whoever is in each slot, rebuilt only when the players on the pitch change."""
+        key = (tuple(self.shapes[0].player_ids), tuple(self.shapes[1].player_ids))
+        if key != self._stamina_key:
+            self._stamina_key = key
+            self._stamina_cache = np.array([[self._a(k, i, "stamina") for i in range(11)] for k in (0, 1)])
+        return self._stamina_cache
 
     def _record_frame(self) -> None:
         f = self.frames
