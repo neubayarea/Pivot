@@ -10,8 +10,17 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .vocabulary import (BANNED_TERMS, DOWN_WORDS, JARGON, LIKELY_DOWN, LIKELY_UP, MAGNITUDE_WORDS, OFF_PITCH_WORDS,
-                         SIGNIFICANCE_WORDS, UP_WORDS)
+from .vocabulary import (
+    BANNED_TERMS,
+    DOWN_WORDS,
+    JARGON,
+    LIKELY_DOWN,
+    LIKELY_UP,
+    MAGNITUDE_WORDS,
+    OFF_PITCH_WORDS,
+    SIGNIFICANCE_WORDS,
+    UP_WORDS,
+)
 
 INSTRUCTIONS = {
     "en": "Write in English.",
@@ -48,10 +57,16 @@ BANNED = {"zh": ("赌", "赔率", "投注", "下注", "博彩", "一定", "肯�
 FAN_JARGON = {"zh": ("预期进球", "期望进球", "预期助攻", "期望助攻", "预期威胁"),
               "es": ("goles esperados", "gol esperado", "asistencias esperadas", "amenaza esperada")}
 OFF_PITCH = {"zh": ("旧主", "老东家", "前东家", "旧东家", "老队友", "前队友", "老上司", "恩怨", "宿怨", "旧怨", "不和",
-                    "重返", "夜店", "场外", "合同纠纷", "转会传闻"),
+                    "重返", "夜店", "场外", "合同纠纷", "转会传闻", "当年放走", "放走他的", "放走她的", "母队", "旧主场",
+                    "老主场", "故地", "昔日东家", "曾效力"),
              "es": ("antiguo club", "exclub", "ex club", "antiguo equipo", "exequipo", "excompañero",
                     "antiguo entrenador", "rencilla", "enemistad", "rencor", "reencuentro", "fuera del campo",
-                    "vida nocturna")}
+                    "vida nocturna", "que lo dejó ir", "que la dejó ir", "que lo dejó marchar", "que la dejó marchar",
+                    "que lo vendió", "que la vendió", "antiguo estadio", "antigua casa", "exjugador", "ex jugador",
+                    "excompañeros", "antiguos compañeros", "club de su infancia", "regreso a casa")}
+# Off-pitch stories with a name in the middle ("the former Harbour man", "an ex-Rovers captain").
+OFF_PITCH_PATTERN = re.compile(r"\b(?:former|ex-)\s*(?:[A-Z][\w'’-]*\s+){1,3}(?:man|woman|player|captain|striker|"
+                               r"forward|winger|midfielder|defender|keeper|goalkeeper)\b")
 
 # Numbers written as words, which a headline may not carry any more than digits. "one", "un"
 # and "一" are left out: they double as articles ("one more push", "un cambio", "一张牌").
@@ -108,6 +123,11 @@ def off_pitch_words(lang: str) -> tuple[str, ...]:
     return OFF_PITCH_WORDS + OFF_PITCH.get(lang, ())
 
 
+def off_pitch_names(text: str) -> list[str]:
+    """Off-pitch stories the word lists cannot hold because a team name sits inside them."""
+    return [m[0] for m in OFF_PITCH_PATTERN.finditer(text)]
+
+
 _CJK = re.compile(r"[㐀-鿿豈-﫿]")
 
 
@@ -133,7 +153,13 @@ def normalise(text: str, lang: str) -> str:
 
 
 # Ways of writing a match minute that are not claims. A number in quotes ('12' or ‘12’) is not one.
-MINUTES = re.compile(r"(?<![A-Za-z\d.])\d{1,3}(?:\+\d{1,2})?(?P<mark>['’′])|第\s*\d{1,3}\s*分钟|\bminuto\s+\d{1,3}\b")
+# An ordinal is a minute before "minute", a linking word or the end of a clause ("in the 61st and"),
+# not before a noun ("their 12th shot"); "en el 63" is one unless it is a share ("en el 63%").
+MINUTES = re.compile(r"(?<![A-Za-z\d.])\d{1,3}(?:\+\d{1,2})?(?P<mark>['’′])|第\s*\d{1,3}\s*分钟"
+                     r"|\bminut[eo]\s+\d{1,3}(?:\+\d{1,2})?\b"
+                     r"|(?<![A-Za-z\d.])\d{1,3}(?:st|nd|rd|th)\b(?=\s*-?\s*minute|\s*[.,;:!?)]|\s*$"
+                     r"|\s+(?:and|but|when|as|after|before|with|while|then|in|on|of|for|from|to)\b)"
+                     r"|\b(?:en|desde|hasta|tras)\s+el\s+\d{1,3}(?!\d|\s*%|[.,]\d)", re.IGNORECASE)
 # Lengths of time ("five minutes", "5分钟") are not claims either; checked after number words become digits.
 DURATION = re.compile(r"(?<![\d.])\d+\s*(?:minutes?|mins?|minutos?|分钟)", re.IGNORECASE)
 
@@ -217,6 +243,32 @@ def spell_out(text: str, lang: str) -> str:
     return _WORD_NUMBER[lang].sub(word, text)
 
 
+# Multiples ("three times as many", "el triple", "是之前的三倍") in spelled-out text: the later value must
+# be about this many times the earlier one. Counting ("hit the post three times") is not a multiple, nor
+# is a tactical "doble pivote".
+MULTIPLE = {
+    "en": re.compile(r"\b(?:(?P<n>\d+(?:\.\d+)?)\s+times|(?P<w>twice))\s+(?:as\s+(?:many|much|high|often)|more|"
+                     r"higher|greater|the)\b", re.IGNORECASE),
+    "es": re.compile(r"\b(?:(?P<n>\d+(?:\.\d+)?)\s+veces\s+(?:más|mayor|lo|el|la|los|las)|el\s+(?P<w>doble|triple|"
+                     r"cuádruple))\b(?!\s+pivote)", re.IGNORECASE),
+    "zh": re.compile(r"(?:是|为|达到|成了|变成|变为)[^。；，,\d]{0,8}?(?P<n>\d+(?:\.\d+)?)\s*倍"),
+}
+_MULTIPLE_WORDS = {"twice": 2.0, "doble": 2.0, "triple": 3.0, "cuádruple": 4.0}
+
+
+def multiples(text: str, lang: str) -> list[tuple[str, float]]:
+    """Each multiple in spelled-out text and the factor it means."""
+    pattern = MULTIPLE.get(lang)
+    return [(m[0], float(m["n"]) if m["n"] else _MULTIPLE_WORDS[m["w"].lower()])
+            for m in pattern.finditer(text)] if pattern else []
+
+
+def mask_multiples(text: str, lang: str) -> str:
+    """The factor of a multiple is checked as a ratio, not as a number."""
+    pattern = MULTIPLE.get(lang)
+    return pattern.sub(lambda m: " " * len(m[0]), text) if pattern else text
+
+
 # "from A to B" in each language; A must be the earlier window's value.
 _N = r"(-?\d+(?:\.\d+)?)"
 FROM_TO = {"en": re.compile(rf"\bfrom\s+{_N}[^\d]{{0,15}}?\bto\s+{_N}", re.IGNORECASE),
@@ -259,7 +311,7 @@ PHRASES: dict[str, dict[str, str]] = {
         "injury": "{team} perdió a un jugador por lesión en el {at}.", "injury_h": "Una lesión cambia el partido",
         "stat": "En los cinco minutos siguientes, {label} de {team} {verb} de {a} a {b}.",
         "stat_fan": "En los cinco minutos siguientes, {label} de {team} {verb} a {b}.",
-        "rose": "subió", "fell": "bajó",
+        "rose": "subió", "fell": "bajó", "rose_pl": "subieron", "fell_pl": "bajaron",     # "los pases … subieron"
         "momentum": "A partir de ahí el impulso pasó a {team}.", "momentum_h": "El impulso pasa a {team}",
         "momentum_lost": "A partir de ahí {team} perdió el impulso.", "momentum_lost_h": "{team} pierde el impulso",
         "fallback": "El partido cambió en este momento.", "fallback_h": "El partido da un giro",

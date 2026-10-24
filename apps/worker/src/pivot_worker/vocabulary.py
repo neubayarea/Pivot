@@ -124,6 +124,9 @@ OFF_PITCH_WORDS = (
     "former teammate", "old teammate", "the club that sold", "sold him", "sold her", "first game back",
     "returns to face", "back against", "reunion", "feud", "grudge", "bad blood", "nightlife", "night out",
     "out late", "contract dispute", "transfer rumour", "off the pitch", "off-pitch",
+    "that let him go", "who let him go", "that let her go", "who let her go", "that released him",
+    "that released her", "old ground", "stomping ground", "boyhood club", "old teammates", "former teammates",
+    "homecoming",
 )
 
 

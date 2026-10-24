@@ -89,19 +89,36 @@ def _spans(text: str, phrase: str):
     return re.finditer(pattern, text)
 
 
+# A team named before "more likely to win" names its win: "Harbour City were more likely to win",
+# "Harbour City更有可能获胜". The team's name is where the outcome is.
+_LIKELY_TO_WIN = {
+    "en": r"(?=[^.;:,]{0,30}?\b(?:more likely|less likely|likelier) to win\b)",
+    "zh": r"(?=[^。；，,]{0,6}?(?:更有可能|可能性更大|可能性更小|更不可能)(?:获胜|取胜|赢球|胜出))",
+}
+
+
 def outcome_mentions(result: SimResult, team_names: Mapping[str, str], lang: str = "en"):
     """For the Verifier: every outcome a sentence names, where, and how it changed."""
     deltas, names = changes(result), outcome_names(team_names, lang)
+    likely = [p for p in (_LIKELY_TO_WIN["en"], _LIKELY_TO_WIN.get(lang)) if p]
+    teams = [(f"{side}_win", team_names[side]) for side in ("home", "away")]
 
     def mentioned(text: str) -> list[OutcomeMention]:
         lowered, found = text.lower(), {}
+
+        def add(k: str, m: re.Match) -> None:
+            found.setdefault(m.start(), OutcomeMention(text[m.start():m.end()], m.start(), m.end(), deltas[k],
+                                                       bool(result.significant.get(k))))
         for k, phrases in names.items():
             if k not in deltas:
                 continue
             for p in phrases:
                 for m in _spans(lowered, p):
-                    found.setdefault(m.start(), OutcomeMention(text[m.start():m.end()], m.start(), m.end(), deltas[k],
-                                                               bool(result.significant.get(k))))
+                    add(k, m)
+        for k, team in teams:
+            for pattern in likely:
+                for m in re.finditer(rf"(?<![a-z0-9]){re.escape(team.lower())}(?![a-z0-9]){pattern}", lowered):
+                    add(k, m)
         return sorted(found.values(), key=lambda m: m.start)
 
     return mentioned
