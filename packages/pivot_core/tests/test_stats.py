@@ -13,6 +13,7 @@ from pivot_core.analytics.ratings import POSITION_OFFSET
 from pivot_core.domain import (
     ExplanationSentence,
     MatchEvent,
+    MinuteMetric,
     Narrative,
     StatMetric,
     StatRef,
@@ -263,6 +264,20 @@ def test_rat_001_idle_player_keeps_the_baseline_and_a_goal_adds_one():
     assert stats["h10"].rating == pytest.approx(forward)
     assert stats["h09"].rating == pytest.approx(forward + 1.0 + 0.1)   # goal + shot on target
     assert stats["h09"].minutes_played == 20
+
+
+def test_a_window_after_the_last_minute_played_has_no_answer():
+    c = calc([ev(1, 600, "pass", location=(30, 30), end_location=(40, 30), outcome="success")])
+    with pytest.raises(LookupError):
+        ask(c, "passes", window=(30, 35))
+
+
+def test_met_015_momentum_comes_from_the_stored_metrics_when_given():
+    stored = [MinuteMetric(match_id=MID, minute=m, momentum=0.5, threat_home=0, threat_away=0,
+                           pressure_home=0, pressure_away=0) for m in range(10)]
+    c = StatCalculator(MATCH, [ev(1, 300, "pass", outcome="success")], [], metrics=stored)
+    assert ask(c, "momentum_avg", window=(0, 10)) == 0.5
+    assert ask(c, "momentum_avg", team="away", window=(0, 10)) == -0.5
 
 
 # --- on a simulated match -------------------------------------------------------------

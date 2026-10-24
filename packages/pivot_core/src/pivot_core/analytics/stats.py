@@ -17,8 +17,11 @@ Rules shared by every metric:
 - with `player_id` set, only that player's events (or positions) count;
 - no data is never a number: a ratio with nothing to divide by, a window without frames, a
   team-only metric (possession, width, PPDA, field tilt, momentum) asked for a player, a player
-  who is not in the squad of the team asked about, or no match at all raise LookupError, which
-  the Verifier reports as "cannot be recomputed".
+  who is not in the squad of the team asked about, a window that starts after the last minute
+  played, or no match at all raise LookupError, which the Verifier reports as "cannot be
+  recomputed";
+- momentum comes from the minute metrics the pipeline stored when they are passed in, so the
+  curve on screen and the Verifier read the same numbers; otherwise it is recomputed from events.
 """
 
 from __future__ import annotations
@@ -29,7 +32,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..domain import STAT_UNITS, Match, MatchEvent, StatRef, TrackingFrame
+from ..domain import STAT_UNITS, Match, MatchEvent, MinuteMetric, StatRef, TrackingFrame
 from ..domain.common import PITCH_LENGTH, PITCH_WIDTH, area_of, attacking_view, third_of
 from .momentum import momentum_series
 
@@ -56,7 +59,8 @@ class NoData(LookupError):
 
 
 class StatCalculator:
-    def __init__(self, match: Match | None, events: list[MatchEvent], frames: list[TrackingFrame]):
+    def __init__(self, match: Match | None, events: list[MatchEvent], frames: list[TrackingFrame],
+                 metrics: list[MinuteMetric] | None = None):
         self.match = match
         if match is None:                 # load_view passes None for a match it cannot find
             return
@@ -65,8 +69,13 @@ class StatCalculator:
         self.team_of = {p.player_id: p.team for t in (match.home, match.away) for p in t.squad}
         self._roles = self._role_timeline()
         self._frames = self._index_frames(frames)
-        self._metrics = momentum_series(match.match_id, self.events)
+        if metrics is not None:                                    # what the pipeline stored and shows
+            self._metrics = sorted(metrics, key=lambda m: m.minute)
+        else:
+            self._metrics = momentum_series(match.match_id, self.events)
         self._possessions = self._index_possessions()
+        seconds = [e.t for e in events] + [int(t) for t in self._frames.t]
+        self._last_minute = max(seconds) // 60 if seconds else None      # None: nothing recorded yet
         self._span: tuple[float, float] = (0, math.inf)     # seconds kept by compute(..., period=)
 
     @classmethod
@@ -157,6 +166,8 @@ class StatCalculator:
             side = self.team_of.get(ref.player_id)
             raise NoData(f"{ref.player_id} plays for {side}, not {ref.team}" if side
                          else f"no player {ref.player_id} in this match")
+        if self._last_minute is not None and ref.window[0] > self._last_minute:
+            raise NoData(f"the match has not reached minute {ref.window[0]} (last minute {self._last_minute})")
         if period is not None:
             p = next((p for p in self.match.periods if p.period == period), None)
             if p is None:

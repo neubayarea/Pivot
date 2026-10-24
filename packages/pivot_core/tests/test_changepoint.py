@@ -73,7 +73,7 @@ def test_window_and_key_events_for_the_judge():
               ev(4, 10, "substitution")]
     c = detect_candidates(MID, series(values), events)[0]
     assert c.window == (c.minute - 8, c.minute + 5)
-    assert c.key_event_ids == ["e1", "e3"]                    # goal and red card; yellow and early sub left out
+    assert c.key_event_ids == ["e3", "e1"]                    # red card then goal, in match order; yellow and early sub left out
     assert key_events(events, (0, 90)) == ["e1", "e3", "e4"]
 
 
@@ -118,3 +118,29 @@ def test_seed_942_has_no_alarm_at_half_time():
     second = min(e.minute for e in events if e.period == 2)
     found = detect_candidates(out.match.match_id, momentum_series(out.match.match_id, events), events)
     assert not [c.minute for c in found if second - 2 <= c.minute <= second + 2]
+
+
+def test_the_climb_back_after_the_restart_is_not_a_turn():
+    # home on top before the break; momentum restarts at zero and is back at its level within minutes
+    values = np.r_[np.full(47, 0.7), np.zeros(3), np.full(42, 0.7)]
+    assert detect_candidates(MID, series(values), half_events(47, 92)) == []
+
+
+def test_live_push_with_only_new_events_gives_the_same_key_events():
+    rng = np.random.default_rng(0)
+    values = np.r_[0.4 + noise(30, rng), -0.4 + noise(15, rng)]
+    events = [ev(1, 29, "shot", team="away", shot_outcome="goal", xg=0.3),
+              ev(3, 27, "card", foul=FoulDetail(foul_type="tackle", card="red"))]
+    det = PivotDetector(MID)
+    for m in series(values):
+        det.push(m, [e for e in events if e.minute == m.minute])      # each minute brings its own events
+    assert det.emitted and det.emitted[0].key_event_ids == ["e3", "e1"]
+
+
+def test_a_minute_pushed_twice_counts_once():
+    det = PivotDetector(MID)
+    m = series([0.5])[0]
+    det.push(m)
+    det.push(m)
+    assert len(det.series) == 1
+
