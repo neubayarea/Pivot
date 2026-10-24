@@ -64,6 +64,17 @@ def test_feedback_is_appended_on_a_retry(events, stats):
     assert messages[1]["content"].endswith("- number_mismatch: xg is 0.84, not 0.9.")
 
 
+def test_a_rewrite_shows_the_rejected_card(events, stats):
+    verdict = Verdict(passed=False, issues=[VerifierIssue(code="number_mismatch", message="xg is 0.84, not 0.9.")])
+    previous = ex.EXAMPLES[0].model_dump_json()
+    _, messages = ex.build_messages(candidate(), events=events, stats=stats, team_names=TEAMS, feedback=verdict,
+                                    previous=previous)
+    text = messages[1]["content"]
+    assert f"Your previous card:\n{previous}" in text and text.index(previous) < text.index("The Verifier rejected")
+    _, first = ex.build_messages(candidate(), events=events, stats=stats, team_names=TEAMS, previous=previous)
+    assert previous not in first[1]["content"]                      # only on a rewrite
+
+
 def test_parse_draft_builds_an_llm_narrative():
     raw = ex.EXAMPLES[0].model_dump_json()
     narrative = ex.parse_draft(raw, chain_id="c1", verifier_attempts=1)

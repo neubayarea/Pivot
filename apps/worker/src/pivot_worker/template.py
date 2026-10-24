@@ -1,8 +1,11 @@
 """TemplateExplainer: the fallback card when the Explainer cannot pass the Verifier (D05).
 
 It builds up to three sentences from the key events and one recomputed stat change, so
-what it writes passes the same Verifier. It must never raise: if anything goes wrong it
-returns a minimal card that still fits the Narrative contract.
+what it writes passes the same Verifier. With a focus team it tells the story from their side,
+even when the match turned against them; fan versions write only the newer value of the change.
+It must never raise: if anything goes wrong it returns a minimal card that still fits the
+Narrative contract. It only cites events in the Verifier's evidence window; when there are none,
+it writes only the momentum sentence, which needs no evidence, and cites `NO_EVIDENCE`.
 """
 
 from __future__ import annotations
@@ -14,8 +17,8 @@ from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotC
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from .context import ContextItem, involved_in
-from .languages import LABELS, MAX_HEADLINE, PHRASES
-from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
+from .languages import FAN_LABELS, LABELS, MAX_HEADLINE, PHRASES, length
+from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, NO_EVIDENCE, StatSource
 from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 
 # Stats the template tries, in order of preference when changes are equal.
@@ -42,35 +45,41 @@ def _trigger(event: MatchEvent, team: str, lang: str = "en") -> tuple[str, str]:
 
 def _label(metric: str, lang: str, fan: bool) -> str:
     if lang in LABELS:
-        return LABELS[lang][metric]
+        return (FAN_LABELS if fan else LABELS)[lang][metric]
     term = STAT_TERMS[metric]
     return term.fan_label if fan else term.label
 
 
-def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: list[str],
+def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, evidence: list[str],
                    fan: bool = False, lang: str = "en") -> ExplanationSentence | None:
+    """The biggest change for `side`: a rise if the match turned their way, a fall if it turned against them."""
     m = c.minute
     before, after = (max(0, m - COMPARE_MINUTES), m), (m, m + COMPARE_MINUTES)
+    gaining = side == c.direction
     best = None
     for metric in FAN_METRICS if fan else CANDIDATE_METRICS:
         try:
-            refs = [StatRef(metric=metric, team=c.direction, window=w) for w in (before, after)]
+            refs = [StatRef(metric=metric, team=side, window=w) for w in (before, after)]
             a, b = (stats.compute(r) for r in refs)
         except Exception:
             continue
         unit = STAT_UNITS[metric]
         if format_value(a, unit) == format_value(b, unit):
             continue
-        if best is None or (b - a > 0, abs(b - a) / (abs(a) + 1)) > best[0]:
-            best = ((b - a > 0, abs(b - a) / (abs(a) + 1)), metric, refs, a, b)
+        score = ((b - a > 0) == gaining, abs(b - a) / (abs(a) + 1))
+        if best is None or score > best[0]:
+            best = (score, metric, refs, a, b)
     if best is None:
         return None
     _, metric, refs, a, b = best
     unit = STAT_UNITS[metric]
-    phrases = PHRASES[lang]
-    text = phrases["stat"].format(team=team, owner=possessive(team), label=_label(metric, lang, fan),
-                                  verb=phrases["rose" if b > a else "fell"],
-                                  a=format_value(a, unit), b=format_value(b, unit))
+    phrases, label = PHRASES[lang], _label(metric, lang, fan)
+    verb = "rose" if b > a else "fell"
+    if f"{verb}_pl" in phrases and label.startswith(("los ", "las ")):     # plural subject, plural verb
+        verb += "_pl"
+    text = phrases["stat_fan" if fan else "stat"].format(
+        team=team, owner=possessive(team), label=label, verb=phrases[verb],
+        a=format_value(a, unit), b=format_value(b, unit))
     if lang == "es":
         text = text[0].upper() + text[1:]
     claims = [Claim(value=v, unit=unit, stat_ref=r) for v, r in ((a, refs[0]), (b, refs[1]))]
@@ -105,8 +114,10 @@ def clean_headline(text: str, lang: str = "en") -> str:
     """No digits, and cut to the language's headline limit."""
     text = re.sub(r"\d", "", text).strip()
     limit = MAX_HEADLINE[lang]
-    if lang == "zh":
-        return text[:limit] or PHRASES["zh"]["fallback_h"]
+    if lang == "zh":                              # Latin words (team names) count as one each
+        while length(text, lang) > limit:
+            text = text[:-1].rstrip()
+        return text or PHRASES["zh"]["fallback_h"]
     return " ".join(text.split()[:limit]) or PHRASES[lang]["fallback_h"]
 
 
@@ -124,11 +135,13 @@ def template_explain(
     prefs = prefs or ViewerPrefs()
     lang = prefs.language
     names = {"home": "Home", "away": "Away", **(team_names or {})}
-    team = names[candidate.direction]
+    side = prefs.focus_team or candidate.direction
+    team = names[side]
+    gaining = side == candidate.direction
     try:
         phrases = PHRASES[lang]
         found = _evidence(candidate, events)
-        ids = [e.event_id for e in found][:4] or [f"{candidate.match_id}:{candidate.minute}"]
+        ids = [e.event_id for e in found][:4] or [NO_EVIDENCE]
         headline, first = _trigger(found[0], names[found[0].team], lang) if found else ("", "")
         sentences = []
         if first:
@@ -136,18 +149,24 @@ def template_explain(
         note = _context_sentence(found[0], context, ids[:1]) if found and lang == "en" else None
         if note:
             sentences.append(note)
-        stat = _stat_sentence(candidate, team, stats, ids[:4], fan=prefs.audience == "fan", lang=lang)
+        stat = _stat_sentence(candidate, side, team, stats, ids[:4], fan=prefs.audience == "fan",
+                              lang=lang) if found else None
         if stat:
             sentences.append(stat)
-        sentences.append(ExplanationSentence(text=phrases["momentum"].format(team=team), evidence_ids=ids[:4]))
-        return Narrative(prefs=prefs, headline=clean_headline(headline or phrases["momentum_h"].format(team=team), lang),
+        momentum = "momentum" if gaining else "momentum_lost"
+        sentences.append(ExplanationSentence(text=phrases[momentum].format(team=team), evidence_ids=ids[:4]))
+        fallback_headline = phrases[f"{momentum}_h"].format(team=team)
+        return Narrative(prefs=prefs, headline=clean_headline(headline or fallback_headline, lang),
                          sentences=sentences[:3], source="template", verifier_attempts=verifier_attempts,
                          chain_id=chain_id)
     except Exception:
         phrases = PHRASES.get(lang, PHRASES["en"])
+        try:
+            ids = [e.event_id for e in _evidence(candidate, events)][:1]
+        except Exception:
+            ids = []
         return Narrative(
             prefs=prefs, headline=phrases["fallback_h"],
-            sentences=[ExplanationSentence(text=phrases["fallback"],
-                                           evidence_ids=list(candidate.key_event_ids[:1]) or [candidate.match_id])],
+            sentences=[ExplanationSentence(text=phrases["fallback"], evidence_ids=ids or [NO_EVIDENCE])],
             source="template", verifier_attempts=verifier_attempts, chain_id=chain_id,
         )

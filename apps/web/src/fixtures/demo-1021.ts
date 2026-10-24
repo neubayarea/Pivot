@@ -39,7 +39,7 @@ const TEAMS: Record<Side, TeamInfo> = {
   away: { name: "Northvale Rovers", short_name: "NVR", side: "away", color: "#D22B3C" },
 };
 
-const ROSTER: Record<Side, [string, string][]> = {
+export const ROSTER: Record<Side, [string, string][]> = {
   home: [
     ["hcy-1", "K. Doyle"], ["hcy-4", "J. Kessler"], ["hcy-5", "M. Lund"], ["hcy-6", "S. Haddad"],
     ["hcy-8", "L. Varga"], ["hcy-10", "P. Reyes"], ["hcy-11", "A. Moreau"], ["hcy-14", "O. Brandt"],

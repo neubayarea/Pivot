@@ -11,7 +11,7 @@ match analyst would say it on air: what changed, who made it change, and the evi
 
 ## Shape
 
-- **Headline**: at most 8 words, no digits, no team score. Name the change, not the outcome
+- **Headline**: at most 8 words, no numbers (neither digits nor words like "two"), no team score. Name the change, not the outcome
   ("Rovers' press flips the midfield", not "Rovers lead 2-1").
 - **Sentences**: 1 to 3, each at most 30 words, one idea per sentence.
 - **Order**: what happened (the trigger) → what changed in the numbers → what it led to.
@@ -112,7 +112,8 @@ Why it fails: a number without a claim (`number_mismatch`).
 
 > **Headline**: Rovers score 2 in 5 minutes
 
-Why it fails: digits in the headline.
+Why it fails: digits in the headline. "Two goals in three minutes" fails the same way:
+numbers written as words count too.
 
 ### Bad 3
 

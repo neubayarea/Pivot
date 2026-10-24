@@ -9,8 +9,8 @@ import Scrubber from "../components/Scrubber";
 import Sourced, { formatValue } from "../components/Sourced";
 import Stamp from "../components/Stamp";
 import WhyItTurned from "../components/WhyItTurned";
-import { useMatch } from "../data/match";
-import { useT } from "../i18n";
+import { involves, useMatch } from "../data/match";
+import { usePrefs } from "../i18n";
 import NotFound from "./NotFound";
 
 // Evidence actions stay drawn for a few seconds either side of the event.
@@ -21,7 +21,8 @@ const PLAY_MS = 250;
 export default function PivotDetail() {
   const { id = "" } = useParams();
   const { pivotDetail, eventById, teams, playerName } = useMatch();
-  const tr = useT();
+  const { prefs, t: tr } = usePrefs();
+  const focus = prefs.focus_player_id;
   const detail = pivotDetail(id);
   const pivot = detail?.pivot;
   const sentences = pivot?.narrative?.sentences ?? [];
@@ -102,14 +103,19 @@ export default function PivotDetail() {
         </span>
       </div>
       <div className="grid2">
-        <Card title={tr("detail.pitch")} note={tr("detail.pitchNote", { from: from / 60, to: to / 60, team: teams.home.short_name })}>
-          <Pitch frame={frame} actions={actions} selected={selected}
+        <Card title={tr("detail.pitch")} note={
+          <>
+            {tr("detail.pitchNote", { from: from / 60, to: to / 60, team: teams.home.short_name })}
+            {focus && <> · <span className="focus-key">{tr("detail.focusNote", { player: playerName(focus) })}</span></>}
+          </>
+        }>
+          <Pitch frame={frame} actions={actions} selected={selected} focus={focus}
             label={picked
               ? tr("detail.pitchLabelPicked", { t: frame.t, n: frame.players.length, seq: picked.seq })
               : tr("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
           <Scrubber window={detail.window} t={t} onChange={(s) => { setT(s); setPlaying(false); }}
             playing={playing} onPlayingChange={setPlaying} pivotMinute={pivot.minute}
-            marks={evidence.map((e) => ({ t: e.t, on: e.event_id === selected }))} />
+            marks={evidence.map((e) => ({ t: e.t, on: e.event_id === selected, mine: involves(e, focus) }))} />
           <p className="pitch-cap">
             {picked ? (
               <>

@@ -9,6 +9,8 @@ export type Side = "home" | "away";
 export type Speed = Match["speed"];
 /** Everything S2 needs for one pivot. The pivot is the confirmed version even before the replay reaches it. */
 export type PivotDetail = PivotDetailData & { pivot: Pivot };
+/** One player in the focus-player picker. */
+export type SquadPlayer = { player_id: string; name: string; shirt: number | null };
 export type TeamStats = { possession: number; shots: number; xg: number; pressures: number; finalThirdPasses: number };
 
 export type MatchView = {
@@ -20,6 +22,8 @@ export type MatchView = {
   /** Visible pivots, newest first. */
   pivots: Pivot[];
   stats: Record<Side, TeamStats>;
+  /** Both squads, for the focus-player picker; ordered by shirt number. */
+  squads: Record<Side, SquadPlayer[]>;
   playerName: (id: string | null) => string;
   eventById: (id: string) => MatchEvent | undefined;
   pivotDetail: (id: string) => PivotDetail | undefined;
@@ -55,6 +59,13 @@ export function useMatch(): MatchView {
 export const useMaybeMatch = () => useContext(MatchContext);
 
 export const useConnection = () => useContext(ConnectionContext);
+
+/** Shirt order, players without a number last. */
+export const byShirt = (a: SquadPlayer, b: SquadPlayer) => (a.shirt ?? 999) - (b.shirt ?? 999) || a.name.localeCompare(b.name);
+
+/** True when the player made or received the action, or came on or went off in it. */
+export const involves = (e: Pick<MatchEvent, "player_id" | "receiver_id" | "substitution">, playerId: string | null) =>
+  playerId !== null && [e.player_id, e.receiver_id, e.substitution?.player_on_id, e.substitution?.player_off_id].includes(playerId);
 
 export function computeStats(events: MatchEvent[]): Record<Side, TeamStats> {
   const s = {

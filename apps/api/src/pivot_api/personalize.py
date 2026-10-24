@@ -7,8 +7,8 @@ set of `ViewerPrefs` is written here on first request, with the D line's own par
 
 Every version passes the same Verifier as the default one. A version that passes is stored
 through the repository, keyed by (pivot_id, prefs), so the next request for it does no model call.
-If not even the template passes, the default version is returned, unstored, and `prefs`
-says so: the caller always gets a card, never an error.
+If not even the template passes, or any step raises (a bug in a stat source, say), the default
+version is returned, unstored, and `prefs` says so: the caller always gets a card, never an error.
 
 The worker code is only called, not changed.
 """
@@ -26,7 +26,6 @@ from pydantic import ValidationError
 from pivot_core.domain import Narrative, Pivot, PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
 from pivot_core.ports import MatchRepository
 from pivot_worker import explainer
-from pivot_worker.context import known_ids
 from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, with_computed
 from pivot_worker.models import ModelClient, ModelUnavailable, model_client_from_env
 from pivot_worker.template import template_explain
@@ -76,7 +75,12 @@ class Personalizer:
             narrative = await self._stored(pivot, prefs)
             if narrative is None:
                 async with self._slots:
-                    narrative = await self._write(pivot, prefs)
+                    try:
+                        narrative = await self._write(pivot, prefs)
+                    except Exception:
+                        log.warning("%s: writing the version for %s failed; serving the default",
+                                    pivot.pivot_id, prefs.model_dump(), exc_info=True)
+                        return Personalized(pivot, base.prefs)
                 if narrative is None:
                     log.warning("%s: no version for %s passed the verifier; serving the default",
                                 pivot.pivot_id, prefs.model_dump())
@@ -94,36 +98,48 @@ class Personalizer:
         candidate = candidate_of(pivot, view)
         checks = 0
         if self.models is not None:
-            feedback = None
+            feedback, previous = None, None
             for checks in range(1, MAX_CHECKS + 1):
                 try:
-                    draft = await self._draft(candidate, view, prefs, pivot.chain_id, feedback)
+                    previous = await self._ask(candidate, view, prefs, feedback, previous)
                 except ModelUnavailable as e:
                     log.info("%s: explainer unavailable (%s); using the template", pivot.pivot_id, e)
                     break
+                except Exception:
+                    log.warning("%s: explainer failed; using the template", pivot.pivot_id, exc_info=True)
+                    break
+                try:
+                    draft = explainer.parse_draft(previous, prefs=prefs, chain_id=pivot.chain_id)
                 except ValidationError as e:
                     feedback = Verdict(passed=False, issues=[VerifierIssue(code="schema_invalid",
                                                                            message=e.errors()[0]["msg"])])
                     continue
-                feedback = self._verify(draft, candidate, view)
+                try:
+                    feedback = self._verify(draft, candidate, view)
+                except Exception:             # a rewrite cannot fix it; the template still gets its check
+                    log.warning("%s: verifier failed on the draft; using the template", pivot.pivot_id,
+                                exc_info=True)
+                    break
                 if feedback.passed:
                     return with_computed(draft, view.stats).model_copy(update={"verifier_attempts": checks})
         card = template_explain(candidate, events=view.events, stats=view.stats, team_names=view.team_names,
                                 prefs=prefs, chain_id=pivot.chain_id, verifier_attempts=checks,
-                                context=view.context)
+                                context=explainer.shown_context(candidate, view.events, view.context))
         return card if self._verify(card, candidate, view).passed else None
 
-    async def _draft(self, candidate: PivotCandidate, view: MatchView, prefs: ViewerPrefs, chain_id: str,
-                     feedback: Verdict | None) -> Narrative:
+    async def _ask(self, candidate: PivotCandidate, view: MatchView, prefs: ViewerPrefs,
+                   feedback: Verdict | None, previous: str | None) -> str:
+        """The explainer's raw reply; on a rewrite it sees the Verifier's verdict and its own last reply."""
         _, messages = explainer.build_messages(
             candidate, events=view.events, stats=view.stats, team_names=view.team_names, prefs=prefs,
-            player_names=view.player_names, context=view.context, feedback=feedback)
+            player_names=view.player_names, context=view.context, feedback=feedback, previous=previous)
         reply = await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
-        return explainer.parse_draft(reply.text, prefs=prefs, chain_id=chain_id)
+        return reply.text
 
     def _verify(self, narrative: Narrative, candidate: PivotCandidate, view: MatchView) -> Verdict:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
-                      context_ids=known_ids(view.context))
+                      context=explainer.shown_context(candidate, view.events, view.context),
+                      team_names=view.team_names)
 
 
 def personalizer_from_env(repo: MatchRepository) -> Personalizer:

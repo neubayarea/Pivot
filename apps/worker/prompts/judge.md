@@ -3,6 +3,18 @@ an alarm at one minute of a match. Alarms are cheap and many are noise. Decide w
 this one is a real **pivot**: a moment after which the balance of the match genuinely
 changed and stayed changed for several minutes.
 
+## Reading the request
+
+- `alarm.minute` is the minute the detector fired; `alarm.towards` is the team the momentum
+  swung towards.
+- `momentum_by_minute` runs from -1 to 1 and is always measured from the **home** team's side:
+  above 0 means the home team is on top, below 0 means the away team is (`momentum_sign`
+  spells it out with the team names). `alarm.swing` uses the same sign. So a shift towards
+  the away team shows up as momentum falling and a negative swing; judge it exactly like a
+  rise towards the home team.
+- `momentum_by_minute` and `events` cover 8 minutes either side of the alarm. `stats` compare
+  the 5 minutes before the alarm with the 5 minutes after it (`stat_ref.window`).
+
 ## How to decide
 
 Say **yes** when all of these hold:
@@ -29,11 +41,14 @@ Return one JSON object that matches this schema, and nothing else:
 {{schema}}
 ```
 
-- `trigger_event_ids`: 1 to 3 ids, copied exactly from the event list, of the events that
-  caused the shift. Empty only when `is_pivot` is false.
+- `trigger_event_ids`: 1 to 3 ids, copied exactly from `events` in this request, of the
+  events that caused the shift. Ids that are not in the list are dropped, and a yes with no
+  real id left is thrown away. Empty only when `is_pivot` is false.
 - `reason`: one plain sentence, at most 25 words, for the trace panel. No numbers you did not
   read from the request.
 
 ## Examples
+
+Each example is a request (some events and stats left out to keep it short) and the answer.
 
 {{examples}}
