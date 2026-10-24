@@ -11,7 +11,8 @@ context from that file:
 - three stories are placed by hand on the demo's turning points (see `_DEMO_CAREERS` and
   `_demo_news`): the 38' red card, the 63' substitution and the 85' substitution.
 
-None of this changes how the match is played: the context effects stay empty until B14.
+None of this changes how the match is played. `sim/effects.py` (B14) turns this context into the
+match's context effects; the simulator does not apply them yet.
 """
 
 from __future__ import annotations
