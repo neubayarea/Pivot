@@ -26,7 +26,6 @@ services:
       - "443:443/udp"
     environment:
       PIVOT_DOMAIN: ${PIVOT_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data        # certificates; keep it, or Let's Encrypt rate limits bite
