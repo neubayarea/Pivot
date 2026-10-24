@@ -1,0 +1,13 @@
+[project]
+name = "pivot-adapters"
+version = "0.1.0"
+description = "Pivot adapters: local (in-memory) and, later, Azure implementations of the pivot_core ports."
+requires-python = ">=3.12"
+dependencies = ["pivot-core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pivot_adapters"]
