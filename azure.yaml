@@ -1,0 +1,34 @@
+# azd project for the C1 deployment (docs/deploy.md). Infra is in infra/main.bicep.
+# All images build in ACR (remoteBuild), so nobody needs Docker locally.
+name: pivot
+infra:
+  provider: bicep
+  path: infra
+services:
+  api:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      remoteBuild: true
+  worker:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      remoteBuild: true
+      buildArgs:
+        - PACKAGE=pivot-worker
+        - MODULE=pivot_worker
+  web:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./infra/web/Dockerfile
+      context: .
+      remoteBuild: true
