@@ -8,7 +8,7 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 3. numbers: every claim recomputes within tolerance, and every number in the text has a claim
 4. direction: rose/fell words match the sign of the change between two claimed windows
 5. significance: "significant"-style words only when the what-if intervals do not overlap
-6. wording: no banned terms
+6. wording: no banned terms, and no jargon in fan versions
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -22,7 +22,7 @@ from typing import Protocol
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
 from pivot_core.domain.stats import Claim
 
-from .vocabulary import BANNED_TERMS, DOWN_WORDS, SIGNIFICANCE_WORDS, UP_WORDS
+from .vocabulary import BANNED_TERMS, DOWN_WORDS, JARGON, SIGNIFICANCE_WORDS, UP_WORDS
 
 MAX_WORDS = 30
 MAX_HEADLINE_WORDS = 8
@@ -103,7 +103,8 @@ def verify(
         issue("too_long", f"The headline must be at most {MAX_HEADLINE_WORDS} words.")
     if re.search(r"\d", narrative.headline):
         issue("number_mismatch", "The headline must not contain digits.")
-    for term in _has_word(narrative.headline, BANNED_TERMS):
+    banned = BANNED_TERMS + (JARGON if narrative.prefs.audience == "fan" else ())
+    for term in _has_word(narrative.headline, banned):
         issue("banned_term", f"Remove '{term}' from the headline.")
 
     lo, hi = pivot_minute - EVIDENCE_BEFORE, pivot_minute + EVIDENCE_AFTER
@@ -155,7 +156,8 @@ def verify(
                 issue("significance_unsupported", f"Do not say '{w}': the difference is not significant.", i)
 
         # 6. Banned terms.
-        for term in _has_word(s.text, BANNED_TERMS):
-            issue("banned_term", f"Remove '{term}' from sentence {i + 1}.", i)
+        for term in _has_word(s.text, banned):
+            hint = " Fan versions use everyday words." if term in JARGON else ""
+            issue("banned_term", f"Remove '{term}' from sentence {i + 1}.{hint}", i)
 
     return Verdict(passed=not issues, issues=issues)

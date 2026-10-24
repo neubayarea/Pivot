@@ -18,6 +18,8 @@ from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 
 # Stats the template tries, in order of preference when changes are equal.
 CANDIDATE_METRICS = ("threat_total", "passes_final_third", "box_entries", "shots", "pressures", "xg")
+# Fan wording that reads as a noun after "Rovers'"; xG is left out because its unit is jargon.
+FAN_METRICS = ("threat_total", "passes_final_third", "shots")
 COMPARE_MINUTES = 5
 _DECIMALS = {"count": 0, "pct": 0, "xg": 2, "index": 2, "m": 0, "km": 1, "ratio": 1}
 
@@ -42,11 +44,12 @@ def _trigger(event: MatchEvent, team: str) -> tuple[str, str]:
     return "", ""
 
 
-def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: list[str]) -> ExplanationSentence | None:
+def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: list[str],
+                   fan: bool = False) -> ExplanationSentence | None:
     m = c.minute
     before, after = (max(0, m - COMPARE_MINUTES), m), (m, m + COMPARE_MINUTES)
     best = None
-    for metric in CANDIDATE_METRICS:
+    for metric in FAN_METRICS if fan else CANDIDATE_METRICS:
         try:
             refs = [StatRef(metric=metric, team=c.direction, window=w) for w in (before, after)]
             a, b = (stats.compute(r) for r in refs)
@@ -62,7 +65,8 @@ def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: li
     _, metric, refs, a, b = best
     unit = STAT_UNITS[metric]
     verb = "rose" if b > a else "fell"
-    text = (f"{team}'s {STAT_TERMS[metric].label} {verb} from {format_value(a, unit)} "
+    term = STAT_TERMS[metric]
+    text = (f"{possessive(team)} {term.fan_label if fan else term.label} {verb} from {format_value(a, unit)} "
             f"to {format_value(b, unit)} in the next five minutes.")
     claims = [Claim(value=v, unit=unit, stat_ref=r) for v, r in ((a, refs[0]), (b, refs[1]))]
     return ExplanationSentence(text=text, evidence_ids=evidence, claims=claims)
@@ -75,6 +79,10 @@ def _evidence(c: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[Match
         return keyed
     nearby = sorted((e for e in events.values() if lo <= e.minute <= hi), key=lambda e: abs(e.minute - c.minute))
     return nearby[:1]
+
+
+def possessive(name: str) -> str:
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
 
 
 def clean_headline(text: str) -> str:
@@ -102,7 +110,7 @@ def template_explain(
         sentences = []
         if first:
             sentences.append(ExplanationSentence(text=first, evidence_ids=ids[:1]))
-        stat = _stat_sentence(candidate, team, stats, ids[:4])
+        stat = _stat_sentence(candidate, team, stats, ids[:4], fan=prefs.audience == "fan")
         if stat:
             sentences.append(stat)
         sentences.append(ExplanationSentence(text=f"From there the momentum swung towards {team}.", evidence_ids=ids[:4]))
