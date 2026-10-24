@@ -44,6 +44,13 @@ button { font: inherit; color: inherit; }
   .top .pick-label { display: none; }
 }
 
+/* Under the top bar while the live feed is down; the board below keeps the last data. */
+.banner { display: flex; align-items: center; gap: 12px; padding: 7px 18px; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); border-bottom: 2px solid var(--pv-ink); }
+.banner.warn { background: var(--pv-warn-bg); color: var(--pv-warn-fg); }
+.banner .btn { padding: 3px 10px; font-size: var(--pv-fs-xs); }
+.banner .sp { flex: 1; }
+.banner .at { font-variant-numeric: tabular-nums; }
+
 /* ---------- Components ---------- */
 .kicker { display: inline-block; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); letter-spacing: .14em; text-transform: uppercase; background: var(--pv-red); color: var(--pv-on-red); padding: 3px 10px; white-space: nowrap; }
 .stamp { display: inline-flex; align-items: center; gap: 5px; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border: 2px solid currentColor; line-height: 1.5; }
@@ -69,6 +76,7 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Page layouts (S1 / S2 / S3) ---------- */
 .page { max-width: 1240px; margin: 0 auto; }
+.waiting { padding: 24px 18px; }
 .headline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; padding: 12px 20px 4px; }
 .headline .x { font-family: var(--pv-display); font-size: 28px; line-height: 1.05; text-transform: uppercase; }
 .headline .sp { flex: 1; }

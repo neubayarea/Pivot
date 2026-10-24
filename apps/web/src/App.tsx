@@ -1,12 +1,26 @@
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
+import ConnectionBanner from "./components/ConnectionBanner";
 import TopBar from "./components/TopBar";
 import { MatchProvider } from "./data/match";
 import LiveBoard from "./pages/LiveBoard";
 import NotFound from "./pages/NotFound";
 import PivotDetail from "./pages/PivotDetail";
 import WhatIfLab from "./pages/WhatIfLab";
+
+/** Until the live feed has its first state there is no match to put in the top bar. */
+const WAITING = (
+  <>
+    <header className="top">
+      <span className="brand">Pivot</span>
+    </header>
+    <ConnectionBanner />
+    <main className="page">
+      <p className="muted waiting">Connecting to the live match…</p>
+    </main>
+  </>
+);
 
 const DEFAULT_PREFS: ViewerPrefs = {
   audience: "analyst",
@@ -19,8 +33,9 @@ export default function App() {
   const [prefs, setPrefs] = useState<ViewerPrefs>(DEFAULT_PREFS);
 
   return (
-    <MatchProvider>
+    <MatchProvider fallback={WAITING}>
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
+      <ConnectionBanner />
       <main className="page">
         <Routes>
           <Route path="/" element={<LiveBoard />} />
