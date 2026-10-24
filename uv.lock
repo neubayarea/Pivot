@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 [manifest]
 members = [
     "pivot",
+    "pivot-adapters",
     "pivot-api",
     "pivot-core",
     "pivot-simulator",
@@ -203,6 +204,7 @@ name = "pivot"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "pivot-adapters" },
     { name = "pivot-api" },
     { name = "pivot-core" },
     { name = "pivot-simulator" },
@@ -219,6 +221,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "pivot-adapters", editable = "packages/pivot_adapters" },
     { name = "pivot-api", editable = "apps/api" },
     { name = "pivot-core", editable = "packages/pivot_core" },
     { name = "pivot-simulator", editable = "apps/simulator" },
@@ -234,11 +237,23 @@ dev = [
 ]
 
 [[package]]
+name = "pivot-adapters"
+version = "0.1.0"
+source = { editable = "packages/pivot_adapters" }
+dependencies = [
+    { name = "pivot-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pivot-core", editable = "packages/pivot_core" }]
+
+[[package]]
 name = "pivot-api"
 version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "fastapi" },
+    { name = "pivot-adapters" },
     { name = "pivot-core" },
     { name = "uvicorn" },
 ]
@@ -246,6 +261,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "pivot-adapters", editable = "packages/pivot_adapters" },
     { name = "pivot-core", editable = "packages/pivot_core" },
     { name = "uvicorn", specifier = ">=0.32" },
 ]
