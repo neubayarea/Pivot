@@ -26,7 +26,6 @@ from pydantic import ValidationError
 from pivot_core.domain import Narrative, Pivot, PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
 from pivot_core.ports import MatchRepository
 from pivot_worker import explainer
-from pivot_worker.context import known_ids
 from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, with_computed
 from pivot_worker.models import ModelClient, ModelUnavailable, model_client_from_env
 from pivot_worker.template import template_explain
@@ -110,7 +109,7 @@ class Personalizer:
                     return with_computed(draft, view.stats).model_copy(update={"verifier_attempts": checks})
         card = template_explain(candidate, events=view.events, stats=view.stats, team_names=view.team_names,
                                 prefs=prefs, chain_id=pivot.chain_id, verifier_attempts=checks,
-                                context=view.context)
+                                context=explainer.shown_context(candidate, view.events, view.context))
         return card if self._verify(card, candidate, view).passed else None
 
     async def _draft(self, candidate: PivotCandidate, view: MatchView, prefs: ViewerPrefs, chain_id: str,
@@ -123,7 +122,8 @@ class Personalizer:
 
     def _verify(self, narrative: Narrative, candidate: PivotCandidate, view: MatchView) -> Verdict:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
-                      context_ids=known_ids(view.context))
+                      context=explainer.shown_context(candidate, view.events, view.context),
+                      team_names=view.team_names)
 
 
 def personalizer_from_env(repo: MatchRepository) -> Personalizer:

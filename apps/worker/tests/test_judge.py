@@ -41,9 +41,41 @@ def test_parse_keeps_real_triggers_and_drops_invented_ones():
     assert v.trigger_event_ids == ["m063-s01042"]
 
 
-def test_parse_falls_back_to_key_events_when_every_trigger_is_invented():
-    raw = json.dumps({"is_pivot": True, "severity": 3, "trigger_event_ids": ["x"], "reason": "ok"})
-    assert judge.parse_verdict(raw, candidate(), set()).trigger_event_ids == ["m063-s01042"]
+@pytest.mark.parametrize("triggers", [["x"], []])
+def test_a_yes_with_no_real_trigger_is_not_accepted(triggers):
+    raw = json.dumps({"is_pivot": True, "severity": 3, "trigger_event_ids": triggers, "reason": "ok"})
+    with pytest.raises(judge.InvalidVerdict):
+        judge.parse_verdict(raw, candidate(), set())
+
+
+def test_triggers_must_be_events_the_judge_was_shown(events):
+    far = {**events, "m063-s00100": events["m063-s00100"]}          # minute 20: in the match, not the window
+    shown = {e.event_id for e in judge.judge_events(candidate(), far)}
+    assert "m063-s00100" not in shown and "m063-s01042" in shown
+    raw = {"is_pivot": True, "severity": 2, "trigger_event_ids": ["m063-s00100", "m063-s01042"], "reason": "ok"}
+    assert judge.parse_verdict(raw, candidate(), shown).trigger_event_ids == ["m063-s01042"]
+    with pytest.raises(judge.InvalidVerdict):
+        judge.parse_verdict({**raw, "trigger_event_ids": ["m063-s00100"]}, candidate(), shown)
+
+
+def test_request_explains_the_momentum_sign(events, stats):
+    _, messages = judge.build_messages(candidate(), events=events, metrics=metrics(), stats=stats, team_names=TEAMS)
+    assert json.loads(messages[1]["content"])["momentum_sign"] == "above 0: Rovers on top; below 0: Harbour on top"
+    assert "below 0 means the away team" in messages[0]["content"]
+
+
+def test_examples_look_like_real_requests(events, stats):
+    _, messages = judge.build_messages(candidate(), events=events, metrics=metrics(), stats=stats, team_names=TEAMS)
+    real = json.loads(messages[1]["content"])
+    for request, verdict in judge.EXAMPLES:
+        assert request.keys() == real.keys() and request["alarm"].keys() == real["alarm"].keys()
+        assert request["stats"][0].keys() == real["stats"][0].keys()
+        m = request["alarm"]["minute"]
+        assert [x["minute"] for x in request["momentum_by_minute"]] == list(range(m - 8, m + 9))
+        assert {tuple(c["stat_ref"]["window"]) for c in request["stats"]} == {(m - 5, m), (m, m + 5)}
+        assert set(verdict.trigger_event_ids) <= {e["id"] for e in request["events"]}
+        assert json.dumps(request, ensure_ascii=False) in judge.system_prompt().text
+    assert any(r["alarm"]["swing"] < 0 and v.is_pivot for r, v in judge.EXAMPLES)   # one pivot towards the away side
 
 
 def test_a_no_carries_no_triggers():
