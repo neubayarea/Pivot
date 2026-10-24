@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .vocabulary import BANNED_TERMS, DOWN_WORDS, SIGNIFICANCE_WORDS, UP_WORDS
+from .vocabulary import BANNED_TERMS, DOWN_WORDS, LIKELY_DOWN, LIKELY_UP, SIGNIFICANCE_WORDS, UP_WORDS
 
 INSTRUCTIONS = {
     "en": "Write in English.",
@@ -25,10 +25,12 @@ MAX_SENTENCE = {"en": 30, "es": 35, "zh": 60}
 MAX_HEADLINE = {"en": 8, "es": 10, "zh": 16}
 
 # The English lists apply to every language (names and loanwords stay English); these are added.
-UP = {"zh": ("上升", "增加", "提高", "升至", "翻倍", "更有可能", "可能性更大"),
-      "es": ("subió", "aumentó", "creció", "se duplicó", "más probable")}
-DOWN = {"zh": ("下降", "减少", "降低", "降至", "减半", "可能性更小", "更不可能"),
-        "es": ("bajó", "cayó", "disminuyó", "descendió", "menos probable")}
+UP = {"zh": ("上升", "增加", "提高", "升至", "翻倍"),
+      "es": ("subió", "aumentó", "creció", "se duplicó")}
+DOWN = {"zh": ("下降", "减少", "降低", "降至", "减半"),
+        "es": ("bajó", "cayó", "disminuyó", "descendió")}
+LIKELY_MORE = {"zh": ("更有可能", "可能性更大"), "es": ("más probable",)}
+LIKELY_LESS = {"zh": ("可能性更小", "更不可能"), "es": ("menos probable",)}
 SIGNIFICANCE = {"zh": ("显著", "明显", "决定性"),
                 "es": ("significativo", "significativa", "significativamente", "claramente", "decisivo")}
 BANNED = {"zh": ("赌", "赔率", "投注", "下注", "博彩", "一定", "肯定", "绝对", "必然", "毫无疑问", "永远", "从不"),
@@ -41,6 +43,14 @@ def up_words(lang: str) -> tuple[str, ...]:
 
 def down_words(lang: str) -> tuple[str, ...]:
     return DOWN_WORDS + DOWN.get(lang, ())
+
+
+def likely_up(lang: str) -> tuple[str, ...]:
+    return LIKELY_UP + LIKELY_MORE.get(lang, ())
+
+
+def likely_down(lang: str) -> tuple[str, ...]:
+    return LIKELY_DOWN + LIKELY_LESS.get(lang, ())
 
 
 def significance_words(lang: str) -> tuple[str, ...]:

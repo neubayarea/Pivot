@@ -5,9 +5,11 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 
 1. shape: sentence count, words per sentence, evidence count, headline length and digits
 2. evidence: every evidence id exists and falls from 8 minutes before the pivot to 5 after
+   (comparisons instead cite only the ids they were offered)
 3. numbers: every claim recomputes within tolerance, and every number in the text has a claim
-4. direction: rose/fell words match the sign of the change between two claimed windows
-5. significance: "significant"-style words only when the what-if intervals do not overlap
+4. direction: rose/fell words match the sign of the change between two claimed windows; in
+   comparisons, "more likely" style words match the outcome they describe
+5. significance: "significant"-style words only about outcomes whose what-if intervals do not overlap
 6. wording: no banned terms, and no jargon in fan versions
 7. context: every `context_ids` entry is a real item of the match context (D13)
 
@@ -18,7 +20,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Collection, Mapping
-from typing import Protocol
+from typing import NamedTuple, Protocol
 
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
 from pivot_core.domain.stats import Claim
@@ -36,8 +38,24 @@ TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km"
 _NUMBER = re.compile(r"(?<![A-Za-z\d.])\d+(?:\.\d+)?")
 
 
+# Words that point a likelihood word at a second outcome: "a win became more likely than a draw",
+# "más probable que un empate", and in Chinese "平局比主队获胜更有可能" (the marker comes first).
+_THAN_AFTER = re.compile(r"\s*(?:than|que)\b", re.IGNORECASE)
+_THAN_BEFORE = "比"
+
+
 class StatSource(Protocol):
     def compute(self, ref: StatRef) -> float: ...
+
+
+class OutcomeMention(NamedTuple):
+    """One outcome named in a comparison sentence, where it is, and how it changed."""
+
+    outcome: str
+    start: int
+    end: int
+    delta: float
+    significant: bool
 
 
 def _compute(stats: StatSource, ref: StatRef) -> float | None:
@@ -59,18 +77,55 @@ def _matches(number: str, claim: Claim) -> bool:
     return abs(float(number) - claim.value) <= slack + 1e-9
 
 
-def _has_word(text: str, words: tuple[str, ...]) -> list[str]:
+def _pattern(w: str) -> str:
+    if lang_rules.has_cjk(w) or not w[0].isalnum() or not w[-1].isalnum():   # no word boundaries in Chinese
+        return re.escape(w.lower())
+    return rf"\b{re.escape(w.lower())}\b"
+
+
+def _spans(text: str, words: tuple[str, ...]) -> list[tuple[int, int, str]]:
     lowered = text.lower()
-    found = []
-    for w in words:
-        if lang_rules.has_cjk(w):                 # no word boundaries in Chinese
-            if w in text:
-                found.append(w)
+    return sorted((m.start(), m.end(), w) for w in words for m in re.finditer(_pattern(w), lowered))
+
+
+def _has_word(text: str, words: tuple[str, ...]) -> list[str]:
+    found = {w for *_, w in _spans(text, words)}
+    return [w for w in words if w in found]
+
+
+def _outcome_directions(text: str, mentions: list[OutcomeMention], up: tuple[str, ...],
+                        down: tuple[str, ...]) -> list[str]:
+    """Check each direction word against the outcome it describes, not any outcome in the sentence.
+
+    The outcome is the nearest one named before the word in its clause (or the first one after
+    it); "X more likely than Y" also needs X to have gained on Y. Returns problems for the writer.
+    """
+    words = sorted([(a, b, w, 1) for a, b, w in _spans(text, up)] + [(a, b, w, -1) for a, b, w in _spans(text, down)])
+    problems, clause_start = [], 0
+    for a, b, word, sign in words:
+        before = [m for m in mentions if clause_start <= m.start and m.end <= a]
+        after = [m for m in mentions if m.start >= b]
+        marker = text.rfind(_THAN_BEFORE, clause_start, a)
+        clause_start = b
+        other = None
+        if marker >= 0 and any(m.end <= marker for m in before):
+            subject = [m for m in before if m.end <= marker][-1]
+            other = next((m for m in before if m.start > marker), None)
+        elif before:
+            subject = before[-1]
+            other = after[0] if after and _THAN_AFTER.match(text, b) else None
+        elif after:
+            subject = after[0]
+        else:
+            problems.append(f"'{word}' must name the result it is about (for example 'a draw').")
             continue
-        pattern = re.escape(w.lower()) if not w[0].isalnum() or not w[-1].isalnum() else rf"\b{re.escape(w.lower())}\b"
-        if re.search(pattern, lowered):
-            found.append(w)
-    return found
+        went = "more" if subject.delta > 0 else "less" if subject.delta < 0 else "no more or less"
+        if sign * subject.delta <= 0:
+            problems.append(f"'{word}' is about {subject.outcome}, which became {went} likely in the replays.")
+        elif other is not None and sign * (subject.delta - other.delta) <= 0:
+            problems.append(f"'{word}' compares {subject.outcome} with {other.outcome}, but {subject.outcome} "
+                            f"did not {'gain on' if sign > 0 else 'lose ground to'} it.")
+    return problems
 
 
 def _deltas(claims: list[Claim], stats: StatSource) -> list[float]:
@@ -96,14 +151,16 @@ def verify(
     events: Mapping[str, MatchEvent],
     stats: StatSource,
     significant: Mapping[str, bool] | None = None,
-    outcome_deltas: Callable[[str], list[float]] | None = None,
+    outcomes: Callable[[str], list[OutcomeMention]] | None = None,
+    allowed_evidence: Collection[str] | None = None,
     context_ids: Collection[str] = frozenset(),
     max_sentences: int = 3,
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
 
-    `outcome_deltas` is for comparisons: given a sentence, it returns the change in each
-    outcome the sentence mentions, so "more likely" style words can be checked without claims.
+    `outcomes` is for comparisons: given a sentence, it returns each outcome the sentence
+    names, so "more likely" style and significance words are checked against that outcome.
+    `allowed_evidence`, when given, replaces the minute window: only those ids may be cited.
     `context_ids` are the ids of the match-context items the writer was shown (context.py).
     """
     issues: list[VerifierIssue] = []
@@ -113,6 +170,8 @@ def verify(
 
     lang = narrative.prefs.language
     up_words, down_words = lang_rules.up_words(lang), lang_rules.down_words(lang)
+    if outcomes:
+        up_words, down_words = up_words + lang_rules.likely_up(lang), down_words + lang_rules.likely_down(lang)
     max_words, max_headline = lang_rules.MAX_SENTENCE[lang], lang_rules.MAX_HEADLINE[lang]
     unit_name = "characters" if lang == "zh" else "words"
 
@@ -128,7 +187,7 @@ def verify(
         issue("banned_term", f"Remove '{term}' from the headline.")
 
     lo, hi = pivot_minute - EVIDENCE_BEFORE, pivot_minute + EVIDENCE_AFTER
-    allow_significance = bool(significant) and any(significant.values())
+    any_significant = bool(significant) and any(significant.values())
 
     for i, s in enumerate(narrative.sentences):
         words = lang_rules.length(s.text, lang)
@@ -142,6 +201,10 @@ def verify(
             event = events.get(eid)
             if event is None:
                 issue("evidence_invalid", f"Evidence {eid} does not exist.", i)
+            elif allowed_evidence is not None:
+                if eid not in allowed_evidence:
+                    issue("evidence_invalid", f"Evidence {eid} was not offered; cite one of "
+                          f"{', '.join(sorted(allowed_evidence))}.", i)
             elif not lo <= event.minute <= hi:
                 issue("evidence_invalid", f"Evidence {eid} is at minute {event.minute}, outside {lo}-{hi}.", i)
 
@@ -160,22 +223,31 @@ def verify(
 
         # 4. Direction words.
         up, down = _has_word(s.text, up_words), _has_word(s.text, down_words)
-        if up or down:
-            deltas = _deltas(list(s.claims), stats) or (outcome_deltas(s.text) if outcome_deltas else [])
+        deltas = _deltas(list(s.claims), stats) if up or down else []
+        if (up or down) and not deltas and outcomes:
+            for problem in _outcome_directions(s.text, outcomes(s.text), up_words, down_words):
+                issue("direction_mismatch", problem, i)
+        elif up or down:
             if not deltas:
                 issue("direction_mismatch",
-                      f"'{(up or down)[0]}' needs two claims on the same stat in different windows"
-                      f"{' or a named outcome' if outcome_deltas else ''}.", i)
+                      f"'{(up or down)[0]}' needs two claims on the same stat in different windows.", i)
             else:
                 if up and not any(d > 0 for d in deltas):
                     issue("direction_mismatch", f"'{up[0]}' says it went up, but the numbers did not rise.", i)
                 if down and not any(d < 0 for d in deltas):
                     issue("direction_mismatch", f"'{down[0]}' says it went down, but the numbers did not fall.", i)
 
-        # 5. Significance wording.
-        if not allow_significance:
-            for w in _has_word(s.text, lang_rules.significance_words(lang)):
+        # 5. Significance wording, judged for every outcome the sentence names.
+        for w in _has_word(s.text, lang_rules.significance_words(lang)):
+            if not any_significant:
                 issue("significance_unsupported", f"Do not say '{w}': the difference is not significant.", i)
+            elif outcomes:
+                named = outcomes(s.text)
+                if not named:
+                    issue("significance_unsupported", f"Say which result '{w}' is about.", i)
+                for name in dict.fromkeys(m.outcome for m in named if not m.significant):
+                    issue("significance_unsupported",
+                          f"Do not say '{w}' about {name}: its intervals overlap, so that change is within noise.", i)
 
         # 6. Banned terms.
         for term in _has_word(s.text, banned):

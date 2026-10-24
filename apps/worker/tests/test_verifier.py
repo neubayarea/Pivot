@@ -118,3 +118,8 @@ def test_banned_terms(events, stats):
 
 def test_banned_terms_match_whole_words_only(events, stats):
     assert check(card(s("The neverending pressure told.")), events, stats).passed
+
+
+def test_likelihood_words_are_not_direction_words_on_pivot_cards(events, stats):
+    text = s("After Okafor came on at 61', Harbour City looked more likely to score.")
+    assert check(card(text), events, stats).passed
