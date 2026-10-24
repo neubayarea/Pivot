@@ -45,7 +45,7 @@ export default function PivotList({ activeId }: { activeId: string | null }) {
             </span>
           </div>
         ) : (
-          <Link key={p.pivot_id} to={`/pivot/${p.pivot_id}`} className={`pv${p.pivot_id === activeId ? " active" : ""}`}>
+          <Link key={p.pivot_id} to={`/pivot/${p.pivot_id}`} className={`pv to-${p.direction}${p.pivot_id === activeId ? " active" : ""}`}>
             <span className="m">{p.minute}′</span>
             <span className="tt">{pivotHeadline(p, teams, t)}</span>
             <span className="meta">
