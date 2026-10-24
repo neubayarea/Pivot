@@ -27,6 +27,11 @@ export const es: Messages = {
   "top.player.search": "Buscar jugador",
   "top.player.empty": "Ningún jugador coincide",
 
+  "picker.label": "Partido",
+  "picker.seed": "semilla {seed}",
+  "picker.demo": "demo",
+  "picker.generating": "Generando partidos… {ready}/{total}",
+
   "common.retryNow": "Reintentar",
   "common.reload": "Recargar",
 
