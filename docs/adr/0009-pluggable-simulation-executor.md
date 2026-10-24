@@ -31,3 +31,10 @@
 - **正面**：Demo 主线（500 次）延迟最低、最稳定；架构上保留了横向扩展路径。如果有时间，可以在视频中加一段 5,000 次分片运行的展示。
 - **负面**：如果 Jobs 适配器没做完，Cloud Native 的展示会少一个亮点；README 和架构图中如实说明扩展方式。
 - **风险**：进程池占满 CPU 会拖慢实时比赛。缓解办法是实时比赛和批量推演分别部署成两个 Container App 修订版本（或者限制进程池最多 2 个进程）。
+
+## 实现情况（B04、B08，2026-10-24）
+
+- 代码在 `packages/pivot_core/src/pivot_core/sim/whatif.py`，入口是 `run_whatif(match, spec, plants=...)`，返回 `SimResult`（`executor="local_pool"`）。
+- “存档”不读数据库里的分钟快照：同一个种子的比赛每次踢出来都一样，所以用原种子重新踢到 `at_minute`，把引擎整个复制一份就是存档（`save`）。踢到第 37 分钟约 1 到 3 秒。
+- 两组各 `n_runs` 次，第 i 次在两组里都用种子 `seed_base + i`（配对种子）；胜平负比例带 Wilson 95% 区间，两组区间不重叠才算 `significant`。
+- 每个进程池任务跑 10 次（`run_shard(key, blob, seeds)`），以后的 `AcaJobExecutor` 可以直接调用同一个函数，结果逐位一致。`SimulationExecutor` 端口和 Jobs 适配器还没做。
