@@ -99,9 +99,10 @@ def main() -> None:
           itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){projectV2Item{id}}}""",
                 p=project_id, i=item, f=fid, o=options[value])
     if a.estimate and "预估小时" in fields:
-        gh("api", "graphql", "-F", f"n={a.estimate}", "-f", f"p={project_id}", "-f", f"i={item}", "-f", f"f={fields['预估小时'][0]}",
-           "-f", "query=mutation($p:ID!,$i:ID!,$f:ID!,$n:Float!){updateProjectV2ItemFieldValue(input:{projectId:$p,"
-                 "itemId:$i,fieldId:$f,value:{number:$n}}){projectV2Item{id}}}")
+        # gh -F only parses integers, so the number goes into the query as a literal.
+        gh("api", "graphql", "-f", f"p={project_id}", "-f", f"i={item}", "-f", f"f={fields['预估小时'][0]}",
+           "-f", "query=mutation($p:ID!,$i:ID!,$f:ID!){updateProjectV2ItemFieldValue(input:{projectId:$p,"
+                 "itemId:$i,fieldId:$f,value:{number:%s}}){projectV2Item{id}}}" % float(a.estimate))
     print(f"\n已创建并认领：{url}")
 
 

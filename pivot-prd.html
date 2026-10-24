@@ -501,6 +501,9 @@ aside a.subl{padding-left:22px;font-size:12.5px}
         <tr><td class="id">FR-32</td><td>场外因素：生涯、人际关系、赛事等级、赛前状态、场外新闻、环境，换算成可追溯的小幅影响；解释引用时经核查</td><td><span class="tag p0">P0</span></td><td>B + D</td><td>全部虚构</td></tr>
         <tr><td class="id">FR-33</td><td>阵容与战术看板：阵型图、首发、战术设置、场外背景卡片</td><td><span class="tag p1">P1</span></td><td>C</td><td></td></tr>
         <tr><td class="id">FR-34</td><td>补时、加时和点球大战：时钟含补时；淘汰赛打平进入加时和点球大战；推演结果给出“谁晋级”的概率</td><td><span class="tag p0">P0</span></td><td>B</td><td>阶段编号沿用 StatsBomb：1、2 上下半场，3、4 加时，5 点球大战</td></tr>
+        <tr><td class="id">FR-35</td><td>裁判与 VAR、伤病、门将动作、空中对抗、反抢、定位球套路：模拟器产生这些事件，并影响比赛走向</td><td><span class="tag p1">P1</span></td><td>B</td><td>格式已定，模拟按时间实现</td></tr>
+        <tr><td class="id">FR-36</td><td>单场球员评分和个人数据，实时更新；关注球员模式和赛后报道使用</td><td><span class="tag p0">P0</span></td><td>B + C</td><td>评分公式写进数据定义说明</td></tr>
+        <tr><td class="id">FR-37</td><td>《数据定义说明》：每种事件和字段的判断规则、阈值、例子，以及与 StatsBomb / Opta 的对应关系</td><td><span class="tag p0">P0</span></td><td>B + D</td><td>B03 开工前完成</td></tr>
       </tbody>
     </table></div>
   </div>
@@ -796,15 +799,18 @@ flowchart LR
 
   <div class="sub">
     <h3>6.6 数据模型</h3>
-    <p class="small">字段的唯一来源是代码 <code>packages/pivot_core/src/pivot_core/domain/</code>，前端类型由它自动生成。下表只列要点，字段命名参考了 StatsBomb、Opta 和 SPADL。</p>
+    <p class="small">字段的唯一来源是代码 <code>packages/pivot_core/src/pivot_core/domain/</code>，前端类型由它自动生成；每种事件什么时候产生、每个字段怎么判断，写在《数据定义说明》<code>docs/data-definitions.md</code>（任务 B15）。下表只列要点，字段命名参考了 StatsBomb、Opta 和 SPADL。</p>
     <div class="scroll"><table>
       <thead><tr><th>实体</th><th>关键字段</th><th>分区键</th></tr></thead>
       <tbody>
         <tr><td>Match / Team</td><td>比赛：seed、比分（含点球大战比分）、时钟、各阶段的起止时间和补时、怎么分出胜负（常规时间 / 加时 / 点球）、状态、比赛背景；球队：俱乐部、名称、颜色、主教练、大名单、阵容单、战术</td><td>match_id</td></tr>
         <tr><td>Player / Coach</td><td>球员：细分位置和可打位置、年龄、身高体重、惯用脚和逆足、花式、攻防积极性、34 项能力值和 6 项汇总分、11 项隐藏性格值、特长标签、生涯经历；教练：执教风格、偏好阵型、4 项执教能力、性格、生涯</td><td>match_id</td></tr>
         <tr><td>TeamSheet / TeamTactics</td><td>阵型、首发与基准位置、替补、队长、定位球主罚人；防线高度、压迫、宽度、节奏、传球方式、进攻侧重、反击、造越位、拖延时间、个人指令</td><td>match_id</td></tr>
-        <tr><td>MatchContext</td><td>赛事（等级、阶段、重要程度）、场馆、观众、德比、比赛意义、天气、球员赛前状态、场外新闻、人际关系、模拟器算出的影响列表</td><td>match_id</td></tr>
+        <tr><td>MatchContext</td><td>赛事（等级、阶段、重要程度）、场馆、观众、德比、比赛意义、天气、场地状况、主裁、双方近况、交手记录、球员赛前状态、场外新闻、人际关系、模拟器算出的影响列表</td><td>match_id</td></tr>
         <tr><td>MatchEvent</td><td>累计时间、所在阶段、阶段内时间、自动推出的转播时钟（63′、45+2′、PEN）、类型（21 种，含补时公布）、球员、接球人、起止坐标（105 × 68 米）、自动推出的网格（16 × 12）、三分之一、纵向通道和禁区、结果、成功概率（传球难度）、射门结果、xG、传球类型和高度、部位、球速、是否被压迫、控球段与来源、关联事件、威胁值</td><td>match_id</td></tr>
+        <tr><td>官方与伤病</td><td>主裁（判罚尺度、出牌倾向、让有利倾向、大赛经验）；犯规类型、是否让有利、是否判点、牌和出牌原因；VAR 复核（复核什么、维持还是改判、原因、用时）；伤病（部位、严重程度、原因、能否坚持、预计缺阵天数）</td><td>match_id</td></tr>
+        <tr><td>门将与对抗</td><td>门将动作（扑住、扑出、托出、失球、接高球、拳击、出击、封堵、捡球）和技术（站立、鱼跃、反应）；射门时的门将站位；对抗类型（空中 / 地面）；丢球 5 秒内的反抢；传中和定位球的弧线（内旋 / 外旋 / 直线）</td><td>match_id</td></tr>
+        <tr><td>PlayerMatchStats</td><td>单场评分（1–10，实时更新）、出场时间、进球、助攻、射门、xG、xA、传球与成功率、关键传球、推进传球、过人、抢断、拦截、对抗、争顶、犯规、扑救、跑动、最高速度、冲刺次数</td><td>match_id</td></tr>
         <tr><td>TrackingFrame</td><td>每秒一帧：球的位置和高度、持球人、22 名球员的位置、速度、体能</td><td>match_id</td></tr>
         <tr><td>MinuteMetric</td><td>每分钟的势头、双方威胁值、双方压迫次数</td><td>match_id</td></tr>
         <tr><td>Pivot + Narrative</td><td>转折点：分钟、方向、严重程度、触发事件；解释：观众设置、标题、带证据和统计引用的句子</td><td>match_id</td></tr>

@@ -5,12 +5,17 @@ Usage in a WebSocket handler:
     async with live.subscribe(match_id) as sub:
         async for envelope in sub:
             await ws.send_json(envelope.model_dump(mode="json"))
+
+The publisher is the single hub of profile L, so it owns the per-match `seq`: each envelope
+leaves with `seq = max(its seq, last seq + 1)`, which keeps seq strictly increasing even when
+several publishers (simulator, worker) count on their own. It also keeps the last `history`
+envelopes per match so a reconnecting client can `replay(match_id, since_seq)` what it missed.
 """
 
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
+from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -43,13 +48,29 @@ class Subscription:
 
 
 class InMemoryLivePublisher:
-    def __init__(self, maxsize: int = 1000) -> None:
+    def __init__(self, maxsize: int = 1000, history: int = 2000) -> None:
         self._maxsize = maxsize
         self._subs: defaultdict[str, set[Subscription]] = defaultdict(set)
+        self._history: defaultdict[str, deque[Envelope]] = defaultdict(lambda: deque(maxlen=history))
+        self._last_seq: dict[str, int] = {}
 
     async def publish(self, envelope: Envelope) -> None:
+        last = self._last_seq.get(envelope.match_id, -1)
+        if envelope.seq <= last:
+            envelope = envelope.model_copy(update={"seq": last + 1})
+        self._last_seq[envelope.match_id] = envelope.seq
+        self._history[envelope.match_id].append(envelope)
         for sub in list(self._subs.get(envelope.match_id, ())):
             sub._offer(envelope)
+
+    def replay(self, match_id: str, since_seq: int = -1) -> list[Envelope]:
+        """Kept envelopes with seq > since_seq, in seq order. Older ones may have been evicted:
+        if the first seq returned is not since_seq + 1, the client must refetch over REST."""
+        return [e for e in self._history.get(match_id, ()) if e.seq > since_seq]
+
+    def last_seq(self, match_id: str) -> int:
+        """Seq of the last envelope published for the match, -1 if none."""
+        return self._last_seq.get(match_id, -1)
 
     @asynccontextmanager
     async def subscribe(self, match_id: str) -> AsyncIterator[Subscription]:

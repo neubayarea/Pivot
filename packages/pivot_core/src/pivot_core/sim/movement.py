@@ -1,0 +1,200 @@
+"""Movement model (B11): where each of the 22 players wants to be every second.
+
+Each player has an anchor in the team's formation (team view, CONV-002). Every second
+the anchor is moved as a block:
+
+- vertically, around a back-line height set by the team's `line_height` and the ball's
+  position; the block stretches in possession and compresses out of it;
+- horizontally, towards the ball side, wider in possession (`width`) and narrower out of it;
+- by individual instructions (overlap, stay back, cut inside, ...);
+- attackers do not run beyond the opponents' last line by more than a step, so offside
+  happens only occasionally;
+- out of possession the one or two nearest players press the ball carrier, depending on
+  `press` and on where the ball is; right after losing the ball one more player joins in.
+
+Players then move towards their target, limited by a top speed from their pace and
+fitness. A slowly changing personal offset keeps lines from looking robotic.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+import numpy as np
+
+from ..domain import TeamSheet, TeamTactics
+from ..domain.common import PITCH_LENGTH, PITCH_WIDTH
+from .formations import DEFENDER_ROLES, WIDE_DEFENDERS
+
+LINE_HEIGHT = {"low": 18.0, "mid": 28.0, "high": 38.0}   # back-line x with the ball at halfway (team view)
+WIDTH_IN = {"narrow": 0.9, "normal": 1.05, "wide": 1.2}
+PRESS_PLAYERS = {"low": 1, "mid": 1, "high": 2}
+PRESS_ZONE = {"low": 45.0, "mid": 70.0, "high": PITCH_LENGTH}  # press when the ball is closer to our goal than this
+SPRINT_MS = 8.5
+
+
+@dataclass
+class TeamShape:
+    """Per-team state the movement model needs, rebuilt whenever the sheet or tactics change."""
+
+    side: int                                 # 0 home, 1 away
+    player_ids: list[str | None]              # by slot index 0-10; None = sent off, slot empty
+    roles: list[str]
+    anchors: np.ndarray                       # (11, 2) team view
+    tactics: TeamTactics
+    pace: np.ndarray                          # (11,) 0-1
+    instructions: dict[int, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_sheet(cls, side: int, sheet: TeamSheet, tactics: TeamTactics,
+                   pace_by_player: dict[str, float]) -> "TeamShape":
+        slots = sorted(sheet.starters, key=lambda s: s.slot)
+        ids: list[str | None] = [None] * 11
+        roles = ["CB"] * 11
+        anchors = np.zeros((11, 2))
+        for s in slots:
+            i = s.slot - 1
+            ids[i], roles[i] = s.player_id, s.role
+            anchors[i] = s.anchor
+        pace = np.array([pace_by_player.get(p, 0.6) if p else 0.0 for p in ids])
+        slot_of = {p: i for i, p in enumerate(ids) if p}
+        instr = {slot_of[i.player_id]: i.instruction for i in tactics.instructions if i.player_id in slot_of}
+        return cls(side, ids, roles, anchors, tactics, pace, instr)
+
+    @property
+    def active(self) -> np.ndarray:
+        return np.array([p is not None for p in self.player_ids])
+
+
+def to_view(p: np.ndarray, side: int) -> np.ndarray:
+    """Absolute pitch coordinates to the team view of `side` (works on (..., 2) arrays)."""
+    if side == 0:
+        return p
+    return np.stack([PITCH_LENGTH - p[..., 0], PITCH_WIDTH - p[..., 1]], axis=-1)
+
+
+from_view = to_view   # the transform is its own inverse
+
+
+@dataclass
+class MovementModel:
+    rng: np.random.Generator
+    offsets: np.ndarray = field(default_factory=lambda: np.zeros((2, 11, 2)))
+    offset_until: np.ndarray = field(default_factory=lambda: np.zeros((2, 11)))
+    run_until: np.ndarray = field(default_factory=lambda: np.zeros((2, 11)))
+    pressers: set = field(default_factory=set)   # (team, slot) sent to close down the ball this second
+
+    def _refresh_offsets(self, t: int) -> None:
+        due = self.offset_until <= t
+        n = int(due.sum())
+        if n:
+            self.offsets[due] = self.rng.normal(0, [1.8, 1.5], size=(n, 2))
+            self.offset_until[due] = t + self.rng.integers(10, 25, size=n)
+
+    def targets(self, t: int, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, ball: np.ndarray,
+                possession: int | None, carrier: tuple[int, int] | None, loose: bool,
+                last_loss_t: tuple[int, int], flight_target: tuple[int, int, np.ndarray] | None) -> np.ndarray:
+        self._refresh_offsets(t)
+        self.pressers = set()
+        out = np.zeros_like(pos)
+        for k, shape in enumerate(shapes):
+            out[k] = self._team_targets(t, k, shape, shapes[1 - k], pos, ball, possession, carrier,
+                                        loose, last_loss_t[k])
+        if flight_target is not None:
+            k, i, end = flight_target
+            out[k, i] = end
+        return out
+
+    def _team_targets(self, t: int, k: int, shape: TeamShape, opp: TeamShape, pos: np.ndarray,
+                      ball: np.ndarray, possession: int | None, carrier: tuple[int, int] | None,
+                      loose: bool, last_loss: int) -> np.ndarray:
+        tac = shape.tactics
+        b = to_view(ball, k)
+        in_poss = possession == k
+        anchors = shape.anchors
+        rel_x = anchors[:, 0] - 26.0
+
+        if in_poss:
+            line = np.clip(LINE_HEIGHT[tac.line_height] + 6 + 0.45 * (b[0] - 40), 15, 62)
+            depth, width, follow = 1.25, WIDTH_IN[tac.width], 0.2
+        else:
+            line = np.clip(LINE_HEIGHT[tac.line_height] + 0.3 * (b[0] - 52.5), 8, 55)
+            depth, width, follow = 0.8, 0.72, 0.4
+
+        tx = line + rel_x * depth
+        ty = 34 + (anchors[:, 1] - 34) * width + follow * (b[1] - 34)
+
+        for i, instr in shape.instructions.items():
+            if instr in ("get_forward", "overlap") and in_poss:
+                tx[i] += 10
+            elif instr == "stay_back" or instr == "sit_deeper":
+                tx[i] -= 7
+            elif instr == "cut_inside" and in_poss:
+                ty[i] = 34 + (ty[i] - 34) * 0.6
+            elif instr == "stay_wide" and in_poss:
+                ty[i] = 34 + (ty[i] - 34) * 1.15
+
+        # Forward runs in possession: attackers and midfielders now and then push on.
+        if in_poss:
+            starting = (self.run_until[k] <= t) & (self.rng.random(11) < 0.03)
+            for i in np.flatnonzero(starting):
+                if shape.roles[i] not in DEFENDER_ROLES or shape.roles[i] in WIDE_DEFENDERS:
+                    self.run_until[k, i] = t + self.rng.integers(3, 7)
+            running = self.run_until[k] > t
+            tx = np.where(running, tx + 9, tx)
+
+        # Do not stand far beyond the opponents' last line.
+        opp_view = to_view(pos[1 - k], k)
+        opp_active = opp.active
+        opp_x = np.sort(opp_view[opp_active, 0])[::-1]
+        last_line = opp_x[1] if len(opp_x) > 1 else PITCH_LENGTH
+        cap = max(last_line, b[0]) + 0.5
+        tx = np.minimum(tx, cap)
+
+        target = np.stack([tx, ty], axis=-1) + self.offsets[k]
+
+        # Goalkeeper.
+        gk = [i for i, r in enumerate(shape.roles) if r == "GK"]
+        for i in gk:
+            target[i] = [np.clip(3 + 0.1 * b[0] * (1.5 if in_poss else 1.0), 2, 20), 34 + 0.2 * (b[1] - 34)]
+
+        own = to_view(pos[k], k)
+        active = shape.active
+        outfield = np.array([r != "GK" for r in shape.roles]) & active
+
+        # Pressing and chasing loose balls.
+        if loose:
+            d = np.where(outfield, np.hypot(*(own - b).T), np.inf)
+            for i in np.argsort(d)[:2]:
+                target[i] = b
+        elif not in_poss and carrier is not None:
+            n = PRESS_PLAYERS[tac.press]
+            counter = t - last_loss <= 5
+            if counter:
+                n += 1
+            if counter or b[0] <= PRESS_ZONE[tac.press]:
+                d = np.where(outfield, np.hypot(*(own - b).T), np.inf)
+                towards_goal = np.array([-2.5, 0.0])   # close down, do not run into him
+                for i in np.argsort(d)[:n]:
+                    target[i] = b + towards_goal
+                    self.pressers.add((k, int(i)))
+        target[:, 0] = np.clip(target[:, 0], 0.5, PITCH_LENGTH - 0.5)
+        target[:, 1] = np.clip(target[:, 1], 0.5, PITCH_WIDTH - 0.5)
+        return from_view(target, k)
+
+    @staticmethod
+    def step(pos: np.ndarray, target: np.ndarray, pace: np.ndarray, fitness: np.ndarray,
+             active: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Move every player one second towards the target. Returns new positions and speeds."""
+        delta = target - pos
+        dist = np.hypot(delta[..., 0], delta[..., 1])
+        vmax = (5.5 + 3.0 * pace) * (0.7 + 0.3 * fitness)
+        vmax = np.minimum(vmax, SPRINT_MS)
+        # Jog when the target is close, sprint only when it is far.
+        desired = np.minimum(vmax, 0.3 + 0.35 * dist)
+        move = np.minimum(dist, desired)
+        scale = np.divide(move, dist, out=np.zeros_like(dist), where=dist > 1e-9)
+        new = pos + delta * scale[..., None]
+        speed = np.where(active, move, 0.0)
+        new = np.where(active[..., None], new, pos)
+        return new, speed

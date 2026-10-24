@@ -46,6 +46,15 @@ class PlayerInstruction(Model):
     target_player_id: str | None = None       # man_mark only
 
 
+class SetPieceTactics(Model):
+    corner_delivery: Literal["inswing", "outswing", "short", "mixed"] = "mixed"
+    corner_target: Literal["near_post", "far_post", "penalty_spot", "edge_of_box", "mixed"] = "mixed"
+    free_kick_style: Literal["direct", "cross", "short", "mixed"] = "mixed"
+    players_forward_on_corners: Annotated[int, Field(ge=0, le=9)] = 5
+    corner_defence: Literal["zonal", "man", "mixed"] = "mixed"
+    players_back_on_corners: Annotated[int, Field(ge=0, le=3)] = 1   # left upfield for the counter
+
+
 class TeamTactics(Model):
     line_height: Level = "mid"                # where the back line holds
     press: Level = "mid"                      # how aggressively the team hunts the ball
@@ -56,6 +65,7 @@ class TeamTactics(Model):
     counter_attack: bool = False              # break quickly after winning the ball
     offside_trap: bool = False
     time_wasting: bool = False                # slow restarts when protecting a lead
+    set_pieces: SetPieceTactics = SetPieceTactics()
     instructions: list[PlayerInstruction] = []
 
 
