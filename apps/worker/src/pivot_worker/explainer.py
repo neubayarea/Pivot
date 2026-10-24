@@ -8,7 +8,7 @@ the Verifier's number check a formality and the first-pass rate high (ADR-0005).
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Annotated
 
 from pydantic import Field
@@ -17,6 +17,7 @@ from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotC
 from pivot_core.domain.common import Model
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
+from .context import ContextItem, relevant
 from .languages import INSTRUCTIONS
 from .prompts import Prompt, render
 from .template import possessive
@@ -189,18 +190,23 @@ def build_request(
     team_names: Mapping[str, str],
     prefs: ViewerPrefs | None = None,
     player_names: Mapping[str, str] | None = None,
+    context: Sequence[ContextItem] = (),
     feedback: Verdict | None = None,
 ) -> str:
     focus = (prefs or ViewerPrefs()).focus_player_id
+    shown = window_events(candidate, events)
     request = {
         "pivot": {"minute": candidate.minute, "clock": f"{candidate.minute + 1}'",
                   "towards": team_names[candidate.direction], "swing": round(candidate.swing, 3),
                   "key_event_ids": candidate.key_event_ids},
         "teams": dict(team_names),
-        "events": [event_line(e, team_names, player_names) for e in window_events(candidate, events)],
+        "events": [event_line(e, team_names, player_names) for e in shown],
         "stat_sheet": [c.model_dump() for c in stat_sheet(candidate, stats, player_id=focus,
                                                           player_team=_player_team(focus, events))],
     }
+    if context:
+        request["match_context"] = [{"id": i.context_id, "about": list(i.subject_ids), "note": i.text}
+                                    for i in relevant(context, shown)]
     text = json.dumps(request, ensure_ascii=False)
     if feedback and not feedback.passed:
         fixes = "\n".join(f"- {i.code}: {i.message}" for i in feedback.issues)
@@ -216,13 +222,14 @@ def build_messages(
     team_names: Mapping[str, str],
     prefs: ViewerPrefs | None = None,
     player_names: Mapping[str, str] | None = None,
+    context: Sequence[ContextItem] = (),
     feedback: Verdict | None = None,
 ) -> tuple[Prompt, list[dict[str, str]]]:
     """System and user messages for one Explainer call, plus the prompt (for its hash)."""
     prefs = prefs or ViewerPrefs()
     prompt = system_prompt(prefs, team_names, player_names)
     user = build_request(candidate, events=events, stats=stats, team_names=team_names, prefs=prefs,
-                         player_names=player_names, feedback=feedback)
+                         player_names=player_names, context=context, feedback=feedback)
     return prompt, [{"role": "system", "content": prompt.text}, {"role": "user", "content": user}]
 
 
