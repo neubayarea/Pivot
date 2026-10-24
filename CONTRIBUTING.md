@@ -36,6 +36,7 @@
 
 - 默认使用 `PIVOT_PROFILE=local`。任何功能先在本地形态跑通，再上云。
 - 密钥不进仓库。本地访问 Azure 用 `az login` 的身份。
+- 生成的比赛数据不进仓库，存在服务器硬盘上，由服务启动时自己生成。放在哪、哪些能提交，见 [docs/match-data.md](docs/match-data.md)。
 
 ## 完成定义
 
