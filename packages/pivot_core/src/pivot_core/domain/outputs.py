@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from .common import ClockSeconds, Model, Side
+from .common import ClockSeconds, Minute, Model, Period, Side
 from .match import Score
 from .narrative import Language, Narrative
 
@@ -60,6 +60,50 @@ class PlayerMatchStats(Model):
     distance_km: Annotated[float, Field(ge=0, le=20)] = 0.0
     top_speed_kmh: Annotated[float, Field(ge=0, le=45)] = 0.0
     sprints: Annotated[int, Field(ge=0)] = 0
+
+
+OVERLAY_CARD_SECONDS = 12                     # how long a pivot card stays on screen
+
+
+class OverlayCard(Model):
+    """A confirmed pivot as a lower-third card, timed on the match clock (FR-26)."""
+
+    pivot_id: str
+    minute: Minute
+    minute_label: str                         # "63'" or "45+2'", shown in the red box
+    show_at: ClockSeconds                     # card is on screen for show_at <= clock < hide_at
+    hide_at: ClockSeconds
+    direction: Side                           # side the momentum swung towards
+    direction_team: str                       # that team's name, "Momentum -> Northgate Rovers"
+    severity: Literal[1, 2, 3]
+    status: Literal["confirmed", "degraded"]  # only checked pivots go on air
+    headline: str
+    subline: str | None = None                # first sentence of the explanation
+
+
+class OverlayScoreboard(Model):
+    home_short: str
+    away_short: str
+    score: Score
+    period: Period
+    clock_label: str
+
+
+class OverlayFrame(Model):
+    """What the overlay shows at one moment of the match clock: the score bug and at most one card."""
+
+    match_id: str
+    clock: ClockSeconds
+    scoreboard: OverlayScoreboard
+    card: OverlayCard | None = None
+
+
+class OverlayTimeline(Model):
+    """Every card of a match in clock order, never overlapping, for recordings and the preview page."""
+
+    match_id: str
+    card_seconds: int = OVERLAY_CARD_SECONDS
+    cards: list[OverlayCard]
 
 
 class Recap(Model):

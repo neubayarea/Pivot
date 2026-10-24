@@ -979,6 +979,25 @@ export interface OutcomeDist {
   home_win: number;
 }
 /**
+ * A confirmed pivot as a lower-third card, timed on the match clock (FR-26).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "OverlayCard".
+ */
+export interface OverlayCard {
+  direction: "home" | "away";
+  direction_team: string;
+  headline: string;
+  hide_at: number;
+  minute: number;
+  minute_label: string;
+  pivot_id: string;
+  severity: 1 | 2 | 3;
+  show_at: number;
+  status: "confirmed" | "degraded";
+  subline: string | null;
+}
+/**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "OverlayFeed".
  */
@@ -1005,6 +1024,50 @@ export interface OverlayItem {
   show_at: number;
   subline: string | null;
   team: "home" | "away";
+}
+/**
+ * What the overlay shows at one moment of the match clock: the score bug and at most one card.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "OverlayFrame".
+ */
+export interface OverlayFrame {
+  card: OverlayCard | null;
+  clock: number;
+  match_id: string;
+  scoreboard: OverlayScoreboard;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "OverlayScoreboard".
+ */
+export interface OverlayScoreboard {
+  away_short: string;
+  clock_label: string;
+  home_short: string;
+  period: 1 | 2 | 3 | 4 | 5;
+  score: Score1;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Score".
+ */
+export interface Score1 {
+  away: number;
+  away_penalties: number | null;
+  home: number;
+  home_penalties: number | null;
+}
+/**
+ * Every card of a match in clock order, never overlapping, for recordings and the preview page.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "OverlayTimeline".
+ */
+export interface OverlayTimeline {
+  card_seconds: number;
+  cards: OverlayCard[];
+  match_id: string;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -1106,16 +1169,6 @@ export interface Recap {
   match_id: string;
   narrative: Narrative;
   pivot_ids: string[];
-}
-/**
- * This interface was referenced by `Pivot`'s JSON-Schema
- * via the `definition` "Score".
- */
-export interface Score1 {
-  away: number;
-  away_penalties: number | null;
-  home: number;
-  home_penalties: number | null;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

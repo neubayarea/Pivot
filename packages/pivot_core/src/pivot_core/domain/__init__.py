@@ -20,7 +20,10 @@ from .lineup import (
 from .match import Match, PeriodInfo, Score, Team
 from .narrative import Audience, ExplanationSentence, Language, Narrative, ViewerPrefs
 from .officials import FoulDetail, InjuryInfo, Referee, VarReview
-from .outputs import OverlayFeed, OverlayItem, PlayerMatchStats, Recap
+from .outputs import (
+    OVERLAY_CARD_SECONDS, OverlayCard, OverlayFeed, OverlayFrame, OverlayItem, OverlayScoreboard,
+    OverlayTimeline, PlayerMatchStats, Recap,
+)
 from .people import (
     ROLE_POSITION, AttackingAttributes, AttributeSummary, CareerStint, Coach, CoachAttributes,
     DefendingAttributes, GoalkeepingAttributes, MentalityAttributes, MovementAttributes,
@@ -48,13 +51,14 @@ CONTRACT_MODELS = (
     ViewerPrefs, ExplanationSentence, Narrative,
     PivotCandidate, Pivot,
     ScenarioSpec, PlantSpec, OutcomeDist, SimResult, Scenario,
-    OverlayItem, OverlayFeed, PlayerMatchStats, Recap,
+    OverlayItem, OverlayFeed, OverlayCard, OverlayScoreboard, OverlayFrame, OverlayTimeline,
+    PlayerMatchStats, Recap,
     VerifierIssue, Verdict, AgentTrace,
     Envelope,
 )
 
 __all__ = [
-    "CONTRACT_MODELS", "FRAME_RATE_HZ", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
+    "CONTRACT_MODELS", "FRAME_RATE_HZ", "OVERLAY_CARD_SECONDS", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
     "ROLE_POSITION", "STAT_UNITS",
     "area_of", "attacking_view", "clock_label", "lane_of", "third_of", "zone_of",
     "AgentTrace", "Area", "AttackingAttributes", "AttributeSummary", "Audience", "BallPosition",
@@ -63,7 +67,8 @@ __all__ = [
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
     "MatchEvent", "MentalityAttributes", "MinuteMetric", "MovementAttributes", "Narrative",
     "OffFieldEvent", "OutcomeDist", "PastMeeting", "PlayerMatchStats", "Referee", "SetPieceTactics",
-    "TeamForm", "VarReview", "OverlayFeed", "OverlayItem", "PassHeight", "PassTechnique", "PassType", "ShotTechnique",
+    "TeamForm", "VarReview", "OverlayCard", "OverlayFeed", "OverlayFrame", "OverlayItem",
+    "OverlayScoreboard", "OverlayTimeline", "PassHeight", "PassTechnique", "PassType", "ShotTechnique",
     "Period", "PeriodInfo",
     "Personality", "Pivot", "PivotCandidate", "PlantSpec", "PlayPattern", "Player",
     "PlayerAttributes", "PlayerInstruction", "PlayerPosition", "Point", "PowerAttributes",

@@ -2284,6 +2284,87 @@
       "title": "OutcomeDist",
       "type": "object"
     },
+    "OverlayCard": {
+      "additionalProperties": false,
+      "description": "A confirmed pivot as a lower-third card, timed on the match clock (FR-26).",
+      "properties": {
+        "direction": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "direction_team": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "hide_at": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "minute": {
+          "maximum": 180,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "minute_label": {
+          "type": "string"
+        },
+        "pivot_id": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "type": "integer"
+        },
+        "show_at": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "degraded"
+          ],
+          "type": "string"
+        },
+        "subline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "pivot_id",
+        "minute",
+        "minute_label",
+        "show_at",
+        "hide_at",
+        "direction",
+        "direction_team",
+        "severity",
+        "status",
+        "headline",
+        "subline"
+      ],
+      "title": "OverlayCard",
+      "type": "object"
+    },
     "OverlayFeed": {
       "additionalProperties": false,
       "properties": {
@@ -2316,6 +2397,42 @@
         "items"
       ],
       "title": "OverlayFeed",
+      "type": "object"
+    },
+    "OverlayFrame": {
+      "additionalProperties": false,
+      "description": "What the overlay shows at one moment of the match clock: the score bug and at most one card.",
+      "properties": {
+        "card": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OverlayCard"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clock": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "scoreboard": {
+          "$ref": "#/$defs/OverlayScoreboard"
+        }
+      },
+      "required": [
+        "match_id",
+        "clock",
+        "scoreboard",
+        "card"
+      ],
+      "title": "OverlayFrame",
       "type": "object"
     },
     "OverlayItem": {
@@ -2414,6 +2531,68 @@
         "severity"
       ],
       "title": "OverlayItem",
+      "type": "object"
+    },
+    "OverlayScoreboard": {
+      "additionalProperties": false,
+      "properties": {
+        "away_short": {
+          "type": "string"
+        },
+        "clock_label": {
+          "type": "string"
+        },
+        "home_short": {
+          "type": "string"
+        },
+        "period": {
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "type": "integer"
+        },
+        "score": {
+          "$ref": "#/$defs/Score"
+        }
+      },
+      "required": [
+        "home_short",
+        "away_short",
+        "score",
+        "period",
+        "clock_label"
+      ],
+      "title": "OverlayScoreboard",
+      "type": "object"
+    },
+    "OverlayTimeline": {
+      "additionalProperties": false,
+      "description": "Every card of a match in clock order, never overlapping, for recordings and the preview page.",
+      "properties": {
+        "card_seconds": {
+          "default": 12,
+          "type": "integer"
+        },
+        "cards": {
+          "items": {
+            "$ref": "#/$defs/OverlayCard"
+          },
+          "type": "array"
+        },
+        "match_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "match_id",
+        "card_seconds",
+        "cards"
+      ],
+      "title": "OverlayTimeline",
       "type": "object"
     },
     "PastMeeting": {
