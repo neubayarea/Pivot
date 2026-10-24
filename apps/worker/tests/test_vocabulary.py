@@ -11,7 +11,7 @@ STYLE_GUIDE = Path(__file__).parents[1] / "prompts" / "style_guide.md"
 def test_vocabulary_matches_the_contract_one_to_one():
     assert tuple(v.STAT_TERMS) == get_args(StatMetric)
     assert set(v.STAT_TERMS) == set(STAT_UNITS)
-    assert len(v.STAT_TERMS) == 19
+    assert len(v.STAT_TERMS) == 23
 
 
 def test_every_term_is_filled_in_and_every_unit_has_a_suffix():
