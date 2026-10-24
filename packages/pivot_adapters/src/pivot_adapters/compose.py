@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from pivot_core.ports import LivePublisher, MatchRepository, TraceRepository, WorkQueue
+from pivot_core.ports import LiveNegotiator, LivePublisher, MatchRepository, TraceRepository, WorkQueue
 
 PROFILES = ("local", "c1", "c2")
 
@@ -21,12 +21,19 @@ class Adapters:
     matches: MatchRepository
     traces: TraceRepository
     live: LivePublisher
+    negotiator: LiveNegotiator
 
 
 def build_adapters(profile: str | None = None) -> Adapters:
     profile = (profile or os.getenv("PIVOT_PROFILE") or "local").strip().lower()
     if profile == "local":
-        from .local import InMemoryLivePublisher, InMemoryMatchRepository, InMemoryTraceRepository, InMemoryWorkQueue
+        from .local import (
+            InMemoryLivePublisher,
+            InMemoryMatchRepository,
+            InMemoryTraceRepository,
+            InMemoryWorkQueue,
+            LocalNegotiator,
+        )
 
         return Adapters(
             profile=profile,
@@ -34,6 +41,7 @@ def build_adapters(profile: str | None = None) -> Adapters:
             matches=InMemoryMatchRepository(),
             traces=InMemoryTraceRepository(),
             live=InMemoryLivePublisher(),
+            negotiator=LocalNegotiator(),
         )
     if profile in PROFILES:
         raise NotImplementedError(f"PIVOT_PROFILE={profile!r}: Azure adapters are not implemented yet (A08)")

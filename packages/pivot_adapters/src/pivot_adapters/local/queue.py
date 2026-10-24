@@ -17,6 +17,7 @@ class InMemoryWorkQueue:
         self._seen: defaultdict[str, set[str]] = defaultdict(set)      # message ids ever sent, per queue
         self._locked: dict[str, QueueMessage] = {}                      # lock_token -> message
         self._tokens = itertools.count(1)
+        self.dead_letters: defaultdict[str, list[tuple[QueueMessage, str]]] = defaultdict(list)
 
     async def send(self, queue: str, message_id: str, body: dict[str, Any]) -> None:
         if message_id in self._seen[queue]:
@@ -40,6 +41,14 @@ class InMemoryWorkQueue:
 
     async def abandon(self, message: QueueMessage) -> None:
         self._ready[message.queue].put_nowait(self._take_lock(message))
+
+    async def renew_lock(self, message: QueueMessage) -> None:
+        # Local locks never expire; only check that the message is still ours.
+        if message.lock_token not in self._locked:
+            raise ValueError(f"message {message.message_id!r} is not locked (already settled?)")
+
+    async def dead_letter(self, message: QueueMessage, reason: str) -> None:
+        self.dead_letters[message.queue].append((self._take_lock(message), reason))
 
     def _take_lock(self, message: QueueMessage) -> QueueMessage:
         locked = self._locked.pop(message.lock_token, None)

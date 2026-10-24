@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .domain import AgentTrace, Envelope, MatchEvent, Pivot
+from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Pivot
 
 # Service Bus queue names (architecture §7.2).
 PIVOT_CANDIDATES = "pivot-candidates"
@@ -49,9 +49,27 @@ class WorkQueue(Protocol):
         """Release the lock so the message is delivered again."""
         ...
 
+    async def renew_lock(self, message: QueueMessage) -> None:
+        """Extend the lock while a long job runs (Service Bus locks expire after 60 s, ADR-0003)."""
+        ...
+
+    async def dead_letter(self, message: QueueMessage, reason: str) -> None:
+        """Settle a message that keeps failing: it moves aside and is not delivered again."""
+        ...
+
 
 class MatchRepository(Protocol):
-    """Match data by match (Cosmos `match_data` in the cloud): events and pivots."""
+    """Match data by match (Cosmos `match_data` in the cloud): the match, events, metrics and pivots."""
+
+    async def upsert_match(self, match: Match) -> None:
+        """Insert or replace by match_id (score, clock and status change as the match runs)."""
+        ...
+
+    async def get_match(self, match_id: str) -> Match | None: ...
+
+    async def list_matches(self) -> list[Match]:
+        """Every stored match, most recently stored first."""
+        ...
 
     async def append_events(self, events: list[MatchEvent]) -> int:
         """Store events, skipping any (match_id, seq) already stored. Returns how many were new."""
@@ -59,6 +77,14 @@ class MatchRepository(Protocol):
 
     async def list_events(self, match_id: str, since_seq: int = -1) -> list[MatchEvent]:
         """Events with seq > since_seq, in seq order."""
+        ...
+
+    async def upsert_metrics(self, metrics: list[MinuteMetric]) -> None:
+        """Insert or replace by (match_id, minute)."""
+        ...
+
+    async def list_metrics(self, match_id: str) -> list[MinuteMetric]:
+        """Per-minute metrics of a match in minute order (the momentum timeline)."""
         ...
 
     async def upsert_pivot(self, pivot: Pivot) -> None:
@@ -88,3 +114,11 @@ class LivePublisher(Protocol):
     """Push envelopes to every browser watching a match (Web PubSub group per match in the cloud)."""
 
     async def publish(self, envelope: Envelope) -> None: ...
+
+
+class LiveNegotiator(Protocol):
+    """Hand a browser the address to open its realtime connection (Web PubSub client URL in the cloud)."""
+
+    async def negotiate(self, match_id: str | None = None) -> str:
+        """WebSocket URL the browser connects to; scoped to one match when `match_id` is given."""
+        ...
