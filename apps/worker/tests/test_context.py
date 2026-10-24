@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from pivot_core.domain import (
     CareerStint,
@@ -107,3 +108,12 @@ def test_template_cites_context_about_the_trigger_player(events, stats):
     cited = [s for s in narrative.sentences if s.context_ids]
     assert cited and cited[0].context_ids == ["e1"] and len(narrative.sentences) == 3
     assert verify(narrative, pivot_minute=63, events=evs, stats=stats, context=items()).passed
+
+
+def test_demo_fixture_gives_the_writers_off_field_stories():
+    path = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
+    match = Match.model_validate(json.loads(path.read_text(encoding="utf-8"))["match"])
+    items = ctx.from_match(match)
+    kinds = {i.kind for i in items}
+    assert {"former_club", "news", "relationship"} <= kinds
+    assert {"a04-c1", "h13-c2", "news-a04-return", "news-h15-100"} <= ctx.known_ids(items)
