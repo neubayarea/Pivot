@@ -16,7 +16,7 @@ Issue messages are written for the Explainer, which gets them back on a retry.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Protocol
 
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
@@ -83,9 +83,14 @@ def verify(
     events: Mapping[str, MatchEvent],
     stats: StatSource,
     significant: Mapping[str, bool] | None = None,
+    outcome_deltas: Callable[[str], list[float]] | None = None,
     max_sentences: int = 3,
 ) -> Verdict:
-    """Check a pivot card (or, with `significant`, a what-if comparison) against the data."""
+    """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
+
+    `outcome_deltas` is for comparisons: given a sentence, it returns the change in each
+    outcome the sentence mentions, so "more likely" style words can be checked without claims.
+    """
     issues: list[VerifierIssue] = []
 
     def issue(code: str, message: str, index: int | None = None) -> None:
@@ -133,10 +138,11 @@ def verify(
         # 4. Direction words.
         up, down = _has_word(s.text, UP_WORDS), _has_word(s.text, DOWN_WORDS)
         if up or down:
-            deltas = _deltas(list(s.claims), stats)
+            deltas = _deltas(list(s.claims), stats) or (outcome_deltas(s.text) if outcome_deltas else [])
             if not deltas:
                 issue("direction_mismatch",
-                      f"'{(up or down)[0]}' needs two claims on the same stat in different windows.", i)
+                      f"'{(up or down)[0]}' needs two claims on the same stat in different windows"
+                      f"{' or a named outcome' if outcome_deltas else ''}.", i)
             else:
                 if up and not any(d > 0 for d in deltas):
                     issue("direction_mismatch", f"'{up[0]}' says it went up, but the numbers did not rise.", i)
