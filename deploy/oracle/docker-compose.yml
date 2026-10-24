@@ -1,0 +1,37 @@
+# One VM: the Pivot app (single process, local adapters) behind Caddy for HTTPS.
+# Run from this folder: docker compose up -d --build   (see docs/deploy-oracle.md)
+name: pivot
+
+services:
+  app:
+    build:
+      context: ../..
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PIVOT_PROFILE: local
+      # The browser opens its WebSocket here (POST /api/negotiate); goes through Caddy as wss.
+      PIVOT_WS_URL: wss://${PIVOT_DOMAIN:?set PIVOT_DOMAIN in deploy/oracle/.env}/api/ws
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      PIVOT_DOMAIN: ${PIVOT_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # certificates; keep it, or Let's Encrypt rate limits bite
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

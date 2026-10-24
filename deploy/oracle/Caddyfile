@@ -1,0 +1,10 @@
+# Caddy gets a Let's Encrypt certificate for PIVOT_DOMAIN by itself (ports 80 and 443 must be open).
+# reverse_proxy passes WebSocket upgrades through as is, so /api/ws/... works over wss.
+{
+	email {$ACME_EMAIL}
+}
+
+{$PIVOT_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8000
+}
