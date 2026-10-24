@@ -19,7 +19,7 @@ from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 # Stats the template tries, in order of preference when changes are equal.
 CANDIDATE_METRICS = ("threat_total", "passes_final_third", "box_entries", "shots", "pressures", "xg")
 COMPARE_MINUTES = 5
-_DECIMALS = {"count": 0, "pct": 0, "xg": 2, "index": 2, "m": 0, "km": 1}
+_DECIMALS = {"count": 0, "pct": 0, "xg": 2, "index": 2, "m": 0, "km": 1, "ratio": 1}
 
 
 def format_value(value: float, unit: str) -> str:
