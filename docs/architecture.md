@@ -501,14 +501,15 @@ FastAPI 会自动生成 OpenAPI 文档，地址是 `/api/docs`（对应 F17，�
 | `match.py` | `Match`、`Team`、`Score` |
 | `people.py` | `Player`、`PlayerAttributes`（七组 34 项）、`Personality`、`Coach`、`CareerStint`、`Relationship` |
 | `lineup.py` | `TeamSheet`、`LineupSlot`、`TeamTactics`、`PlayerInstruction`、`Substitution` |
-| `context.py` | `MatchContext`、`Competition`、`PreMatchCondition`、`OffFieldEvent`、`ContextEffect` |
+| `context.py` | `MatchContext`、`Competition`、`PreMatchCondition`、`OffFieldEvent`、`ContextEffect`、`TeamForm`、`HeadToHead` |
+| `officials.py` | `Referee`、`FoulDetail`、`VarReview`、`InjuryInfo` |
 | `events.py` | `MatchEvent`（`minute`、`from_zone`、`to_zone` 由 `t` 和坐标推出，会随 JSON 一起输出） |
 | `tracking.py` | `TrackingFrame`、`PlayerPosition`、`BallPosition`（每秒一帧） |
-| `stats.py` | 统计词表 `StatMetric`（19 项）、`STAT_UNITS`、`StatRef`、`Claim` |
+| `stats.py` | 统计词表 `StatMetric`（23 项）、`STAT_UNITS`、`StatRef`、`Claim` |
 | `narrative.py` | `ViewerPrefs`、`ExplanationSentence`、`Narrative` |
 | `pivots.py` | `MinuteMetric`、`PivotCandidate`、`Pivot` |
 | `scenarios.py` | `ScenarioSpec`、`PlantSpec`、`OutcomeDist`、`SimResult`、`Scenario` |
-| `outputs.py` | `OverlayItem`、`OverlayFeed`、`Recap` |
+| `outputs.py` | `OverlayItem`、`OverlayFeed`、`PlayerMatchStats`、`Recap` |
 | `traces.py` | `VerifierIssue`、`Verdict`、`AgentTrace` |
 | `realtime.py` | 推送信封 `Envelope` |
 
@@ -520,6 +521,8 @@ FastAPI 会自动生成 OpenAPI 文档，地址是 `/api/docs`（对应 F17，�
 - **对齐真实事件数据**（参考 StatsBomb、Opta、SPADL）：事件改用连续坐标 `location` / `end_location`（105 × 68 米，主队始终向 x = 105 进攻），`from_zone` / `to_zone` 改为由坐标推出；新增 `shot_outcome`、`ball_speed_kmh`、`under_pressure`、`possession_id`、`play_pattern`；事件类型补上 dribble、save、duel、clearance、block、ball_recovery、offside、tactical_shift；进球不再是单独的事件类型，而是 `shot_outcome = "goal"` 的射门；`Team` 加了 `formation`。事件还记录 `success_prob`（模拟器给出的成功概率，即传球难度）、`pass_type`、`pass_height`、`body_part` 和 `related_event_ids`；`Player` 改用细分位置 `role`（`position` 由它推出），并加了 `preferred_foot` 和能力值 `PlayerAttributes`；`PlayerPosition` 加了 `fitness`。真实度规则和标定目标见 PRD 6.3。
 - **能力值、阵容与场外因素**（[ADR-0015](adr/0015-match-context-and-off-field-factors.md)）：能力值扩到 34 项（七组），加汇总分、隐藏性格值、身体资料和特长标签；新增 `Coach`、`CareerStint`、`Relationship`、`TeamSheet`、`LineupSlot`、`TeamTactics`、`PlayerInstruction`、`Substitution`、`MatchContext`、`Competition`、`PreMatchCondition`、`OffFieldEvent`、`ContextEffect`。`Team` 去掉了 `formation` 和 `players`，改为 `squad`、`sheet`、`tactics`、`coach`、`club_id`；`Match` 加了 `context`；开场、阵型调整、换人事件带上阵容单和战术。解释句子加了 `context_ids`。
 - **补时、加时和点球大战**：`t` 改为从开球起累计的秒数（含补时和加时，所以全场唯一、只增不减），事件加了 `period_t`（阶段内的秒数）和自动推出的 `clock_label`（63′、45+2′、PEN）；阶段编号沿用 StatsBomb，1、2 是上下半场，3、4 是加时，5 是点球大战。新增 `added_time` 事件和 `added_minutes`、`shootout_round` 字段；`Match` 加了 `periods`（各阶段起止和补时）和 `decided_by`，`Score` 加了点球大战比分；`Competition` 加了 `extra_time` 和 `penalty_shootout`；推演结果加了淘汰赛的晋级概率 `home_advance`。所有“分钟”都按累计时间计算（`t // 60`），界面显示用 `clock_label`。
+- **裁判、伤病、门将和比赛细节**：新增虚构主裁 `Referee`（判罚尺度、出牌倾向、让有利倾向）；犯规和出牌带 `FoulDetail`（犯规类型、是否让有利、是否判点、牌和出牌原因）；新增 `var_review` 事件和 `VarReview`；`injury` 事件带 `InjuryInfo`（部位、严重程度、原因、能否坚持），赛前状态有伤停名单。`save` 事件改为 `goalkeeper` 事件，带 `keeper_action`（扑住、扑出、托出、失球、接高球、拳击、出击、封堵、捡球）和 `keeper_technique`；射门带门将站位 `keeper_location`。事件还加了 `duel_type`（空中 / 地面）、`counterpress`（丢球 5 秒内的反抢）和 `delivery`（内旋、外旋、直线）。战术加了定位球套路 `SetPieceTactics`；比赛背景加了 `form`（近况）、`head_to_head`（交手记录）和场地状况。新增输出 `PlayerMatchStats`（单场评分和个人数据）。统计词表加了推进传球、PPDA、xA、场地倾斜度，共 23 项。
+- **数据定义**：每种事件什么时候产生、每个字段怎么判断，写在《数据定义说明》（`docs/data-definitions.md`，任务 B15），模拟器、统计员和核查员都按它实现。
 - **网格加细**：威胁网格从 12 × 8 改为 16 × 12；事件自动推出所在三分之一、纵向通道、禁区，都从进攻方视角计算。
 - **全员位置**（[ADR-0014](adr/0014-per-second-positional-simulator.md)）：新增 `TrackingFrame` / `PlayerPosition` / `BallPosition`，每秒一帧；推送消息新增 `tracking.frame`；统计词表新增 4 项阵型数据（防线高度、阵型宽度、压迫距离、跑动距离），共 19 项。
 - **新输出**：`OverlayItem` / `OverlayFeed`（转播叠加层）和 `Recap`（终场报道）。

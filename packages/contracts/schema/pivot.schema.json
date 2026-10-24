@@ -325,7 +325,8 @@
             "xg",
             "index",
             "m",
-            "km"
+            "km",
+            "ratio"
           ],
           "type": "string"
         },
@@ -530,7 +531,10 @@
             "off_field",
             "form",
             "fatigue",
-            "weather"
+            "weather",
+            "referee",
+            "head_to_head",
+            "injury"
           ],
           "type": "string"
         },
@@ -557,7 +561,9 @@
             "aggression",
             "chemistry",
             "card_risk",
-            "error_rate"
+            "error_rate",
+            "stamina_decay",
+            "injury_risk"
           ],
           "type": "string"
         }
@@ -631,7 +637,8 @@
             "scenario.progress",
             "scenario.completed",
             "trace.appended",
-            "recap.ready"
+            "recap.ready",
+            "player_stats.updated"
           ],
           "type": "string"
         }
@@ -685,6 +692,83 @@
       "title": "ExplanationSentence",
       "type": "object"
     },
+    "FoulDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "advantage_played": {
+          "default": false,
+          "type": "boolean"
+        },
+        "card": {
+          "anyOf": [
+            {
+              "enum": [
+                "yellow",
+                "second_yellow",
+                "red"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "card_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "reckless_challenge",
+                "serious_foul_play",
+                "professional_foul",
+                "denying_goal_chance",
+                "handball",
+                "dissent",
+                "simulation",
+                "time_wasting",
+                "violent_conduct",
+                "persistent_fouling"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "foul_type": {
+          "enum": [
+            "tackle",
+            "trip",
+            "push",
+            "hold",
+            "handball",
+            "dangerous_play",
+            "obstruction",
+            "simulation",
+            "dissent",
+            "time_wasting",
+            "off_the_ball"
+          ],
+          "type": "string"
+        },
+        "penalty_awarded": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "foul_type",
+        "advantage_played",
+        "penalty_awarded",
+        "card",
+        "card_reason"
+      ],
+      "title": "FoulDetail",
+      "type": "object"
+    },
     "GoalkeepingAttributes": {
       "additionalProperties": false,
       "properties": {
@@ -722,6 +806,105 @@
         "reflexes"
       ],
       "title": "GoalkeepingAttributes",
+      "type": "object"
+    },
+    "HeadToHead": {
+      "additionalProperties": false,
+      "description": "Record between the two clubs, counted from this match's home side.",
+      "properties": {
+        "away_wins": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "draws": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "home_wins": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "last_meetings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PastMeeting"
+          },
+          "maxItems": 10,
+          "type": "array"
+        },
+        "played": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "played",
+        "home_wins",
+        "draws",
+        "away_wins",
+        "last_meetings"
+      ],
+      "title": "HeadToHead",
+      "type": "object"
+    },
+    "InjuryInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "area": {
+          "enum": [
+            "hamstring",
+            "groin",
+            "thigh",
+            "knee",
+            "ankle",
+            "calf",
+            "foot",
+            "back",
+            "shoulder",
+            "head",
+            "other"
+          ],
+          "type": "string"
+        },
+        "can_continue": {
+          "type": "boolean"
+        },
+        "cause": {
+          "enum": [
+            "contact",
+            "non_contact",
+            "fatigue"
+          ],
+          "type": "string"
+        },
+        "expected_days_out": {
+          "default": 0,
+          "maximum": 400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "severity": {
+          "enum": [
+            "knock",
+            "minor",
+            "moderate",
+            "serious"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "area",
+        "severity",
+        "cause",
+        "can_continue",
+        "expected_days_out"
+      ],
+      "title": "InjuryInfo",
       "type": "object"
     },
     "LineupSlot": {
@@ -927,12 +1110,52 @@
           },
           "type": "array"
         },
+        "form": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TeamForm"
+          },
+          "maxItems": 2,
+          "type": "array"
+        },
+        "head_to_head": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HeadToHead"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "news": {
           "default": [],
           "items": {
             "$ref": "#/$defs/OffFieldEvent"
           },
           "type": "array"
+        },
+        "pitch": {
+          "default": "good",
+          "enum": [
+            "good",
+            "worn",
+            "heavy",
+            "artificial"
+          ],
+          "type": "string"
+        },
+        "referee": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Referee"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "relationships": {
           "default": [],
@@ -974,6 +1197,10 @@
         "derby",
         "stakes",
         "weather",
+        "pitch",
+        "referee",
+        "form",
+        "head_to_head",
         "conditions",
         "news",
         "relationships",
@@ -1052,6 +1279,45 @@
           "readOnly": true,
           "type": "string"
         },
+        "counterpress": {
+          "default": false,
+          "type": "boolean"
+        },
+        "deflected": {
+          "default": false,
+          "type": "boolean"
+        },
+        "delivery": {
+          "anyOf": [
+            {
+              "enum": [
+                "inswing",
+                "outswing",
+                "straight"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "duel_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "aerial",
+                "ground"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "end_location": {
           "anyOf": [
             {
@@ -1081,6 +1347,21 @@
         "event_id": {
           "type": "string"
         },
+        "first_time": {
+          "default": false,
+          "type": "boolean"
+        },
+        "foul": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FoulDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "from_zone": {
           "anyOf": [
             {
@@ -1103,6 +1384,81 @@
           ],
           "description": "Threat-grid zone of `location`.",
           "readOnly": true
+        },
+        "injury": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InjuryInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "keeper_action": {
+          "anyOf": [
+            {
+              "enum": [
+                "shot_saved",
+                "shot_parried",
+                "tipped_over",
+                "goal_conceded",
+                "claim",
+                "punch",
+                "sweep",
+                "smother",
+                "pick_up"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "keeper_location": {
+          "anyOf": [
+            {
+              "additionalItems": false,
+              "items": [
+                {
+                  "maximum": 105.0,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "maximum": 68.0,
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "keeper_technique": {
+          "anyOf": [
+            {
+              "enum": [
+                "standing",
+                "diving",
+                "reflex"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "lane": {
           "anyOf": [
@@ -1195,6 +1551,25 @@
           ],
           "default": null
         },
+        "pass_technique": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal",
+                "chip",
+                "flick_on",
+                "lay_off",
+                "backheel",
+                "outside_foot"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "pass_type": {
           "anyOf": [
             {
@@ -1210,7 +1585,9 @@
                 "free_kick",
                 "throw_in",
                 "goal_kick",
-                "kick_off"
+                "kick_off",
+                "keeper_throw",
+                "keeper_kick"
               ],
               "type": "string"
             },
@@ -1350,6 +1727,26 @@
           ],
           "default": null
         },
+        "shot_technique": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal",
+                "volley",
+                "half_volley",
+                "lob",
+                "backheel",
+                "diving_header",
+                "overhead_kick"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "substitution": {
           "anyOf": [
             {
@@ -1458,7 +1855,7 @@
             "carry",
             "dribble",
             "shot",
-            "save",
+            "goalkeeper",
             "pressure",
             "duel",
             "tackle",
@@ -1469,6 +1866,7 @@
             "foul",
             "card",
             "offside",
+            "var_review",
             "injury",
             "substitution",
             "tactical_shift",
@@ -1481,6 +1879,17 @@
         "under_pressure": {
           "default": false,
           "type": "boolean"
+        },
+        "var": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VarReview"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "xg": {
           "anyOf": [
@@ -1515,8 +1924,21 @@
         "shot_outcome",
         "xg",
         "shot_end_height_m",
+        "shot_technique",
+        "pass_technique",
+        "first_time",
+        "deflected",
         "shootout_round",
         "added_minutes",
+        "keeper_location",
+        "keeper_action",
+        "keeper_technique",
+        "duel_type",
+        "delivery",
+        "counterpress",
+        "foul",
+        "var",
+        "injury",
         "pass_type",
         "pass_height",
         "body_part",
@@ -1862,6 +2284,87 @@
       "title": "OutcomeDist",
       "type": "object"
     },
+    "OverlayCard": {
+      "additionalProperties": false,
+      "description": "A confirmed pivot as a lower-third card, timed on the match clock (FR-26).",
+      "properties": {
+        "direction": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "direction_team": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "hide_at": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "minute": {
+          "maximum": 180,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "minute_label": {
+          "type": "string"
+        },
+        "pivot_id": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "type": "integer"
+        },
+        "show_at": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "degraded"
+          ],
+          "type": "string"
+        },
+        "subline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "pivot_id",
+        "minute",
+        "minute_label",
+        "show_at",
+        "hide_at",
+        "direction",
+        "direction_team",
+        "severity",
+        "status",
+        "headline",
+        "subline"
+      ],
+      "title": "OverlayCard",
+      "type": "object"
+    },
     "OverlayFeed": {
       "additionalProperties": false,
       "properties": {
@@ -1896,6 +2399,42 @@
       "title": "OverlayFeed",
       "type": "object"
     },
+    "OverlayFrame": {
+      "additionalProperties": false,
+      "description": "What the overlay shows at one moment of the match clock: the score bug and at most one card.",
+      "properties": {
+        "card": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OverlayCard"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clock": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "scoreboard": {
+          "$ref": "#/$defs/OverlayScoreboard"
+        }
+      },
+      "required": [
+        "match_id",
+        "clock",
+        "scoreboard",
+        "card"
+      ],
+      "title": "OverlayFrame",
+      "type": "object"
+    },
     "OverlayItem": {
       "additionalProperties": false,
       "description": "One graphic that a broadcast renderer can place on top of the live feed.",
@@ -1914,7 +2453,10 @@
             "pivot",
             "goal",
             "card",
-            "substitution"
+            "substitution",
+            "var_review",
+            "injury",
+            "player_rating"
           ],
           "type": "string"
         },
@@ -1989,6 +2531,111 @@
         "severity"
       ],
       "title": "OverlayItem",
+      "type": "object"
+    },
+    "OverlayScoreboard": {
+      "additionalProperties": false,
+      "properties": {
+        "away_short": {
+          "type": "string"
+        },
+        "clock_label": {
+          "type": "string"
+        },
+        "home_short": {
+          "type": "string"
+        },
+        "period": {
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "type": "integer"
+        },
+        "score": {
+          "$ref": "#/$defs/Score"
+        }
+      },
+      "required": [
+        "home_short",
+        "away_short",
+        "score",
+        "period",
+        "clock_label"
+      ],
+      "title": "OverlayScoreboard",
+      "type": "object"
+    },
+    "OverlayTimeline": {
+      "additionalProperties": false,
+      "description": "Every card of a match in clock order, never overlapping, for recordings and the preview page.",
+      "properties": {
+        "card_seconds": {
+          "default": 12,
+          "type": "integer"
+        },
+        "cards": {
+          "items": {
+            "$ref": "#/$defs/OverlayCard"
+          },
+          "type": "array"
+        },
+        "match_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "match_id",
+        "card_seconds",
+        "cards"
+      ],
+      "title": "OverlayTimeline",
+      "type": "object"
+    },
+    "PastMeeting": {
+      "additionalProperties": false,
+      "properties": {
+        "away_club_id": {
+          "type": "string"
+        },
+        "away_goals": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "competition_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "home_club_id": {
+          "type": "string"
+        },
+        "home_goals": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "season": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "season",
+        "home_club_id",
+        "away_club_id",
+        "home_goals",
+        "away_goals",
+        "competition_id"
+      ],
+      "title": "PastMeeting",
       "type": "object"
     },
     "PeriodInfo": {
@@ -2594,6 +3241,166 @@
       "title": "PlayerInstruction",
       "type": "object"
     },
+    "PlayerMatchStats": {
+      "additionalProperties": false,
+      "description": "One player's line for this match, updated live, like the ratings in score apps.",
+      "properties": {
+        "aerials_won": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "assists": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "distance_km": {
+          "default": 0.0,
+          "maximum": 20,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dribbles_won": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "duels_won": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fouls_committed": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "goals": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "interceptions": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "key_passes": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "minutes_played": {
+          "maximum": 180,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pass_accuracy_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "passes": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "progressive_passes": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rating": {
+          "maximum": 10,
+          "minimum": 1,
+          "type": "number"
+        },
+        "saves": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "shots": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sprints": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tackles_won": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "top_speed_kmh": {
+          "default": 0.0,
+          "maximum": 45,
+          "minimum": 0,
+          "type": "number"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "xa": {
+          "default": 0.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "xg": {
+          "default": 0.0,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "match_id",
+        "player_id",
+        "up_to_t",
+        "minutes_played",
+        "rating",
+        "goals",
+        "assists",
+        "shots",
+        "xg",
+        "xa",
+        "passes",
+        "pass_accuracy_pct",
+        "key_passes",
+        "progressive_passes",
+        "dribbles_won",
+        "tackles_won",
+        "interceptions",
+        "duels_won",
+        "aerials_won",
+        "fouls_committed",
+        "saves",
+        "distance_km",
+        "top_speed_kmh",
+        "sprints"
+      ],
+      "title": "PlayerMatchStats",
+      "type": "object"
+    },
     "PlayerPosition": {
       "additionalProperties": false,
       "properties": {
@@ -2675,6 +3482,17 @@
     "PreMatchCondition": {
       "additionalProperties": false,
       "properties": {
+        "availability": {
+          "default": "available",
+          "enum": [
+            "available",
+            "injured",
+            "suspended",
+            "ill",
+            "not_selected"
+          ],
+          "type": "string"
+        },
         "carrying_knock": {
           "default": false,
           "type": "boolean"
@@ -2696,6 +3514,17 @@
           "maximum": 1,
           "minimum": 0,
           "type": "number"
+        },
+        "injury": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InjuryInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "morale": {
           "default": 60,
@@ -2733,6 +3562,8 @@
         "recent_ratings",
         "days_since_last_match",
         "carrying_knock",
+        "availability",
+        "injury",
         "on_yellow_card_threshold"
       ],
       "title": "PreMatchCondition",
@@ -2764,6 +3595,47 @@
         "narrative"
       ],
       "title": "Recap",
+      "type": "object"
+    },
+    "Referee": {
+      "additionalProperties": false,
+      "properties": {
+        "advantage_tendency": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "big_match_experience": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "card_tendency": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "referee_id": {
+          "type": "string"
+        },
+        "strictness": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "referee_id",
+        "name",
+        "strictness",
+        "card_tendency",
+        "advantage_tendency",
+        "big_match_experience"
+      ],
+      "title": "Referee",
       "type": "object"
     },
     "Relationship": {
@@ -3025,6 +3897,73 @@
       "title": "Score",
       "type": "object"
     },
+    "SetPieceTactics": {
+      "additionalProperties": false,
+      "properties": {
+        "corner_defence": {
+          "default": "mixed",
+          "enum": [
+            "zonal",
+            "man",
+            "mixed"
+          ],
+          "type": "string"
+        },
+        "corner_delivery": {
+          "default": "mixed",
+          "enum": [
+            "inswing",
+            "outswing",
+            "short",
+            "mixed"
+          ],
+          "type": "string"
+        },
+        "corner_target": {
+          "default": "mixed",
+          "enum": [
+            "near_post",
+            "far_post",
+            "penalty_spot",
+            "edge_of_box",
+            "mixed"
+          ],
+          "type": "string"
+        },
+        "free_kick_style": {
+          "default": "mixed",
+          "enum": [
+            "direct",
+            "cross",
+            "short",
+            "mixed"
+          ],
+          "type": "string"
+        },
+        "players_back_on_corners": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "players_forward_on_corners": {
+          "default": 5,
+          "maximum": 9,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "corner_delivery",
+        "corner_target",
+        "free_kick_style",
+        "players_forward_on_corners",
+        "corner_defence",
+        "players_back_on_corners"
+      ],
+      "title": "SetPieceTactics",
+      "type": "object"
+    },
     "SimResult": {
       "additionalProperties": false,
       "properties": {
@@ -3148,7 +4087,11 @@
             "line_height_m",
             "team_width_m",
             "press_distance_m",
-            "distance_covered_km"
+            "distance_covered_km",
+            "progressive_passes",
+            "ppda",
+            "xa",
+            "field_tilt_pct"
           ],
           "type": "string"
         },
@@ -3286,6 +4229,76 @@
       "title": "Team",
       "type": "object"
     },
+    "TeamForm": {
+      "additionalProperties": false,
+      "properties": {
+        "goals_against_last5": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "goals_for_last5": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "last_results": {
+          "default": [],
+          "items": {
+            "enum": [
+              "W",
+              "D",
+              "L"
+            ],
+            "type": "string"
+          },
+          "maxItems": 5,
+          "type": "array"
+        },
+        "league_position": {
+          "anyOf": [
+            {
+              "maximum": 40,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "points": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "side": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "side",
+        "last_results",
+        "goals_for_last5",
+        "goals_against_last5",
+        "league_position",
+        "points"
+      ],
+      "title": "TeamForm",
+      "type": "object"
+    },
     "TeamSheet": {
       "additionalProperties": false,
       "properties": {
@@ -3393,6 +4406,17 @@
           ],
           "type": "string"
         },
+        "set_pieces": {
+          "$ref": "#/$defs/SetPieceTactics",
+          "default": {
+            "corner_defence": "mixed",
+            "corner_delivery": "mixed",
+            "corner_target": "mixed",
+            "free_kick_style": "mixed",
+            "players_back_on_corners": 1,
+            "players_forward_on_corners": 5
+          }
+        },
         "tempo": {
           "default": "normal",
           "enum": [
@@ -3426,6 +4450,7 @@
         "counter_attack",
         "offside_trap",
         "time_wasting",
+        "set_pieces",
         "instructions"
       ],
       "title": "TeamTactics",
@@ -3486,6 +4511,58 @@
         "players"
       ],
       "title": "TrackingFrame",
+      "type": "object"
+    },
+    "VarReview": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "enum": [
+            "confirmed",
+            "overturned"
+          ],
+          "type": "string"
+        },
+        "duration_s": {
+          "default": 60,
+          "maximum": 600,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "reason": {
+          "enum": [
+            "offside",
+            "handball",
+            "foul_in_build_up",
+            "ball_out_of_play",
+            "no_foul",
+            "foul_confirmed",
+            "wrong_player",
+            "clear_and_obvious_error"
+          ],
+          "type": "string"
+        },
+        "review_of": {
+          "enum": [
+            "goal",
+            "penalty",
+            "red_card",
+            "mistaken_identity"
+          ],
+          "type": "string"
+        },
+        "reviewed_event_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "review_of",
+        "reviewed_event_id",
+        "decision",
+        "reason",
+        "duration_s"
+      ],
+      "title": "VarReview",
       "type": "object"
     },
     "Verdict": {
