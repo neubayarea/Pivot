@@ -22,26 +22,25 @@ from typing import Protocol
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
 from pivot_core.domain.stats import Claim
 
-from .vocabulary import BANNED_TERMS, DOWN_WORDS, JARGON, SIGNIFICANCE_WORDS, UP_WORDS
+from . import languages as lang_rules
+from .vocabulary import JARGON
 
-MAX_WORDS = 30
-MAX_HEADLINE_WORDS = 8
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
 
 # Allowed gap between a claimed value and the recomputed one, per unit.
 TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km": 0.05, "ratio": 0.05}
 
-# Numbers in running text. Match minutes ("61'", "45+2'") are not claims and are skipped.
-_MINUTE = re.compile(r"\b\d{1,3}(?:\+\d{1,2})?['’′]")
-_NUMBER = re.compile(r"(?<![\w.])\d+(?:\.\d+)?")
+# Numbers in running text. Match minutes ("61'", "45+2'", "第61分钟") are not claims and are
+# skipped. A digit right after a Chinese character still counts ("从3上升到9").
+_NUMBER = re.compile(r"(?<![A-Za-z\d.])\d+(?:\.\d+)?")
 
 
 class StatSource(Protocol):
     def compute(self, ref: StatRef) -> float: ...
 
 
-def numbers_in(text: str) -> list[str]:
-    return _NUMBER.findall(_MINUTE.sub(" ", text))
+def numbers_in(text: str, lang: str = "en") -> list[str]:
+    return _NUMBER.findall(lang_rules.MINUTES.sub(" ", lang_rules.normalise(text, lang)))
 
 
 def _matches(number: str, claim: Claim) -> bool:
@@ -55,6 +54,10 @@ def _has_word(text: str, words: tuple[str, ...]) -> list[str]:
     lowered = text.lower()
     found = []
     for w in words:
+        if lang_rules.has_cjk(w):                 # no word boundaries in Chinese
+            if w in text:
+                found.append(w)
+            continue
         pattern = re.escape(w.lower()) if not w[0].isalnum() or not w[-1].isalnum() else rf"\b{re.escape(w.lower())}\b"
         if re.search(pattern, lowered):
             found.append(w)
@@ -96,14 +99,19 @@ def verify(
     def issue(code: str, message: str, index: int | None = None) -> None:
         issues.append(VerifierIssue(code=code, message=message, sentence_index=index))
 
+    lang = narrative.prefs.language
+    up_words, down_words = lang_rules.up_words(lang), lang_rules.down_words(lang)
+    max_words, max_headline = lang_rules.MAX_SENTENCE[lang], lang_rules.MAX_HEADLINE[lang]
+    unit_name = "characters" if lang == "zh" else "words"
+
     # 1. Shape.
     if not 1 <= len(narrative.sentences) <= max_sentences:
         issue("sentence_count", f"Write 1 to {max_sentences} sentences, not {len(narrative.sentences)}.")
-    if len(narrative.headline.split()) > MAX_HEADLINE_WORDS:
-        issue("too_long", f"The headline must be at most {MAX_HEADLINE_WORDS} words.")
+    if lang_rules.length(narrative.headline, lang) > max_headline:
+        issue("too_long", f"The headline must be at most {max_headline} {unit_name}.")
     if re.search(r"\d", narrative.headline):
         issue("number_mismatch", "The headline must not contain digits.")
-    banned = BANNED_TERMS + (JARGON if narrative.prefs.audience == "fan" else ())
+    banned = lang_rules.banned_terms(lang) + (JARGON if narrative.prefs.audience == "fan" else ())
     for term in _has_word(narrative.headline, banned):
         issue("banned_term", f"Remove '{term}' from the headline.")
 
@@ -111,9 +119,9 @@ def verify(
     allow_significance = bool(significant) and any(significant.values())
 
     for i, s in enumerate(narrative.sentences):
-        words = len(s.text.split())
-        if words > MAX_WORDS:
-            issue("too_long", f"Sentence {i + 1} has {words} words; keep it to {MAX_WORDS}.", i)
+        words = lang_rules.length(s.text, lang)
+        if words > max_words:
+            issue("too_long", f"Sentence {i + 1} has {words} {unit_name}; keep it to {max_words}.", i)
         if not 1 <= len(s.evidence_ids) <= 4:
             issue("evidence_count", f"Sentence {i + 1} must cite 1 to 4 evidence ids.", i)
 
@@ -132,12 +140,12 @@ def verify(
                 ref = c.stat_ref
                 issue("number_mismatch",
                       f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]} is {actual:g}, not {c.value:g}.", i)
-        for n in numbers_in(s.text):
+        for n in numbers_in(s.text, lang):
             if not any(_matches(n, c) for c in s.claims):
                 issue("number_mismatch", f"The number {n} in sentence {i + 1} has no matching claim.", i)
 
         # 4. Direction words.
-        up, down = _has_word(s.text, UP_WORDS), _has_word(s.text, DOWN_WORDS)
+        up, down = _has_word(s.text, up_words), _has_word(s.text, down_words)
         if up or down:
             deltas = _deltas(list(s.claims), stats) or (outcome_deltas(s.text) if outcome_deltas else [])
             if not deltas:
@@ -152,7 +160,7 @@ def verify(
 
         # 5. Significance wording.
         if not allow_significance:
-            for w in _has_word(s.text, SIGNIFICANCE_WORDS):
+            for w in _has_word(s.text, lang_rules.significance_words(lang)):
                 issue("significance_unsupported", f"Do not say '{w}': the difference is not significant.", i)
 
         # 6. Banned terms.

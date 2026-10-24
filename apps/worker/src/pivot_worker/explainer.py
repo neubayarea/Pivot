@@ -17,6 +17,7 @@ from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotC
 from pivot_core.domain.common import Model
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
+from .languages import INSTRUCTIONS
 from .prompts import Prompt, render
 from .template import possessive
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
@@ -62,7 +63,7 @@ def audience_brief(prefs: ViewerPrefs, team_names: Mapping[str, str],
         lines.append(f"The viewer follows {name} (`{prefs.focus_player_id}`). Mention them when the evidence "
                      "involves them, and prefer their player-level stats from the sheet; never invent a role "
                      "for them in events they were not part of.")
-    lines.append("Write in English.")
+    lines.append(INSTRUCTIONS[prefs.language])
     return " ".join(lines)
 
 

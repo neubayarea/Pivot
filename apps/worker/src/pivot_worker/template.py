@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotCandidate, StatRef, ViewerPrefs
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
+from .languages import LABELS, MAX_HEADLINE, PHRASES
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
 from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 
@@ -28,24 +29,25 @@ def format_value(value: float, unit: str) -> str:
     return f"{value:.{_DECIMALS[unit]}f}{UNIT_SUFFIX[unit]}"
 
 
-def _trigger(event: MatchEvent, team: str) -> tuple[str, str]:
+def _trigger(event: MatchEvent, team: str, lang: str = "en") -> tuple[str, str]:
     """Headline and first sentence for the event that set the pivot off."""
-    at = event.clock_label
-    if event.type == "shot" and event.shot_outcome == "goal":
-        return f"{team} goal swings the match", f"{team} scored at {at}."
-    if event.type == "card":
-        return "A card changes the game", f"{team} were shown a card at {at}."
-    if event.type == "substitution":
-        return f"{team} change shifts the balance", f"{team} made a substitution at {at}."
-    if event.type == "tactical_shift":
-        return f"{team} switch shifts the balance", f"{team} changed their shape at {at}."
-    if event.type == "injury":
-        return "An injury changes the game", f"{team} lost a player to injury at {at}."
-    return "", ""
+    kind = "goal" if event.type == "shot" and event.shot_outcome == "goal" else event.type
+    phrases = PHRASES[lang]
+    if kind not in ("goal", "card", "substitution", "tactical_shift", "injury"):
+        return "", ""
+    return (phrases[f"{kind}_h"].format(team=team),
+            phrases[kind].format(team=team, at=event.clock_label))
+
+
+def _label(metric: str, lang: str, fan: bool) -> str:
+    if lang in LABELS:
+        return LABELS[lang][metric]
+    term = STAT_TERMS[metric]
+    return term.fan_label if fan else term.label
 
 
 def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: list[str],
-                   fan: bool = False) -> ExplanationSentence | None:
+                   fan: bool = False, lang: str = "en") -> ExplanationSentence | None:
     m = c.minute
     before, after = (max(0, m - COMPARE_MINUTES), m), (m, m + COMPARE_MINUTES)
     best = None
@@ -64,10 +66,12 @@ def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: li
         return None
     _, metric, refs, a, b = best
     unit = STAT_UNITS[metric]
-    verb = "rose" if b > a else "fell"
-    term = STAT_TERMS[metric]
-    text = (f"{possessive(team)} {term.fan_label if fan else term.label} {verb} from {format_value(a, unit)} "
-            f"to {format_value(b, unit)} in the next five minutes.")
+    phrases = PHRASES[lang]
+    text = phrases["stat"].format(team=team, owner=possessive(team), label=_label(metric, lang, fan),
+                                  verb=phrases["rose" if b > a else "fell"],
+                                  a=format_value(a, unit), b=format_value(b, unit))
+    if lang == "es":
+        text = text[0].upper() + text[1:]
     claims = [Claim(value=v, unit=unit, stat_ref=r) for v, r in ((a, refs[0]), (b, refs[1]))]
     return ExplanationSentence(text=text, evidence_ids=evidence, claims=claims)
 
@@ -85,9 +89,13 @@ def possessive(name: str) -> str:
     return f"{name}'" if name.endswith("s") else f"{name}'s"
 
 
-def clean_headline(text: str) -> str:
-    words = re.sub(r"\d", "", text).split()
-    return " ".join(words[:8]) or "Momentum swings"
+def clean_headline(text: str, lang: str = "en") -> str:
+    """No digits, and cut to the language's headline limit."""
+    text = re.sub(r"\d", "", text).strip()
+    limit = MAX_HEADLINE[lang]
+    if lang == "zh":
+        return text[:limit] or PHRASES["zh"]["fallback_h"]
+    return " ".join(text.split()[:limit]) or PHRASES[lang]["fallback_h"]
 
 
 def template_explain(
@@ -101,26 +109,29 @@ def template_explain(
     verifier_attempts: int = 0,
 ) -> Narrative:
     prefs = prefs or ViewerPrefs()
+    lang = prefs.language
     names = {"home": "Home", "away": "Away", **(team_names or {})}
     team = names[candidate.direction]
     try:
+        phrases = PHRASES[lang]
         found = _evidence(candidate, events)
         ids = [e.event_id for e in found][:4] or [f"{candidate.match_id}:{candidate.minute}"]
-        headline, first = _trigger(found[0], names[found[0].team]) if found else ("", "")
+        headline, first = _trigger(found[0], names[found[0].team], lang) if found else ("", "")
         sentences = []
         if first:
             sentences.append(ExplanationSentence(text=first, evidence_ids=ids[:1]))
-        stat = _stat_sentence(candidate, team, stats, ids[:4], fan=prefs.audience == "fan")
+        stat = _stat_sentence(candidate, team, stats, ids[:4], fan=prefs.audience == "fan", lang=lang)
         if stat:
             sentences.append(stat)
-        sentences.append(ExplanationSentence(text=f"From there the momentum swung towards {team}.", evidence_ids=ids[:4]))
-        return Narrative(prefs=prefs, headline=clean_headline(headline or f"Momentum swings to {team}"),
+        sentences.append(ExplanationSentence(text=phrases["momentum"].format(team=team), evidence_ids=ids[:4]))
+        return Narrative(prefs=prefs, headline=clean_headline(headline or phrases["momentum_h"].format(team=team), lang),
                          sentences=sentences[:3], source="template", verifier_attempts=verifier_attempts,
                          chain_id=chain_id)
     except Exception:
+        phrases = PHRASES.get(lang, PHRASES["en"])
         return Narrative(
-            prefs=prefs, headline="Momentum swings",
-            sentences=[ExplanationSentence(text="The match turned around this point.",
+            prefs=prefs, headline=phrases["fallback_h"],
+            sentences=[ExplanationSentence(text=phrases["fallback"],
                                            evidence_ids=list(candidate.key_event_ids[:1]) or [candidate.match_id])],
             source="template", verifier_attempts=verifier_attempts, chain_id=chain_id,
         )
