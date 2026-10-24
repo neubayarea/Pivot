@@ -1,5 +1,5 @@
 import { useMatch, type TeamStats } from "../data/match";
-import { useT } from "../i18n";
+import { usePrefs } from "../i18n";
 
 const ROWS: [keyof TeamStats, (v: number) => string][] = [
   ["possession", (v) => `${v}%`],
@@ -11,7 +11,10 @@ const ROWS: [keyof TeamStats, (v: number) => string][] = [
 
 export default function MatchStats() {
   const { stats } = useMatch();
-  const t = useT();
+  const { prefs, t } = usePrefs();
+  // Fan mode names the same numbers in plain words: "Who had the ball", not "Possession".
+  const label = prefs.audience === "fan" ? "stats.fan" : "stats";
+  const fav = prefs.focus_team;
   return (
     <div className="statlist">
       {ROWS.map(([key, fmt]) => {
@@ -20,13 +23,13 @@ export default function MatchStats() {
         const total = h + a || 1;
         return (
           <div key={key} className="stat">
-            <span className="nm">{t(`stats.${key}`)}</span>
-            <span>{fmt(h)}</span>
+            <span className="nm">{t(`${label}.${key}`)}</span>
+            <span className={fav === "home" ? "fav" : undefined}>{fmt(h)}</span>
             <span className="bar" aria-hidden="true">
               <i style={{ width: `${(h / total) * 100}%` }} />
               <i style={{ width: `${(a / total) * 100}%` }} />
             </span>
-            <span className="r">{fmt(a)}</span>
+            <span className={`r${fav === "away" ? " fav" : ""}`}>{fmt(a)}</span>
           </div>
         );
       })}

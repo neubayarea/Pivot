@@ -1,4 +1,5 @@
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
+import { involves } from "../data/view";
 import { PITCH } from "../fixtures/pivot-detail";
 
 // 105 x 68 m at 5 px per metre, same drawing as "06 S2" in the design spec. Home attacks to the right.
@@ -13,6 +14,8 @@ type Props = {
   actions: MatchEvent[];
   selected: string | null;
   label: string;
+  /** The followed player (C08): gold outline on his dot, a gold ring on actions he took part in. */
+  focus?: string | null;
 };
 
 const shirt = (id: string) => id.slice(id.lastIndexOf("-") + 1);
@@ -36,7 +39,7 @@ function Markings() {
   );
 }
 
-function Action({ e, on }: { e: MatchEvent; on: boolean }) {
+function Action({ e, on, mine }: { e: MatchEvent; on: boolean; mine: boolean }) {
   if (!e.location) return null;
   const [x1, y1] = px(e.location);
   const tag = `#${e.seq}`;
@@ -54,8 +57,9 @@ function Action({ e, on }: { e: MatchEvent; on: boolean }) {
     );
   }
   return (
-    <g className={`act${on ? " on" : ""}`}>
+    <g className={`act${on ? " on" : ""}${mine ? " mine" : ""}`}>
       {arrow}
+      {mine && !on && <circle cx={x1} cy={y1} r={13} fill="none" stroke="var(--pv-gold)" strokeWidth={3} strokeDasharray="5 3" />}
       {on && (
         <>
           <circle cx={x1} cy={y1} r={15} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />
@@ -71,17 +75,19 @@ function Action({ e, on }: { e: MatchEvent; on: boolean }) {
   );
 }
 
-export default function Pitch({ frame, actions, selected, label }: Props) {
+export default function Pitch({ frame, actions, selected, label, focus = null }: Props) {
   const ball = px([frame.ball.x, frame.ball.y]);
   return (
     <svg className="pitch" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
       <Markings />
-      {actions.filter((e) => e.event_id !== selected).map((e) => <Action key={e.event_id} e={e} on={false} />)}
+      {actions.filter((e) => e.event_id !== selected).map((e) => <Action key={e.event_id} e={e} on={false} mine={involves(e, focus)} />)}
       {frame.players.map((p) => {
         const home = p.player_id.startsWith("hcy");
+        const followed = p.player_id === focus;
         return (
-          <g key={p.player_id} className="pl" style={{ transform: `translate(${p.x * S}px, ${p.y * S}px)` }}>
-            <circle r={9} fill={home ? "var(--pv-home)" : "var(--pv-away)"} stroke="var(--pv-ink)" strokeWidth={2} />
+          <g key={p.player_id} className={`pl${followed ? " followed" : ""}`} style={{ transform: `translate(${p.x * S}px, ${p.y * S}px)` }}>
+            {followed && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />}
+            <circle r={9} fill={home ? "var(--pv-home)" : "var(--pv-away)"} stroke={followed ? "var(--pv-gold)" : "var(--pv-ink)"} strokeWidth={followed ? 3 : 2} />
             <text y={4} fontSize={10} fontWeight={700} textAnchor="middle" fill="var(--pv-sheet)">
               {shirt(p.player_id)}
             </text>
@@ -91,7 +97,7 @@ export default function Pitch({ frame, actions, selected, label }: Props) {
       <g className="pl" style={{ transform: `translate(${ball[0] + 8}px, ${ball[1] - 8}px)` }}>
         <circle r={4} fill="var(--pv-sheet)" stroke="var(--pv-ink)" strokeWidth={1.5} />
       </g>
-      {actions.filter((e) => e.event_id === selected).map((e) => <Action key={e.event_id} e={e} on />)}
+      {actions.filter((e) => e.event_id === selected).map((e) => <Action key={e.event_id} e={e} on mine={involves(e, focus)} />)}
     </svg>
   );
 }

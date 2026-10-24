@@ -37,7 +37,7 @@ function matchView(over: Partial<MatchView> = {}, status: MatchView["match"]["st
     },
     teams: { home: team("home", "Northvale"), away: team("away", "Eastport") },
     events: [], metrics: [], pivots, stats: computeStats([]),
-    playerName: (id) => id ?? "", eventById: () => undefined,
+    squads: { home: [], away: [] }, playerName: (id) => id ?? "", eventById: () => undefined,
     pivotDetail: (id) => {
       const p = pivots.find((x) => x.pivot_id === id);
       return p && { pivot: p, window: [0, 60], frames: [{ match_id: "m1", period: 1, t: 0, possession: null, players: [], ball: { owner_id: null, x: 0, y: 0, z: 0 } }], beforeAfter: [] };

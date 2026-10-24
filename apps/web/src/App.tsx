@@ -29,7 +29,8 @@ export default function App() {
     <MatchProvider fallback={WAITING}>
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <ConnectionBanner />
-      <main className="page">
+      {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}
+      <main className="page" data-fav={prefs.focus_team ?? undefined}>
         <Routes>
           <Route path="/" element={<LiveBoard />} />
           <Route path="/pivot/:id" element={<PivotDetail />} />
