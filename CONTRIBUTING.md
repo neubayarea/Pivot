@@ -8,6 +8,7 @@
 - 开工前把 issue 拖到 In progress，并指派给自己。每人同时最多 2 个进行中的任务。
 - 卡住超过 45 分钟，就在群里 @ 相关的人；超过 2 小时，给 issue 加 `blocked` 标签，在站会上处理。
 - Must 任务按人分配；Should 和 Could 放在公共池，谁先做完手上的 Must，谁按顺序去拉。
+- 清单以外的工作（顺手修的 bug、补的工具、拆出来的子任务），先用 `python3 scripts/new_task.py` 开一个 issue 并认领到自己这条线，再动手。用 AI Agent 写代码时同样如此，规则写在 [AGENTS.md](AGENTS.md)。
 
 ## 分支与提交
 

@@ -1,0 +1,539 @@
+<title>Pivot Matchday Programme</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: a printed matchday programme — ink masthead, numbered programme pages, square cards with printed rules on halftone paper.
+   Tokens are copied from docs/design/tokens.css; change both together. */
+:root{
+  --pv-paper:#ECEEE8; --pv-sheet:#F8F8F3; --pv-ink:#121A3A; --pv-ink-2:#4A5272; --pv-hair:#C3C8BE; --pv-dot:rgba(18,26,58,.09);
+  --pv-bar:#121A3A; --pv-on-bar:#F8F8F3; --pv-bar-line:#3A4570;
+  --pv-gold:#FFC53A; --pv-on-gold:#121A3A; --pv-gold-soft:#FFE6A3; --pv-red:#D22B3C; --pv-on-red:#FFFFFF;
+  --pv-home:#1C2C6E; --pv-away:#D22B3C; --pv-draw:#B9BFB4;
+  --pv-ok-bg:#121A3A; --pv-ok-fg:#FFC53A; --pv-warn-bg:#FCEBC4; --pv-warn-fg:#7A4700; --pv-bad-bg:#F6D2D6; --pv-bad-fg:#8E1220;
+  --pv-pitch:#D9DFD5; --pv-pitch-line:#121A3A;
+  --pv-display:"Alfa Slab One","Rockwell",Georgia,serif;
+  --pv-body:"Archivo","Noto Sans SC",system-ui,sans-serif;
+  --pv-label:"Archivo Narrow","Archivo","Noto Sans SC",sans-serif;
+  --pv-fs-xs:11px; --pv-fs-sm:13px; --pv-fs-md:15px; --pv-fs-lg:19px; --pv-fs-xl:26px; --pv-fs-2xl:38px; --pv-fs-3xl:56px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --pv-paper:#0D1330; --pv-sheet:#161E42; --pv-ink:#F1EFE4; --pv-ink-2:#A9B0CC; --pv-hair:#2E3762; --pv-dot:rgba(241,239,228,.06);
+  --pv-bar:#060A1E; --pv-on-bar:#F1EFE4; --pv-bar-line:#2E3762;
+  --pv-gold-soft:#3B3418; --pv-red:#FF5A67; --pv-home:#8FA6FF; --pv-away:#FF6B76; --pv-draw:#4A5276;
+  --pv-ok-bg:#FFC53A; --pv-ok-fg:#121A3A; --pv-warn-bg:#3A2F14; --pv-warn-fg:#F0B451; --pv-bad-bg:#4A1820; --pv-bad-fg:#FFB3BA;
+  --pv-pitch:#1B2A4A; --pv-pitch-line:#C9CDE0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --pv-paper:#0D1330; --pv-sheet:#161E42; --pv-ink:#F1EFE4; --pv-ink-2:#A9B0CC; --pv-hair:#2E3762; --pv-dot:rgba(241,239,228,.06);
+  --pv-bar:#060A1E; --pv-on-bar:#F1EFE4; --pv-bar-line:#2E3762;
+  --pv-gold-soft:#3B3418; --pv-red:#FF5A67; --pv-home:#8FA6FF; --pv-away:#FF6B76; --pv-draw:#4A5276;
+  --pv-ok-bg:#FFC53A; --pv-ok-fg:#121A3A; --pv-warn-bg:#3A2F14; --pv-warn-fg:#F0B451; --pv-bad-bg:#4A1820; --pv-bad-fg:#FFB3BA;
+  --pv-pitch:#1B2A4A; --pv-pitch-line:#C9CDE0; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle,var(--pv-dot) 1.1px,transparent 1.4px) 0 0/7px 7px,var(--pv-paper);
+  color:var(--pv-ink);font-family:var(--pv-body);font-size:var(--pv-fs-md);line-height:1.6}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--pv-gold);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.label{font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-xs);letter-spacing:.14em;text-transform:uppercase}
+.muted{color:var(--pv-ink-2)}
+
+/* ---------- Masthead ---------- */
+.mast{background:var(--pv-bar);color:var(--pv-on-bar)}
+.mast .wrap{padding-block:28px 30px;display:grid;gap:18px}
+.mast-top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--pv-bar-line);padding-bottom:10px}
+.mast h1{font-family:var(--pv-display);font-weight:400;font-size:clamp(44px,9vw,96px);line-height:.92;text-transform:uppercase;letter-spacing:.005em}
+.mast h1 .dot{display:inline-block;width:.42em;height:.42em;border-radius:50%;background:var(--pv-gold);vertical-align:.12em;margin-left:.06em}
+.mast-fix{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-lg);text-transform:uppercase;letter-spacing:.06em}
+.mast-fix .v{color:var(--pv-gold)}
+.mast-lede{max-width:62ch;color:var(--pv-on-bar);opacity:.86}
+.contents{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:0;border-top:3px solid var(--pv-gold)}
+.contents a{display:flex;gap:10px;align-items:baseline;padding:8px 0;color:var(--pv-on-bar);text-decoration:none;border-bottom:1px solid var(--pv-bar-line);margin-right:18px}
+.contents a:hover{color:var(--pv-gold)}
+.contents b{font-family:var(--pv-display);font-weight:400;color:var(--pv-gold);min-width:2.2em}
+
+/* ---------- Programme pages ---------- */
+section.pg{padding-block:44px 8px;display:grid;gap:18px}
+.pg-head{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:end;border-bottom:3px solid var(--pv-ink);padding-bottom:8px}
+.pg-no{grid-row:span 2;font-family:var(--pv-display);font-size:var(--pv-fs-3xl);line-height:.85;color:var(--pv-red)}
+.pg-head h2{font-family:var(--pv-display);font-weight:400;font-size:clamp(28px,4.4vw,var(--pv-fs-2xl));line-height:1;text-transform:uppercase}
+.pg-head .label{color:var(--pv-ink-2)}
+.note{max-width:72ch;display:grid;gap:8px}
+.note b{font-weight:700}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.sheet{background:var(--pv-sheet);border:3px solid var(--pv-ink);padding:14px 16px;display:grid;gap:10px;align-content:start;min-width:0}
+.sheet h3{font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-sm);letter-spacing:.14em;text-transform:uppercase;border-bottom:3px solid var(--pv-ink);padding-bottom:3px}
+
+/* Colour swatches */
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:12px}
+.chip{border:2px solid var(--pv-ink);background:var(--pv-sheet);display:grid}
+.chip i{display:block;height:58px;border-bottom:2px solid var(--pv-ink)}
+.chip div{padding:6px 8px;display:grid;gap:1px}
+.chip code{font-family:var(--pv-label);font-size:12px;color:var(--pv-ink-2)}
+.chip span{font-weight:600;font-size:var(--pv-fs-sm)}
+
+/* Type specimen */
+.spec{display:grid;gap:14px}
+.spec-row{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:baseline;border-top:1px solid var(--pv-hair);padding-top:10px}
+.spec-row > .label{color:var(--pv-ink-2)}
+.t-display{font-family:var(--pv-display);font-size:var(--pv-fs-2xl);line-height:1;text-transform:uppercase}
+.t-head{font-family:var(--pv-display);font-size:var(--pv-fs-xl);line-height:1.05;text-transform:uppercase}
+.t-label{font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-sm);letter-spacing:.14em;text-transform:uppercase}
+.t-num{font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-xl);font-variant-numeric:tabular-nums}
+
+/* ---------- Components ---------- */
+.kicker{display:inline-block;font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-sm);letter-spacing:.14em;text-transform:uppercase;background:var(--pv-red);color:var(--pv-on-red);padding:3px 10px}
+.stamp{display:inline-flex;align-items:center;gap:5px;font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-xs);letter-spacing:.12em;text-transform:uppercase;padding:2px 7px;border:2px solid currentColor}
+.stamp.ok{background:var(--pv-ok-bg);color:var(--pv-ok-fg);border-color:var(--pv-ok-bg)}
+.stamp.warn{background:var(--pv-warn-bg);color:var(--pv-warn-fg);border-color:var(--pv-warn-bg)}
+.stamp.bad{background:var(--pv-bad-bg);color:var(--pv-bad-fg);border-color:var(--pv-bad-bg)}
+.stamp.live{background:var(--pv-red);color:var(--pv-on-red);border-color:var(--pv-red)}
+.stamp.live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.4s steps(2,start) infinite}
+.stamp.line{color:var(--pv-ink)}
+@keyframes blink{50%{opacity:0}}
+.ev{display:inline-block;font-family:var(--pv-label);font-weight:700;font-size:12px;padding:0 5px;border:1.5px solid var(--pv-ink);background:var(--pv-sheet);color:var(--pv-ink);cursor:pointer;line-height:1.5;vertical-align:1px}
+.ev:hover,.ev.on{background:var(--pv-gold);color:var(--pv-on-gold);border-color:var(--pv-ink)}
+.hl{background:linear-gradient(transparent 58%,var(--pv-gold) 58%);font-weight:700;padding:0 2px;color:var(--pv-ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--pv-label);font-weight:700;font-size:var(--pv-fs-sm);letter-spacing:.1em;text-transform:uppercase;padding:9px 16px;border:2px solid var(--pv-ink);background:var(--pv-sheet);color:var(--pv-ink);cursor:pointer}
+.btn.pri{background:var(--pv-gold);color:var(--pv-on-gold);box-shadow:4px 4px 0 var(--pv-ink)}
+.btn.pri:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--pv-ink)}
+.btn.ghost{border-color:transparent;text-decoration:underline;text-underline-offset:3px;padding-inline:4px}
+.btn:hover{background:var(--pv-gold-soft)} .btn.pri:hover{background:var(--pv-gold)}
+.seg{display:inline-flex;border:2px solid currentColor}
+.seg button{font-family:var(--pv-label);font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border:0;background:transparent;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pv-gold);color:var(--pv-on-gold)}
+.sev{letter-spacing:1px;color:var(--pv-red);font-size:12px}
+.sev i{color:var(--pv-hair);font-style:normal}
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px}
+.comp-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* Stat bars (shared) */
+.stat{display:grid;grid-template-columns:3.2em 1fr 3.2em;gap:8px;align-items:center;font-family:var(--pv-label);font-weight:700;font-variant-numeric:tabular-nums}
+.stat .nm{grid-column:1/-1;font-size:var(--pv-fs-xs);letter-spacing:.12em;text-transform:uppercase;color:var(--pv-ink-2);margin-bottom:-6px}
+.stat .r{text-align:right}
+.stat .bar{display:flex;height:12px;border:2px solid var(--pv-ink)}
+.stat .bar i{display:block;background:var(--pv-home)} .stat .bar i+i{background:var(--pv-away)}
+
+/* ---------- Screen mockups ---------- */
+.frame{overflow-x:auto;border:3px solid var(--pv-ink);background:var(--pv-ink)}
+.screen{width:1180px;background:radial-gradient(circle,var(--pv-dot) 1.1px,transparent 1.4px) 0 0/7px 7px,var(--pv-paper);color:var(--pv-ink);font-size:14px;line-height:1.5}
+.cap{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.cap .label{color:var(--pv-ink-2)}
+
+.top{background:var(--pv-bar);color:var(--pv-on-bar);display:flex;align-items:center;gap:12px;padding:10px 18px;flex-wrap:nowrap}
+.brand{font-family:var(--pv-display);font-size:24px;line-height:1;display:flex;align-items:center;gap:6px;text-transform:uppercase}
+.brand::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--pv-gold)}
+.score{display:flex;align-items:center;gap:8px;font-family:var(--pv-display);font-size:20px;text-transform:uppercase;white-space:nowrap}
+.score .sc{background:var(--pv-gold);color:var(--pv-on-gold);min-width:34px;text-align:center;padding:1px 6px}
+.score .tm{font-size:15px;letter-spacing:.02em}
+.clock{font-family:var(--pv-label);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
+.top .sp{flex:1}
+.top .seg{color:var(--pv-on-bar)}
+.top .seg button{color:var(--pv-on-bar)} .top .seg button[aria-pressed="true"]{color:var(--pv-on-gold)}
+.pick{font-family:var(--pv-label);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:2px solid var(--pv-bar-line);padding:3px 8px;white-space:nowrap}
+.pick em{font-style:normal;color:var(--pv-gold)}
+.top .btn{padding:4px 10px;font-size:12px;background:transparent;color:var(--pv-on-bar);border-color:var(--pv-on-bar)}
+.headline{display:flex;align-items:baseline;gap:14px;padding:12px 20px 4px}
+.headline .x{font-family:var(--pv-display);font-size:28px;line-height:1.05;text-transform:uppercase}
+.grid1{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;padding:10px 20px 20px}
+.card{background:var(--pv-sheet);border:3px solid var(--pv-ink);padding:11px 14px;display:grid;gap:8px;align-content:start;min-width:0}
+.card h3{font-family:var(--pv-label);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;border-bottom:3px solid var(--pv-ink);padding-bottom:3px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card h3 small{font-size:11px;letter-spacing:.08em;color:var(--pv-ink-2);font-weight:600}
+.lower{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px}
+.why p{font-size:15px}
+.why p+p{border-top:1px solid var(--pv-hair);padding-top:6px}
+.why.drop p:first-of-type::first-letter{font-family:var(--pv-display);font-size:42px;float:left;line-height:.88;padding:4px 8px 0 0;color:var(--pv-red)}
+.pipe{font-family:var(--pv-label);font-weight:600;font-size:12px;color:var(--pv-ink-2);letter-spacing:.04em}
+.feed{display:grid;font-family:var(--pv-label);font-size:13px}
+.feed div{display:grid;grid-template-columns:48px 40px 1fr;gap:8px;padding:4px 0;border-bottom:1px solid var(--pv-hair)}
+.feed .t{font-weight:700;font-variant-numeric:tabular-nums}
+.feed .h{color:var(--pv-home);font-weight:700} .feed .a{color:var(--pv-away);font-weight:700}
+.pv{display:grid;grid-template-columns:44px 1fr;gap:2px 10px;border-top:2px solid var(--pv-ink);padding:6px 4px;cursor:pointer}
+.pv.active{background:var(--pv-gold-soft)}
+.pv .m{font-family:var(--pv-display);font-size:19px;line-height:1.1;grid-row:span 3}
+.pv .tt{font-weight:700;line-height:1.3}
+.pv .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pv .to{font-family:var(--pv-label);font-size:12px;font-weight:600;color:var(--pv-ink-2)}
+.pv.wait .tt{color:var(--pv-ink-2);font-style:italic;font-weight:500}
+.statlist{display:grid;gap:10px}
+svg text{font-family:var(--pv-label)}
+
+/* S2 */
+.back{display:flex;align-items:center;gap:14px;padding:12px 20px 0;font-family:var(--pv-label);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+.back a{color:var(--pv-ink)}
+.s2-head{display:grid;grid-template-columns:auto 1fr auto;gap:2px 18px;align-items:end;padding:6px 20px 12px;border-bottom:3px solid var(--pv-ink);margin:0 20px}
+.s2-head .min{font-family:var(--pv-display);font-size:72px;line-height:.85;color:var(--pv-red);grid-row:span 2}
+.s2-head h2{font-family:var(--pv-display);font-weight:400;font-size:34px;line-height:1;text-transform:uppercase}
+.s2-head .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.s2-head .acts{grid-row:span 2;display:flex;gap:10px;align-items:center}
+.grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;padding:14px 20px 20px}
+.scrub{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;font-family:var(--pv-label);font-weight:700;font-size:12px}
+.scrub .track{position:relative;height:22px;border-top:2px solid var(--pv-ink);display:flex;justify-content:space-between}
+.scrub .track span{padding-top:2px}
+.scrub .knob{position:absolute;top:-8px;left:61%;width:14px;height:14px;background:var(--pv-gold);border:2px solid var(--pv-ink)}
+table.ba{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.ba th{font-family:var(--pv-label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-align:right;color:var(--pv-ink-2);padding:3px 6px;border-bottom:2px solid var(--pv-ink)}
+table.ba th:first-child,table.ba td:first-child{text-align:left}
+table.ba td{padding:5px 6px;border-bottom:1px solid var(--pv-hair);text-align:right;font-family:var(--pv-label);font-weight:600}
+table.ba td.big{font-family:var(--pv-display);font-weight:400;font-size:17px}
+
+/* S3 */
+.grid3{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px;padding:14px 20px 20px}
+.ask{display:flex;border:2px solid var(--pv-ink);background:var(--pv-sheet)}
+.ask span{flex:1;padding:7px 10px;color:var(--pv-ink-2);font-style:italic}
+.ask b{background:var(--pv-ink);color:var(--pv-sheet);padding:7px 12px;font-family:var(--pv-label);letter-spacing:.1em;text-transform:uppercase;font-size:12px}
+.scn{display:grid}
+.scn button{display:flex;justify-content:space-between;gap:8px;text-align:left;border:0;border-top:2px solid var(--pv-ink);padding:8px 4px;background:transparent;font-weight:600;cursor:pointer}
+.scn button[aria-pressed="true"]{background:var(--pv-gold-soft)}
+.scn button small{font-family:var(--pv-label);color:var(--pv-ink-2);font-weight:600}
+.conf{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.conf dt{font-family:var(--pv-label);font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--pv-ink-2);padding-top:2px}
+.conf dd{margin:0;font-weight:600}
+.dist{display:grid;gap:4px}
+.dist .row{display:flex;height:40px;border:3px solid var(--pv-ink)}
+.dist .row i{display:flex;align-items:center;padding-inline:8px;font-style:normal;font-family:var(--pv-label);font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
+.dist .h{background:var(--pv-home);color:var(--pv-sheet)} .dist .d{background:var(--pv-draw);color:var(--pv-ink)} .dist .a{background:var(--pv-away);color:var(--pv-sheet)}
+.dist .ci{font-family:var(--pv-label);font-size:12px;color:var(--pv-ink-2);font-variant-numeric:tabular-nums}
+.verdict{display:flex;align-items:center;gap:16px;border:3px solid var(--pv-ink);background:var(--pv-gold);color:var(--pv-on-gold);padding:10px 14px}
+.verdict .big{font-family:var(--pv-display);font-size:44px;line-height:.9}
+.verdict .t{font-weight:700;font-size:16px;line-height:1.3}
+.fine{font-size:12px;color:var(--pv-ink-2);border-top:1px solid var(--pv-hair);padding-top:6px}
+
+/* Mode comparison */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
+.modes .sheet p{font-size:15px}
+.modes .sheet p+p{border-top:1px solid var(--pv-hair);padding-top:6px}
+
+/* Overlay */
+.broadcast{position:relative;height:330px;width:1180px;overflow:hidden;
+  background:repeating-linear-gradient(90deg,#2F6B3A 0 90px,#2A6234 90px 180px)}
+.broadcast::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.35))}
+.broadcast .tag{position:absolute;top:14px;left:18px;z-index:1;font-family:var(--pv-label);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#FFFFFF;background:rgba(0,0,0,.45);padding:3px 8px}
+.ov{position:absolute;left:40px;bottom:32px;z-index:2;display:grid;grid-template-columns:auto 1fr;width:640px;border:3px solid #121A3A;box-shadow:6px 6px 0 rgba(0,0,0,.35)}
+.ov .mn{background:#D22B3C;color:#FFFFFF;font-family:var(--pv-display);font-size:40px;line-height:1;display:grid;place-items:center;padding:0 16px}
+.ov .bd{background:#F8F8F3;color:#121A3A;padding:8px 14px;display:grid;gap:2px}
+.ov .bd .k{font-family:var(--pv-label);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5272}
+.ov .bd .x{font-family:var(--pv-display);font-size:24px;line-height:1.05;text-transform:uppercase}
+.ov .bd .s{font-size:14px}
+.ov .ft{grid-column:1/-1;background:#121A3A;color:#F8F8F3;display:flex;justify-content:space-between;padding:3px 14px;font-family:var(--pv-label);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.ov .ft b{color:#FFC53A;font-weight:700}
+.ovbug{position:absolute;top:14px;right:18px;z-index:2;display:flex;border:3px solid #121A3A;font-family:var(--pv-display);text-transform:uppercase}
+.ovbug span{background:#121A3A;color:#F8F8F3;padding:2px 10px;font-size:16px}
+.ovbug b{background:#FFC53A;color:#121A3A;padding:2px 10px;font-weight:400;font-size:16px}
+
+/* Rules page */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.rules ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+.do h3{border-bottom-color:var(--pv-ink)} .dont h3{color:var(--pv-red);border-bottom-color:var(--pv-red)}
+code.f{font-family:var(--pv-label);font-weight:600;font-size:13px;background:var(--pv-gold-soft);color:var(--pv-ink);padding:0 4px}
+footer{padding-block:40px 56px;color:var(--pv-ink-2);font-size:13px}
+footer .wrap{border-top:3px solid var(--pv-ink);padding-top:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (max-width:640px){.spec-row{grid-template-columns:1fr;gap:4px}.pg-no{font-size:40px}}
+@media (prefers-reduced-motion:reduce){.stamp.live::before{animation:none}.btn.pri:active{transform:none}}
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="mast-top label"><span>Official Matchday Programme · Issue 1021</span><span>设计规范 v1 · 2026/10/23</span></div>
+    <h1>Pivot<span class="dot" aria-hidden="true"></span></h1>
+    <div class="mast-fix"><span>Harbour City</span><span class="v">v</span><span>Northvale Rovers</span><span class="muted" style="color:inherit;opacity:.7">· Kick-off 20:00 · Synthetic league</span></div>
+    <p class="mast-lede">Pivot 网页界面的赛日刊物风格。纸张底色加网点、深蓝油墨、金黄比分框、红色标题条，方角卡片配印刷粗线。这份规范给 C01 搭骨架用，所有颜色和字体以 <code class="f" style="background:var(--pv-gold);color:var(--pv-on-gold)">docs/design/tokens.css</code> 为准。</p>
+    <nav class="contents" aria-label="目录">
+      <a href="#colours"><b>02</b>颜色</a>
+      <a href="#type"><b>03</b>字体</a>
+      <a href="#parts"><b>04</b>组件</a>
+      <a href="#s1"><b>05</b>S1 实时看板</a>
+      <a href="#s2"><b>06</b>S2 转折点详情</a>
+      <a href="#s3"><b>07</b>S3 「假如」实验室</a>
+      <a href="#modes"><b>08</b>两种观看模式</a>
+      <a href="#overlay"><b>09</b>转播叠加层</a>
+      <a href="#rules"><b>10</b>做与不做</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="pg" id="colours">
+  <div class="pg-head"><span class="pg-no">02</span><span class="label">Colours · 颜色</span><h2>Paper, ink and gold</h2></div>
+  <div class="note"><p>刊物只用三种「墨」：<b>深蓝油墨</b>写字和画线，<b>金黄</b>标比分、主按钮和重点数字，<b>红色</b>只给 LIVE、标题条和首字下沉。两支球队各用自己的队色，和界面颜色分开。夜间模式叫「灯光球场版」，纸变成深蓝，墨变成米白，金黄不变。</p></div>
+  <div class="sw" id="swatches"></div>
+</section>
+
+<section class="pg" id="type">
+  <div class="pg-head"><span class="pg-no">03</span><span class="label">Type · 字体</span><h2>Slab headlines, narrow numbers</h2></div>
+  <div class="sheet spec">
+    <div class="spec-row"><span class="label">Display · Alfa Slab One</span><span class="t-display">Substitution flipped the left flank</span></div>
+    <div class="spec-row"><span class="label">Heading · 26px 大写</span><span class="t-head">Why it turned</span></div>
+    <div class="spec-row"><span class="label">Label · Archivo Narrow 700</span><span class="t-label">Momentum · Pivots · Match stats</span></div>
+    <div class="spec-row"><span class="label">Numbers · 等宽数字</span><span class="t-num">74:12 &nbsp; 54% · 46% &nbsp; xG 1.21</span></div>
+    <div class="spec-row"><span class="label">Body · Archivo 15px</span><span style="max-width:62ch">After the change, Harbour City's final-third passes fell from <span class="hl">9 to 3</span>. Northvale won 6 of 8 duels on their right flank. 中文界面回落到 Noto Sans SC。</span></div>
+  </div>
+  <div class="note muted"><p>字号只用这一组：11 / 13 / 15 / 19 / 26 / 38 / 56 px。标题字体只用在比分、分钟数、大标题上，每屏最多三处；正文和数字不用它。</p></div>
+</section>
+
+<section class="pg" id="parts">
+  <div class="pg-head"><span class="pg-no">04</span><span class="label">Components · 组件</span><h2>The parts list</h2></div>
+  <div class="comp-grid">
+    <div class="sheet"><h3>Status stamps · 状态章</h3>
+      <div class="comp-row"><span class="stamp live">Live</span><span class="stamp ok">Verified ✓</span><span class="stamp warn">Auto summary</span><span class="stamp bad">Claim rejected</span><span class="stamp line">Analysing…</span></div>
+      <p class="muted" style="font-size:13px">像盖在刊物上的印章：方角、全大写、粗边。已核对用深蓝底金字，降级用米黄，拒绝用浅红。</p></div>
+    <div class="sheet"><h3>Buttons · 按钮</h3>
+      <div class="comp-row"><button class="btn pri" type="button">Run simulation</button><button class="btn" type="button">What if…</button><button class="btn ghost" type="button">Not a turning point</button></div>
+      <p class="muted" style="font-size:13px">主按钮金黄加错位阴影，像贴在纸上的票根；每屏只放一个。</p></div>
+    <div class="sheet"><h3>Evidence chips · 证据标签</h3>
+      <p>Pressures rose from <span class="hl">6 to 12</span> <button class="ev" type="button">#2336</button> <button class="ev on" type="button">#2391</button></p>
+      <p class="muted" style="font-size:13px">每个标签对应一个事件编号，点击后在球场图上高亮那次动作。被点中时变金黄。</p></div>
+    <div class="sheet"><h3>Kicker and severity · 标题条</h3>
+      <div class="comp-row"><span class="kicker">Latest pivot · 63′</span><span class="sev" aria-label="严重度 3/3">●●●</span><span class="sev" aria-label="严重度 2/3">●●<i>●</i></span></div>
+      <p class="muted" style="font-size:13px">红色标题条只出现在每屏的主标题前。严重度用三个点表示。</p></div>
+    <div class="sheet"><h3>Stat bar · 对比条</h3>
+      <div class="statlist" id="demoStats"></div></div>
+    <div class="sheet"><h3>Viewer settings · 观看设置 (C08)</h3>
+      <div class="comp-row"><span class="seg" role="group" aria-label="观看模式"><button type="button" aria-pressed="true" data-seg>Analyst</button><button type="button" aria-pressed="false" data-seg>Fan</button></span>
+        <span class="seg" role="group" aria-label="语言"><button type="button" aria-pressed="true" data-seg>EN</button><button type="button" aria-pressed="false" data-seg>中文</button><button type="button" aria-pressed="false" data-seg>ES</button></span></div>
+      <p class="muted" style="font-size:13px">放在顶栏右侧，和主队、关注球员选择器排在一起。</p></div>
+  </div>
+</section>
+
+<section class="pg" id="s1">
+  <div class="pg-head"><span class="pg-no">05</span><span class="label">Screen S1 · 实时看板 · C02 + C08</span><h2>The live board</h2></div>
+  <div class="note"><p>一屏读完整场：顶栏是比分、时钟和观看设置；下面一行大标题永远是<b>最新的转折点</b>；左边势头曲线占最大面积，右边是转折点列表和比赛数据。势头曲线上方是主队占优，下方是客队占优，转折点用红色竖线标在曲线上。</p></div>
+  <div class="frame"><div class="screen">
+    <div class="top">
+      <span class="brand">Pivot</span>
+      <span class="score"><span class="tm">Harbour City</span><span class="sc">1</span><span class="sc">1</span><span class="tm">Northvale Rovers</span></span>
+      <span class="clock">74:12</span><span class="stamp live">Live</span>
+      <span class="sp"></span>
+      <span class="seg" role="group" aria-label="观看模式"><button type="button" aria-pressed="true" data-seg>Analyst</button><button type="button" aria-pressed="false" data-seg>Fan</button></span>
+      <span class="pick" title="Team">♥ <em>HCY ▾</em></span><span class="pick" title="Player">★ <em>Moreau ▾</em></span>
+      <span class="seg" role="group" aria-label="语言"><button type="button" aria-pressed="true" data-seg>EN</button><button type="button" aria-pressed="false" data-seg>中文</button><button type="button" aria-pressed="false" data-seg>ES</button></span>
+      <button class="btn" type="button">Trace 3</button>
+    </div>
+    <div class="headline"><span class="kicker">Latest pivot · 63′</span><span class="x">Substitution flipped the left flank</span></div>
+    <div class="grid1">
+      <div style="display:grid;gap:14px;min-width:0">
+        <div class="card"><h3>Momentum <small><span style="color:var(--pv-home)">■</span> Harbour City &nbsp; <span style="color:var(--pv-away)">■</span> Northvale Rovers</small></h3>
+          <svg id="mom" viewBox="0 0 780 220" role="img" aria-label="势头曲线：38 分钟后主队占优，63 分钟后转向客队"></svg></div>
+        <div class="lower">
+          <div class="card why drop"><h3>Why it turned <small>63′ · verified</small></h3>
+            <p>After the change, Harbour City's final-third passes fell from <span class="hl">9 to 3</span>. <button class="ev" type="button">#2311</button> <button class="ev" type="button">#2318</button></p>
+            <p>Northvale won <span class="hl">6 of 8</span> duels on their right flank, where Moreau had been the outlet. <button class="ev" type="button">#2324</button></p>
+            <p>Northvale's pressures rose from <span class="hl">6 to 12</span>, and their equaliser followed. <button class="ev" type="button">#2391</button></p>
+            <span class="pipe">Judge ✓ · Explainer ✓ · Verifier ✓ 3 claims · 6 evidence</span></div>
+          <div class="card"><h3>Events <small>auto-scroll</small></h3>
+            <div class="feed">
+              <div><span class="t">74:05</span><span class="a">NVR</span><span>Pass · R. Ibe → T. Marsh ✓</span></div>
+              <div><span class="t">73:51</span><span class="h">HCY</span><span>Tackle · J. Kessler ✓</span></div>
+              <div><span class="t">73:40</span><span class="a">NVR</span><span>Shot · T. Marsh · xG 0.08</span></div>
+              <div><span class="t">73:22</span><span class="a">NVR</span><span>Pressure · K. Ansah</span></div>
+              <div><span class="t">73:10</span><span class="h">HCY</span><span>Pass · L. Varga ✗</span></div>
+              <div><span class="t">72:48</span><span class="a">NVR</span><span>Corner · right side</span></div>
+            </div></div>
+        </div>
+      </div>
+      <div style="display:grid;gap:14px;align-content:start">
+        <div class="card"><h3>Pivots <small>3 this match</small></h3>
+          <div class="pv wait"><span class="m">74′</span><span class="tt">Checking a momentum swing…</span><span class="meta"><span class="stamp line">Analysing…</span></span></div>
+          <div class="pv active"><span class="m">63′</span><span class="tt">Substitution flipped the left flank</span><span class="meta"><span class="sev">●●●</span><span class="stamp ok">Verified ✓</span></span><span class="to">Momentum → Northvale Rovers</span></div>
+          <div class="pv"><span class="m">38′</span><span class="tt">Red card tilted control to Harbour City</span><span class="meta"><span class="sev">●●●</span><span class="stamp ok">Verified ✓</span></span><span class="to">Momentum → Harbour City</span></div>
+        </div>
+        <div class="card"><h3>Match stats <small>0′–74′</small></h3><div class="statlist" id="s1Stats"></div></div>
+      </div>
+    </div>
+  </div></div>
+  <div class="cap"><span class="label">状态</span><span class="muted">断线时顶栏下方出现米黄提示条「Live connection lost. Reconnecting…」，数据停在断线那一秒；AI 暂不可用时卡片换成「Auto summary」章，内容照常显示（C06）。</span></div>
+</section>
+
+<section class="pg" id="s2">
+  <div class="pg-head"><span class="pg-no">06</span><span class="label">Screen S2 · 转折点详情 · C04</span><h2>The pivot, page by page</h2></div>
+  <div class="note"><p>像刊物里的一篇赛事报道：红色大号分钟数打头，左边球场图显示 22 名球员当时的站位，右边三句解释，每句后面跟证据标签。点证据标签，球场图上对应的那次动作会变成金黄；拖动时间条可以看前后的站位变化。</p></div>
+  <div class="frame"><div class="screen">
+    <div class="top"><span class="brand">Pivot</span><span class="score"><span class="tm">HCY</span><span class="sc">1</span><span class="sc">1</span><span class="tm">NVR</span></span><span class="clock">74:12</span><span class="sp"></span><span class="seg" role="group" aria-label="观看模式"><button type="button" aria-pressed="true" data-seg>Analyst</button><button type="button" aria-pressed="false" data-seg>Fan</button></span><button class="btn" type="button">Trace</button></div>
+    <div class="back"><a href="#s1">← Live board</a></div>
+    <div class="s2-head">
+      <span class="min">63′</span>
+      <h2>Substitution flipped the left flank</h2>
+      <span class="acts"><button class="btn pri" type="button">What if…</button><button class="btn ghost" type="button">Not a turning point</button></span>
+      <span class="meta"><span class="sev">●●●</span><span class="stamp ok">Verified ✓ · 3 claims · 6 evidence</span><span class="pipe">Momentum → Northvale Rovers</span></span>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Pitch <small>55′–68′ · Northvale attack →</small></h3>
+        <svg id="pitch" viewBox="0 0 525 340" role="img" aria-label="球场图：22 名球员站位，#2324 动作高亮"></svg>
+        <div class="scrub"><span>▶</span><div class="track"><span>55′</span><span>63′</span><span>68′</span><i class="knob"></i></div></div></div>
+      <div style="display:grid;gap:14px;align-content:start">
+        <div class="card why drop"><h3>Why it turned</h3>
+          <p>After the change, Harbour City's final-third passes fell from <span class="hl">9 to 3</span>. <button class="ev" type="button">#2311</button> <button class="ev" type="button">#2318</button></p>
+          <p>Northvale won <span class="hl">6 of 8</span> duels on their right flank, where Moreau had been the outlet. <button class="ev on" type="button">#2324</button> <button class="ev" type="button">#2330</button></p>
+          <p>Northvale's pressures rose from <span class="hl">6 to 12</span>, and their equaliser followed. <button class="ev" type="button">#2336</button> <button class="ev" type="button">#2391</button></p></div>
+        <div class="card"><h3>Before / after</h3>
+          <table class="ba"><thead><tr><th>Metric</th><th>58–63′</th><th>63–68′</th></tr></thead>
+            <tbody><tr><td>HCY final-third passes</td><td class="big">9</td><td class="big">3</td></tr>
+            <tr><td>NVR pressures</td><td class="big">6</td><td class="big">12</td></tr>
+            <tr><td>Momentum (avg)</td><td class="big">+0.42</td><td class="big">−0.31</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="pg" id="s3">
+  <div class="pg-head"><span class="pg-no">07</span><span class="label">Screen S3 · 「假如」实验室 · C05</span><h2>Replay it a thousand times</h2></div>
+  <div class="note"><p>左栏选一个改动并确认，右栏给结果。结果用两条三段对比条：上面是实际走势，下面是改动后的走势，每段写百分比和可信范围。差距明显时出现金黄结论条，在误差范围内则改成灰色的「No clear difference」。底部始终写明这是模拟，不是预测。</p></div>
+  <div class="frame"><div class="screen">
+    <div class="top"><span class="brand">Pivot</span><span class="score"><span class="tm">HCY</span><span class="sc">1</span><span class="sc">1</span><span class="tm">NVR</span></span><span class="sp"></span><span class="label" style="color:var(--pv-gold)">What-if Lab</span></div>
+    <div class="back"><a href="#s2">← Pivot 63′ · Substitution flipped the left flank</a></div>
+    <div class="grid3">
+      <div style="display:grid;gap:14px;align-content:start">
+        <div class="card"><h3>Ask a what-if</h3><div class="ask"><span>What if Harbour City kept Moreau on?</span><b>Parse</b></div></div>
+        <div class="card"><h3>Or pick a scenario</h3>
+          <div class="scn">
+            <button type="button" aria-pressed="true" data-seg>Cancel 63′ substitution <small>#2302</small></button>
+            <button type="button" aria-pressed="false" data-seg>Remove 38′ red card <small>#1544</small></button>
+            <button type="button" aria-pressed="false" data-seg>Move substitution to 75′</button>
+            <button type="button" aria-pressed="false" data-seg>Press higher from 63′</button>
+          </div></div>
+        <div class="card"><h3>Confirm change</h3>
+          <dl class="conf"><dt>Change</dt><dd>Cancel Kessler ⇄ Moreau · HCY · 63′</dd><dt>From</dt><dd>63:00 snapshot</dd><dt>Runs</dt><dd>1,000 paired · seeds 1021000–1021999</dd></dl>
+          <div class="comp-row"><button class="btn pri" type="button">Run simulation</button><button class="btn ghost" type="button">Edit</button></div></div>
+      </div>
+      <div class="card" style="gap:14px"><h3>Result <small>1,000 runs · 4.1 s</small></h3>
+        <div class="verdict"><span class="big">+18</span><span class="t">points more likely Harbour City win if Moreau stays on.<br><span class="stamp ok" style="margin-top:4px">Significant</span></span></div>
+        <div class="dist"><span class="label muted">As played (from 63′)</span>
+          <div class="row"><i class="h" style="width:34%">HCY 34%</i><i class="d" style="width:41%">Draw 41%</i><i class="a" style="width:25%">NVR 25%</i></div>
+          <span class="ci">34% (30–38) · 41% (37–45) · 25% (21–29)</span></div>
+        <div class="dist"><span class="label muted">If the substitution is cancelled</span>
+          <div class="row"><i class="h" style="width:52%">HCY 52%</i><i class="d" style="width:31%">Draw 31%</i><i class="a" style="width:17%">NVR 17%</i></div>
+          <span class="ci">52% (48–56) · 31% (27–35) · 17% (14–21)</span></div>
+        <div class="why"><p>Keeping Moreau on preserved Harbour City's left-side outlet: simulated final-third entries rose by <span class="hl">38%</span> after 63′.</p></div>
+        <div class="comp-row"><button class="btn" type="button">Share card</button><button class="btn ghost" type="button">Try another</button></div>
+        <p class="fine">Simulated from a synthetic match model. Not a prediction. Baseline and change share the same seeds; ranges are 95% Wilson intervals.</p>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="pg" id="modes">
+  <div class="pg-head"><span class="pg-no">08</span><span class="label">Personalize · 两种观看模式 · C08 + D11</span><h2>Same evidence, two voices</h2></div>
+  <div class="note"><p>切换模式时卡片的版式不变，只换文字：分析师版讲数字和战术术语，球迷版讲成故事，每句最多一个数字。两版引用同一组证据，都盖「Verified」章。选了主队之后，从主队的角度叙述；选了关注球员，他的名字加金黄底。</p></div>
+  <div class="modes">
+    <div class="sheet why"><h3>Analyst</h3>
+      <p>After the change, Harbour City's final-third passes fell from <span class="hl">9 to 3</span>. <button class="ev" type="button">#2311</button></p>
+      <p>Northvale won <span class="hl">6 of 8</span> duels on the right, where <span class="hl">Moreau</span> had been the outlet. <button class="ev" type="button">#2324</button></p>
+      <p>Pressures rose from <span class="hl">6 to 12</span> before the equaliser. <button class="ev" type="button">#2391</button></p>
+      <span class="stamp ok" style="justify-self:start">Verified ✓</span></div>
+    <div class="sheet why"><h3>Fan · following Harbour City</h3>
+      <p>Taking <span class="hl">Moreau</span> off cost us our best way forward down the left. <button class="ev" type="button">#2311</button></p>
+      <p>Northvale smelled it and kept winning the ball on that side. <button class="ev" type="button">#2324</button></p>
+      <p>Within <span class="hl">five minutes</span> they had pinned us back and scored. <button class="ev" type="button">#2391</button></p>
+      <span class="stamp ok" style="justify-self:start">Verified ✓</span></div>
+  </div>
+</section>
+
+<section class="pg" id="overlay">
+  <div class="pg-head"><span class="pg-no">09</span><span class="label">Render · 转播叠加层 · C09</span><h2>On the broadcast</h2></div>
+  <div class="note"><p>叠加层页面背景透明，下面的绿色只是示意的转播画面。卡片按比赛时钟出现 12 秒后滑出。叠加层在两种主题下都用固定的白卡深蓝字，保证压在任何画面上都看得清。</p></div>
+  <div class="frame"><div class="broadcast">
+    <span class="tag">Broadcast feed (placeholder)</span>
+    <div class="ovbug"><span>HCY 1–1 NVR</span><b>74′</b></div>
+    <div class="ov"><span class="mn">63′</span>
+      <div class="bd"><span class="k">Pivot · Momentum → Northvale Rovers</span><span class="x">Substitution flipped the left flank</span><span class="s">Final-third passes fell from 9 to 3 after Moreau went off.</span></div>
+      <div class="ft"><span>Pivot · verified by event data</span><b>●●●</b></div></div>
+  </div></div>
+</section>
+
+<section class="pg" id="rules">
+  <div class="pg-head"><span class="pg-no">10</span><span class="label">House style · 做与不做</span><h2>House rules</h2></div>
+  <div class="rules">
+    <div class="sheet do"><h3>Do · 要</h3><ul>
+      <li>颜色、字体、间距全部用 <code class="f">--pv-*</code> 变量，不写死色值（叠加层卡片除外）。</li>
+      <li>卡片用方角和 3px 深蓝粗边；卡片内部的分隔用 1px 细线。</li>
+      <li>数字一律用 Archivo Narrow 加等宽数字，关键数字加金黄荧光笔底。</li>
+      <li>主队、客队永远用 <code class="f">--pv-home</code> / <code class="f">--pv-away</code>，图表和文字一致。</li>
+      <li>每屏只有一个金黄主按钮、一个红色标题条。</li>
+    </ul></div>
+    <div class="sheet dont"><h3>Don't · 不要</h3><ul>
+      <li>不用圆角、渐变按钮和柔和阴影，唯一的阴影是主按钮的错位实色阴影。</li>
+      <li>不用 Alfa Slab One 写正文或小于 17px 的字。</li>
+      <li>不用真实联赛、球队的名字和队徽，界面上始终能看到「Synthetic」字样。</li>
+      <li>不用 emoji 当图标；比赛事件用文字和 ⚽ ▮ ⇄ 这几个符号。</li>
+      <li>深色模式不要简单反色：顶栏仍然最深，金黄不变。</li>
+    </ul></div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap"><span>Pivot · Matchday Programme 设计规范 · 给 C01–C09 使用</span><span>All teams, players and matches are synthetic. Not affiliated with any league or club.</span></div></footer>
+
+<script>
+(function(){
+  // Colour swatches, read from the live tokens so they follow the theme.
+  var sw=[["--pv-paper","Paper 纸张"],["--pv-sheet","Sheet 卡片"],["--pv-ink","Ink 油墨"],["--pv-ink-2","Ink 2 次要文字"],["--pv-bar","Bar 顶栏"],["--pv-gold","Gold 金黄"],["--pv-gold-soft","Gold soft 选中行"],["--pv-red","Red 红"],["--pv-home","Home 主队"],["--pv-away","Away 客队"],["--pv-draw","Draw 平局"],["--pv-warn-bg","Warn 降级"],["--pv-bad-bg","Bad 拒绝"],["--pv-pitch","Pitch 球场"]];
+  var host=document.getElementById("swatches");
+  sw.forEach(function(s){var d=document.createElement("div");d.className="chip";
+    d.innerHTML='<i style="background:var('+s[0]+')"></i><div><span>'+s[1]+'</span><code>'+s[0]+'</code></div>';host.appendChild(d)});
+
+  function stats(el,rows){rows.forEach(function(r){var t=r[1]+r[2]||1,d=document.createElement("div");d.className="stat";
+    d.innerHTML='<span class="nm">'+r[0]+'</span><span>'+r[3]+'</span><span class="bar"><i style="width:'+(r[1]/t*100)+'%"></i><i style="width:'+(r[2]/t*100)+'%"></i></span><span class="r">'+r[4]+'</span>';el.appendChild(d)})}
+  stats(document.getElementById("demoStats"),[["Possession",54,46,"54%","46%"],["xG",1.21,0.94,"1.21","0.94"]]);
+  stats(document.getElementById("s1Stats"),[["Possession",54,46,"54%","46%"],["Shots",11,9,"11","9"],["xG",1.21,0.94,"1.21","0.94"],["Pressures",38,51,"38","51"],["Final-third passes",41,33,"41","33"]]);
+
+  // Momentum: deterministic sample series, home above the line, away below.
+  var NS="http://www.w3.org/2000/svg";
+  function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);(p||null)&&p.appendChild(e);return e}
+  var seed=1021;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647-.5}
+  var m=[],v=0;for(var i=0;i<=74;i++){var target=i<38?0.05:(i<63?0.45:-0.4);v+= (target-v)*0.16+rnd()*0.22;m.push(Math.max(-1,Math.min(1,v)))}
+  var svg=document.getElementById("mom"),W=780,H=220,L=34,R=12,T=14,B=26,mid=T+(H-T-B)/2,amp=(H-T-B)/2;
+  function x(t){return L+(W-L-R)*t/90} function y(val){return mid-val*amp}
+  el("rect",{x:x(45),y:T,width:1,height:H-T-B,fill:"var(--pv-hair)"},svg);
+  el("text",{x:x(45)+4,y:T+10,"font-size":11,fill:"var(--pv-ink-2)"},svg).textContent="HT";
+  el("line",{x1:L,x2:W-R,y1:mid,y2:mid,stroke:"var(--pv-ink)","stroke-width":2},svg);
+  [0,15,30,45,60,75,90].forEach(function(t){el("text",{x:x(t),y:H-8,"font-size":11,"text-anchor":"middle",fill:"var(--pv-ink-2)"},svg).textContent=t+"′"});
+  el("text",{x:4,y:T+12,"font-size":11,"font-weight":700,fill:"var(--pv-home)"},svg).textContent="HCY";
+  el("text",{x:4,y:H-B-4,"font-size":11,"font-weight":700,fill:"var(--pv-away)"},svg).textContent="NVR";
+  var defs=el("defs",{},svg);
+  el("rect",{x:0,y:0,width:W,height:mid},el("clipPath",{id:"up"},defs));
+  el("rect",{x:0,y:mid,width:W,height:H},el("clipPath",{id:"dn"},defs));
+  var area="M"+x(0)+","+mid+m.map(function(val,t){return" L"+x(t)+","+y(val)}).join("")+" L"+x(74)+","+mid+" Z";
+  var line="M"+m.map(function(val,t){return x(t)+","+y(val)}).join(" L");
+  el("path",{d:area,fill:"var(--pv-home)","fill-opacity":.85,"clip-path":"url(#up)"},svg);
+  el("path",{d:area,fill:"var(--pv-away)","fill-opacity":.85,"clip-path":"url(#dn)"},svg);
+  el("path",{d:line,fill:"none",stroke:"var(--pv-ink)","stroke-width":1.5},svg);
+  [[38,"38′"],[63,"63′"]].forEach(function(p){el("line",{x1:x(p[0]),x2:x(p[0]),y1:T,y2:H-B,stroke:"var(--pv-red)","stroke-width":3},svg);
+    var g=el("g",{},svg);el("rect",{x:x(p[0])-17,y:T-12,width:34,height:17,fill:"var(--pv-red)"},g);
+    el("text",{x:x(p[0]),y:T,"font-size":12,"font-weight":700,"text-anchor":"middle",fill:"var(--pv-on-red)"},g).textContent=p[1]});
+  el("circle",{cx:x(74),cy:y(m[74]),r:5,fill:"var(--pv-gold)",stroke:"var(--pv-ink)","stroke-width":2},svg);
+  el("rect",{x:x(74)+8,y:T,width:2,height:H-T-B,fill:"var(--pv-hair)"},svg);
+
+  // Pitch: 105 x 68 m at 5 px per metre; Harbour City (home) defend the left goal.
+  var P=document.getElementById("pitch"),s=5,ln={fill:"none",stroke:"var(--pv-pitch-line)","stroke-width":2};
+  el("rect",{x:0,y:0,width:525,height:340,fill:"var(--pv-pitch)"},P);
+  el("rect",Object.assign({x:1,y:1,width:523,height:338},ln),P);
+  el("line",Object.assign({x1:262.5,x2:262.5,y1:0,y2:340},ln),P);
+  el("circle",Object.assign({cx:262.5,cy:170,r:9.15*s},ln),P);
+  el("rect",Object.assign({x:0,y:(68-40.3)/2*s,width:16.5*s,height:40.3*s},ln),P);
+  el("rect",Object.assign({x:525-16.5*s,y:(68-40.3)/2*s,width:16.5*s,height:40.3*s},ln),P);
+  el("rect",Object.assign({x:0,y:(68-18.3)/2*s,width:5.5*s,height:18.3*s},ln),P);
+  el("rect",Object.assign({x:525-5.5*s,y:(68-18.3)/2*s,width:5.5*s,height:18.3*s},ln),P);
+  var home=[[5,34],[22,10],[20,27],[20,41],[22,58],[40,22],[38,40],[48,32],[58,12],[62,36],[60,56]];
+  var away=[[100,34],[72,58],[70,44],[72,28],[74,12],[60,48],[56,30],[52,20],[44,62],[42,46],[46,8]];
+  // Highlighted action #2324: Northvale win the duel on their right flank and carry forward.
+  el("line",{x1:44*s,y1:62*s,x2:30*s,y2:60*s,stroke:"var(--pv-gold)","stroke-width":5},P);
+  el("polygon",{points:(30*s)+","+(60*s-7)+" "+(30*s-12)+","+(60*s)+" "+(30*s)+","+(60*s+7),fill:"var(--pv-gold)",stroke:"var(--pv-ink)","stroke-width":1.5},P);
+  function dot(p,fill,num){var g=el("g",{},P);el("circle",{cx:p[0]*s,cy:p[1]*s,r:9,fill:fill,stroke:"var(--pv-ink)","stroke-width":2},g);
+    el("text",{x:p[0]*s,y:p[1]*s+4,"font-size":10,"font-weight":700,"text-anchor":"middle",fill:"var(--pv-sheet)"},g).textContent=num}
+  home.forEach(function(p,i){dot(p,"var(--pv-home)",i+1)});
+  away.forEach(function(p,i){dot(p,"var(--pv-away)",i+1)});
+  el("circle",{cx:44*s,cy:62*s,r:15,fill:"none",stroke:"var(--pv-gold)","stroke-width":3},P);
+  var tg=el("g",{},P);el("rect",{x:44*s-26,y:62*s-40,width:52,height:18,fill:"var(--pv-gold)",stroke:"var(--pv-ink)","stroke-width":1.5},tg);
+  el("text",{x:44*s,y:62*s-27,"font-size":12,"font-weight":700,"text-anchor":"middle",fill:"var(--pv-on-gold)"},tg).textContent="#2324";
+
+  // Segmented controls and scenario list toggle within their group.
+  document.querySelectorAll("[data-seg]").forEach(function(b){b.addEventListener("click",function(){
+    b.parentElement.querySelectorAll("[data-seg]").forEach(function(o){o.setAttribute("aria-pressed",o===b?"true":"false")})})});
+  document.querySelectorAll(".ev").forEach(function(b){b.addEventListener("click",function(){b.classList.toggle("on")})});
+})();
+</script>
