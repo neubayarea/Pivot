@@ -77,7 +77,7 @@ def _evidence(c: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[Match
     return nearby[:1]
 
 
-def _clean_headline(text: str) -> str:
+def clean_headline(text: str) -> str:
     words = re.sub(r"\d", "", text).split()
     return " ".join(words[:8]) or "Momentum swings"
 
@@ -106,7 +106,7 @@ def template_explain(
         if stat:
             sentences.append(stat)
         sentences.append(ExplanationSentence(text=f"From there the momentum swung towards {team}.", evidence_ids=ids[:4]))
-        return Narrative(prefs=prefs, headline=_clean_headline(headline or f"Momentum swings to {team}"),
+        return Narrative(prefs=prefs, headline=clean_headline(headline or f"Momentum swings to {team}"),
                          sentences=sentences[:3], source="template", verifier_attempts=verifier_attempts,
                          chain_id=chain_id)
     except Exception:
