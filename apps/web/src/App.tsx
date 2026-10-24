@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import TopBar from "./components/TopBar";
+import { MatchProvider } from "./data/match";
 import LiveBoard from "./pages/LiveBoard";
 import NotFound from "./pages/NotFound";
 import PivotDetail from "./pages/PivotDetail";
@@ -18,7 +19,7 @@ export default function App() {
   const [prefs, setPrefs] = useState<ViewerPrefs>(DEFAULT_PREFS);
 
   return (
-    <>
+    <MatchProvider>
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <main className="page">
         <Routes>
@@ -28,6 +29,6 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-    </>
+    </MatchProvider>
   );
 }

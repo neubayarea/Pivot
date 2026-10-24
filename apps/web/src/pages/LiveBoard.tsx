@@ -1,43 +1,76 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import Card from "../components/Card";
+import EventFeed from "../components/EventFeed";
 import Kicker from "../components/Kicker";
-import Stamp from "../components/Stamp";
+import MatchStats from "../components/MatchStats";
+import MomentumChart from "../components/MomentumChart";
+import PivotList from "../components/PivotList";
+import Playback from "../components/Playback";
+import WhyItTurned from "../components/WhyItTurned";
+import { useMatch } from "../data/match";
 
-// S1 · Live board. Placeholder layout; C02 fills momentum, pivots and stats.
+// S1 · Live board. Layout follows "05 S1" in docs/design/matchday-programme.html.
 export default function LiveBoard() {
+  const { match, teams, metrics, pivots } = useMatch();
+  const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
+  const latest = pivots.find((p) => p.status === "confirmed") ?? null;
+  const minute = Math.floor(match.clock / 60);
+
+  const toggle = (id: string) =>
+    setEvidence((s) => {
+      const next = new Set(s);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
   return (
     <>
       <div className="headline">
-        <Kicker>Latest pivot · 63′</Kicker>
-        <span className="x">Substitution flipped the left flank</span>
+        {latest ? (
+          <div className="latest" key={latest.pivot_id}>
+            <Kicker>Latest pivot · {latest.minute}′</Kicker>
+            <span className="x">{latest.narrative?.headline}</span>
+          </div>
+        ) : (
+          <div className="latest">
+            <Kicker>Kick-off</Kicker>
+            <span className="x">Watching for the first pivot</span>
+          </div>
+        )}
+        <span className="sp" />
+        <Playback />
       </div>
       <div className="grid1">
         <div className="stack">
-          <Card title="Momentum" note="coming in C02">
-            <div className="placeholder">Momentum chart</div>
+          <Card
+            title="Momentum"
+            note={
+              <>
+                <span style={{ color: "var(--pv-home)" }}>■</span> {teams.home.name} &nbsp;
+                <span style={{ color: "var(--pv-away)" }}>■</span> {teams.away.name}
+              </>
+            }
+          >
+            <MomentumChart
+              metrics={metrics}
+              pivots={pivots}
+              homeLabel={teams.home.short_name}
+              awayLabel={teams.away.short_name}
+            />
           </Card>
           <div className="lower">
-            <Card title="Why it turned" note="63′">
-              <p className="muted">The verified explanation for the latest pivot appears here.</p>
-            </Card>
+            <WhyItTurned pivot={latest} selected={evidence} onToggle={toggle} />
             <Card title="Events" note="auto-scroll">
-              <p className="muted">Live event feed.</p>
+              <EventFeed highlight={evidence} />
             </Card>
           </div>
         </div>
         <div className="stack">
-          <Card title="Pivots" note="3 found">
-            <Link to="/pivot/demo-63" className="pv-link">
-              <span className="m">63′</span>
-              <span>
-                <b>Substitution flipped the left flank</b>
-                <br />
-                <Stamp tone="ok">Verified ✓</Stamp>
-              </span>
-            </Link>
+          <Card title="Pivots" note={`${pivots.length} this match`}>
+            <PivotList activeId={latest?.pivot_id ?? null} />
           </Card>
-          <Card title="Match stats">
-            <p className="muted">Possession, shots, xG.</p>
+          <Card title="Match stats" note={`0′–${minute}′`}>
+            <MatchStats />
           </Card>
         </div>
       </div>
