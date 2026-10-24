@@ -168,6 +168,8 @@ AI 相关的几项（`PIVOT_PIPELINE`、`PIVOT_FOUNDRY_*`、`PIVOT_MODEL_*`、`A
 
 `.env` 里有密钥，**不要提交到 git，不要发到群里**（`.gitignore` 已经忽略了它）。
 
+用 Dokploy 部署时没有 `.env` 文件：把 `.env.example` 里的各行复制到应用的 Environment 页再改值。注意 `PIVOT_WS_URL` 要自己填成 `wss://<域名>/api/ws`，`PIVOT_DATA_DIR` 填挂了持久卷的文件夹（例如 `/data`）。
+
 ## 8. 启动
 
 ```bash
