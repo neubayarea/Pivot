@@ -1,13 +1,19 @@
 // Which match S1, S2 and the overlay show (Ax6). `?match=` wins, then the viewer's last pick
-// (localStorage), else the API's choice (its live match, else its latest). The picker in the top
-// bar lists the API's matches and polls while the server is still generating its simulated ones.
+// (localStorage), else the API's choice (the recorded demo, else its live match, else its latest).
+// The picker in the top bar lists the API's matches and polls while the server is still generating
+// its simulated ones.
 import { createContext, useContext, useEffect, useState } from "react";
 import type { Match } from "@pivot/contracts";
 import type { T } from "../i18n";
 import { api, type SimsStatus } from "./live/api";
 
 const STORAGE_KEY = "pivot.match";
+/** The hand-made sample match the API seeds for frontend work (apps/api demo.py). */
 export const DEMO_MATCH_ID = "M-api-demo";
+/** The recorded demo (B02): simulated, committed as eval/fixtures/demo-1021, the same on every machine. */
+export const DEMO_PRESET = "demo-1021";
+
+export const isRecordedDemo = (m: Match) => m.preset === DEMO_PRESET;
 const POLL_MS = 2000;
 
 /** `fromUrl`: a match named in the link is shown as "not found" if missing; a saved one is just dropped. */
@@ -34,9 +40,13 @@ export function initialMatch(search: string, saved: string | null): MatchChoice 
   return asked ? { id: asked, fromUrl: true } : { id: saved, fromUrl: false };
 }
 
-/** "HBC 4–5 ROV · seed 101"; the hand-made demo match says so instead of its seed. */
+/** "HBC 4–5 ROV · seed 101"; the recorded demo and the hand-made sample say so instead of a seed. */
 export function matchLabel(m: Match, t: T): string {
-  const tag = m.match_id === DEMO_MATCH_ID ? t("picker.demo") : t("picker.seed", { seed: m.seed });
+  const tag = isRecordedDemo(m)
+    ? t("picker.demo")
+    : m.match_id === DEMO_MATCH_ID
+      ? t("picker.sample")
+      : t("picker.seed", { seed: m.seed });
   const status = m.status === "finished" ? "" : ` · ${t(`status.${m.status}`)}`;
   return `${m.home.short_name} ${m.score.home}–${m.score.away} ${m.away.short_name} · ${tag}${status}`;
 }

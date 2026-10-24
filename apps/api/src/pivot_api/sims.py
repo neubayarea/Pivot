@@ -11,6 +11,9 @@ SIM_VERSION hashes the simulator and analytics source, so editing either re-runs
 next start; an unchanged one is read straight back. The frames stay on disk; `GET
 /api/matches/{id}/frames` reads them from there (`read_frames`). Candidates go on `pivot-candidates`, so the
 worker writes the pivots; its message ids are "{match_id}:{minute}", so a second load adds nothing.
+
+The recorded demo (B02) is stored the same way, from the files committed in `eval/fixtures/`
+(`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`.
 """
 
 from __future__ import annotations
@@ -146,7 +149,11 @@ class SimStatus:
 
 async def store_one(adapters: Adapters, data_path: Path) -> str:
     """Put one cached match into the store and its candidates on the worker queue."""
-    data = await asyncio.to_thread(_read_json_gz, data_path)
+    return await store_data(adapters, await asyncio.to_thread(_read_json_gz, data_path))
+
+
+async def store_data(adapters: Adapters, data: dict) -> str:
+    """Store a match file's match, events and metrics, and put its candidates on the worker queue."""
     match = Match.model_validate(data["match"])
     await adapters.matches.upsert_match(match)
     await adapters.matches.append_events([MatchEvent.model_validate(e) for e in data["events"]])
@@ -155,6 +162,26 @@ async def store_one(adapters: Adapters, data_path: Path) -> str:
         c = PivotCandidate.model_validate(raw)
         await adapters.queue.send(PIVOT_CANDIDATES, f"{c.match_id}:{c.minute}", c.model_dump(mode="json", round_trip=True))
     return match.match_id
+
+
+# The recorded demo (B02): committed to the repo, so every machine and the server show the same match.
+FIXTURE = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "demo-1021.json"
+
+
+def fixture_from_env() -> Path | None:
+    """`PIVOT_DEMO_FIXTURE` names another file; "0" turns the recorded demo off."""
+    raw = os.getenv("PIVOT_DEMO_FIXTURE", "")
+    if raw == "0":
+        return None
+    return Path(raw) if raw else FIXTURE
+
+
+async def load_fixture(adapters: Adapters, path: Path) -> tuple[str, Path | None]:
+    """Store the recorded demo; returns its match id and its frames file (None if it is missing)."""
+    data = await asyncio.to_thread(lambda: json.loads(path.read_text(encoding="utf-8")))
+    match_id = await store_data(adapters, data)
+    frames = path.with_name(path.name.removesuffix(".json") + ".frames.json.gz")
+    return match_id, frames if frames.is_file() else None
 
 
 def _read_json_gz(path: Path) -> dict:

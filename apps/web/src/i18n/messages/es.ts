@@ -30,6 +30,7 @@ export const es: Messages = {
   "picker.label": "Partido",
   "picker.seed": "semilla {seed}",
   "picker.demo": "demo",
+  "picker.sample": "muestra",
   "picker.generating": "Generando partidos… {ready}/{total}",
 
   "common.retryNow": "Reintentar",

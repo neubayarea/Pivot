@@ -11,7 +11,8 @@ City substitution and deeper line):
   - the alarm fires between 62' and 70' towards Rovers,
   - the match has 1 to 4 goals and no red card other than the planted one.
 
-Output (all fields follow packages/contracts):
+Output (all fields follow packages/contracts; computed fields such as `minute` and `clock_label`
+are left out, so the API can load the files back as they are):
   eval/fixtures/demo-1021.json           match, events, minute metrics, pivot candidates, player stats,
                                          and the 23 team stats for the match and each half
   eval/fixtures/demo-1021.frames.json.gz one tracking frame per second
@@ -92,17 +93,17 @@ def export(seed: int) -> None:
     calc = StatCalculator(out.match, events, out.frames_as_models())
     data = {
         "preset": {"name": DEMO_1021.name, "seed": seed, "plants": [p.model_dump(mode="json") for p in DEMO_1021.plants]},
-        "match": out.match.model_dump(mode="json"),
-        "events": [e.model_dump(mode="json") for e in events],
-        "metrics": [m.model_dump(mode="json") for m in metrics],
-        "candidates": [c.model_dump(mode="json") for c in cands],
+        "match": out.match.model_dump(mode="json", round_trip=True),
+        "events": [e.model_dump(mode="json", round_trip=True) for e in events],
+        "metrics": [m.model_dump(mode="json", round_trip=True) for m in metrics],
+        "candidates": [c.model_dump(mode="json", round_trip=True) for c in cands],
         "player_stats": [p.model_dump(mode="json") for p in player_match_stats(calc)],
         "stat_units": STAT_UNITS,
         "team_stats": team_stats(calc),
     }
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "demo-1021.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    frames = [f.model_dump(mode="json") for f in out.frames_as_models()]
+    frames = [f.model_dump(mode="json", round_trip=True) for f in out.frames_as_models()]
     raw = json.dumps(frames, separators=(",", ":")).encode("utf-8")
     (OUT / "demo-1021.frames.json.gz").write_bytes(gzip.compress(raw, mtime=0))   # same match, same bytes
     s = out.match.score
