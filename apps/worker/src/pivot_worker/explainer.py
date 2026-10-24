@@ -26,6 +26,7 @@ from .vocabulary import BANNED_TERMS, DOWN_WORDS, JARGON, SIGNIFICANCE_WORDS, UP
 
 COMPARE_MINUTES = 5
 MAX_EVENTS = 30
+MAX_PREVIOUS = 4000                           # characters of the rejected answer echoed back on a rewrite
 # Event types always worth showing the model, in the order it should notice them.
 KEY_TYPES = ("shot", "card", "substitution", "tactical_shift", "injury", "foul", "save")
 # Player-level stats offered in focus-player mode.
@@ -192,6 +193,7 @@ def build_request(
     player_names: Mapping[str, str] | None = None,
     context: Sequence[ContextItem] = (),
     feedback: Verdict | None = None,
+    previous: str | None = None,
 ) -> str:
     focus = (prefs or ViewerPrefs()).focus_player_id
     shown = window_events(candidate, events)
@@ -209,6 +211,8 @@ def build_request(
                                     for i in relevant(context, shown)]
     text = json.dumps(request, ensure_ascii=False)
     if feedback and not feedback.passed:
+        if previous:
+            text += f"\n\nYour previous card:\n{previous[:MAX_PREVIOUS]}"
         fixes = "\n".join(f"- {i.code}: {i.message}" for i in feedback.issues)
         text += f"\n\nThe Verifier rejected your previous card:\n{fixes}"
     return text
@@ -224,12 +228,17 @@ def build_messages(
     player_names: Mapping[str, str] | None = None,
     context: Sequence[ContextItem] = (),
     feedback: Verdict | None = None,
+    previous: str | None = None,
 ) -> tuple[Prompt, list[dict[str, str]]]:
-    """System and user messages for one Explainer call, plus the prompt (for its hash)."""
+    """System and user messages for one Explainer call, plus the prompt (for its hash).
+
+    On a rewrite, `previous` is the answer the Verifier rejected, so the model can fix it in place.
+    """
     prefs = prefs or ViewerPrefs()
     prompt = system_prompt(prefs, team_names, player_names)
     user = build_request(candidate, events=events, stats=stats, team_names=team_names, prefs=prefs,
-                         player_names=player_names, context=context, feedback=feedback)
+                         player_names=player_names, context=context, feedback=feedback,
+                         previous=previous)
     return prompt, [{"role": "system", "content": prompt.text}, {"role": "user", "content": user}]
 
 

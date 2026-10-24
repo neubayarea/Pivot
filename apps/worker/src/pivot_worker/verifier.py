@@ -3,7 +3,7 @@
 The Verifier never calls a model. It recomputes every claim through a `StatSource`
 (B05's StatCalculator in production, a fake in tests) and checks six kinds of rule:
 
-1. shape: sentence count, words per sentence, evidence count, headline length and digits
+1. shape: sentence count, words per sentence, evidence count, headline length and numbers
 2. evidence: every evidence id exists and falls from 8 minutes before the pivot to 5 after
 3. numbers: every claim recomputes within tolerance, and every number in the text has a claim
 4. direction: rose/fell words match the sign of the change between two claimed windows
@@ -123,6 +123,8 @@ def verify(
         issue("too_long", f"The headline must be at most {max_headline} {unit_name}.")
     if re.search(r"\d", narrative.headline):
         issue("number_mismatch", "The headline must not contain digits.")
+    if spelled := lang_rules.number_words(narrative.headline, lang):
+        issue("number_mismatch", f"The headline must not contain numbers, even as words: remove '{spelled[0]}'.")
     banned = lang_rules.banned_terms(lang) + (JARGON if narrative.prefs.audience == "fan" else ())
     for term in _has_word(narrative.headline, banned):
         issue("banned_term", f"Remove '{term}' from the headline.")

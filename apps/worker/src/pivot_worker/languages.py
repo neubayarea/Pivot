@@ -34,6 +34,17 @@ SIGNIFICANCE = {"zh": ("显著", "明显", "决定性"),
 BANNED = {"zh": ("赌", "赔率", "投注", "下注", "博彩", "一定", "肯定", "绝对", "必然", "毫无疑问", "永远", "从不"),
           "es": ("apuesta", "apuestas", "cuotas", "siempre", "nunca", "garantizado", "sin duda", "definitivamente")}
 
+# Numbers written as words, which a headline may not carry any more than digits. "one", "un"
+# and "一" are left out: they double as articles ("one more push", "un cambio", "一张牌").
+NUMBER_WORDS = ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+                "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+                "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand", "dozen")
+NUMBER = {"es": ("dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce",
+                 "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte",
+                 "treinta", "cuarenta", "cincuenta", "cien", "ciento", "mil", "docena")}
+# Chinese numerals only count before a measure word ("两球", "三分钟"), so "前场三区" and "十分" ("very") pass.
+_ZH_NUMBER = re.compile(r"[二两三四五六七八九十百千][〇零一二两三四五六七八九十百千]*\s*(?:个|球|粒|次|脚|张|名|人|记|场|分钟|比)")
+
 
 def up_words(lang: str) -> tuple[str, ...]:
     return UP_WORDS + UP.get(lang, ())
@@ -49,6 +60,13 @@ def significance_words(lang: str) -> tuple[str, ...]:
 
 def banned_terms(lang: str) -> tuple[str, ...]:
     return BANNED_TERMS + BANNED.get(lang, ())
+
+
+def number_words(text: str, lang: str) -> list[str]:
+    """Numbers written out in words ("Two goals", "dos goles", "两球")."""
+    words = NUMBER_WORDS + NUMBER.get(lang, ())
+    found = [w for w in words if re.search(rf"\b{w}\b", text, re.I)]
+    return found + (_ZH_NUMBER.findall(text) if lang == "zh" else [])
 
 
 _CJK = re.compile(r"[㐀-鿿豈-﫿]")

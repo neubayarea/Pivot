@@ -52,6 +52,21 @@ def test_rejected_then_rewritten_then_passed(events, stats):
                      ("explainer", "retried"), ("verifier", "ok")]
     retry_request = models.calls[2][1][1]["content"]
     assert "The Verifier rejected your previous card" in retry_request and "is 9, not 12" in retry_request
+    assert f"Your previous card:\n{draft(12)}" in retry_request
+
+
+def test_invalid_json_is_shown_back_on_the_rewrite(events, stats):
+    models = ScriptedModelClient(standard=['{"headline": 1}', draft(9)], mini=[YES])
+    run(events, stats, models)
+    assert 'Your previous card:\n{"headline": 1}' in models.calls[2][1][1]["content"]
+
+
+@pytest.mark.parametrize("triggers", [["made-up"], ["m063-s00100"]])     # invented, or outside the window
+def test_a_yes_without_a_real_trigger_is_not_confirmed(events, stats, triggers):
+    yes = json.dumps({"is_pivot": True, "severity": 2, "trigger_event_ids": triggers, "reason": "trust me"})
+    pivot, steps = run(events, stats, ScriptedModelClient(mini=[yes]))
+    assert pivot.status == "degraded" and steps == [("judge", "degraded"), ("template", "degraded")]
+    assert pivot.trigger_event_ids == ["m063-s01042"]
 
 
 def test_two_rewrites_then_the_template(events, stats):

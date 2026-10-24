@@ -94,6 +94,7 @@ class Run:
     checks: int = 0
     draft: Narrative | None = None
     feedback: Verdict | None = None
+    reply: str | None = None                  # the Explainer's last raw answer, shown to it on a rewrite
     schema_error: str | None = None
 
     def __deepcopy__(self, memo: dict) -> Run:
@@ -125,8 +126,9 @@ class JudgeNode(Executor):
                                                 team_names=v.team_names)
         try:
             reply = await self.models.complete_json("mini", messages, timeout=JUDGE_TIMEOUT)
-            verdict = judge.parse_verdict(reply.text, r.candidate, set(v.events))
-        except (ModelUnavailable, ValidationError) as e:
+            shown = {ev.event_id for ev in judge.judge_events(r.candidate, v.events)}
+            verdict = judge.parse_verdict(reply.text, r.candidate, shown)
+        except (ModelUnavailable, ValidationError, judge.InvalidVerdict) as e:
             await r.record(Step("judge", f"unavailable ({type(e).__name__}); detector only", "degraded",
                                 prompt_hash=prompt.hash))
             await ctx.send_message(replace(r, verdict=judge.fallback_verdict(r.candidate), status="degraded",
@@ -152,7 +154,7 @@ class ExplainerNode(Executor):
         v = r.view
         prompt, messages = explainer.build_messages(
             r.candidate, events=v.events, stats=v.stats, team_names=v.team_names, prefs=r.prefs,
-            player_names=v.player_names, context=v.context, feedback=r.feedback)
+            player_names=v.player_names, context=v.context, feedback=r.feedback, previous=r.reply)
         status = "retried" if r.checks else "ok"
         try:
             reply = await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
@@ -167,7 +169,7 @@ class ExplainerNode(Executor):
             draft, error = None, f"{e.error_count()} schema errors: {e.errors()[0]['msg']}"
             summary = f"invalid output ({error})"
         await r.record(Step("explainer", summary, status, reply.model, prompt.hash, reply.tokens))
-        await ctx.send_message(replace(r, draft=draft, schema_error=error, next="verify"))
+        await ctx.send_message(replace(r, draft=draft, reply=reply.text, schema_error=error, next="verify"))
 
 
 class VerifierNode(Executor):
