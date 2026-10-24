@@ -11,7 +11,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from .common import Model
+from .common import Model, Side
+from .officials import InjuryInfo, Referee
 from .people import Relationship
 
 CompetitionLevel = Literal[
@@ -44,6 +45,8 @@ class PreMatchCondition(Model):
     recent_ratings: Annotated[list[float], Field(max_length=5)] = []   # last five, 1-10, newest last
     days_since_last_match: Annotated[int, Field(ge=0)] | None = None
     carrying_knock: bool = False
+    availability: Literal["available", "injured", "suspended", "ill", "not_selected"] = "available"
+    injury: InjuryInfo | None = None          # current injury, if any
     on_yellow_card_threshold: bool = False    # one more booking means a suspension
 
 
@@ -67,9 +70,40 @@ class OffFieldEvent(Model):
     headline: Annotated[str, Field(max_length=120)]
 
 
+Result = Literal["W", "D", "L"]
+
+
+class TeamForm(Model):
+    side: Side
+    last_results: Annotated[list[Result], Field(max_length=5)] = []   # newest last
+    goals_for_last5: Annotated[int, Field(ge=0)] = 0
+    goals_against_last5: Annotated[int, Field(ge=0)] = 0
+    league_position: Annotated[int, Field(ge=1, le=40)] | None = None
+    points: Annotated[int, Field(ge=0)] | None = None
+
+
+class PastMeeting(Model):
+    season: str                               # "2025-26"
+    home_club_id: str
+    away_club_id: str
+    home_goals: Annotated[int, Field(ge=0)]
+    away_goals: Annotated[int, Field(ge=0)]
+    competition_id: str | None = None
+
+
+class HeadToHead(Model):
+    """Record between the two clubs, counted from this match's home side."""
+
+    played: Annotated[int, Field(ge=0)] = 0
+    home_wins: Annotated[int, Field(ge=0)] = 0
+    draws: Annotated[int, Field(ge=0)] = 0
+    away_wins: Annotated[int, Field(ge=0)] = 0
+    last_meetings: Annotated[list[PastMeeting], Field(max_length=10)] = []   # newest last
+
+
 EffectSource = Literal[
     "former_club", "former_teammate", "former_coach", "rivalry", "competition",
-    "stakes", "crowd", "off_field", "form", "fatigue", "weather",
+    "stakes", "crowd", "off_field", "form", "fatigue", "weather", "referee", "head_to_head", "injury",
 ]
 EffectTarget = Literal[
     "composure", "motivation", "concentration", "fitness", "aggression", "chemistry",
@@ -96,6 +130,10 @@ class MatchContext(Model):
     derby: bool = False
     stakes: Literal["none", "title_race", "relegation", "qualification", "knockout"] = "none"
     weather: Literal["clear", "rain", "wind", "heat", "snow"] = "clear"
+    pitch: Literal["good", "worn", "heavy", "artificial"] = "good"
+    referee: Referee | None = None
+    form: Annotated[list[TeamForm], Field(max_length=2)] = []   # one per side
+    head_to_head: HeadToHead | None = None
     conditions: list[PreMatchCondition] = []
     news: list[OffFieldEvent] = []
     relationships: list[Relationship] = []    # ties between people in this match

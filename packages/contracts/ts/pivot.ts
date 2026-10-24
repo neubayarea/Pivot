@@ -110,7 +110,7 @@ export interface CareerStint {
  */
 export interface Claim {
   stat_ref: StatRef;
-  unit: "count" | "pct" | "xg" | "index" | "m" | "km";
+  unit: "count" | "pct" | "xg" | "index" | "m" | "km" | "ratio";
   value: number;
 }
 /**
@@ -137,7 +137,11 @@ export interface StatRef {
     | "line_height_m"
     | "team_width_m"
     | "press_distance_m"
-    | "distance_covered_km";
+    | "distance_covered_km"
+    | "progressive_passes"
+    | "ppda"
+    | "xa"
+    | "field_tilt_pct";
   player_id: string | null;
   team: "home" | "away";
   /**
@@ -226,7 +230,10 @@ export interface ContextEffect {
     | "off_field"
     | "form"
     | "fatigue"
-    | "weather";
+    | "weather"
+    | "referee"
+    | "head_to_head"
+    | "injury";
   source_ref: string | null;
   subject_id: string;
   target:
@@ -264,7 +271,8 @@ export interface Envelope {
     | "scenario.progress"
     | "scenario.completed"
     | "trace.appended"
-    | "recap.ready";
+    | "recap.ready"
+    | "player_stats.updated";
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -285,6 +293,41 @@ export interface ExplanationSentence {
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "FoulDetail".
+ */
+export interface FoulDetail {
+  advantage_played: boolean;
+  card: ("yellow" | "second_yellow" | "red") | null;
+  card_reason:
+    | (
+        | "reckless_challenge"
+        | "serious_foul_play"
+        | "professional_foul"
+        | "denying_goal_chance"
+        | "handball"
+        | "dissent"
+        | "simulation"
+        | "time_wasting"
+        | "violent_conduct"
+        | "persistent_fouling"
+      )
+    | null;
+  foul_type:
+    | "tackle"
+    | "trip"
+    | "push"
+    | "hold"
+    | "handball"
+    | "dangerous_play"
+    | "obstruction"
+    | "simulation"
+    | "dissent"
+    | "time_wasting"
+    | "off_the_ball";
+  penalty_awarded: boolean;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "GoalkeepingAttributes".
  */
 export interface GoalkeepingAttributes {
@@ -293,6 +336,45 @@ export interface GoalkeepingAttributes {
   kicking: number;
   positioning: number;
   reflexes: number;
+}
+/**
+ * Record between the two clubs, counted from this match's home side.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "HeadToHead".
+ */
+export interface HeadToHead {
+  away_wins: number;
+  draws: number;
+  home_wins: number;
+  /**
+   * @maxItems 10
+   */
+  last_meetings: PastMeeting[];
+  played: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PastMeeting".
+ */
+export interface PastMeeting {
+  away_club_id: string;
+  away_goals: number;
+  competition_id: string | null;
+  home_club_id: string;
+  home_goals: number;
+  season: string;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "InjuryInfo".
+ */
+export interface InjuryInfo {
+  area: "hamstring" | "groin" | "thigh" | "knee" | "ankle" | "calf" | "foot" | "back" | "shoulder" | "head" | "other";
+  can_continue: boolean;
+  cause: "contact" | "non_contact" | "fatigue";
+  expected_days_out: number;
+  severity: "knock" | "minor" | "moderate" | "serious";
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -502,6 +584,7 @@ export interface TeamTactics {
   offside_trap: boolean;
   passing: "short" | "mixed" | "direct";
   press: "low" | "mid" | "high";
+  set_pieces: SetPieceTactics;
   tempo: "slow" | "normal" | "fast";
   time_wasting: boolean;
   width: "narrow" | "normal" | "wide";
@@ -526,6 +609,14 @@ export interface PlayerInstruction {
   player_id: string;
   target_player_id: string | null;
 }
+export interface SetPieceTactics {
+  corner_defence: "zonal" | "man" | "mixed";
+  corner_delivery: "inswing" | "outswing" | "short" | "mixed";
+  corner_target: "near_post" | "far_post" | "penalty_spot" | "edge_of_box" | "mixed";
+  free_kick_style: "direct" | "cross" | "short" | "mixed";
+  players_back_on_corners: number;
+  players_forward_on_corners: number;
+}
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "MatchContext".
@@ -536,7 +627,14 @@ export interface MatchContext {
   conditions: PreMatchCondition[];
   derby: boolean;
   effects: ContextEffect[];
+  /**
+   * @maxItems 2
+   */
+  form: TeamForm[];
+  head_to_head: HeadToHead | null;
   news: OffFieldEvent[];
+  pitch: "good" | "worn" | "heavy" | "artificial";
+  referee: Referee | null;
   relationships: Relationship[];
   stakes: "none" | "title_race" | "relegation" | "qualification" | "knockout";
   venue: string;
@@ -547,9 +645,11 @@ export interface MatchContext {
  * via the `definition` "PreMatchCondition".
  */
 export interface PreMatchCondition {
+  availability: "available" | "injured" | "suspended" | "ill" | "not_selected";
   carrying_knock: boolean;
   days_since_last_match: number | null;
   fitness: number;
+  injury: InjuryInfo | null;
   morale: number;
   on_yellow_card_threshold: boolean;
   player_id: string;
@@ -558,6 +658,21 @@ export interface PreMatchCondition {
    */
   recent_ratings: number[];
   sharpness: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamForm".
+ */
+export interface TeamForm {
+  goals_against_last5: number;
+  goals_for_last5: number;
+  /**
+   * @maxItems 5
+   */
+  last_results: ("W" | "D" | "L")[];
+  league_position: number | null;
+  points: number | null;
+  side: "home" | "away";
 }
 /**
  * A fictional news item about a player or coach before the match.
@@ -587,6 +702,18 @@ export interface OffFieldEvent {
   sentiment: "negative" | "neutral" | "positive";
   severity: number;
   subject_id: string;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Referee".
+ */
+export interface Referee {
+  advantage_tendency: number;
+  big_match_experience: number;
+  card_tendency: number;
+  name: string;
+  referee_id: string;
+  strictness: number;
 }
 /**
  * A tie between two people that can matter on match day (chemistry, motivation, needle).
@@ -637,12 +764,32 @@ export interface MatchEvent {
    * What a broadcast would show: 63', 45+2', 105+1', or PEN in the shootout.
    */
   clock_label: string;
+  counterpress: boolean;
+  delivery: ("inswing" | "outswing" | "straight") | null;
+  duel_type: ("aerial" | "ground") | null;
   end_location: [number, number] | null;
   event_id: string;
+  foul: FoulDetail | null;
   /**
    * Threat-grid zone of `location`.
    */
   from_zone: [number, number] | null;
+  injury: InjuryInfo | null;
+  keeper_action:
+    | (
+        | "shot_saved"
+        | "shot_parried"
+        | "tipped_over"
+        | "goal_conceded"
+        | "claim"
+        | "punch"
+        | "sweep"
+        | "smother"
+        | "pick_up"
+      )
+    | null;
+  keeper_location: [number, number] | null;
+  keeper_technique: ("standing" | "diving" | "reflex") | null;
   /**
    * Vertical lane of `location` (wings, half-spaces, centre), from the acting team's view.
    */
@@ -672,6 +819,8 @@ export interface MatchEvent {
         | "throw_in"
         | "goal_kick"
         | "kick_off"
+        | "keeper_throw"
+        | "keeper_kick"
       )
     | null;
   period: 1 | 2 | 3 | 4 | 5;
@@ -707,7 +856,7 @@ export interface MatchEvent {
     | "carry"
     | "dribble"
     | "shot"
-    | "save"
+    | "goalkeeper"
     | "pressure"
     | "duel"
     | "tackle"
@@ -718,6 +867,7 @@ export interface MatchEvent {
     | "foul"
     | "card"
     | "offside"
+    | "var_review"
     | "injury"
     | "substitution"
     | "tactical_shift"
@@ -725,6 +875,7 @@ export interface MatchEvent {
     | "added_time"
     | "period_end";
   under_pressure: boolean;
+  var: VarReview | null;
   xg: number | null;
 }
 /**
@@ -736,6 +887,25 @@ export interface Substitution {
   player_on_id: string;
   reason: "tactical" | "fatigue" | "injury" | "card_risk" | "time_wasting";
   slot: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "VarReview".
+ */
+export interface VarReview {
+  decision: "confirmed" | "overturned";
+  duration_s: number;
+  reason:
+    | "offside"
+    | "handball"
+    | "foul_in_build_up"
+    | "ball_out_of_play"
+    | "no_foul"
+    | "foul_confirmed"
+    | "wrong_player"
+    | "clear_and_obvious_error";
+  review_of: "goal" | "penalty" | "red_card" | "mistaken_identity";
+  reviewed_event_id: string;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -814,7 +984,7 @@ export interface OverlayFeed {
 export interface OverlayItem {
   headline: string;
   hide_at: number;
-  kind: "pivot" | "goal" | "card" | "substitution";
+  kind: "pivot" | "goal" | "card" | "substitution" | "var_review" | "injury" | "player_rating";
   overlay_id: string;
   player_id: string | null;
   ref_id: string;
@@ -870,6 +1040,38 @@ export interface PlantSpec {
   };
   team: "home" | "away";
   type: "red_card" | "substitution" | "goal" | "press_change" | "formation_change" | "injury";
+}
+/**
+ * One player's line for this match, updated live, like the ratings in score apps.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerMatchStats".
+ */
+export interface PlayerMatchStats {
+  aerials_won: number;
+  assists: number;
+  distance_km: number;
+  dribbles_won: number;
+  duels_won: number;
+  fouls_committed: number;
+  goals: number;
+  interceptions: number;
+  key_passes: number;
+  match_id: string;
+  minutes_played: number;
+  pass_accuracy_pct: number | null;
+  passes: number;
+  player_id: string;
+  progressive_passes: number;
+  rating: number;
+  saves: number;
+  shots: number;
+  sprints: number;
+  tackles_won: number;
+  top_speed_kmh: number;
+  up_to_t: number;
+  xa: number;
+  xg: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -954,6 +1156,18 @@ export interface ScenarioSpec {
     | "change_formation"
     | "change_tactics"
     | "change_lineup";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "SetPieceTactics".
+ */
+export interface SetPieceTactics1 {
+  corner_defence: "zonal" | "man" | "mixed";
+  corner_delivery: "inswing" | "outswing" | "short" | "mixed";
+  corner_target: "near_post" | "far_post" | "penalty_spot" | "edge_of_box" | "mixed";
+  free_kick_style: "direct" | "cross" | "short" | "mixed";
+  players_back_on_corners: number;
+  players_forward_on_corners: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

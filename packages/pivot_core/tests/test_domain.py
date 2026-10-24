@@ -15,26 +15,35 @@ from pivot_core.domain import (
     Competition,
     ContextEffect,
     ExplanationSentence,
+    FoulDetail,
+    HeadToHead,
+    InjuryInfo,
     LineupSlot,
     Match,
     MatchContext,
     MatchEvent,
     Narrative,
     OffFieldEvent,
+    OutcomeDist,
+    PastMeeting,
+    PeriodInfo,
     Personality,
     Pivot,
     Player,
     PlayerAttributes,
-    OutcomeDist,
-    PeriodInfo,
-    Score,
+    PlayerMatchStats,
+    PreMatchCondition,
+    Referee,
     Relationship,
+    Score,
     StatMetric,
     StatRef,
     Team,
+    TeamForm,
     TeamSheet,
     TeamTactics,
     TrackingFrame,
+    VarReview,
     ViewerPrefs,
     area_of,
     clock_label,
@@ -104,7 +113,19 @@ def context() -> MatchContext:
     return MatchContext(
         competition=Competition(competition_id="cl-1", name="Continental Club Cup",
                                 level="continental_club", stage="quarter_final", importance=4),
-        venue="Harbour Park", attendance=41250, stakes="knockout", weather="rain",
+        venue="Harbour Park", attendance=41250, stakes="knockout", weather="rain", pitch="heavy",
+        referee=Referee(referee_id="ref-1", name="T. Lindqvist", strictness=72, card_tendency=65,
+                        advantage_tendency=58, big_match_experience=80),
+        form=[TeamForm(side="home", last_results=["W", "W", "D", "L", "W"], goals_for_last5=9,
+                       goals_against_last5=5, league_position=3, points=41),
+              TeamForm(side="away", last_results=["L", "D", "W", "W", "W"])],
+        head_to_head=HeadToHead(played=6, home_wins=2, draws=1, away_wins=3, last_meetings=[
+            PastMeeting(season="2025-26", home_club_id="club-rov", away_club_id="club-hbc",
+                        home_goals=2, away_goals=1)]),
+        conditions=[PreMatchCondition(player_id="h05", availability="injured",
+                                      injury=InjuryInfo(area="hamstring", severity="moderate",
+                                                        cause="non_contact", can_continue=False,
+                                                        expected_days_out=21))],
         news=[OffFieldEvent(news_id="n1", subject_id="a09", kind="nightlife", hours_before_kickoff=20,
                             severity=2, sentiment="negative",
                             headline="Rovers striker seen at a late-night club two nights before the tie")],
@@ -139,9 +160,9 @@ def pivot() -> Pivot:
 
 # --- stats -----------------------------------------------------------------------------
 
-def test_stat_vocabulary_has_19_metrics_each_with_a_unit():
+def test_stat_vocabulary_has_23_metrics_each_with_a_unit():
     metrics = typing.get_args(StatMetric)
-    assert len(metrics) == 19
+    assert len(metrics) == 23
     assert set(STAT_UNITS) == set(metrics)
 
 
@@ -325,6 +346,58 @@ def test_knockout_outcome_reports_who_goes_through():
                     ci95={"home_win": (0.37, 0.45), "draw": (0.23, 0.31), "away_win": (0.28, 0.36),
                           "home_advance": (0.51, 0.59)})
     validate("OutcomeDist", d.model_dump(mode="json"))
+
+
+# --- officials, keepers, injuries, player ratings --------------------------------------
+
+def ev(**kw) -> MatchEvent:
+    base = dict(match_id="M", seq=1, event_id="e", t=1000, period=1, period_t=1000, team="home")
+    return MatchEvent(**{**base, **kw})
+
+
+def test_foul_with_advantage_and_a_card():
+    e = ev(type="foul", player_id="h04", location=(40.0, 30.0), related_event_ids=["card-1"],
+           foul=FoulDetail(foul_type="tackle", advantage_played=True, card="yellow",
+                           card_reason="reckless_challenge"))
+    validate("MatchEvent", e.model_dump(mode="json"))
+
+
+def test_var_overturns_a_goal():
+    e = ev(type="var_review", var=VarReview(review_of="goal", reviewed_event_id="m038-s00007",
+                                            decision="overturned", reason="offside", duration_s=95))
+    validate("MatchEvent", e.model_dump(mode="json"))
+
+
+def test_injury_event_and_keeper_save_and_aerial_duel():
+    injury = ev(type="injury", player_id="h05",
+                injury=InjuryInfo(area="hamstring", severity="minor", cause="non_contact", can_continue=False))
+    save = ev(type="goalkeeper", team="away", player_id="a01", location=(2.0, 33.0),
+              keeper_action="shot_parried", keeper_technique="diving", body_part="right_foot",
+              related_event_ids=["shot-9"])
+    shot = ev(type="shot", player_id="h09", location=(92.0, 30.0), end_location=(105.0, 35.0),
+              shot_outcome="saved", xg=0.18, keeper_location=(102.5, 33.5))
+    duel = ev(type="duel", team="away", player_id="a05", duel_type="aerial", outcome="success",
+              counterpress=True)
+    corner = ev(type="pass", player_id="h07", pass_type="corner", delivery="inswing",
+                pass_height="high", location=(105.0, 0.0), end_location=(99.0, 31.0))
+    for e in (injury, save, shot, duel, corner):
+        validate("MatchEvent", e.model_dump(mode="json"))
+    with pytest.raises(ValidationError):
+        ev(type="save")
+
+
+def test_set_piece_tactics_have_defaults():
+    sp = TeamTactics().set_pieces
+    assert (sp.corner_defence, sp.players_back_on_corners) == ("mixed", 1)
+
+
+def test_player_match_stats_rating_range():
+    s = PlayerMatchStats(match_id="M", player_id="h09", up_to_t=5400, minutes_played=90, rating=7.4,
+                         goals=1, shots=4, xg=0.92, passes=31, pass_accuracy_pct=80.6,
+                         distance_km=10.8, top_speed_kmh=33.1, sprints=21)
+    validate("PlayerMatchStats", s.model_dump(mode="json"))
+    with pytest.raises(ValidationError):
+        PlayerMatchStats(match_id="M", player_id="h09", up_to_t=60, minutes_played=1, rating=11)
 
 
 # --- narratives ------------------------------------------------------------------------
