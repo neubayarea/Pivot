@@ -157,7 +157,7 @@ def main() -> None:
     proj = next(x for x in p.list("/projects/") if x["name"] == PROJECT)
     pid = proj["id"]
     states = {s["name"]: s["id"] for s in p.list(f"/projects/{pid}/states/")}
-    labels = {l["name"]: l["id"] for l in p.list(f"/projects/{pid}/labels/")}
+    labels = {lb["name"]: lb["id"] for lb in p.list(f"/projects/{pid}/labels/")}
     existing = {i["name"].split(" ", 1)[0]: i for i in p.list(f"/projects/{pid}/issues/")}
     cycles = {c["name"]: c for c in p.list(f"/projects/{pid}/cycles/")}
     print(f"[{'APPLY' if args.apply else 'DRY RUN'}] project {PROJECT}, {len(existing)} items, cycles {list(cycles)}")
@@ -182,7 +182,10 @@ def main() -> None:
             print(f"  update cycle {ph['name']}")
             cycle_ids[ph["key"]] = cycles[ph["name"]]["id"]
             if args.apply:
-                p.call("PATCH", f"/projects/{pid}/cycles/{cycle_ids[ph['key']]}/", body)
+                try:
+                    p.call("PATCH", f"/projects/{pid}/cycles/{cycle_ids[ph['key']]}/", body)
+                except SystemExit as e:  # Plane refuses to edit a cycle whose end date has passed.
+                    print(f"    skipped: {e}")
         else:
             print(f"  create cycle {ph['name']} ({ph['start']} → {ph['end']})")
             if args.apply:
@@ -205,8 +208,11 @@ def main() -> None:
     if args.apply:
         for key, ids in per_cycle.items():
             if ids and key in cycle_ids:
-                p.call("POST", f"/projects/{pid}/cycles/{cycle_ids[key]}/cycle-issues/", {"issues": ids})
-                print(f"  cycle {key}: {len(ids)} items")
+                try:
+                    p.call("POST", f"/projects/{pid}/cycles/{cycle_ids[key]}/cycle-issues/", {"issues": ids})
+                    print(f"  cycle {key}: {len(ids)} items")
+                except SystemExit as e:
+                    print(f"  cycle {key} skipped: {e}")
     print("done" if args.apply else "dry run only; re-run with --apply")
 
 
