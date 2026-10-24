@@ -3,7 +3,7 @@
 import pytest
 
 from pivot_core.domain import ScenarioSpec, TeamTactics
-from pivot_core.sim import DEMO_1021, simulate
+from pivot_core.sim import DEMO_1021, build_demo_match, simulate
 from pivot_core.sim.whatif import (
     copy_engine, play_on, prepare, run_arms, run_whatif, save, significant, summarise, wilson,
 )
@@ -99,13 +99,14 @@ def test_b04_reseeded_runs_share_the_history_and_then_differ(ref, saved37):
 # --- B08: scenarios --------------------------------------------------------------------
 
 def test_b08_remove_red_card_keeps_the_player_on(ref, saved37):
-    red = next(e for e in ref.events if is_red(e))
+    red = next(e for e in ref.events if is_red(e) and e.get("_plant") is not None)
     base, cf = prepare(saved37, spec("remove_red_card", 37, target_event_id=red["event_id"], team="away"))
     b, c = played(base, 4), played(cf, 4)
     assert [e["player_id"] for e in b.events if is_red(e) and e["t"] >= 37 * 60] == [red["player_id"]]
     assert not [e for e in c.events if is_red(e) and e["t"] >= 37 * 60]
-    assert sum(p is not None for p in c.shapes[1].player_ids) == 11
-    assert sum(p is not None for p in b.shapes[1].player_ids) == 10
+    on = sum(p is not None for p in saved37.shapes[1].player_ids)      # a red card earlier on stays
+    assert sum(p is not None for p in c.shapes[1].player_ids) == on
+    assert sum(p is not None for p in b.shapes[1].player_ids) == on - 1
 
 
 def test_b08_cancel_a_natural_substitution_keeps_both_players(ref, saved56):
@@ -158,7 +159,7 @@ def test_b08_change_formation_and_lineup(saved64):
     sheet = saved64.sheets[1].model_copy(update={"formation": "5-4-1"})
     _, cf = prepare(saved64, spec("change_formation", 64, team="away", team_sheet=sheet))
     assert cf.sheets[1].formation == "5-4-1"
-    assert sum(p is not None for p in cf.shapes[1].player_ids) == 10
+    assert sum(p is not None for p in cf.shapes[1].player_ids) == sum(p is not None for p in saved64.shapes[1].player_ids)
 
     home = saved64.sheets[0]
     off = next(s for s in home.starters if s.role != "GK" and s.player_id in saved64.shapes[0].player_ids)
@@ -169,11 +170,17 @@ def test_b08_change_formation_and_lineup(saved64):
     assert (off.player_id, on) in subs(played(cf, 4), 64 * 60)
 
 
-def test_b08_remove_goal_takes_it_off_the_score(ref, saved37):
-    goal = next(e for e in ref.events if e["type"] == "shot" and e["shot_outcome"] == "goal" and e["t"] >= 37 * 60)
+def test_b08_remove_goal_takes_it_off_the_score():
+    # the first seed whose match has a goal after 10' (the demo story itself may have none)
+    for seed in range(1, 30):
+        m = build_demo_match(seed)
+        goals = [e for e in simulate(m).events if e["type"] == "shot" and e["shot_outcome"] == "goal" and e["t"] >= 600]
+        if goals:
+            break
+    goal = goals[0]
     k = 0 if goal["team"] == "home" else 1
-    base, cf = prepare(saved37, spec("remove_goal", goal["t"] // 60 + 1, target_event_id=goal["event_id"],
-                                     team=goal["team"]))
+    base, cf = prepare(save(m, 10), spec("remove_goal", goal["t"] // 60 + 1, target_event_id=goal["event_id"],
+                                         team=goal["team"]))
     assert base.score[k] == cf.score[k] + 1 and base.score[1 - k] == cf.score[1 - k]
     assert base.t == cf.t and cf.restart["kind"] == "goal_kick" and cf.restart["team"] == 1 - k
 
@@ -209,7 +216,7 @@ def test_b08_paired_runs_do_not_depend_on_the_pool(ref, saved64):
     pooled = run_arms(starts, 4, 1000, workers=2, progress=lambda d, t: calls.append((d, t)))
     assert alone == pooled
     assert calls[-1] == (8, 8)
-    assert all(h >= 1 for arm in alone for h, _ in arm)                    # Harbour City were 1-0 up at 88'
+    assert all(h >= late.score[0] and a >= late.score[1] for arm in alone for h, a in arm)   # goals stay scored
 
 
 def test_b08_run_whatif_returns_a_sim_result():

@@ -100,6 +100,20 @@ class Params:
     state_shot: float = 0.15                     # shot willingness x (1 + state_shot * urgency)
     state_direct: float = 0.35                   # long-pass penalty x (1 - state_direct * urgency) when chasing
     waste_s: float = 10.0                        # extra seconds the leading side takes over its restarts
+    # Chance creation (B12).
+    lane_cut: float = 0.22                       # cut-out chance for an opponent right on the passing lane
+    intercept_share: float = 0.4                 # cut-outs recorded as interceptions; the rest are recoveries
+    high_pass_acc: float = 0.85                  # accuracy factor for a ball in the air (low passes: halfway)
+    clear_under_pressure: float = 0.3            # a defender pressed near his own goal clears it
+    clear_behind: float = 0.25                   # a clearance in his own box goes behind for a corner
+    loose_shot: float = 0.35                     # chance to strike a loose ball in front of goal first time (+3 x xG)
+    offside_pen: float = 3.5                     # passer's reluctance to pick a receiver standing offside
+    offside_slack: float = 0.5                   # metres a forward may drift beyond the last defender
+    claim_rate: float = 0.45                     # keeper comes for a cross dropping into his area
+    sweep_rate: float = 0.5                      # keeper rushes out to a ball played in behind
+    aerial_contest: float = 3.0                  # metres: a defender this close to a long ball's drop challenges for it
+    pass_forward: float = 0.05                   # pass choice: weight per metre gained towards goal
+    pass_threat: float = 12.0                    # pass choice: weight on threat gained
     # How much the ratings matter (B12): a better side should win more often.
     skill_pass: float = 0.6                      # pass accuracy x (1 + skill_pass * (passing - 0.75))
     skill_def: float = 1.0                       # lane cut-out x (1 + skill_def * (interceptions - 0.7))
@@ -198,6 +212,7 @@ class Engine:
         self.attr = {pid: self._flatten(pl) for pid, pl in self.players.items()}
         self.shapes = [self._shape(k) for k in (0, 1)]
         self.move = MovementModel(self.rng)
+        self.move.offside_slack = self.p.offside_slack
         ref = match.context.referee
         self.strict = (ref.strictness / 60) if ref else 1.0
         self.card_rate = (ref.card_tendency / 60) if ref else 1.0
@@ -479,11 +494,15 @@ class Engine:
                 return self._shoot(k, i, v, under=False, free_kick=True)
             if kind == "header":
                 return self._shoot(k, i, v, under=True, header=True)   # headers are never first time (StatsBomb)
+            if kind == "loose_shot":                                    # a rebound or loose ball, struck first time
+                return self._shoot(k, i, v, under, first_time=True, incoming=None)
             return self._pass(k, i, v, under=False, restart=kind)
 
         role = self.shapes[k].roles[i]
         if d_opp < 1.8 and self.rng.random() < self.p.tackle_attempt:
             return self._challenge(k, i, j, v)
+        if v[0] < 22 and under and role != "GK" and self.rng.random() < self.p.clear_under_pressure:
+            return self._clearance(k, i)                             # no time near his own goal: away it goes
         if v[0] > 70:
             xg = xg_model(v, blockers=self._blockers(k, v), pressed=under, finishing=self._a(k, i, "finishing"))
             tendency = 1.2 if role in FORWARD else (0.5 if role in DEFENDER_ROLES else 0.9)
@@ -632,9 +651,10 @@ class Engine:
         long_pen = {"short": 1.4, "mixed": 1.0, "direct": 0.55}[style]
         long_pen *= 1 - self.p.state_direct * max(self.urgency[k], 0.0)     # chasing: go longer sooner
         tgain = np.array([threat_value(mates[m]) for m in cand]) - threat_value(v)
-        score = 0.05 * gains + 0.14 * np.minimum(open_, 10) - long_pen * (dists / 32) ** 2 + 12 * tgain
+        score = (self.p.pass_forward * gains + 0.14 * np.minimum(open_, 10) - long_pen * (dists / 32) ** 2
+                 + self.p.pass_threat * tgain)
         score -= np.array([1.2 if shape.roles[m] == "GK" else 0.0 for m in cand])
-        score -= 3.5 * offside
+        score -= self.p.offside_pen * offside
         if restart == "corner":
             score = np.where([_in_box(mates[m]) for m in cand], score + 4, score - 4)
         if restart == "goal_kick" and style == "direct":
@@ -662,7 +682,7 @@ class Engine:
         dsegs = np.hypot(*(points - opp[opp_idx]).T)
         for n in np.flatnonzero((us > 0.05) & (dsegs < 2.5)):
             u, dseg = float(us[n]), float(dsegs[n])
-            w = 0.22 * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
+            w = self.p.lane_cut * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
             w *= 1 + self.p.skill_def * (self._a(1 - k, int(opp_idx[n]), "interceptions") - 0.7)
             lane.append((opp_idx[n], w, points[n].copy()))
             acc *= 1 - w
@@ -678,8 +698,10 @@ class Engine:
         acc = self._success(k, acc)
 
         ptype = self._pass_type(k, v, end_v, r, restart, back)
-        height = "high" if ptype in ("cross", "corner", "long_ball") and self.rng.random() < 0.75 else (
-            "ground" if dist < 25 else "low")
+        height = self._pass_height(ptype, dist)
+        if height != "ground" and restart is None:          # a ball in the air is harder to bring down
+            acc = float(clip1(acc * (self.p.high_pass_acc if height == "high" else (1 + self.p.high_pass_acc) / 2),
+                              0.02, 0.99))
         foot = self.attr[self._pid(k, i)]["foot"]
         body = "other" if restart == "throw_in" else (
             f"{foot}_foot" if self.rng.random() < 0.8 else ("right_foot" if foot == "left" else "left_foot"))
@@ -688,8 +710,6 @@ class Engine:
             from_left = v[1] > PITCH_WIDTH / 2
             delivery = "inswing" if (from_left and foot == "right") or (not from_left and foot == "left") else "outswing"
         speed_ms = 11 + 0.35 * dist + self.rng.normal(0, 1.5)
-        if height == "high" and dist > 20:
-            self.rng.random()          # the draw the old chip label used: keeps every seed's run of play as before
         first_time = quick and restart is None and self.style_rng.random() < FIRST_TIME_PASS_SHARE
         technique, label_height, label_body = self._pass_technique(k, i, v, end_v, dist, height, body, bool(lane),
                                                                    incoming if first_time else None, restart)
@@ -710,6 +730,8 @@ class Engine:
 
         ok = self.rng.random() < acc
         end_abs = from_view(np.clip(end_v, [0.3, 0.3], [104.7, 67.7]), k)
+        if ok and ptype in ("through_ball", "long_ball") and self._keeper_sweep(k, i, r, end_abs, base):
+            return
         if ok:
             pe = self._emit("pass", k, i, end_location=end_abs, outcome="success", receiver_id=self._pid(k, r),
                             threat=round(threat_value(end_v) - threat_value(v), 4), **base)
@@ -728,8 +750,9 @@ class Engine:
         if cause < len(lane):
             j, _, point = lane[cause]
             pe = self._emit("pass", k, i, end_location=from_view(point, k), outcome="fail", receiver_id=None, **base)
-            ie = self._emit("interception", 1 - k, j, location=from_view(point, k),
-                            counterpress=self.t - self.last_loss_t[1 - k] <= 5)
+            # a clean interception, or a block or deflection he then collects (EVT-009, EVT-012)
+            ie = self._emit("interception" if self.rng.random() < self.p.intercept_share else "ball_recovery",
+                            1 - k, j, location=from_view(point, k), counterpress=self.t - self.last_loss_t[1 - k] <= 5)
             self._link(pe, ie)
             self.pos[1 - k, j] = from_view(point, k)
             self._gain(1 - k, j)
@@ -796,6 +819,81 @@ class Engine:
             return "outside_foot", height, f"{foot}_foot"
         return "normal", height, body
 
+    def _pass_height(self, ptype: str, dist: float) -> str:
+        """ATTR-005 (B12): how high the ball travels, by pass type and length. Over a match this
+        gives about StatsBomb's 2022 World Cup mix: 75 % on the ground, 8 % low, 17 % high."""
+        if ptype == "throw_in":
+            return "low"
+        if ptype in ("cross", "corner"):
+            hi, lo = 0.85, 0.1
+        elif ptype in ("long_ball", "switch") or dist >= 32:
+            hi, lo = 0.75, 0.15
+        elif ptype in ("free_kick", "goal_kick") and dist >= 25:
+            hi, lo = 0.7, 0.15
+        elif dist >= 20:
+            hi, lo = 0.2, 0.2
+        else:
+            hi, lo = 0.02, 0.03
+        r = self.rng.random()
+        return "high" if r < hi else ("low" if r < hi + lo else "ground")
+
+    def _keeper(self, k: int) -> int | None:
+        """Slot of k's keeper, if he is on the pitch."""
+        roles = self.shapes[k].roles
+        if "GK" not in roles:
+            return None
+        g = roles.index("GK")
+        return g if self._active(k)[g] else None
+
+    def _keeper_claim(self, k: int) -> bool:
+        """A cross dropping into the keeper's area (B12, EVT-005): he comes for it and catches or
+        punches it. k is the crossing side."""
+        opp = 1 - k
+        g = self._keeper(opp)
+        if g is None:
+            return False
+        dv = self._view(self.ball, opp)
+        if dv[0] > 13 or abs(dv[1] - PITCH_WIDTH / 2) > 12:
+            return False
+        skill = self._a(opp, g, "handling") * 0.5 + self._a(opp, g, "positioning") * 0.5
+        if self.rng.random() >= self.p.claim_rate * (1.15 - dv[0] / 13) * (0.5 + 0.6 * skill):
+            return False
+        punch = self.rng.random() < 0.3
+        self.pos[opp, g] = self.ball
+        self._emit("goalkeeper", opp, g, location=self.ball.copy(), keeper_action="punch" if punch else "claim",
+                   keeper_technique="standing")
+        self.last_pass = None
+        if punch:
+            self.owner, self.loose = None, True
+            self.ball = self._clip_pitch(from_view(np.array([self.rng.uniform(18, 32), self.rng.uniform(14, 54)]), opp))
+        else:
+            self._gain(opp, g)
+        return True
+
+    def _keeper_sweep(self, k: int, i: int, r: int, end_abs: np.ndarray, base: dict) -> bool:
+        """A ball played in behind (B12, EVT-005): the keeper rushes off his line for a ball that
+        drops within his reach, and picks it up in his box or clears it."""
+        opp = 1 - k
+        g = self._keeper(opp)
+        if g is None:
+            return False
+        dv = self._view(end_abs, opp)
+        if dv[0] > 30 or abs(dv[1] - PITCH_WIDTH / 2) > 22:
+            return False
+        d_gk = float(np.hypot(*(self.pos[opp, g] - end_abs)))
+        if d_gk > 20 or self.rng.random() >= self.p.sweep_rate * (1 - d_gk / 22):
+            return False
+        pe = self._emit("pass", k, i, end_location=end_abs, outcome="fail", receiver_id=None, **base)
+        self.pos[opp, g] = end_abs
+        ge = self._emit("goalkeeper", opp, g, location=end_abs.copy(), keeper_action="sweep", keeper_technique="standing")
+        self._link(pe, ge)
+        self.owner = None
+        self.ball = end_abs.copy()
+        self._gain(opp, g)
+        if not _in_own_box(dv):
+            self._clearance(opp, g)                    # outside his box he has to kick it away
+        return True
+
     def _pass_type(self, k: int, v: np.ndarray, end_v: np.ndarray, r: int, restart: str | None, back: float) -> str:
         """ATTR-004, first match wins."""
         if restart in ("corner", "free_kick", "throw_in", "goal_kick", "kick_off"):
@@ -826,6 +924,10 @@ class Engine:
         if not self._active(k)[r]:
             self.loose = True
             return
+        if f["cross"] and self._keeper_claim(k):
+            return
+        if f.get("height") == "high" and not f["cross"] and self._aerial_contest(k, r):
+            return
         if np.hypot(*(self.pos[k, r] - self.ball)) <= 6:
             self.ball = self.pos[k, r].copy()                 # he collects it where he is
         else:
@@ -848,6 +950,28 @@ class Engine:
             if _in_box(v) and self.rng.random() < 0.7:
                 self.forced = {"kind": "header"}
 
+    def _aerial_contest(self, k: int, r: int) -> bool:
+        """A long ball dropping near a defender (B12, EVT-007): he challenges in the air. If he wins
+        it he heads it clear in his own half and to a team-mate further up. k, r: the intended receiver."""
+        opp = 1 - k
+        j = self._nearest(opp, self.ball, outfield=True)
+        if np.hypot(*(self.pos[opp, j] - self.ball)) > self.p.aerial_contest:
+            return False
+        att = self._a(k, r, "heading_accuracy") * 0.4 + self._a(k, r, "jumping") * 0.3 + self._a(k, r, "strength") * 0.3
+        dfn = self._a(opp, j, "heading_accuracy") * 0.4 + self._a(opp, j, "jumping") * 0.3 + self._a(opp, j, "strength") * 0.3
+        won = self.rng.random() < 0.55 + 0.6 * (dfn - att)
+        a = self._emit("duel", k, r, location=self.ball.copy(), duel_type="aerial", outcome="fail" if won else "success")
+        d = self._emit("duel", opp, j, location=self.ball.copy(), duel_type="aerial", outcome="success" if won else "fail")
+        self._link(a, d)
+        if not won:
+            return False                                      # the receiver wins it and plays on
+        self.ball_z = 2.0
+        self.pos[opp, j] = self.ball
+        self._gain(opp, j)
+        if self._view(self.ball, opp)[0] < PITCH_LENGTH / 2:
+            self._clearance(opp, j)
+        return True
+
     def _clearance(self, k: int, j: int) -> None:
         """Defender j heads or kicks the ball away (EVT-010)."""
         self._end_carry()
@@ -861,7 +985,7 @@ class Engine:
             out = target.copy()
             out[1] = -1.0 if target[1] < PITCH_WIDTH / 2 else PITCH_WIDTH + 1
             return self._out_of_play(out, k)
-        if r < 0.45 and _in_own_box(self._view(self.ball, k)):
+        if r < 0.2 + self.p.clear_behind and _in_own_box(self._view(self.ball, k)):
             behind = from_view(np.array([-1.0, self._view(self.ball, k)[1]]), k)
             return self._out_of_play(behind, k)
         self.flight = {"team": None, "slot": None, "end": target, "arrive": self.t + 2, "cross": False}
@@ -918,8 +1042,6 @@ class Engine:
                 outcome = "off_target"
                 aim_y += self.rng.choice([-1, 1]) * self.rng.uniform(4, 9)
         end_v = np.array([PITCH_LENGTH, aim_y])
-        if header:
-            self.rng.random()          # the draw the old diving-header label used: keeps every seed as before
         power = self._a(k, i, "shot_power")
         shot = self._emit(
             "shot", k, i, location=self.ball.copy(), end_location=from_view(end_v, k), shot_outcome=outcome,
@@ -994,6 +1116,11 @@ class Engine:
         v = self._view(self.ball, win)
         if _in_own_box(v) and self._pressure(win, j[win])[1] < 4.0:
             self._clearance(win, j[win])
+        elif v[0] > 80 and self.shapes[win].roles[j[win]] != "GK":
+            # a rebound or a loose ball in front of goal is struck first time (B12)
+            xg = xg_model(v, blockers=self._blockers(win, v), pressed=True, finishing=self._a(win, j[win], "finishing"))
+            if xg >= self.p.shot_min_xg and self.rng.random() < min(0.9, self.p.loose_shot + 3 * xg):
+                self.forced = {"kind": "loose_shot"}
 
     # --- pressure events -------------------------------------------------------------
 

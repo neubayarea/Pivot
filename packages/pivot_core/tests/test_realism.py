@@ -1,8 +1,10 @@
 """B12 realism rules: game state, team strength, formations. Test names carry the definition they cover."""
 
 import numpy as np
+import pytest
 
-from pivot_core.sim import build_demo_match
+from pivot_core.domain.common import PITCH_LENGTH
+from pivot_core.sim import build_demo_match, simulate
 from pivot_core.sim.engine import Engine, xg_model
 from pivot_core.sim.movement import MovementModel, TeamShape, to_view
 
@@ -97,3 +99,48 @@ def test_real_004_a_much_stronger_side_passes_better_and_makes_more_chances():
         return [e[key] for e in out.events if e["team"] == team and e["type"] in ("pass", "shot") and e.get(key) is not None]
     assert np.mean(side("away", "success_prob")) > np.mean(side("home", "success_prob")) + 0.03
     assert sum(side("away", "xg")) > sum(side("home", "xg"))
+
+
+# --- chance creation (REAL-005 to REAL-008) -------------------------------------------
+
+@pytest.fixture(scope="module")
+def outs():
+    return [simulate(build_demo_match(seed)) for seed in (1021, 1022)]
+
+
+def test_real_005_pass_heights_follow_the_real_mix(outs):
+    passes = [e for out in outs for e in out.events if e["type"] == "pass" and e.get("pass_type") != "throw_in"]
+    share = {h: sum(e["pass_height"] == h for e in passes) / len(passes) for h in ("ground", "low", "high")}
+    assert 0.65 < share["ground"] < 0.85 and 0.04 < share["low"] < 0.14 and 0.1 < share["high"] < 0.25
+    long_ = [e for e in passes if e["pass_type"] in ("long_ball", "cross", "corner")]
+    assert sum(e["pass_height"] == "high" for e in long_) / len(long_) > 0.6
+
+
+def test_real_006_keepers_come_for_crosses_and_balls_in_behind(outs):
+    actions = [e for out in outs for e in out.events if e["type"] == "goalkeeper"]
+    kinds = {e["keeper_action"] for e in actions}
+    assert {"claim", "sweep"} <= kinds
+    for e in actions:
+        if e["keeper_action"] in ("claim", "punch"):
+            x = e["location"][0] if e["team"] == "home" else PITCH_LENGTH - e["location"][0]
+            assert x <= 13.5                                   # only crosses dropping into his area
+
+
+def test_real_007_loose_balls_in_front_of_goal_are_struck_first_time(outs):
+    for out in outs:
+        by_id = {e["event_id"]: e for e in out.events}
+        loose = [e for e in out.events if e["type"] == "shot" and e["first_time"]
+                 and not any(by_id[r]["type"] == "pass" for r in e.get("related_event_ids", []))]
+        assert loose
+
+
+def test_real_008_long_balls_are_contested_in_the_air(outs):
+    aerial = [e for out in outs for e in out.events if e["type"] == "duel" and e["duel_type"] == "aerial"]
+    clear = [e for out in outs for e in out.events if e["type"] == "clearance"]
+    assert len(aerial) >= 20 and len(clear) >= 30          # was about 10 clearances a match
+
+
+def test_evt_009_012_cut_out_passes_are_interceptions_or_recoveries(outs):
+    for out in outs:
+        types = [e["type"] for e in out.events]
+        assert types.count("interception") > 5 and types.count("ball_recovery") > types.count("interception")

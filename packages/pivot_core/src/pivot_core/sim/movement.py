@@ -105,6 +105,7 @@ class MovementModel:
     pressers: set = field(default_factory=set)   # (team, slot) sent to close down the ball this second
     line_shift: list = field(default_factory=lambda: [0.0, 0.0])   # metres, set by the engine's game state
     press_shift: list = field(default_factory=lambda: [0, 0])      # press levels up (+) or down (-)
+    offside_slack: float = 0.5                   # metres a forward may drift beyond the last defender
 
     def _refresh_offsets(self, t: int) -> None:
         due = self.offset_until <= t
@@ -208,7 +209,7 @@ class MovementModel:
         opp_x = sorted((x if k == 0 else PITCH_LENGTH - x
                         for x, on in zip(pos[1 - k, :, 0].tolist(), opp_active.tolist()) if on), reverse=True)
         last_line = opp_x[1] if len(opp_x) > 1 else PITCH_LENGTH
-        cap = max(last_line, bx) + 0.5
+        cap = max(last_line, bx) + self.offside_slack
         target = np.array([[min(x, cap) + ox, y + oy] for x, y, (ox, oy) in zip(tx, ty, self.offsets[k].tolist())])
 
         # Goalkeeper.
