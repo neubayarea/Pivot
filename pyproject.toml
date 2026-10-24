@@ -1,22 +1,42 @@
-# uv workspace root. Minimal version added with B01 so the shared models can be
-# installed and tested; A01 extends it with the apps, tooling and CI settings.
+# uv workspace root. The root itself is not a package; it only pins the members
+# and holds the shared tooling config (ruff, pytest).
 [project]
 name = "pivot"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = ["pivot-core"]
+dependencies = ["pivot-core", "pivot-api", "pivot-worker", "pivot-simulator"]
 
 [dependency-groups]
-dev = ["pytest>=8.3", "jsonschema>=4.23"]
+dev = ["pytest>=8.3", "jsonschema>=4.23", "ruff>=0.7", "httpx>=0.27"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/pivot_core"]
+members = ["packages/pivot_core", "apps/api", "apps/worker", "apps/simulator"]
 
 [tool.uv.sources]
 pivot-core = { workspace = true }
+pivot-api = { workspace = true }
+pivot-worker = { workspace = true }
+pivot-simulator = { workspace = true }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["packages/contracts"]
+
+[tool.ruff.lint]
+# Classic ruff defaults plus import sorting; pinned explicitly because newer ruff widens the defaults.
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pivot_core", "pivot_api", "pivot_worker", "pivot_simulator"]
+
+[tool.ruff.lint.per-file-ignores]
+# The B01 domain models group their imports by hand; leave them alone until B tidies them.
+"packages/pivot_core/src/pivot_core/domain/*" = ["I001"]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/pivot_core/tests"]
+testpaths = ["packages/pivot_core/tests", "apps/api/tests", "apps/worker/tests", "apps/simulator/tests"]
+addopts = "--import-mode=importlib"
