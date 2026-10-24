@@ -8,7 +8,8 @@ then written to `PIVOT_DATA_DIR/sims/` (default `./.pivot-data/sims/`):
   M-seed-101.<SIM_VERSION>.frames.json.gz  one tracking frame per second
 
 SIM_VERSION hashes the simulator and analytics source, so editing either re-runs the matches on the
-next start; an unchanged one is read straight back. Candidates go on `pivot-candidates`, so the
+next start; an unchanged one is read straight back. The frames stay on disk; `GET
+/api/matches/{id}/frames` reads them from there (`read_frames`). Candidates go on `pivot-candidates`, so the
 worker writes the pivots; its message ids are "{match_id}:{minute}", so a second load adds nothing.
 """
 
@@ -21,9 +22,12 @@ import json
 import logging
 import multiprocessing
 import os
+import re
 import time
+from bisect import bisect_left, bisect_right
 from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import pivot_core.analytics as analytics_pkg
@@ -156,6 +160,32 @@ async def store_one(adapters: Adapters, data_path: Path) -> str:
 def _read_json_gz(path: Path) -> dict:
     with gzip.open(path, "rt", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+MATCH_ID = re.compile(r"[A-Za-z0-9_-]+")
+
+
+def frames_path(data_dir: Path, match_id: str, version: str = SIM_VERSION) -> Path | None:
+    """The cached frames file of this match at this version, or None if there is none."""
+    if not MATCH_ID.fullmatch(match_id):
+        return None
+    path = data_dir / f"{match_id}.{version}.frames.json.gz"
+    return path if path.is_file() else None
+
+
+# A whole match is ~6000 frames, ~10 MB of JSON; keep the last two parsed so scrubbing stays cheap.
+@lru_cache(maxsize=2)
+def _frames(path: Path, mtime_ns: int) -> tuple[list[dict], list[int]]:
+    frames = _read_json_gz(path)
+    return frames, [f["t"] for f in frames]
+
+
+def read_frames(path: Path, start: int | None = None, end: int | None = None) -> list[dict]:
+    """Frames with start <= t <= end (either bound left out: from kick-off / to the final whistle), in t order."""
+    frames, ts = _frames(path, path.stat().st_mtime_ns)
+    lo = 0 if start is None else bisect_left(ts, start)
+    hi = len(ts) if end is None else bisect_right(ts, end)
+    return frames[lo:hi]
 
 
 def default_executor(n: int) -> Executor:

@@ -1,17 +1,12 @@
-// "Start demo" / "Start match". The API has no endpoint to start a match yet, so this asks for
-// POST /api/dev/demo/start and, until that exists (or whenever it fails), switches the page to
-// the local fixture replay from kick-off. Either way the viewer ends up watching a match.
-import { api } from "./live/api";
+// "Start demo" / "Start match": replays the chosen stored match from kick-off in the browser
+// (`?match=…&from=0`, data/live/replay). With no match to name, or on the fixture, it plays the
+// local demo-1021 fixture instead. Either way the viewer ends up watching a match.
 import { fixtureMode } from "./match";
 
 export const REPLAY_URL = "/?fixture=1&from=0";
 
-export async function startDemo(matchId?: string, go: (url: string) => void = (u) => window.location.assign(u)) {
-  if (fixtureMode()) return go(REPLAY_URL);
-  try {
-    const { match_id } = await api.startDemo(matchId);
-    go(`/?match=${encodeURIComponent(match_id)}`);
-  } catch {
-    go(REPLAY_URL);
-  }
+export const replayUrl = (matchId: string) => `/?match=${encodeURIComponent(matchId)}&from=0`;
+
+export function startDemo(matchId?: string, go: (url: string) => void = (u) => window.location.assign(u)) {
+  go(fixtureMode() || !matchId ? REPLAY_URL : replayUrl(matchId));
 }

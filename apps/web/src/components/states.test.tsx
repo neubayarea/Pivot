@@ -7,13 +7,14 @@ import { describe, expect, it } from "vitest";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { classifyLoadError } from "../data/live/provider";
 import { ApiError } from "../data/live/api";
-import { startDemo, REPLAY_URL } from "../data/demo";
+import { startDemo, replayUrl, REPLAY_URL } from "../data/demo";
 import { MatchContext, computeStats, type Connection, type MatchView } from "../data/match";
 import LiveBoard from "../pages/LiveBoard";
 import PivotDetail from "../pages/PivotDetail";
 import { ErrorScreen } from "./ErrorBoundary";
 import EventFeed from "./EventFeed";
 import PivotList from "./PivotList";
+import Playback from "./Playback";
 import { Startup } from "./StartupScreen";
 
 const narrative = {
@@ -95,18 +96,17 @@ describe("load errors", () => {
     expect(classifyLoadError(new TypeError("Failed to fetch"), null)).toEqual({ kind: "unreachable" });
   });
 
-  it("falls back to the fixture replay when the API cannot start a demo", async () => {
-    const real = globalThis.fetch;
-    globalThis.fetch = (async () => new Response("", { status: 404 })) as typeof fetch;
+  it("replays the chosen match, or the fixture when there is none to name", () => {
     (globalThis as { window?: unknown }).window = { location: { search: "" } };
-    let went = "";
+    const went: string[] = [];
     try {
-      await startDemo(undefined, (u) => (went = u));
+      startDemo("M-seed-505", (u) => went.push(u));
+      startDemo(undefined, (u) => went.push(u));
     } finally {
-      globalThis.fetch = real;
       delete (globalThis as { window?: unknown }).window;
     }
-    expect(went).toBe(REPLAY_URL);
+    expect(went).toEqual([replayUrl("M-seed-505"), REPLAY_URL]);
+    expect(replayUrl("M-seed-505")).toBe("/?match=M-seed-505&from=0");
   });
 });
 
@@ -135,6 +135,16 @@ describe("live board states", () => {
     const html = render(<PivotList activeId={null} />, matchView({ pivots: [pivot(70, "rejected"), pivot(63, "confirmed")] }));
     expect(html).toContain("Verified ✓");
     expect(html).not.toContain("70′");
+  });
+
+  it("puts one timeline over the whole replay, and none on the live feed", () => {
+    const playback = { playing: true, setPlaying: () => {}, setSpeed: () => {}, restart: () => {}, seek: () => {}, end: 5700 };
+    const html = render(<Playback />, matchView({ playback, pivots: [pivot(63, "confirmed")] }));
+    expect(html).toContain('type="range"');
+    expect(html).toContain('max="5700"');
+    expect(html).toContain("63′");
+    expect(html).toContain("Restart");
+    expect(render(<Playback />, matchView())).toBe("");
   });
 
   it("says when the event feed is empty", () => {

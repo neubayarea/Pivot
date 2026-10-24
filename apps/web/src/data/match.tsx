@@ -1,5 +1,6 @@
 // The one place S1 and S2 get match data from. By default it follows the live API and WebSocket
-// feed (data/live); with `?fixture=1`, or VITE_PIVOT_FIXTURE=1 at build time, it replays the
+// feed (data/live); `?match=…&from=0` replays that stored match from kick-off instead (Start demo,
+// data/live/replay); with `?fixture=1`, or VITE_PIVOT_FIXTURE=1 at build time, it replays the
 // local demo-1021 fixture on a timer so the board can be shown without a backend; add
 // `&degraded=1` to show every pivot as an automatic summary (the AI-down state). The fixture's
 // explanations come in the viewer's language (fixtures/demo-1021-i18n). Pages call useMatch() either way.
@@ -11,6 +12,7 @@ import { localisePivot, localiseRowLabel } from "../fixtures/demo-1021-i18n";
 import { useLang, type Lang } from "../i18n";
 import { MatchChoiceContext, initialMatch, readSavedMatch, saveMatch, type MatchChoice } from "./choice";
 import LiveProvider from "./live/provider";
+import ReplayProvider, { replayStart } from "./live/replay";
 import { MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
 
 export * from "./view";
@@ -92,21 +94,30 @@ export function MatchProvider({ children, fallback = null }: ProviderProps) {
   return fixture ? <FixtureProvider>{children}</FixtureProvider> : <ChosenLiveProvider fallback={fallback}>{children}</ChosenLiveProvider>;
 }
 
-/** The live feed for the viewer's chosen match; picking another goes to its S1 and starts a fresh feed. */
+/**
+ * The live feed for the viewer's chosen match, or its replay when the link asks for one; picking
+ * another goes to its S1 and starts a fresh feed (not a replay).
+ */
 function ChosenLiveProvider({ children, fallback }: ProviderProps) {
   const [choice, setChoice] = useState<MatchChoice>(() => initialMatch(window.location.search, readSavedMatch()));
+  const [from, setFrom] = useState(() => replayStart(window.location.search));
   const navigate = useNavigate();
   const choose = useCallback((id: string) => {
     saveMatch(id);
     setChoice({ id, fromUrl: true });
+    setFrom(null);
     const search = new URLSearchParams(window.location.search);
     search.set("match", id);
+    search.delete("from");
     navigate({ pathname: "/", search: `?${search}` });
   }, [navigate]);
   const value = useMemo(() => ({ choice, choose }), [choice, choose]);
+  const key = `${choice.id ?? ""}|${from ?? "live"}`;
   return (
     <MatchChoiceContext.Provider value={value}>
-      <LiveProvider key={choice.id ?? ""} choice={choice} fallback={fallback}>{children}</LiveProvider>
+      {from === null
+        ? <LiveProvider key={key} choice={choice} fallback={fallback}>{children}</LiveProvider>
+        : <ReplayProvider key={key} choice={choice} from={from} fallback={fallback}>{children}</ReplayProvider>}
     </MatchChoiceContext.Provider>
   );
 }
@@ -147,6 +158,8 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
           setClock(startClock(fixture));
           setPlaying(true);
         },
+        seek: (t: number) => setClock(Math.min(fixture.endAt, Math.max(0, t))),
+        end: fixture.endAt,
       },
     }),
     [data, playing, fixture],

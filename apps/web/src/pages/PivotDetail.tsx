@@ -114,7 +114,7 @@ export default function PivotDetail() {
               ? tr("detail.pitchLabelPicked", { t: frame.t, n: frame.players.length, seq: picked.seq })
               : tr("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
           <Scrubber window={detail.window} t={t} onChange={(s) => { setT(s); setPlaying(false); }}
-            playing={playing} onPlayingChange={setPlaying} pivotMinute={pivot.minute}
+            playing={playing} onPlayingChange={setPlaying} pivotMinutes={[pivot.minute]}
             marks={evidence.map((e) => ({ t: e.t, on: e.event_id === selected, mine: involves(e, focus) }))} />
           <p className="pitch-cap">
             {picked ? (

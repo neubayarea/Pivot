@@ -166,7 +166,7 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
   );
 }
 
-function toView({ match, events, metrics, pivots }: LiveState): MatchView {
+export function toView({ match, events, metrics, pivots }: LiveState): MatchView {
   const players = new Map<string, string>();
   for (const team of [match.home, match.away]) for (const p of team.squad) players.set(p.player_id, p.name);
   const byId = new Map(events.map((e) => [e.event_id, e]));
