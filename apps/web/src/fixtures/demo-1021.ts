@@ -114,7 +114,12 @@ function push(team: Side, t: number, type: MatchEvent["type"], extra: Partial<Ma
     play_pattern: null, player_id: null, possession_id: null, receiver_id: null, related_event_ids: [],
     schema_version: 1, seq: 0, shootout_round: null, shot_end_height_m: null, shot_outcome: null,
     substitution: null, success_prob: null, t, tactics: null, team, team_sheet: null, third: null,
-    threat: 0, to_zone: null, type, under_pressure: false, xg: null, ...extra,
+    threat: 0, to_zone: null, type, under_pressure: false, xg: null,
+    // Fields added to the data format after B01 was first merged (PR #71).
+    counterpress: false, deflected: false, delivery: null, duel_type: null, first_time: false,
+    foul: null, injury: null, keeper_action: null, keeper_location: null, keeper_technique: null,
+    pass_technique: null, shot_technique: null, var: null,
+    ...extra,
   };
   events.push(e);
   return e;

@@ -17,11 +17,12 @@ from .common import (
     clock_label, lane_of, third_of, zone_of,
 )
 from .lineup import Substitution, TeamSheet, TeamTactics
+from .officials import FoulDetail, InjuryInfo, VarReview
 
 EventType = Literal[
-    "pass", "carry", "dribble", "shot", "save",
+    "pass", "carry", "dribble", "shot", "goalkeeper",
     "pressure", "duel", "tackle", "interception", "clearance", "block", "ball_recovery",
-    "foul", "card", "offside", "injury", "substitution", "tactical_shift",
+    "foul", "card", "offside", "var_review", "injury", "substitution", "tactical_shift",
     "kickoff", "added_time", "period_end",
 ]
 
@@ -34,10 +35,24 @@ PlayPattern = Literal[
 
 PassType = Literal[
     "regular", "cross", "through_ball", "switch", "cutback", "long_ball", "back_pass",
-    "corner", "free_kick", "throw_in", "goal_kick", "kick_off",
+    "corner", "free_kick", "throw_in", "goal_kick", "kick_off", "keeper_throw", "keeper_kick",
 ]
 PassHeight = Literal["ground", "low", "high"]   # low = off the grass but below shoulder height
+Delivery = Literal["inswing", "outswing", "straight"]   # crosses, corners and free kicks into the box
 BodyPart = Literal["left_foot", "right_foot", "head", "other"]
+DuelType = Literal["aerial", "ground"]
+# StatsBomb shot techniques.
+ShotTechnique = Literal[
+    "normal", "volley", "half_volley", "lob", "backheel", "diving_header", "overhead_kick",
+]
+PassTechnique = Literal["normal", "chip", "flick_on", "lay_off", "backheel", "outside_foot"]
+
+# What the keeper did in a "goalkeeper" event (modelled on StatsBomb's goalkeeper event types).
+KeeperAction = Literal[
+    "shot_saved", "shot_parried", "tipped_over", "goal_conceded", "claim", "punch",
+    "sweep", "smother", "pick_up",
+]
+KeeperTechnique = Literal["standing", "diving", "reflex"]
 
 
 class MatchEvent(Model):
@@ -61,9 +76,22 @@ class MatchEvent(Model):
     shot_outcome: ShotOutcome | None = None   # shots only; a goal is a shot with outcome "goal"
     xg: Annotated[float, Field(ge=0, le=1)] | None = None   # shots only
     shot_end_height_m: Annotated[float, Field(ge=0, le=10)] | None = None   # height at the goal line; the goal is 2.44 m
+    shot_technique: ShotTechnique | None = None   # shots only
+    pass_technique: PassTechnique | None = None   # passes only
+    first_time: bool = False                  # shot or pass struck without a controlling touch
+    deflected: bool = False                   # pass or shot touched by another player on its way
     # Penalty shootout kicks are shots in period 5 with play_pattern "penalty"; this is the round (1-5, then sudden death).
     shootout_round: Annotated[int, Field(ge=1, le=30)] | None = None
     added_minutes: Annotated[int, Field(ge=0, le=20)] | None = None   # "added_time" events: minutes shown on the board
+    keeper_location: Point | None = None      # shots: where the defending keeper stood at the moment of the shot
+    keeper_action: KeeperAction | None = None   # "goalkeeper" events only
+    keeper_technique: KeeperTechnique | None = None
+    duel_type: DuelType | None = None         # duels only
+    delivery: Delivery | None = None          # crosses and set-piece deliveries
+    counterpress: bool = False                # defensive action within 5 s of this team losing the ball
+    foul: FoulDetail | None = None            # "foul" and "card" events: type, advantage, card
+    var: VarReview | None = None              # "var_review" events only
+    injury: InjuryInfo | None = None          # "injury" events only
     pass_type: PassType | None = None         # passes only
     pass_height: PassHeight | None = None     # passes only
     body_part: BodyPart | None = None         # passes, shots, clearances
