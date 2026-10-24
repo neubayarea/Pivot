@@ -8,14 +8,15 @@ workflow sets the status to "degraded".
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Annotated, Literal
 
 from pydantic import Field
 
-from pivot_core.domain import MatchEvent, MinuteMetric, Pivot, PivotCandidate
+from pivot_core.domain import MatchEvent, MinuteMetric, Pivot, PivotCandidate, StatRef
 from pivot_core.domain.common import Model
 from pivot_core.domain.pivots import PivotStatus
+from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from .explainer import event_line, stat_sheet, window_events
 from .prompts import Prompt, render
@@ -32,21 +33,82 @@ class JudgeVerdict(Model):
     reason: Annotated[str, Field(max_length=200)]
 
 
+class InvalidVerdict(ValueError):
+    """A "yes" that names no real trigger: treated like a Judge failure, so the pivot is degraded."""
+
+
+def _momentum(start: int, values: Sequence[float]) -> list[dict]:
+    return [{"minute": start + i, "momentum": v} for i, v in enumerate(values)]
+
+
+def _stat(metric: str, team: str, window: tuple[int, int], value: float) -> dict:
+    ref = StatRef(metric=metric, team=team, window=window)
+    return Claim(value=value, unit=STAT_UNITS[metric], stat_ref=ref).model_dump(mode="json")
+
+
+def momentum_sign(team_names: Mapping[str, str]) -> str:
+    return f"above 0: {team_names['home']} on top; below 0: {team_names['away']} on top"
+
+
+_TEAMS = {"home": "Rovers", "away": "Harbour"}
+
+
+# Each example is a request exactly as `build_messages` sends it (events and stats trimmed)
+# and the verdict for it. Windows match the real ones: momentum and events 8 minutes either
+# side of the alarm, stats 5 minutes before and after it.
 EXAMPLES = (
-    ("Alarm at 63' towards Rovers. Okafor came on at 61'; Rovers' threat and final-third passes "
-     "tripled in the next five minutes and momentum stayed with them for eight minutes.",
+    ({"alarm": {"minute": 62, "clock": "63'", "towards": "Rovers", "cusum": 4.6, "swing": 0.41,
+                "key_event_ids": ["m063-s01042"]},
+      "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "momentum_by_minute": _momentum(54, [-0.12, -0.15, -0.1, -0.08, -0.11, -0.06, -0.02, 0.08, 0.21,
+                                           0.3, 0.34, 0.31, 0.36, 0.29, 0.33, 0.27, 0.3]),
+      "events": [{"id": "m063-s01042", "clock": "61'", "type": "substitution", "team": "Rovers",
+                  "player_id": "R-17", "substitution": {"player_off_id": "R-11", "player_on_id": "R-17"}},
+                 {"id": "m063-s01077", "clock": "63'", "type": "pass", "team": "Rovers", "player_id": "R-17",
+                  "receiver_id": "R-9", "outcome": "success"},
+                 {"id": "m063-s01120", "clock": "65'", "type": "shot", "team": "Rovers", "player_id": "R-9",
+                  "shot_outcome": "saved", "xg": 0.31}],
+      "stats": [_stat("threat_total", "home", (57, 62), 0.19), _stat("threat_total", "home", (62, 67), 0.58),
+                _stat("passes_final_third", "home", (57, 62), 3), _stat("passes_final_third", "home", (62, 67), 9)]},
      JudgeVerdict(is_pivot=True, severity=2, trigger_event_ids=["m063-s01042"],
-                  reason="The substitution opened the left flank and Rovers kept control afterwards.")),
-    ("Alarm at 27' towards Harbour. One long Harbour possession ended in a blocked shot; "
-     "momentum returned to level within two minutes and no substitution, card or change of shape happened.",
+                  reason="The substitution opened the left flank and Rovers kept control for eight minutes.")),
+    ({"alarm": {"minute": 39, "clock": "40'", "towards": "Harbour", "cusum": 5.1, "swing": -0.52,
+                "key_event_ids": ["m063-s00811"]},
+      "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "momentum_by_minute": _momentum(31, [0.18, 0.2, 0.15, 0.22, 0.17, 0.12, 0.1, -0.05, -0.28,
+                                           -0.37, -0.41, -0.44, -0.39, -0.46, -0.42, -0.4, -0.45]),
+      "events": [{"id": "m063-s00811", "clock": "38'", "type": "card", "team": "Rovers", "player_id": "R-4"},
+                 {"id": "m063-s00840", "clock": "41'", "type": "shot", "team": "Harbour", "player_id": "H-10",
+                  "shot_outcome": "off_target", "xg": 0.08}],
+      "stats": [_stat("shots", "away", (34, 39), 0), _stat("shots", "away", (39, 44), 3),
+                _stat("possession_pct", "home", (34, 39), 58.0),
+                _stat("possession_pct", "home", (39, 44), 36.0)]},
+     JudgeVerdict(is_pivot=True, severity=3, trigger_event_ids=["m063-s00811"],
+                  reason="After the Rovers card momentum went below zero and stayed there, with Harbour shooting at will.")),
+    ({"alarm": {"minute": 26, "clock": "27'", "towards": "Harbour", "cusum": 3.2, "swing": -0.14,
+                "key_event_ids": []},
+      "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "momentum_by_minute": _momentum(18, [0.05, 0.02, 0.04, 0.01, 0.03, -0.02, -0.1, -0.24, -0.31,
+                                           -0.12, 0.01, 0.04, 0.02, 0.05, 0.03, 0.01, 0.04]),
+      "events": [{"id": "m063-s00512", "clock": "27'", "type": "shot", "team": "Harbour", "player_id": "H-9",
+                  "shot_outcome": "blocked", "xg": 0.06}],
+      "stats": [_stat("shots", "away", (21, 26), 0), _stat("shots", "away", (26, 31), 1),
+                _stat("possession_pct", "home", (21, 26), 52.0),
+                _stat("possession_pct", "home", (26, 31), 49.0)]},
      JudgeVerdict(is_pivot=False, severity=1, trigger_event_ids=[],
-                  reason="A single spell of pressure that faded at once, with nothing on the pitch behind it.")),
+                  reason="A single spell of Harbour pressure that faded at once, with nothing on the pitch behind it.")),
 )
 
 
 def system_prompt() -> Prompt:
-    examples = "\n\n".join(f"{situation}\n\n```json\n{v.model_dump_json()}\n```" for situation, v in EXAMPLES)
+    examples = "\n\n".join(f"Request:\n\n```json\n{json.dumps(request, ensure_ascii=False)}\n```\n\n"
+                            f"Answer:\n\n```json\n{v.model_dump_json()}\n```" for request, v in EXAMPLES)
     return render("judge", schema=json.dumps(JudgeVerdict.model_json_schema()), examples=examples)
+
+
+def judge_events(candidate: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[MatchEvent]:
+    """The events the Judge is shown, and so the only ones it may name as triggers."""
+    return window_events(candidate, events, before=JUDGE_WINDOW, after=JUDGE_WINDOW)
 
 
 def build_messages(
@@ -63,10 +125,10 @@ def build_messages(
                   "towards": team_names[candidate.direction], "cusum": round(candidate.cusum_stat, 3),
                   "swing": round(candidate.swing, 3), "key_event_ids": candidate.key_event_ids},
         "teams": dict(team_names),
+        "momentum_sign": momentum_sign(team_names),
         "momentum_by_minute": [{"minute": m.minute, "momentum": round(m.momentum, 3)}
                                for m in metrics if lo <= m.minute <= hi],
-        "events": [event_line(e, team_names)
-                   for e in window_events(candidate, events, before=JUDGE_WINDOW, after=JUDGE_WINDOW)],
+        "events": [event_line(e, team_names) for e in judge_events(candidate, events)],
         "stats": [c.model_dump() for c in stat_sheet(candidate, stats) if c.stat_ref.metric in JUDGE_METRICS],
     }
     prompt = system_prompt()
@@ -74,17 +136,20 @@ def build_messages(
                     {"role": "user", "content": json.dumps(request, ensure_ascii=False)}]
 
 
-def parse_verdict(raw: str | dict, candidate: PivotCandidate, known_ids: set[str]) -> JudgeVerdict:
+def parse_verdict(raw: str | dict, candidate: PivotCandidate, known_ids: Collection[str]) -> JudgeVerdict:
     """Validate the model output and drop trigger ids it made up.
 
-    Raises pydantic.ValidationError on a bad shape. A "yes" whose triggers were all invented
-    falls back to the detector's key events, so a confirmed pivot always points at something real.
+    `known_ids` are the ids of the events the Judge was shown (`judge_events`), not the whole
+    match. Raises pydantic.ValidationError on a bad shape, and InvalidVerdict on a "yes" with
+    no real trigger left, so a confirmed pivot always points at something the Judge saw.
     """
     v = JudgeVerdict.model_validate_json(raw) if isinstance(raw, str) else JudgeVerdict.model_validate(raw)
+    if not v.is_pivot:
+        return v.model_copy(update={"trigger_event_ids": []})
     triggers = [i for i in v.trigger_event_ids if i in known_ids]
-    if v.is_pivot and not triggers:
-        triggers = candidate.key_event_ids[:3]
-    return v.model_copy(update={"trigger_event_ids": triggers if v.is_pivot else []})
+    if not triggers:
+        raise InvalidVerdict(f"no real trigger among {v.trigger_event_ids}")
+    return v.model_copy(update={"trigger_event_ids": triggers})
 
 
 def fallback_verdict(candidate: PivotCandidate) -> JudgeVerdict:

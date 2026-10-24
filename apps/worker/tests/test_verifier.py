@@ -39,13 +39,23 @@ def test_sentence_count(events, stats):
 
 def test_too_long_sentence_and_headline(events, stats):
     long = s(" ".join(["word"] * 31))
-    assert codes(check(card(long, headline="one two three four five six seven eight nine"), events, stats)) == [
+    assert codes(check(card(long, headline=" ".join(["word"] * 9)), events, stats)) == [
         "too_long", "too_long"]
 
 
 def test_headline_digits(events, stats):
     assert codes(check(card(GOOD, headline="Rovers score 2 in 5 minutes"), events, stats)) == [
         "number_mismatch"]
+
+
+@pytest.mark.parametrize("headline,ok", [
+    ("Two goals in three minutes", False),
+    ("Rovers' twenty-minute storm", False),
+    ("No one stops Rovers now", True),            # "one" doubles as a pronoun, so it is allowed
+    ("Okafor's arrival flips the left flank", True),
+])
+def test_headline_numbers_written_as_words(events, stats, headline, ok):
+    assert codes(check(card(GOOD, headline=headline), events, stats)) == ([] if ok else ["number_mismatch"])
 
 
 # 2. Evidence
