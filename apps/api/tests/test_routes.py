@@ -70,7 +70,7 @@ def test_unknown_pivot_is_404(client):
 def test_negotiate_returns_the_local_websocket(client):
     assert client.post("/api/negotiate").json() == {"url": "ws://127.0.0.1:8000/api/ws"}
     url = client.post("/api/negotiate", params={"match_id": DEMO_MATCH_ID}).json()["url"]
-    assert url == f"ws://127.0.0.1:8000/api/ws?matchId={DEMO_MATCH_ID}"
+    assert url == f"ws://127.0.0.1:8000/api/ws/matches/{DEMO_MATCH_ID}"
 
 
 def test_cors_allows_the_vite_dev_server(client):
