@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from fastapi.testclient import TestClient
 
@@ -50,3 +51,18 @@ def test_embedded_worker_shares_the_api_adapters(tmp_path, monkeypatch):
         client.portal.call(send_and_wait)
         assert client.get("/api/pivots/M-api-demo:p50").json()["status"] == "confirmed"
 
+
+
+def test_embedded_worker_pushes_to_the_websocket(tmp_path, monkeypatch):
+    monkeypatch.delenv("PIVOT_WORKER", raising=False)
+    app = build_app(tmp_path)
+    candidate = PivotCandidate(match_id="M-api-demo", minute=52, direction="home", cusum_stat=4.0, swing=0.3,
+                               key_event_ids=[], window=(47, 57))
+    with TestClient(app) as client, client.websocket_connect("/api/ws/matches/M-api-demo") as ws:
+        client.portal.call(app.state.adapters.queue.send, PIVOT_CANDIDATES, "M-api-demo:52",
+                           candidate.model_dump(mode="json"))
+        types = []
+        while not types or not types[-1].startswith("pivot."):
+            types.append(json.loads(ws.receive_text())["type"])
+        assert types[-1] == "pivot.confirmed"
+        assert "trace.appended" in types
