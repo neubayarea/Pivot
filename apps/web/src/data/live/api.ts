@@ -1,6 +1,6 @@
 // REST client for the endpoints in apps/api/src/pivot_api/routes.py. Paths are relative, so the
 // Vite dev server proxies them to the local API and a same-origin deploy needs nothing else.
-import type { Match, MatchEvent, MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
+import type { Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot } from "@pivot/contracts";
 
 export class ApiError extends Error {
   constructor(
@@ -26,6 +26,10 @@ export const api = {
   listEvents: (id: string, since = -1) => request<MatchEvent[]>(`${m(id)}/events?since=${since}`),
   getTimeline: (id: string) => request<MinuteMetric[]>(`${m(id)}/timeline`),
   listPivots: (id: string) => request<Pivot[]>(`${m(id)}/pivots`),
+  /** Score bug and card at elapsed second `clock`; the match's current clock when left out. */
+  getOverlay: (id: string, clock?: number) =>
+    request<OverlayFrame>(`${m(id)}/overlay${clock === undefined ? "" : `?clock=${clock}`}`),
+  getOverlayTimeline: (id: string) => request<OverlayTimeline>(`${m(id)}/overlay/timeline`),
   /** The WebSocket URL for one match's feed. */
   negotiate: async (id: string) => {
     const { url } = await request<{ url: string }>(`/negotiate?match_id=${encodeURIComponent(id)}`, { method: "POST" });
