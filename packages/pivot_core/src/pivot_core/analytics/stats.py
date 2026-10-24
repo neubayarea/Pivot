@@ -12,9 +12,11 @@ must use this class, never its own arithmetic (data definitions, section 4).
 Rules shared by every metric:
 - the window (a, b) covers elapsed minutes a <= t // 60 < b;
 - period 5 (the shootout) never counts;
-- with `player_id` set, only that player's events (or positions) count; metrics that only make
-  sense for a team (possession, width, PPDA, field tilt) return NaN for a player;
-- a ratio with nothing to divide by returns NaN, so no claim can be checked against it.
+- with `player_id` set, only that player's events (or positions) count;
+- no data is never a number: a ratio with nothing to divide by, a window without frames, a
+  team-only metric (possession, width, PPDA, field tilt, momentum) asked for a player, a player
+  who is not in the squad of the team asked about, or no match at all raise LookupError, which
+  the Verifier reports as "cannot be recomputed".
 """
 
 from __future__ import annotations
@@ -33,7 +35,6 @@ DEFENDER_ROLES = {"LB", "CB", "RB", "LWB", "RWB"}
 GOAL = (PITCH_LENGTH, PITCH_WIDTH / 2)
 OPEN_PATTERNS = {"open_play", "counter"}
 DECIMALS = {"count": 0, "pct": 1, "xg": 3, "index": 3, "m": 1, "km": 2, "ratio": 2}
-NAN = float("nan")
 
 
 def _other(team: str) -> str:
@@ -48,9 +49,15 @@ class _Frames:
     pos: dict[str, dict[int, tuple[float, float]]]   # player -> t -> (x, y)
 
 
+class NoData(LookupError):
+    """There is nothing to compute this stat from, so no number can be checked against it."""
+
+
 class StatCalculator:
-    def __init__(self, match: Match, events: list[MatchEvent], frames: list[TrackingFrame]):
+    def __init__(self, match: Match | None, events: list[MatchEvent], frames: list[TrackingFrame]):
         self.match = match
+        if match is None:                 # load_view passes None for a match it cannot find
+            return
         self.events = [e for e in events if e.period != 5]
         self.by_id = {e.event_id: e for e in self.events}
         self.team_of = {p.player_id: p.team for t in (match.home, match.away) for p in t.squad}
@@ -140,19 +147,31 @@ class StatCalculator:
     # --- public ----------------------------------------------------------------------
 
     def compute(self, ref: StatRef) -> float:
-        value = getattr(self, f"_m_{ref.metric}")(ref)
-        if isinstance(value, float) and math.isnan(value):
-            return value
-        return round(float(value), DECIMALS[STAT_UNITS[ref.metric]])
+        if self.match is None:
+            raise NoData("no match: the StatCalculator was built without one")
+        if ref.player_id and self.team_of.get(ref.player_id) != ref.team:
+            side = self.team_of.get(ref.player_id)
+            raise NoData(f"{ref.player_id} plays for {side}, not {ref.team}" if side
+                         else f"no player {ref.player_id} in this match")
+        value = float(getattr(self, f"_m_{ref.metric}")(ref))
+        if math.isnan(value):
+            raise NoData(f"{ref.metric} has no value for {ref.team} in {ref.window[0]}-{ref.window[1]}")
+        return round(value, DECIMALS[STAT_UNITS[ref.metric]])
+
+    @staticmethod
+    def _team_only(ref: StatRef) -> None:
+        if ref.player_id:
+            raise NoData(f"{ref.metric} is a team stat; it has no value for one player")
 
     # --- MET-001 to MET-023 ----------------------------------------------------------
 
     def _m_possession_pct(self, ref: StatRef) -> float:
-        if ref.player_id:
-            return NAN
+        self._team_only(ref)
         idx = self._frame_idx(ref.window)
         live = [self._frames.possession[i] for i in idx if self._frames.possession[i] is not None]
-        return 100 * sum(p == ref.team for p in live) / len(live) if live else NAN
+        if not live:
+            raise NoData("no live tracking frames in this window")
+        return 100 * sum(p == ref.team for p in live) / len(live)
 
     @staticmethod
     def _countable_pass(e: MatchEvent) -> bool:
@@ -163,7 +182,9 @@ class StatCalculator:
 
     def _m_pass_accuracy_pct(self, ref: StatRef) -> float:
         passes = [e for e in self._events(ref, types=("pass",)) if self._countable_pass(e)]
-        return 100 * sum(e.outcome == "success" for e in passes) / len(passes) if passes else NAN
+        if not passes:
+            raise NoData("no passes in this window, so no pass accuracy")
+        return 100 * sum(e.outcome == "success" for e in passes) / len(passes)
 
     def _m_passes_final_third(self, ref: StatRef) -> float:
         return sum(1 for e in self._events(ref, types=("pass",))
@@ -221,11 +242,10 @@ class StatCalculator:
         return n
 
     def _m_momentum_avg(self, ref: StatRef) -> float:
-        if ref.player_id:
-            return NAN
+        self._team_only(ref)
         vals = [m.momentum for m in self._metrics if ref.window[0] <= m.minute < ref.window[1]]
         if not vals:
-            return NAN
+            raise NoData("no momentum minutes in this window")
         sign = 1.0 if ref.team == "home" else -1.0
         return sign * float(np.mean(vals))
 
@@ -240,12 +260,13 @@ class StatCalculator:
                   if (pid == ref.player_id if ref.player_id else self.role_at(pid, t) in DEFENDER_ROLES)]
             if xs:
                 heights.append(float(np.mean(xs)))
-        return float(np.mean(heights)) if heights else NAN
+        if not heights:
+            raise NoData("no out-of-possession frames with a back line in this window")
+        return float(np.mean(heights))
 
     def _m_team_width_m(self, ref: StatRef) -> float:
         """In possession: spread of the outfield players across the pitch (MET-017)."""
-        if ref.player_id:
-            return NAN
+        self._team_only(ref)
         widths = []
         for i in self._frame_idx(ref.window):
             if self._frames.possession[i] != ref.team:
@@ -254,7 +275,9 @@ class StatCalculator:
             ys = [p[1] for pid, p in self._players_at(ref.team, t).items() if self.role_at(pid, t) != "GK"]
             if len(ys) >= 2:
                 widths.append(max(ys) - min(ys))
-        return float(np.mean(widths)) if widths else NAN
+        if not widths:
+            raise NoData("no in-possession frames in this window")
+        return float(np.mean(widths))
 
     def _m_press_distance_m(self, ref: StatRef) -> float:
         """Opponent in possession: distance from its ball carrier to our nearest player (MET-018)."""
@@ -271,10 +294,12 @@ class StatCalculator:
                 ours = {k: v for k, v in ours.items() if k == ref.player_id}
             if carrier and ours:
                 dists.append(min(math.dist(carrier, p) for p in ours.values()))
-        return float(np.mean(dists)) if dists else NAN
+        if not dists:
+            raise NoData("no frames with an opponent on the ball in this window")
+        return float(np.mean(dists))
 
     def _m_distance_covered_km(self, ref: StatRef) -> float:
-        total = 0.0
+        total, steps = 0.0, 0
         lo, hi = ref.window[0] * 60, ref.window[1] * 60
         for pid, frames in self._frames.pos.items():
             if self.team_of.get(pid) != ref.team or (ref.player_id and pid != ref.player_id):
@@ -283,6 +308,9 @@ class StatCalculator:
                 q = frames.get(t + 1)
                 if q is not None and lo <= t < hi:
                     total += math.dist(p, q)
+                    steps += 1
+        if not steps:
+            raise NoData("no tracking frames for these players in this window")
         return total / 1000
 
     @staticmethod
@@ -306,14 +334,15 @@ class StatCalculator:
 
     def _m_ppda(self, ref: StatRef) -> float:
         """Opponent passes in its own 60% / our defensive actions in that area (MET-021)."""
-        if ref.player_id:
-            return NAN
+        self._team_only(ref)
         opp = _other(ref.team)
         passes = sum(1 for e in self._events(ref, team=opp, types=("pass",))
                      if e.location and attacking_view(e.location, opp)[0] < 0.6 * PITCH_LENGTH)
         actions = sum(1 for e in self._events(ref, types=("tackle", "interception", "foul", "duel"))
                       if e.location and attacking_view(e.location, ref.team)[0] > 0.4 * PITCH_LENGTH)
-        return passes / actions if actions else NAN
+        if not actions:
+            raise NoData("no defensive actions in the opponent's build-up zone, so no PPDA")
+        return passes / actions
 
     def key_pass(self, shot: MatchEvent) -> MatchEvent | None:
         """The pass linked to this shot (ATTR-010), if any."""
@@ -332,11 +361,12 @@ class StatCalculator:
         return total
 
     def _m_field_tilt_pct(self, ref: StatRef) -> float:
-        if ref.player_id:
-            return NAN
+        self._team_only(ref)
 
         def final_third_passes(team: str) -> int:
             return sum(1 for e in self._events(ref, team=team, types=("pass",))
                        if e.location and third_of(e.location, team) == "final")
         ours, theirs = final_third_passes(ref.team), final_third_passes(_other(ref.team))
-        return 100 * ours / (ours + theirs) if ours + theirs else NAN
+        if not ours + theirs:
+            raise NoData("no final-third passes in this window, so no field tilt")
+        return 100 * ours / (ours + theirs)
