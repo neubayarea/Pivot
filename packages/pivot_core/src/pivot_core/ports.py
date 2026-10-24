@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Pivot
+from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Narrative, Pivot, ViewerPrefs
 
 # Service Bus queue names (architecture §7.2).
 PIVOT_CANDIDATES = "pivot-candidates"
@@ -95,6 +95,14 @@ class MatchRepository(Protocol):
 
     async def list_pivots(self, match_id: str) -> list[Pivot]:
         """Pivots of a match in minute order."""
+        ...
+
+    async def upsert_narrative(self, match_id: str, pivot_id: str, narrative: Narrative) -> None:
+        """Store one version of a pivot's text, keyed by (pivot_id, narrative.prefs); replaces the same key (A11)."""
+        ...
+
+    async def get_narrative(self, match_id: str, pivot_id: str, prefs: ViewerPrefs) -> Narrative | None:
+        """The stored version for exactly these viewer preferences, or None."""
         ...
 
 

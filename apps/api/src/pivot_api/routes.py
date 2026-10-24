@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from pivot_adapters import Adapters
-from pivot_core.domain import Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot
+from pivot_core.domain import Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot, ViewerPrefs
+from pivot_core.domain.common import Side
+from pivot_core.domain.narrative import Audience, Language
 
 from . import overlay
+from .personalize import Personalizer
 
 router = APIRouter(prefix="/api")
 
@@ -17,8 +22,31 @@ class NegotiateResponse(BaseModel):
     url: str                                  # WebSocket URL the browser connects to
 
 
+class PersonalizedPivot(Pivot):
+    """A pivot whose narrative is the version for the asked viewer prefs (A11)."""
+
+    # What the narrative was actually written for. Differs from the query when that version could
+    # not be written yet: then it is the default version (analyst, English).
+    prefs: ViewerPrefs
+
+
 def _adapters(request: Request) -> Adapters:
     return request.app.state.adapters
+
+
+def _personalizer(request: Request) -> Personalizer:
+    return request.app.state.personalizer
+
+
+def _prefs(match: Match, lang: Language, audience: Audience, team: Side | None, player: str | None) -> ViewerPrefs:
+    if player and player not in {p.player_id for t in (match.home, match.away) for p in t.squad}:
+        raise HTTPException(422, f"player {player!r} is not in this match")
+    return ViewerPrefs(audience=audience, language=lang, focus_team=team, focus_player_id=player or None)
+
+
+async def _personalized(request: Request, pivot: Pivot, prefs: ViewerPrefs) -> PersonalizedPivot:
+    result = await _personalizer(request).personalize(pivot, prefs)
+    return PersonalizedPivot(**dict(result.pivot), prefs=result.prefs)
 
 
 async def _match_or_404(request: Request, match_id: str) -> Match:
@@ -55,20 +83,30 @@ async def list_events(request: Request, match_id: str, since: int = -1) -> list[
 
 
 @router.get("/matches/{match_id}/pivots")
-async def list_pivots(request: Request, match_id: str) -> list[Pivot]:
-    """Pivots of a match in minute order, pending ones included."""
-    await _match_or_404(request, match_id)
-    return await _adapters(request).matches.list_pivots(match_id)
+async def list_pivots(request: Request, match_id: str, lang: Language = "en", audience: Audience = "analyst",
+                      team: Side | None = None, player: str | None = None) -> list[PersonalizedPivot]:
+    """Pivots of a match in minute order, pending ones included, each written for the viewer prefs.
+
+    `lang` en/zh/es, `audience` analyst/fan, `team` home/away and `player` (a player id) pick the
+    version of each narrative (FR-23, FR-24, FR-25); `prefs` in each item says which one it is.
+    """
+    match = await _match_or_404(request, match_id)
+    prefs = _prefs(match, lang, audience, team, player)
+    pivots = await _adapters(request).matches.list_pivots(match_id)
+    return list(await asyncio.gather(*(_personalized(request, p, prefs) for p in pivots)))
 
 
 @router.get("/pivots/{pivot_id}")
-async def get_pivot(request: Request, pivot_id: str) -> Pivot:
-    """One pivot by id ("{match_id}:p{minute}")."""
+async def get_pivot(request: Request, pivot_id: str, lang: Language = "en", audience: Audience = "analyst",
+                    team: Side | None = None, player: str | None = None) -> PersonalizedPivot:
+    """One pivot by id ("{match_id}:p{minute}"), written for the viewer prefs (same parameters as the list)."""
     match_id, sep, _ = pivot_id.rpartition(":p")
-    pivot = await _adapters(request).matches.get_pivot(match_id, pivot_id) if sep else None
-    if pivot is None:
+    repo = _adapters(request).matches
+    pivot = await repo.get_pivot(match_id, pivot_id) if sep else None
+    match = await repo.get_match(match_id) if pivot else None
+    if pivot is None or match is None:
         raise HTTPException(404, f"pivot {pivot_id!r} not found")
-    return pivot
+    return await _personalized(request, pivot, _prefs(match, lang, audience, team, player))
 
 
 async def _overlay_timeline(request: Request, match_id: str) -> tuple[Match, OverlayTimeline, list[MatchEvent]]:

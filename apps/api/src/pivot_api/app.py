@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pivot_adapters import build_adapters
 
 from .demo import seed_demo
+from .personalize import personalizer_from_env
 from .realtime import router as realtime_router
 from .routes import router
 
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Composition root: the only place the API picks adapters, from PIVOT_PROFILE (default local).
     app.state.adapters = build_adapters()
     log.info("PIVOT_PROFILE=%s", app.state.adapters.profile)
+    app.state.personalizer = personalizer_from_env(app.state.adapters.matches)
     # Local profile starts empty, so put one demo match in for frontend work. PIVOT_DEMO=0 turns it off.
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
         log.info("seeded demo match %s", await seed_demo(app.state.adapters.matches))

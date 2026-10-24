@@ -61,3 +61,23 @@ def test_metrics_upsert_by_minute_in_order():
         assert [(m.minute, m.momentum) for m in await repo.list_metrics("m1")] == [(1, 0.2), (2, -0.3)]
         assert await repo.list_metrics("nope") == []
     asyncio.run(run())
+
+
+def test_narrative_versions_by_prefs():
+    from pivot_core.domain import ExplanationSentence, Narrative, ViewerPrefs
+
+    def card(prefs, headline):
+        return Narrative(prefs=prefs, headline=headline, source="template",
+                         sentences=[ExplanationSentence(text="x", evidence_ids=["e1"])])
+
+    async def run():
+        repo = InMemoryMatchRepository()
+        zh, zh_fan = ViewerPrefs(language="zh"), ViewerPrefs(language="zh", audience="fan")
+        await repo.upsert_narrative("m1", "m1:p55", card(zh, "a"))
+        await repo.upsert_narrative("m1", "m1:p55", card(zh_fan, "b"))
+        await repo.upsert_narrative("m1", "m1:p55", card(zh, "c"))
+        assert (await repo.get_narrative("m1", "m1:p55", ViewerPrefs(language="zh"))).headline == "c"
+        assert (await repo.get_narrative("m1", "m1:p55", zh_fan)).headline == "b"
+        assert await repo.get_narrative("m1", "m1:p55", ViewerPrefs()) is None
+        assert await repo.get_narrative("m1", "m1:p70", zh) is None
+    asyncio.run(run())
