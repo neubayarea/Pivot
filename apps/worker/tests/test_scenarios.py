@@ -1,4 +1,9 @@
-from pivot_core.domain import Pivot, Substitution, TeamTactics
+import json
+from pathlib import Path
+
+import pytest
+
+from pivot_core.domain import FoulDetail, MatchEvent, Pivot, Substitution, TeamTactics
 from pivot_worker import scenarios as sc
 from pivot_worker.testing import event
 
@@ -55,6 +60,71 @@ def test_yellow_cards_and_shootout_goals_do_not_count():
     assert sc.is_red_card(event("m063-s00001", 30, "card", meta={"card": "second_yellow"}))
     kick = DEMO[0].model_copy(update={"period": 5})
     assert not sc.is_goal(kick)
+
+
+def test_red_cards_are_read_from_the_foul():
+    foul = FoulDetail(foul_type="tackle", card="red", card_reason="professional_foul")
+    red = event("m063-s00002", 30, "card", foul=foul)
+    second = red.model_copy(update={"foul": foul.model_copy(update={"card": "second_yellow"})})
+    yellow = red.model_copy(update={"foul": foul.model_copy(update={"card": "yellow"})})
+    assert sc.is_red_card(red) and sc.is_red_card(second) and not sc.is_red_card(yellow)
+
+
+def test_target_prefers_a_trigger_then_the_lead_up_then_a_tactical_substitution():
+    fatigue = SUB.model_copy(update={"reason": "fatigue"})
+    events = [event("m063-s00100", 50, "substitution", substitution=fatigue),
+              event("m063-s00200", 52, "substitution", substitution=SUB),
+              event("m063-s00300", 58, "substitution", substitution=fatigue),
+              event("m063-s00400", 66, "substitution", substitution=fatigue)]
+
+    def target(minute, triggers=()):
+        return by_type(sc.options_for(pivot(minute=minute, triggers=triggers), events))["cancel_substitution"].at_minute
+
+    assert target(64, ["m063-s00100"]) == 50        # the pivot's own trigger
+    assert target(64) == 52                         # in the lead-up, tactical over the nearer 58' one
+    assert target(80) == 66                         # nothing in the 15' before: the nearest
+    assert target(20) == 52                         # all after the pivot: still the tactical one
+    goals = [event("m063-s00500", 30, "shot", shot_outcome="goal"), event("m063-s00600", 41, "shot", shot_outcome="goal")]
+    assert by_type(sc.options_for(pivot(minute=38, triggers=()), goals))["remove_goal"].at_minute == 30
+
+
+# --- the recorded demo (eval/fixtures/demo-1021.json, M-seed-41) ----------------------------
+
+FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
+
+
+@pytest.fixture(scope="module")
+def demo():
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    events = [MatchEvent.model_validate(e) for e in data["events"]]
+    candidates = {c["minute"]: c for c in data["candidates"]}
+
+    def at(minute, triggers=True):
+        c = candidates[minute]
+        return by_type(sc.options_for(Pivot(
+            pivot_id=f"M-seed-41:p{minute}", match_id="M-seed-41", minute=minute, direction=c["direction"],
+            severity=3, status="confirmed", trigger_event_ids=c["key_event_ids"] if triggers else [],
+            chain_id="c1"), events))
+    return {e.event_id: e for e in events}, at
+
+
+def test_demo_38_offers_removing_the_planted_red_card(demo):
+    events, at = demo
+    for o in (at(38), at(38, triggers=False)):
+        red = o["remove_red_card"]
+        assert red.enabled and red.label == "Remove 38′ red card"
+        assert events[red.target_event_id].foul.card == "red" and red.at_minute == 37 and red.team == "away"
+
+
+@pytest.mark.parametrize("triggers", [True, False])
+def test_demo_65_substitution_chips_target_the_64th_minute_tactical_change(demo, triggers):
+    events, at = demo
+    o = at(65, triggers)
+    for type_ in ("cancel_substitution", "move_substitution"):
+        sub = events[o[type_].target_event_id]
+        assert sub.minute == 64 and sub.substitution.reason == "tactical"
+        assert (sub.substitution.player_off_id, sub.substitution.player_on_id) == ("h09", "h15")
+    assert o["cancel_substitution"].label == "Cancel 65′ substitution"
 
 
 def test_move_minute_range():

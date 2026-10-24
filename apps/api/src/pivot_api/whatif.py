@@ -14,7 +14,7 @@ with `input_ref` = the scenario id, so the S4 trace page shows it with the match
 Progress and the end go out on the match's live channel as `scenario.progress` and
 `scenario.completed` envelopes, whose payload is the Scenario plus `total`.
 
-A finished scenario is cached by (match version, pivot, type, params, n_runs, seed_base), with a
+A finished scenario is cached by (match version, pivot, type, target event, params, n_runs, seed_base), with a
 `seed_base` derived from the pivot and type, so the same question twice gets the same answer at once.
 The cache goes through the result store (files or Cosmos DB, Ax10/Ax11), so it survives a restart; a
 comparison that came from the template is written again on the first request after one.
@@ -95,7 +95,10 @@ def seed_base(pivot_id: str, type_: str) -> int:
 
 
 def cache_key(version: str, spec: ScenarioSpec) -> str:
-    raw = json.dumps([version, spec.pivot_id, spec.type, spec.params, spec.n_runs, spec.seed_base], sort_keys=True)
+    """The target is in the key: when the catalog picks another event for a chip (Ax13), the replays
+    against the old one are not served for it."""
+    raw = json.dumps([version, spec.pivot_id, spec.type, spec.target_event_id, spec.params, spec.n_runs,
+                      spec.seed_base], sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:24]
 
 

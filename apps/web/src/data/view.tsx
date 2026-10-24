@@ -75,6 +75,10 @@ export const byShirt = (a: SquadPlayer, b: SquadPlayer) => (a.shirt ?? 999) - (b
 export const involves = (e: Pick<MatchEvent, "player_id" | "receiver_id" | "substitution">, playerId: string | null) =>
   playerId !== null && [e.player_id, e.receiver_id, e.substitution?.player_on_id, e.substitution?.player_off_id].includes(playerId);
 
+/** A red card, straight or a second yellow: the colour is in `foul.card`; the fixture's hand-made events use `meta.card`. */
+export const isRedCard = (e: Pick<MatchEvent, "type" | "foul" | "meta">) =>
+  e.type === "card" && ["red", "second_yellow"].includes(String(e.foul?.card ?? e.meta.card ?? e.meta.colour ?? e.meta.color));
+
 export function computeStats(events: MatchEvent[]): Record<Side, TeamStats> {
   const s = {
     home: { possession: 0, shots: 0, xg: 0, pressures: 0, finalThirdPasses: 0 },

@@ -1,6 +1,8 @@
 """What-if API (A09): chips, POST -> poll -> completed with a narrative, errors, cache and read-back."""
 
 import asyncio
+import hashlib
+import json
 import time
 
 import pytest
@@ -12,7 +14,7 @@ from pivot_api.app import app
 from pivot_api.demo import DEMO_MATCH_ID, demo_match
 from pivot_api.sims import Replay
 from pivot_api.whatif import NOT_REPLAYABLE, WhatIf, cache_key, seed_base
-from pivot_core.domain import OutcomeDist, Pivot, ScenarioSpec, SimResult
+from pivot_core.domain import OutcomeDist, Pivot, Scenario, ScenarioSpec, SimResult
 from pivot_core.sim.whatif import run_whatif
 from pivot_worker.models import OfflineModelClient
 
@@ -137,6 +139,28 @@ def test_same_question_twice_is_answered_from_the_cache(client, runner):
     assert other["scenario_id"] != first["scenario_id"]
 
 
+def test_a_stored_result_for_another_target_is_not_reused(client, runner, monkeypatch):
+    """Before Ax13 the key had no target, and the catalog picked other events for some chips: results
+    stored under those keys (on disk or in Cosmos) must not come back after the restart that ships the fix."""
+    body = {"pivot_id": PIVOT_ID, "type": "cancel_substitution"}
+    first = wait_done(client, client.post("/api/scenarios", json=body).json()["scenario_id"])
+    whatif: WhatIf = app.state.whatif
+    stale = Scenario.model_validate(first)
+    stale = stale.model_copy(update={"scenario_id": f"{DEMO_MATCH_ID}:sstale",
+                                     "spec": stale.spec.model_copy(update={"target_event_id": "m058-s00001"})})
+    spec = stale.spec
+    legacy = hashlib.sha256(json.dumps(["v1", spec.pivot_id, spec.type, spec.params, spec.n_runs, spec.seed_base],
+                                       sort_keys=True).encode()).hexdigest()[:24]
+    monkeypatch.setattr(whatif, "_stored", lambda match_id: {legacy: stale, cache_key("v1", spec): stale})
+    whatif.scenarios.clear()                       # as after a restart: only the store remembers
+    whatif._keys.clear()
+    again = client.post("/api/scenarios", json=body).json()
+    assert again["scenario_id"] != stale.scenario_id and again["status"] == "queued"
+    assert again["spec"]["target_event_id"] == first["spec"]["target_event_id"]
+    wait_done(client, again["scenario_id"])
+    assert len(runner.calls) == 2
+
+
 def test_warm_up_runs_the_first_chips_after_what_viewers_ask(client, runner):
     pivots = [p for p in client.get(f"/api/matches/{DEMO_MATCH_ID}/pivots").json() if p["status"] != "rejected"]
     whatif: WhatIf = app.state.whatif
@@ -168,13 +192,14 @@ def test_errors(client):
     assert client.get(f"/api/scenarios/{DEMO_MATCH_ID}:snope").status_code == 404
 
 
-def test_cache_key_depends_on_version_params_and_runs():
+def test_cache_key_depends_on_version_target_params_and_runs():
     a = ScenarioSpec(type="move_substitution", pivot_id=PIVOT_ID, target_event_id="e1", at_minute=61,
                      params={"new_minute": 74}, n_runs=200, seed_base=seed_base(PIVOT_ID, "move_substitution"))
     assert cache_key("v1", a) == cache_key("v1", a.model_copy())
     assert cache_key("v2", a) != cache_key("v1", a)
     assert cache_key("v1", a.model_copy(update={"n_runs": 500})) != cache_key("v1", a)
     assert cache_key("v1", a.model_copy(update={"params": {"new_minute": 60}})) != cache_key("v1", a)
+    assert cache_key("v1", a.model_copy(update={"target_event_id": "e2"})) != cache_key("v1", a)
     assert seed_base(PIVOT_ID, "remove_goal") != a.seed_base
 
 
