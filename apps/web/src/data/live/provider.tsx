@@ -7,7 +7,7 @@ import { clockLabel } from "../../fixtures/demo-1021";
 import {
   ConnectionContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
-import type { MatchChoice } from "../choice";
+import { isRecordedDemo, type MatchChoice } from "../choice";
 import { ApiError, api } from "./api";
 import { LiveSocket, type ConnectionStatus } from "./socket";
 import { applyEnvelope, applyPivot, applyPivots, applySnapshot, lastEventSeq, type LiveState } from "./state";
@@ -15,7 +15,8 @@ import { applyEnvelope, applyPivot, applyPivots, applySnapshot, lastEventSeq, ty
 class NoMatches extends Error {}
 
 /**
- * The chosen match if the API has it, else its most recent live match, else its most recent match.
+ * The chosen match if the API has it, else the recorded demo, else its most recent live match, else its
+ * most recent match.
  * A match named in the URL that is gone is an error; a saved one (from an older server run) is skipped.
  */
 export async function pickMatch(choice: MatchChoice = { id: null, fromUrl: false }): Promise<string> {
@@ -27,7 +28,7 @@ export async function pickMatch(choice: MatchChoice = { id: null, fromUrl: false
     }
   }
   const matches = await api.listMatches();
-  const pick = matches.find((m) => m.status === "live") ?? matches[0];
+  const pick = matches.find(isRecordedDemo) ?? matches.find((m) => m.status === "live") ?? matches[0];
   if (!pick) throw new NoMatches();
   return pick.match_id;
 }
@@ -166,7 +167,7 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
   );
 }
 
-function toView({ match, events, metrics, pivots }: LiveState): MatchView {
+export function toView({ match, events, metrics, pivots }: LiveState): MatchView {
   const players = new Map<string, string>();
   for (const team of [match.home, match.away]) for (const p of team.squad) players.set(p.player_id, p.name);
   const byId = new Map(events.map((e) => [e.event_id, e]));

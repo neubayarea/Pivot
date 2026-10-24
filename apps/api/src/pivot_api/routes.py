@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from pivot_adapters import Adapters
@@ -16,12 +17,13 @@ from pivot_core.domain import (
     OverlayFrame,
     OverlayTimeline,
     Pivot,
+    TrackingFrame,
     ViewerPrefs,
 )
 from pivot_core.domain.common import Side
 from pivot_core.domain.narrative import Audience, Language
 
-from . import overlay
+from . import overlay, sims
 from .personalize import Personalizer
 
 router = APIRouter(prefix="/api")
@@ -96,6 +98,22 @@ async def list_events(request: Request, match_id: str, since: int = -1) -> list[
     """Events with seq > `since`, in seq order; pass the last seq seen to catch up after a reconnect."""
     await _match_or_404(request, match_id)
     return await _adapters(request).matches.list_events(match_id, since_seq=since)
+
+
+@router.get("/matches/{match_id}/frames", response_model=list[TrackingFrame])
+async def list_frames(request: Request, match_id: str, start: int | None = Query(None, alias="from", ge=0),
+                      end: int | None = Query(None, alias="to", ge=0)) -> JSONResponse:
+    """Player and ball positions, one frame per second, with `from` <= t <= `to` (seconds; both optional).
+
+    Only simulated matches and the recorded demo have frames (Ax6); any other match is a 404, like an
+    unknown one.
+    """
+    await _match_or_404(request, match_id)
+    path = getattr(request.app.state, "fixture_frames", {}).get(match_id) or         sims.frames_path(getattr(request.app.state, "sims_dir", sims.data_dir_from_env()), match_id)
+    if path is None:
+        raise HTTPException(404, f"match {match_id!r} has no tracking frames")
+    # Straight from the cache file, which build_one wrote from TrackingFrame models: no need to validate 6000 again.
+    return JSONResponse(await asyncio.to_thread(sims.read_frames, path, start, end))
 
 
 @router.get("/matches/{match_id}/pivots")

@@ -1,6 +1,7 @@
 import { useMatch, type Speed } from "../data/match";
 import { useT } from "../i18n";
 import Button from "./Button";
+import Scrubber from "./Scrubber";
 import Segmented from "./Segmented";
 
 const SPEEDS = [
@@ -10,18 +11,27 @@ const SPEEDS = [
   { value: "60", label: "60×" },
 ] as const;
 
-/** Replay controls for the local fixture, so demo recordings can pause and rewind. Hidden on the live feed. */
+/**
+ * The replay bar under the top bar, on every page while a replay runs (the fixture, or Start demo
+ * on a stored match): play/pause, a timeline over the whole match, speed and restart. Dragging the
+ * timeline moves the one replay clock, so the score, momentum, events, pivots and stats all follow,
+ * backwards too. Hidden on the live feed.
+ */
 export default function Playback() {
-  const { match, playback } = useMatch();
+  const { match, events, pivots, playback } = useMatch();
   const t = useT();
   if (!playback) return null;
-  const done = match.status === "finished";
+  const play = (on: boolean) => {
+    if (on && match.clock >= playback.end) playback.seek(0);    // play again from kick-off
+    playback.setPlaying(on);
+  };
+  const goals = events.filter((e) => e.type === "shot" && e.shot_outcome === "goal");
   return (
-    <span className="playback">
+    <div className="playback" role="region" aria-label={t("playback.replay")}>
       <span className="lbl">{t("playback.replay")}</span>
-      <Button onClick={() => playback.setPlaying(!playback.playing)} disabled={done}>
-        {t(playback.playing ? "playback.pause" : "playback.play")}
-      </Button>
+      <Scrubber window={[0, playback.end]} t={Math.floor(match.clock)} onChange={playback.seek}
+        playing={playback.playing} onPlayingChange={play}
+        pivotMinutes={[...new Set(pivots.map((p) => p.minute))]} marks={goals.map((e) => ({ t: e.t, on: false }))} />
       <Segmented
         label={t("playback.speed")}
         options={SPEEDS}
@@ -31,6 +41,6 @@ export default function Playback() {
       <Button variant="ghost" onClick={playback.restart}>
         {t("playback.restart")}
       </Button>
-    </span>
+    </div>
   );
 }

@@ -30,22 +30,23 @@ afterEach(() => {
 });
 
 const team = (short: string) => ({ short_name: short, name: short, squad: [] });
-const match = (id: string, seed: number, status: Match["status"], home: number, away: number) =>
-  ({ match_id: id, seed, status, score: { home, away }, home: team("HBC"), away: team("ROV") }) as unknown as Match;
+const match = (id: string, seed: number, status: Match["status"], home: number, away: number, preset: string | null = null) =>
+  ({ match_id: id, seed, status, preset, score: { home, away }, home: team("HBC"), away: team("ROV") }) as unknown as Match;
 
 const MATCHES = [
   match("M-seed-212", 212, "finished", 3, 2),
   match("M-seed-101", 101, "finished", 4, 5),
   match("M-api-demo", 20261023, "live", 1, 2),
+  match("M-seed-41", 41, "finished", 1, 0, "demo-1021"),
 ];
 
-/** Answers the API from MATCHES; any other match id is a 404. */
-function stubApi() {
+/** Answers the API from `matches`; any other match id is a 404. */
+function stubApi(matches: Match[] = MATCHES) {
   const urls: string[] = [];
   vi.stubGlobal("fetch", async (url: string) => {
     urls.push(url);
-    if (url === "/api/matches") return Response.json(MATCHES);
-    const hit = MATCHES.find((m) => url === `/api/matches/${m.match_id}`);
+    if (url === "/api/matches") return Response.json(matches);
+    const hit = matches.find((m) => url === `/api/matches/${m.match_id}`);
     return hit ? Response.json(hit) : Response.json({ detail: "not found" }, { status: 404 });
   });
   return urls;
@@ -72,8 +73,14 @@ describe("which match is followed", () => {
     expect(await pickMatch({ id: "M-seed-212", fromUrl: false })).toBe("M-seed-212");
   });
 
-  it("drops a saved match the server no longer has, for its live one", async () => {
+  it("opens the recorded demo when nothing is chosen, or a saved match is gone", async () => {
     stubApi();
+    expect(await pickMatch()).toBe("M-seed-41");
+    expect(await pickMatch({ id: "M-seed-999", fromUrl: false })).toBe("M-seed-41");
+  });
+
+  it("falls back to the live match when the server has no recorded demo", async () => {
+    stubApi(MATCHES.filter((m) => m.preset === null));
     expect(await pickMatch({ id: "M-seed-999", fromUrl: false })).toBe("M-api-demo");
   });
 
@@ -96,17 +103,21 @@ describe("match picker", () => {
       </PrefsProvider>,
     );
 
-  it("labels each match with its score and seed, and the demo as the demo", () => {
+  it("labels each match with its score and seed, the recorded demo as the demo", () => {
     const t = translator("en");
     expect(matchLabel(MATCHES[1], t)).toBe("HBC 4–5 ROV · seed 101");
-    expect(matchLabel(MATCHES[2], t)).toBe("HBC 1–2 ROV · demo · Live");
+    expect(matchLabel(MATCHES[3], t)).toBe("HBC 1–0 ROV · demo");
+    expect(matchLabel(MATCHES[2], t)).toBe("HBC 1–2 ROV · sample · Live");
     expect(matchLabel(MATCHES[1], translator("zh"))).toBe("HBC 4–5 ROV · 种子 101");
+    expect(matchLabel(MATCHES[3], translator("zh"))).toBe("HBC 1–0 ROV · 演示");
   });
 
   it("lists every match and selects the followed one", () => {
     withWindow("?lang=en");
     const html = render(false);
-    expect([...html.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1])).toEqual(["M-seed-101", "M-seed-212", "M-api-demo"]);
+    expect([...html.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1])).toEqual([
+      "M-seed-41", "M-seed-101", "M-seed-212", "M-api-demo",
+    ]);
     expect(html).toContain('<option value="M-seed-212" selected="">HBC 3–2 ROV · seed 212</option>');
     expect(html).not.toContain("Generating");
   });

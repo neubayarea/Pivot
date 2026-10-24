@@ -8,8 +8,12 @@ then written to `PIVOT_DATA_DIR/sims/` (default `./.pivot-data/sims/`):
   M-seed-101.<SIM_VERSION>.frames.json.gz  one tracking frame per second
 
 SIM_VERSION hashes the simulator and analytics source, so editing either re-runs the matches on the
-next start; an unchanged one is read straight back. Candidates go on `pivot-candidates`, so the
+next start; an unchanged one is read straight back. The frames stay on disk; `GET
+/api/matches/{id}/frames` reads them from there (`read_frames`). Candidates go on `pivot-candidates`, so the
 worker writes the pivots; its message ids are "{match_id}:{minute}", so a second load adds nothing.
+
+The recorded demo (B02) is stored the same way, from the files committed in `eval/fixtures/`
+(`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`.
 """
 
 from __future__ import annotations
@@ -21,9 +25,12 @@ import json
 import logging
 import multiprocessing
 import os
+import re
 import time
+from bisect import bisect_left, bisect_right
 from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import pivot_core.analytics as analytics_pkg
@@ -142,7 +149,11 @@ class SimStatus:
 
 async def store_one(adapters: Adapters, data_path: Path) -> str:
     """Put one cached match into the store and its candidates on the worker queue."""
-    data = await asyncio.to_thread(_read_json_gz, data_path)
+    return await store_data(adapters, await asyncio.to_thread(_read_json_gz, data_path))
+
+
+async def store_data(adapters: Adapters, data: dict) -> str:
+    """Store a match file's match, events and metrics, and put its candidates on the worker queue."""
     match = Match.model_validate(data["match"])
     await adapters.matches.upsert_match(match)
     await adapters.matches.append_events([MatchEvent.model_validate(e) for e in data["events"]])
@@ -153,9 +164,55 @@ async def store_one(adapters: Adapters, data_path: Path) -> str:
     return match.match_id
 
 
+# The recorded demo (B02): committed to the repo, so every machine and the server show the same match.
+FIXTURE = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "demo-1021.json"
+
+
+def fixture_from_env() -> Path | None:
+    """`PIVOT_DEMO_FIXTURE` names another file; "0" turns the recorded demo off."""
+    raw = os.getenv("PIVOT_DEMO_FIXTURE", "")
+    if raw == "0":
+        return None
+    return Path(raw) if raw else FIXTURE
+
+
+async def load_fixture(adapters: Adapters, path: Path) -> tuple[str, Path | None]:
+    """Store the recorded demo; returns its match id and its frames file (None if it is missing)."""
+    data = await asyncio.to_thread(lambda: json.loads(path.read_text(encoding="utf-8")))
+    match_id = await store_data(adapters, data)
+    frames = path.with_name(path.name.removesuffix(".json") + ".frames.json.gz")
+    return match_id, frames if frames.is_file() else None
+
+
 def _read_json_gz(path: Path) -> dict:
     with gzip.open(path, "rt", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+MATCH_ID = re.compile(r"[A-Za-z0-9_-]+")
+
+
+def frames_path(data_dir: Path, match_id: str, version: str = SIM_VERSION) -> Path | None:
+    """The cached frames file of this match at this version, or None if there is none."""
+    if not MATCH_ID.fullmatch(match_id):
+        return None
+    path = data_dir / f"{match_id}.{version}.frames.json.gz"
+    return path if path.is_file() else None
+
+
+# A whole match is ~6000 frames, ~10 MB of JSON; keep the last two parsed so scrubbing stays cheap.
+@lru_cache(maxsize=2)
+def _frames(path: Path, mtime_ns: int) -> tuple[list[dict], list[int]]:
+    frames = _read_json_gz(path)
+    return frames, [f["t"] for f in frames]
+
+
+def read_frames(path: Path, start: int | None = None, end: int | None = None) -> list[dict]:
+    """Frames with start <= t <= end (either bound left out: from kick-off / to the final whistle), in t order."""
+    frames, ts = _frames(path, path.stat().st_mtime_ns)
+    lo = 0 if start is None else bisect_left(ts, start)
+    hi = len(ts) if end is None else bisect_right(ts, end)
+    return frames[lo:hi]
 
 
 def default_executor(n: int) -> Executor:
