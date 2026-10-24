@@ -4,15 +4,22 @@ Most tests use a tiny hand-made match whose right answer can be read off the eve
 ones run on a simulated match and check that the numbers hang together.
 """
 
-import math
 import typing
 
 import pytest
 
 from pivot_core.analytics import StatCalculator, player_match_stats
 from pivot_core.analytics.ratings import POSITION_OFFSET
-from pivot_core.domain import StatMetric, StatRef, TrackingFrame
-from pivot_core.domain import MatchEvent
+from pivot_core.domain import (
+    ExplanationSentence,
+    MatchEvent,
+    Narrative,
+    StatMetric,
+    StatRef,
+    TrackingFrame,
+    ViewerPrefs,
+)
+from pivot_core.domain.stats import Claim
 from pivot_core.sim import build_demo_match, simulate
 
 MATCH = build_demo_match(5)
@@ -42,7 +49,70 @@ def ask(c: StatCalculator, metric: str, team: str = "home", window=(0, 120), pla
 def test_every_metric_in_the_vocabulary_is_implemented():
     c = calc([ev(1, 10, "pass", location=(30, 30), end_location=(40, 30), outcome="success")])
     for metric in typing.get_args(StatMetric):
-        assert isinstance(ask(c, metric), float)
+        try:
+            value = ask(c, metric)
+        except LookupError:                        # no frames, nothing to divide by: "no data", never a number
+            continue
+        assert isinstance(value, float) and value == value
+
+
+# --- no data is "no data", not NaN or 0 ---------------------------------------------
+
+NO_FRAMES = ("possession_pct", "line_height_m", "team_width_m", "press_distance_m", "distance_covered_km")
+
+
+@pytest.mark.parametrize("metric", ["pass_accuracy_pct", "ppda", "field_tilt_pct", "momentum_avg", *NO_FRAMES])
+def test_a_window_with_nothing_to_measure_has_no_value(metric):
+    c = calc([ev(1, 10, "pass", location=(30, 30), end_location=(40, 30), outcome="success")])
+    with pytest.raises(LookupError):
+        ask(c, metric, window=(50, 55))
+
+
+@pytest.mark.parametrize("metric", NO_FRAMES)
+def test_frame_metrics_without_frames_have_no_value(metric):
+    with pytest.raises(LookupError):
+        ask(calc([ev(1, 10, "pass", outcome="success")]), metric)
+
+
+@pytest.mark.parametrize("metric", ["possession_pct", "team_width_m", "ppda", "field_tilt_pct", "momentum_avg"])
+def test_team_only_metrics_have_no_value_for_a_player(metric):
+    with pytest.raises(LookupError, match="team"):
+        ask(calc(), metric, player="h09")
+
+
+def test_an_unknown_player_or_one_from_the_other_side_has_no_value():
+    c = calc([ev(1, 10, "pass", player_id="h09", outcome="success")])
+    assert ask(c, "passes", player="h09") == 1
+    with pytest.raises(LookupError, match="no player"):
+        ask(c, "passes", player="x99")
+    with pytest.raises(LookupError, match="away"):
+        ask(c, "passes", player="a09")                  # asked about home, a09 plays for away
+
+
+def test_a_missing_match_has_no_values():
+    c = StatCalculator(None, [], [])                     # what load_view passes for a match it cannot find
+    with pytest.raises(LookupError, match="match"):
+        ask(c, "shots")
+
+
+def test_the_real_verifier_rejects_any_number_for_a_window_without_data():
+    verifier = pytest.importorskip("pivot_worker.verifier")
+    es = [ev(i, 61 * 60 + i, "pass", outcome="success" if i % 4 else "fail") for i in range(1, 9)]
+    c = calc(es)
+    assert ask(c, "pass_accuracy_pct", window=(61, 66)) == 75.0
+
+    def check(value, window):
+        ref = StatRef(metric="pass_accuracy_pct", team="home", window=window)
+        sentence = ExplanationSentence(text=f"Pass accuracy was {value:g}%.", evidence_ids=["e1"],
+                                       claims=[Claim(value=value, unit="pct", stat_ref=ref)])
+        card = Narrative(prefs=ViewerPrefs(), headline="Passing goes up a gear", sentences=[sentence], source="llm")
+        return verifier.verify(card, pivot_minute=63, events={e.event_id: e for e in es}, stats=c)
+
+    assert check(75.0, (61, 66)).passed
+    for wrong in (87.0, 12.0):                         # nothing happened in 40-45: no percentage can be right
+        verdict = check(wrong, (40, 45))
+        assert not verdict.passed
+        assert any("cannot be recomputed" in i.message for i in verdict.issues), verdict.issues
 
 
 def test_window_is_left_closed_right_open_on_elapsed_minutes():
@@ -59,7 +129,8 @@ def test_shootout_never_counts():
 def test_met_001_possession_counts_live_frames_only():
     fs = [frame(0, "home", {}), frame(1, "home", {}), frame(2, "away", {}), frame(3, None, {})]
     assert ask(calc(frames=fs), "possession_pct") == pytest.approx(66.7)
-    assert math.isnan(ask(calc(frames=fs), "possession_pct", player="h09"))
+    with pytest.raises(LookupError):
+        ask(calc(frames=fs), "possession_pct", player="h09")
 
 
 def test_met_002_003_passes_and_accuracy_leave_out_throw_ins():
@@ -210,6 +281,19 @@ def test_team_totals_equal_the_sum_of_players(sim_calc):
     ids = [p.player_id for p in MATCH.home.squad]
     for metric in ("shots", "passes", "pressures", "interceptions"):
         assert ask(sim_calc, metric) == sum(ask(sim_calc, metric, player=pid) for pid in ids)
+
+
+def test_halves_are_cut_at_the_whistle_and_add_up_to_the_match(sim_calc):
+    first_shots = sum(1 for e in sim_calc.events if e.type == "shot" and e.team == "home" and e.period == 1)
+    assert sim_calc.compute(StatRef(metric="shots", team="home", window=(0, 120)), period=1) == first_shots
+    for metric in ("passes", "shots", "pressures", "interceptions", "turnovers", "progressive_passes"):
+        for team in ("home", "away"):
+            whole = ask(sim_calc, metric, team=team)
+            halves = [sim_calc.compute(StatRef(metric=metric, team=team, window=(0, 120)), period=p) for p in (1, 2)]
+            assert sum(halves) == whole
+    full = ask(sim_calc, "shots")
+    sim_calc.compute(StatRef(metric="shots", team="home", window=(0, 120)), period=1)
+    assert ask(sim_calc, "shots") == full                       # the half filter does not stick
 
 
 def test_numbers_are_in_football_ranges(sim_calc):

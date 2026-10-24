@@ -26,9 +26,10 @@ from ..domain import TeamSheet, TeamTactics
 from ..domain.common import PITCH_LENGTH, PITCH_WIDTH
 from .formations import DEFENDER_ROLES, WIDE_DEFENDERS
 
-LINE_HEIGHT = {"low": 18.0, "mid": 28.0, "high": 38.0}   # back-line x with the ball at halfway (team view)
+LINE_HEIGHT = {"low": 22.0, "mid": 28.0, "high": 38.0}   # back-line x with the ball at halfway (team view)
 WIDTH_IN = {"narrow": 0.9, "normal": 1.05, "wide": 1.2}
 PRESS_PLAYERS = {"low": 1, "mid": 1, "high": 2}
+NEAR_OWN_BOX = 25.0                       # ball this close to our goal: at least two close down
 PRESS_ZONE = {"low": 45.0, "mid": 70.0, "high": PITCH_LENGTH}  # press when the ball is closer to our goal than this
 SPRINT_MS = 8.5
 
@@ -118,7 +119,8 @@ class MovementModel:
             line = np.clip(LINE_HEIGHT[tac.line_height] + 6 + 0.45 * (b[0] - 40), 15, 62)
             depth, width, follow = 1.25, WIDTH_IN[tac.width], 0.2
         else:
-            line = np.clip(LINE_HEIGHT[tac.line_height] + 0.3 * (b[0] - 52.5), 8, 55)
+            # even a deep block holds its line around the penalty spot, not on the six-yard box
+            line = np.clip(LINE_HEIGHT[tac.line_height] + 0.3 * (b[0] - 52.5), 11, 55)
             depth, width, follow = 0.8, 0.72, 0.4
 
         tx = line + rel_x * depth
@@ -172,6 +174,8 @@ class MovementModel:
             counter = t - last_loss <= 5
             if counter:
                 n += 1
+            if b[0] <= NEAR_OWN_BOX:
+                n = max(n, 2)                      # every team closes down near its own box
             if counter or b[0] <= PRESS_ZONE[tac.press]:
                 d = np.where(outfield, np.hypot(*(own - b).T), np.inf)
                 towards_goal = np.array([-2.5, 0.0])   # close down, do not run into him

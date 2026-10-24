@@ -12,6 +12,9 @@ How it works, minute by minute within each period:
    started growing from zero, and both sums reset;
 4. the candidate is kept only once `confirm_min` minutes after the change are known and the
    swing (mean after minus mean before) still points the same way and is at least `min_swing`;
+   both means use minutes of the same period only, at least `min_side_min` on each side, and a
+   candidate still waiting when a new period starts is dropped (momentum restarts at the break,
+   which is not a turn in the match);
 5. candidates closer than `min_gap_min` minutes to the previous one are dropped, and at most
    `max_per_match` are kept.
 
@@ -37,6 +40,7 @@ class DetectorParams:
     baseline_min: int = 10           # minutes in the baseline mean
     confirm_min: int = 5             # the new level must hold this long (ADR-0010)
     min_swing: float = 0.3           # minimum |mean after - mean before|
+    min_side_min: int = 3            # minutes of the same period needed on each side of the change
     min_gap_min: int = 8             # minutes between two candidates (ADR-0010)
     max_per_match: int = 5           # ADR-0010
     window_before: int = 8           # evidence window handed to the Judge: [minute - 8, minute + 5)
@@ -89,10 +93,12 @@ class PivotDetector:
     emitted: list[PivotCandidate] = field(default_factory=list)
 
     def reset_period(self, minute: int) -> None:
-        """Call at the first minute of a new period: momentum restarts, so the sums do too."""
+        """Call at the first minute of a new period: momentum restarts, so the sums do too, and a
+        change still waiting for confirmation is dropped (its after-window would be the restart)."""
         self._pos = self._neg = 0.0
         self._pos_start = self._neg_start = None
         self._period_start = minute
+        self._pending.clear()
 
     def _momentum(self, lo: int, hi: int) -> list[float]:
         return [m.momentum for m in self.series if lo <= m.minute < hi]
@@ -132,9 +138,9 @@ class PivotDetector:
             if now < c.minute + p.confirm_min - 1:
                 continue
             self._pending.remove(c)
-            before = self._momentum(c.minute - p.confirm_min, c.minute)
+            before = self._momentum(max(self._period_start, c.minute - p.confirm_min), c.minute)
             after = self._momentum(c.minute, c.minute + p.confirm_min)
-            if not before or not after:
+            if min(len(before), len(after)) < p.min_side_min:
                 continue
             swing = float(np.mean(after) - np.mean(before))
             if (swing > 0) != (c.direction == "home") or abs(swing) < p.min_swing:
