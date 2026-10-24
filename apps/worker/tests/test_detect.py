@@ -113,3 +113,22 @@ def test_inside_the_worker_shell(events, stats):
                                                     ("explainer", "retried"), ("verifier", "ok")]
     assert [t.step for t in traces] == [0, 1, 2, 3, 4]
     assert traces[2].verdict.issues[0].code == "number_mismatch" and traces[1].prompt_hash
+
+
+def test_a_bug_in_the_stat_calculator_degrades_to_the_template_instead_of_crashing(events):
+    class Buggy:
+        def compute(self, ref):
+            raise ZeroDivisionError("bug in the stat calculator")
+
+    pivot, steps = run(events, Buggy(), ScriptedModelClient(standard=[draft(9)], mini=[YES]))
+    assert pivot.status == "degraded" and pivot.narrative.source == "template"
+    assert steps == [("judge", "ok"), ("explainer", "ok"), ("verifier", "error"), ("template", "degraded")]
+
+
+def test_the_verifier_checks_numbers_against_the_named_team(events, stats):
+    wrong_team = json.dumps({"headline": "Okafor's arrival flips the left flank", "sentences": [{
+        "text": "Away's final-third passes rose from 3 to 9 after the change.", "evidence_ids": ["m063-s01042"],
+        "claims": [claim("passes_final_third", "home", (56, 61), 3).model_dump(),
+                   claim("passes_final_third", "home", (61, 66), 9).model_dump()]}]})
+    pivot, steps = run(events, stats, ScriptedModelClient(standard=[wrong_team] * 3, mini=[YES]))
+    assert pivot.status == "degraded" and steps.count(("verifier", "rejected")) == 3

@@ -5,7 +5,8 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 
 1. shape: sentence count, words per sentence, evidence count, headline length and digits
 2. evidence: every evidence id exists and falls from 8 minutes before the pivot to 5 after
-3. numbers: every claim recomputes within tolerance, and every number in the text has a claim
+3. numbers: every claim recomputes within tolerance in its stat's unit, and every number in the
+   text is one of them, on a team and a stat the sentence is talking about
 4. direction: rose/fell words match the sign of the change between two claimed windows
 5. significance: "significant"-style words only when the what-if intervals do not overlap
 6. wording: no banned terms, and no jargon in fan versions
@@ -17,23 +18,25 @@ Issue messages are written for the Explainer, which gets them back on a retry.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
+from functools import cache
 from typing import Protocol
 
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
-from pivot_core.domain.stats import Claim
+from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from . import languages as lang_rules
-from .vocabulary import JARGON
+from .vocabulary import JARGON, STAT_TERMS
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
 
 # Allowed gap between a claimed value and the recomputed one, per unit.
 TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km": 0.05, "ratio": 0.05}
 
-# Numbers in running text. Match minutes ("61'", "45+2'", "第61分钟") are not claims and are
-# skipped. A digit right after a Chinese character still counts ("从3上升到9").
-_NUMBER = re.compile(r"(?<![A-Za-z\d.])\d+(?:\.\d+)?")
+# Numbers in running text, with their sign. Match minutes ("61'", "45+2'", "第61分钟") are not claims
+# and are skipped. A digit right after a Chinese character still counts ("从3上升到9"), and a dash
+# between two numbers ("3-1") is not a minus sign.
+_NUMBER = re.compile(r"(?<![A-Za-z\d.])-?\d+(?:\.\d+)?")
 
 
 class StatSource(Protocol):
@@ -41,22 +44,77 @@ class StatSource(Protocol):
 
 
 def _compute(stats: StatSource, ref: StatRef) -> float | None:
-    """Recompute a stat; None if the source cannot (missing data, or no StatCalculator yet)."""
+    """Recompute a stat; None if the source has no data for it (or there is no StatCalculator yet).
+
+    Any other error is a bug in the stat source and is raised, not reported as a wrong number.
+    """
     try:
         return stats.compute(ref)
-    except Exception:
+    except LookupError:                       # KeyError and IndexError included
         return None
 
 
-def numbers_in(text: str, lang: str = "en") -> list[str]:
-    return _NUMBER.findall(lang_rules.MINUTES.sub(" ", lang_rules.normalise(text, lang)))
+def _plain(text: str, lang: str) -> str:
+    return lang_rules.normalise(text, lang).replace("\u2212", "-")    # the typographic minus sign
 
 
-def _matches(number: str, claim: Claim) -> bool:
-    """True if a number as written could be the claim's value (allowing for rounding)."""
+def _numbers(plain: str, team_names: Iterable[str] = ()) -> list[tuple[int, str]]:
+    """Numbers and where they start. Digits in team names ("FC 1899") and match minutes are not numbers."""
+    for name in team_names:
+        plain = plain.replace(name, " " * len(name))
+    plain = lang_rules.MINUTES.sub(lambda m: " " * len(m.group()), plain)
+    return [(m.start(), m.group()) for m in _NUMBER.finditer(plain)]
+
+
+def numbers_in(text: str, lang: str = "en", team_names: Iterable[str] = ()) -> list[str]:
+    return [n for _, n in _numbers(_plain(text, lang), team_names)]
+
+
+def _pattern(phrase: str) -> str:
+    if lang_rules.has_cjk(phrase):            # no word boundaries in Chinese
+        return re.escape(phrase)
+    return rf"(?<![A-Za-z0-9]){re.escape(phrase)}(?![A-Za-z0-9])"
+
+
+def _mentions(text: str, phrases: Mapping[str, frozenset[str]]) -> list[tuple[int, frozenset[str]]]:
+    """Where each phrase occurs, longest first, so "final-third passes" is not also read as "passes"."""
+    taken = [False] * len(text)
+    found = []
+    for phrase in sorted(phrases, key=len, reverse=True):
+        for m in re.finditer(_pattern(phrase), text):
+            if not any(taken[m.start():m.end()]):
+                taken[m.start():m.end()] = [True] * (m.end() - m.start())
+                found.append((m.start(), phrases[phrase]))
+    return found
+
+
+@cache
+def _stat_names(lang: str) -> dict[str, frozenset[str]]:
+    """Lower-cased stat names a sentence may use, each with every stat it could mean.
+
+    A name counts for every stat whose name contains it, so "passes" may be any kind of pass.
+    """
+    names: dict[str, set[str]] = {}
+    for metric, term in STAT_TERMS.items():
+        for label in (term.label, term.fan_label, lang_rules.LABELS.get(lang, {}).get(metric, "")):
+            for part in re.split(r"[()]", label.lower()):                 # "expected goals (xG)"
+                part = re.sub(r"^(el|la|los|las) ", "", part.strip())     # "la amenaza creada"
+                if part:
+                    names.setdefault(part, set()).add(metric)
+    return {name: frozenset(m for other, ms in names.items() if re.search(_pattern(name), other) for m in ms)
+            for name in names}
+
+
+def _matches(number: str, claim: Claim, actual: float | None) -> bool:
+    """True if a number as written could be the claim's recomputed value (allowing for rounding).
+
+    It is compared with the real value, not the claimed one, so the claim tolerance and the
+    rounding slack are not added together. Without a real value (the claim is already reported
+    as wrong) it is compared with the claim.
+    """
     decimals = len(number.split(".")[1]) if "." in number else 0
-    slack = max(TOLERANCE[claim.unit], 0.5 * 10**-decimals)
-    return abs(float(number) - claim.value) <= slack + 1e-9
+    slack = max(TOLERANCE[STAT_UNITS[claim.stat_ref.metric]], 0.5 * 10**-decimals)
+    return abs(float(number) - (claim.value if actual is None else actual)) <= slack + 1e-9
 
 
 def _has_word(text: str, words: tuple[str, ...]) -> list[str]:
@@ -98,6 +156,7 @@ def verify(
     significant: Mapping[str, bool] | None = None,
     outcome_deltas: Callable[[str], list[float]] | None = None,
     context_ids: Collection[str] = frozenset(),
+    team_names: Mapping[str, str] | None = None,
     max_sentences: int = 3,
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
@@ -105,6 +164,7 @@ def verify(
     `outcome_deltas` is for comparisons: given a sentence, it returns the change in each
     outcome the sentence mentions, so "more likely" style words can be checked without claims.
     `context_ids` are the ids of the match-context items the writer was shown (context.py).
+    `team_names` ("home"/"away" to display names) let the number check see which team a number is about.
     """
     issues: list[VerifierIssue] = []
 
@@ -115,6 +175,8 @@ def verify(
     up_words, down_words = lang_rules.up_words(lang), lang_rules.down_words(lang)
     max_words, max_headline = lang_rules.MAX_SENTENCE[lang], lang_rules.MAX_HEADLINE[lang]
     unit_name = "characters" if lang == "zh" else "words"
+    names = dict(team_names or {})
+    team_phrases = {name: frozenset([side]) for side, name in names.items()}
 
     # 1. Shape.
     if not 1 <= len(narrative.sentences) <= max_sentences:
@@ -145,18 +207,36 @@ def verify(
             elif not lo <= event.minute <= hi:
                 issue("evidence_invalid", f"Evidence {eid} is at minute {event.minute}, outside {lo}-{hi}.", i)
 
-        # 3. Numbers: claims recompute, and the text carries no unclaimed numbers.
-        for c in s.claims:
-            actual, ref = _compute(stats, c.stat_ref), c.stat_ref
+        # 3. Numbers: claims recompute in their stat's unit, and the text carries no unclaimed numbers.
+        actuals = [_compute(stats, c.stat_ref) for c in s.claims]
+        for k, (c, actual) in enumerate(zip(s.claims, actuals)):
+            ref, unit = c.stat_ref, STAT_UNITS[c.stat_ref.metric]
+            where = f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]}"
+            if c.unit != unit:
+                issue("number_mismatch", f"{where} is measured in {unit}, not {c.unit}.", i)
             if actual is None:
-                issue("number_mismatch", f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]} "
-                      "cannot be recomputed; drop the number.", i)
-            elif abs(c.value - actual) > TOLERANCE[c.unit] + 1e-9:
-                issue("number_mismatch",
-                      f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]} is {actual:g}, not {c.value:g}.", i)
-        for n in numbers_in(s.text, lang):
-            if not any(_matches(n, c) for c in s.claims):
+                issue("number_mismatch", f"{where} cannot be recomputed; drop the number.", i)
+            elif abs(c.value - actual) > TOLERANCE[unit] + 1e-9:
+                issue("number_mismatch", f"{where} is {actual:g}, not {c.value:g}.", i)
+                actuals[k] = None             # reported once: its number in the text is checked against the claim
+        # A number belongs to a team named before it and to a stat the sentence names, when it names any.
+        plain = _plain(s.text, lang)
+        teams = _mentions(plain, team_phrases)
+        named_stats = {m for _, ms in _mentions(plain.lower(), _stat_names(lang)) for m in ms}
+        for at, n in _numbers(plain, names.values()):
+            before = {side for start, sides in teams if start < at for side in sides}
+            same = [c for c, actual in zip(s.claims, actuals) if _matches(n, c, actual)]
+            fits = [c for c in same if (not before or c.stat_ref.team in before)
+                    and (not named_stats or c.stat_ref.metric in named_stats)]
+            if not same:
                 issue("number_mismatch", f"The number {n} in sentence {i + 1} has no matching claim.", i)
+            elif not fits:
+                said = ([f"about {' or '.join(names[side] for side in sorted(before))}"] if before else []) + \
+                    ([f"on {' or '.join(sorted(named_stats))}"] if named_stats else [])
+                claimed = ", ".join(f"{c.stat_ref.metric} for {names.get(c.stat_ref.team, c.stat_ref.team)}"
+                                    for c in same)
+                issue("number_mismatch", f"The number {n} in sentence {i + 1} only matches {claimed}, but the "
+                      f"sentence has it {' and '.join(said)}; cite the claim for what the sentence says.", i)
 
         # 4. Direction words.
         up, down = _has_word(s.text, up_words), _has_word(s.text, down_words)
