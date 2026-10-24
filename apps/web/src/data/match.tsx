@@ -1,12 +1,15 @@
-// The one place S1 gets match data from. Today it replays the local demo-1021 fixture on a
+// The one place S1 and S2 get match data from. Today it replays the local demo-1021 fixture on a
 // timer; C03 swaps the inside of MatchProvider for the API and WebSocket feed, and the
 // pages keep calling useMatch() unchanged.
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, MinuteMetric, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import { DEMO_1021, clockLabel, type MatchFixture, type TeamInfo } from "../fixtures/demo-1021";
+import type { PivotDetailData } from "../fixtures/pivot-detail";
 
 export type Side = "home" | "away";
 export type Speed = Match["speed"];
+/** Everything S2 needs for one pivot. The pivot is the confirmed version even before the replay reaches it. */
+export type PivotDetail = PivotDetailData & { pivot: Pivot };
 export type TeamStats = { possession: number; shots: number; xg: number; pressures: number; finalThirdPasses: number };
 
 export type MatchView = {
@@ -20,6 +23,7 @@ export type MatchView = {
   stats: Record<Side, TeamStats>;
   playerName: (id: string | null) => string;
   eventById: (id: string) => MatchEvent | undefined;
+  pivotDetail: (id: string) => PivotDetail | undefined;
   playback: {
     playing: boolean;
     setPlaying: (playing: boolean) => void;
@@ -75,6 +79,11 @@ function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed): 
     stats: computeStats(shown),
     playerName: (id) => (id ? (fx.players[id] ?? id) : ""),
     eventById: (id) => fx.events.find((e) => e.event_id === id),
+    pivotDetail: (id) => {
+      const timeline = fx.pivots.find((p) => p.pivot.pivot_id === id);
+      const detail = fx.details[id];
+      return timeline && detail ? { ...detail, pivot: timeline.pivot } : undefined;
+    },
   };
 }
 
