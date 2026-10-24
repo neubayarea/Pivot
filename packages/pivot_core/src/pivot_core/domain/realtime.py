@@ -12,6 +12,7 @@ MessageType = Literal[
     "match.status", "event.batch", "tracking.frame", "metric.updated",
     "pivot.pending", "pivot.confirmed", "pivot.degraded", "pivot.rejected",
     "scenario.progress", "scenario.completed", "trace.appended", "recap.ready",
+    "player_stats.updated",
 ]
 
 
