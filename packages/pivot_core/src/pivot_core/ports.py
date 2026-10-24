@@ -49,6 +49,14 @@ class WorkQueue(Protocol):
         """Release the lock so the message is delivered again."""
         ...
 
+    async def renew_lock(self, message: QueueMessage) -> None:
+        """Extend the lock while a long job runs (Service Bus locks expire after 60 s, ADR-0003)."""
+        ...
+
+    async def dead_letter(self, message: QueueMessage, reason: str) -> None:
+        """Settle a message that keeps failing: it moves aside and is not delivered again."""
+        ...
+
 
 class MatchRepository(Protocol):
     """Match data by match (Cosmos `match_data` in the cloud): events and pivots."""

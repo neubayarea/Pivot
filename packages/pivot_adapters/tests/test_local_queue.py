@@ -49,3 +49,17 @@ def test_queues_are_separate_and_receive_waits():
         assert (await waiter).message_id == "y"
         assert (await q.receive("a", timeout=1)).message_id == "x"
     asyncio.run(run())
+
+
+def test_renew_lock_and_dead_letter():
+    async def run():
+        q = InMemoryWorkQueue()
+        await q.send("q", "a", {"n": 1})
+        msg = await q.receive("q", timeout=1)
+        await q.renew_lock(msg)
+        await q.dead_letter(msg, "boom")
+        assert [(m.message_id, why) for m, why in q.dead_letters["q"]] == [("a", "boom")]
+        assert await q.receive("q", timeout=0.01) is None
+        with pytest.raises(ValueError):
+            await q.renew_lock(msg)
+    asyncio.run(run())
