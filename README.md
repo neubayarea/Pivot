@@ -25,12 +25,20 @@ uv run python -m pivot_api   # 启动 API，打开 http://127.0.0.1:8000/healthz
 pnpm install && pnpm --filter web dev   # 启动网页，打开 http://localhost:5173
 ```
 
-用 Docker 跑 API：
+单进程跑整套（API、实时推送、worker、网页都在 http://127.0.0.1:8000）：
 
 ```bash
-docker build -t pivot-api .
-docker run --rm -p 8000:8000 pivot-api
+pnpm --filter web build && uv run python -m pivot_api.single
 ```
+
+用 Docker 跑同样的单进程镜像：
+
+```bash
+docker build -t pivot .
+docker run --rm -p 8000:8000 pivot
+```
+
+部署到甲骨文虚拟机见 [docs/deploy-oracle.md](docs/deploy-oracle.md)。
 
 ## AI 模型（D01）
 

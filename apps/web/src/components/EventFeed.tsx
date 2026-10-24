@@ -4,7 +4,7 @@ import { useMatch } from "../data/match";
 const ROWS = 8;
 const TICK = { success: " ✓", fail: " ✗" } as const;
 
-function describe(e: MatchEvent, name: (id: string | null) => string): string {
+export function describe(e: MatchEvent, name: (id: string | null) => string): string {
   const who = name(e.player_id);
   const tick = e.outcome ? TICK[e.outcome] : "";
   switch (e.type) {
@@ -35,6 +35,7 @@ const KEY_TYPES = new Set<MatchEvent["type"]>(["card", "substitution", "tactical
 
 export default function EventFeed({ highlight }: { highlight: ReadonlySet<string> }) {
   const { events, teams, playerName } = useMatch();
+  if (!events.length) return <p className="muted">No events yet. The feed starts at kick-off.</p>;
   return (
     <div className="feed" aria-live="polite">
       {/* The newest rows, plus any older event picked as evidence in "Why it turned". */}
