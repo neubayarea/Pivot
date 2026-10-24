@@ -8,7 +8,7 @@ export default function StartDemoButton({ matchId, children }: { matchId?: strin
   const [busy, setBusy] = useState(false);
   const t = useT();
   return (
-    <Button variant="primary" disabled={busy} onClick={() => { setBusy(true); void startDemo(matchId); }}>
+    <Button variant="primary" disabled={busy} onClick={() => { setBusy(true); startDemo(matchId); }}>
       {busy ? t("demo.starting") : (children ?? t("demo.start"))}
     </Button>
   );

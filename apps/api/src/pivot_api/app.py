@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from pivot_adapters import build_adapters
 
@@ -33,9 +34,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         log.info("seeded demo match %s", await seed_demo(app.state.adapters.matches, app.state.adapters.traces))
     # Simulated finished matches (Ax6), loaded in the background so /healthz answers straight away.
     app.state.sims = SimStatus()
+    app.state.sims_dir = data_dir_from_env()
     task = None
     if app.state.adapters.profile == "local" and (specs := specs_from_env()):
-        task = asyncio.create_task(load_sims(app.state.adapters, specs, data_dir_from_env(), app.state.sims),
+        task = asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims),
                                    name="sims")
     try:
         yield
@@ -53,6 +55,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Tracking frames are ~1.7 KB of JSON a second of play; gzip takes a five-minute window to ~60 KB.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(realtime_router)
 

@@ -54,7 +54,7 @@ export default function LiveBoard() {
           </div>
         )}
         <span className="sp" />
-        {over && <StartDemoButton>{t("demo.startShort")}</StartDemoButton>}
+        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
         <Playback />
       </div>
       <div className="grid1">
