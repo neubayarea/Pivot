@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ViewerPrefs } from "@pivot/contracts";
 import { ApiError, api } from "../data/live/api";
 import { listPivotsFor } from "../data/live/provider";
@@ -33,6 +33,11 @@ function withWindow(search: string, localStorage = memoryStorage()) {
   g.window = { location: { search }, localStorage };
   return g.window;
 }
+
+// Node has a real navigator with the machine's language; these tests expect English unless they ask.
+beforeEach(() => {
+  vi.stubGlobal("navigator", { language: "en-US", languages: ["en-US"] });
+});
 
 afterEach(() => {
   delete g.window;

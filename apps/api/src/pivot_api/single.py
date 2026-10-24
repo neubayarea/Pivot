@@ -52,7 +52,8 @@ class SpaStaticFiles(StaticFiles):
         try:
             return await super().get_response(path, scope)
         except HTTPException as exc:
-            if exc.status_code != 404 or path.startswith(BACKEND_PREFIXES):
+            # Starlette hands over an OS path (`api\nope` on Windows); compare with forward slashes.
+            if exc.status_code != 404 or path.replace(os.sep, "/").startswith(BACKEND_PREFIXES):
                 raise
             return await super().get_response("index.html", scope)
 
