@@ -86,3 +86,35 @@ def test_simulated_matches_give_a_few_candidates_each():
         counts.append(len(found))
         assert all(c.direction in ("home", "away") for c in found)
     assert 1 <= np.mean(counts) <= 5
+
+
+def half_events(first_half_minutes, total_minutes):
+    """One event a minute; period 2 starts at `first_half_minutes` on the elapsed clock."""
+    return [MatchEvent(match_id=MID, seq=m, event_id=f"e{m}", t=m * 60 + 5, period=1 if m < first_half_minutes else 2,
+                       period_t=m * 60 + 5 if m < first_half_minutes else (m - first_half_minutes) * 60 + 5,
+                       type="pass", team="home") for m in range(total_minutes)]
+
+
+def test_momentum_dropping_to_zero_at_half_time_is_not_a_pivot():
+    # Home on top from 38' to the break; the last first-half minute (46', which also holds the first
+    # second-half events in a real match) dips, and momentum restarts at zero after the break.
+    values = np.r_[np.zeros(38), np.full(8, 0.8), -0.8, np.zeros(45)]
+    found = detect_candidates(MID, series(values), half_events(47, 92))
+    assert not [c.minute for c in found if 44 <= c.minute <= 50]
+
+
+def test_a_change_just_after_the_break_is_measured_within_the_second_half():
+    # Away on top at the break, home on top for the first minutes after it, then level: a swing to
+    # away at 50'. Mixing in the first half's minutes would cancel it out.
+    values = np.r_[np.zeros(38), np.full(9, -0.9), np.full(3, 0.6), np.full(42, -0.2)]
+    found = detect_candidates(MID, series(values), half_events(47, 92))
+    assert [(c.minute, c.direction) for c in found] == [(38, "away"), (50, "away")]
+    assert found[1].swing == -0.8
+
+
+def test_seed_942_has_no_alarm_at_half_time():
+    out = simulate(build_demo_match(942))
+    events = out.events_as_models()
+    second = min(e.minute for e in events if e.period == 2)
+    found = detect_candidates(out.match.match_id, momentum_series(out.match.match_id, events), events)
+    assert not [c.minute for c in found if second - 2 <= c.minute <= second + 2]

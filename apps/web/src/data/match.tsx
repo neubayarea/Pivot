@@ -3,11 +3,13 @@
 // local demo-1021 fixture on a timer so the board can be shown without a backend; add
 // `&degraded=1` to show every pivot as an automatic summary (the AI-down state). The fixture's
 // explanations come in the viewer's language (fixtures/demo-1021-i18n). Pages call useMatch() either way.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Match, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import { DEMO_1021, ROSTER, clockLabel, type MatchFixture } from "../fixtures/demo-1021";
 import { localisePivot, localiseRowLabel } from "../fixtures/demo-1021-i18n";
 import { useLang, type Lang } from "../i18n";
+import { MatchChoiceContext, initialMatch, readSavedMatch, saveMatch, type MatchChoice } from "./choice";
 import LiveProvider from "./live/provider";
 import { MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
 
@@ -87,10 +89,25 @@ type ProviderProps = {
 export function MatchProvider({ children, fallback = null }: ProviderProps) {
   // Decided once: in-app links drop `?fixture=1`, and the source must not switch under the pages.
   const [fixture] = useState(() => fixtureMode());
-  return fixture ? (
-    <FixtureProvider>{children}</FixtureProvider>
-  ) : (
-    <LiveProvider fallback={fallback}>{children}</LiveProvider>
+  return fixture ? <FixtureProvider>{children}</FixtureProvider> : <ChosenLiveProvider fallback={fallback}>{children}</ChosenLiveProvider>;
+}
+
+/** The live feed for the viewer's chosen match; picking another goes to its S1 and starts a fresh feed. */
+function ChosenLiveProvider({ children, fallback }: ProviderProps) {
+  const [choice, setChoice] = useState<MatchChoice>(() => initialMatch(window.location.search, readSavedMatch()));
+  const navigate = useNavigate();
+  const choose = useCallback((id: string) => {
+    saveMatch(id);
+    setChoice({ id, fromUrl: true });
+    const search = new URLSearchParams(window.location.search);
+    search.set("match", id);
+    navigate({ pathname: "/", search: `?${search}` });
+  }, [navigate]);
+  const value = useMemo(() => ({ choice, choose }), [choice, choose]);
+  return (
+    <MatchChoiceContext.Provider value={value}>
+      <LiveProvider key={choice.id ?? ""} choice={choice} fallback={fallback}>{children}</LiveProvider>
+    </MatchChoiceContext.Provider>
   );
 }
 

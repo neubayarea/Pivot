@@ -25,7 +25,7 @@ SPRINT_MS = 7.0                      # 25.2 km/h
 
 # Per-position adjustment so each group averages about 6.7 over 30 simulated matches
 # (scripts/rating_report.py). Recompute whenever the weights or the simulator change.
-POSITION_OFFSET = {"GK": 0.0, "DF": 0.1, "MF": -0.65, "FW": -0.5}
+POSITION_OFFSET = {"GK": 0.05, "DF": 0.0, "MF": -0.9, "FW": -0.8}
 
 
 def player_match_stats(calc: StatCalculator, up_to_t: int | None = None) -> list[PlayerMatchStats]:
@@ -69,13 +69,13 @@ def player_match_stats(calc: StatCalculator, up_to_t: int | None = None) -> list
                 s["progressive_passes"] += 1
                 add(pid, "progressive")
             if e.outcome == "success":
-                add(pid, "threat", e.threat)
+                add(pid, "threat", max(e.threat, 0.0))        # a safe ball back is not a mistake
             elif e.outcome == "fail":
                 add(pid, "turnover")
         elif e.type == "carry" and pid:
             if StatCalculator.progressive(e):
                 add(pid, "progressive")
-            add(pid, "threat", e.threat)
+            add(pid, "threat", max(e.threat, 0.0))
         elif e.type == "dribble" and pid:
             if e.outcome == "success":
                 s["dribbles_won"] += 1

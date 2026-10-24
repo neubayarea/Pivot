@@ -27,6 +27,11 @@ export const zh: Messages = {
   "top.player.search": "搜索球员",
   "top.player.empty": "没有匹配的球员",
 
+  "picker.label": "比赛",
+  "picker.seed": "种子 {seed}",
+  "picker.demo": "演示",
+  "picker.generating": "正在生成比赛… {ready}/{total}",
+
   "common.retryNow": "立即重试",
   "common.reload": "重新加载",
 
