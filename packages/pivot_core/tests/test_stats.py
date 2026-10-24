@@ -283,6 +283,19 @@ def test_team_totals_equal_the_sum_of_players(sim_calc):
         assert ask(sim_calc, metric) == sum(ask(sim_calc, metric, player=pid) for pid in ids)
 
 
+def test_halves_are_cut_at_the_whistle_and_add_up_to_the_match(sim_calc):
+    first_shots = sum(1 for e in sim_calc.events if e.type == "shot" and e.team == "home" and e.period == 1)
+    assert sim_calc.compute(StatRef(metric="shots", team="home", window=(0, 120)), period=1) == first_shots
+    for metric in ("passes", "shots", "pressures", "interceptions", "turnovers", "progressive_passes"):
+        for team in ("home", "away"):
+            whole = ask(sim_calc, metric, team=team)
+            halves = [sim_calc.compute(StatRef(metric=metric, team=team, window=(0, 120)), period=p) for p in (1, 2)]
+            assert sum(halves) == whole
+    full = ask(sim_calc, "shots")
+    sim_calc.compute(StatRef(metric="shots", team="home", window=(0, 120)), period=1)
+    assert ask(sim_calc, "shots") == full                       # the half filter does not stick
+
+
 def test_numbers_are_in_football_ranges(sim_calc):
     assert 80 <= ask(sim_calc, "distance_covered_km") <= 130
     assert 10 <= ask(sim_calc, "line_height_m") <= 50

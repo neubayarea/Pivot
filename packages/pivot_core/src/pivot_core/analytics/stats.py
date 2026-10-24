@@ -11,6 +11,8 @@ must use this class, never its own arithmetic (data definitions, section 4).
 
 Rules shared by every metric:
 - the window (a, b) covers elapsed minutes a <= t // 60 < b;
+- `compute(ref, period=2)` also keeps only that period's seconds, so a half is cut at the
+  whistle and not at the minute it falls in (the half-time minute holds both halves);
 - period 5 (the shootout) never counts;
 - with `player_id` set, only that player's events (or positions) count;
 - no data is never a number: a ratio with nothing to divide by, a window without frames, a
@@ -65,6 +67,7 @@ class StatCalculator:
         self._frames = self._index_frames(frames)
         self._metrics = momentum_series(match.match_id, self.events)
         self._possessions = self._index_possessions()
+        self._span: tuple[float, float] = (0, math.inf)     # seconds kept by compute(..., period=)
 
     @classmethod
     def from_sim(cls, out) -> "StatCalculator":
@@ -116,9 +119,8 @@ class StatCalculator:
 
     # --- helpers ---------------------------------------------------------------------
 
-    @staticmethod
-    def _in_window(t: int, window: tuple[int, int]) -> bool:
-        return window[0] <= t // 60 < window[1]
+    def _in_window(self, t: int, window: tuple[int, int]) -> bool:
+        return window[0] <= t // 60 < window[1] and self._span[0] <= t < self._span[1]
 
     def _events(self, ref: StatRef, team: str | None = None, types: tuple[str, ...] = ()) -> list[MatchEvent]:
         team = team or ref.team
@@ -134,8 +136,10 @@ class StatCalculator:
         return out
 
     def _frame_idx(self, window: tuple[int, int]) -> np.ndarray:
-        minutes = self._frames.t // 60
-        return np.flatnonzero((minutes >= window[0]) & (minutes < window[1]))
+        t = self._frames.t
+        minutes = t // 60
+        return np.flatnonzero((minutes >= window[0]) & (minutes < window[1])
+                              & (t >= self._span[0]) & (t < self._span[1]))
 
     def _view(self, point, team: str) -> tuple[float, float]:
         return attacking_view(point, team)
@@ -146,14 +150,22 @@ class StatCalculator:
 
     # --- public ----------------------------------------------------------------------
 
-    def compute(self, ref: StatRef) -> float:
+    def compute(self, ref: StatRef, period: int | None = None) -> float:
         if self.match is None:
             raise NoData("no match: the StatCalculator was built without one")
         if ref.player_id and self.team_of.get(ref.player_id) != ref.team:
             side = self.team_of.get(ref.player_id)
             raise NoData(f"{ref.player_id} plays for {side}, not {ref.team}" if side
                          else f"no player {ref.player_id} in this match")
-        value = float(getattr(self, f"_m_{ref.metric}")(ref))
+        if period is not None:
+            p = next((p for p in self.match.periods if p.period == period), None)
+            if p is None:
+                raise NoData(f"this match has no period {period}")
+            self._span = (p.start_t, p.end_t + 1)
+        try:
+            value = float(getattr(self, f"_m_{ref.metric}")(ref))
+        finally:
+            self._span = (0, math.inf)
         if math.isnan(value):
             raise NoData(f"{ref.metric} has no value for {ref.team} in {ref.window[0]}-{ref.window[1]}")
         return round(value, DECIMALS[STAT_UNITS[ref.metric]])
@@ -243,7 +255,8 @@ class StatCalculator:
 
     def _m_momentum_avg(self, ref: StatRef) -> float:
         self._team_only(ref)
-        vals = [m.momentum for m in self._metrics if ref.window[0] <= m.minute < ref.window[1]]
+        vals = [m.momentum for m in self._metrics if ref.window[0] <= m.minute < ref.window[1]
+                and self._span[0] <= m.minute * 60 + 30 < self._span[1]]      # a minute goes to the half holding most of it
         if not vals:
             raise NoData("no momentum minutes in this window")
         sign = 1.0 if ref.team == "home" else -1.0
@@ -300,7 +313,7 @@ class StatCalculator:
 
     def _m_distance_covered_km(self, ref: StatRef) -> float:
         total, steps = 0.0, 0
-        lo, hi = ref.window[0] * 60, ref.window[1] * 60
+        lo, hi = max(ref.window[0] * 60, self._span[0]), min(ref.window[1] * 60, self._span[1])
         for pid, frames in self._frames.pos.items():
             if self.team_of.get(pid) != ref.team or (ref.player_id and pid != ref.player_id):
                 continue
