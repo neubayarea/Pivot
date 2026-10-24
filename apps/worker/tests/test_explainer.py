@@ -4,7 +4,7 @@ import re
 import pytest
 from pydantic import ValidationError
 
-from pivot_core.domain import PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
+from pivot_core.domain import STAT_UNITS, PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
 from pivot_worker import explainer as ex
 from pivot_worker.prompts import render
 from pivot_worker.testing import FakeStats, event
@@ -45,7 +45,7 @@ def test_request_carries_window_events_and_a_stat_sheet(events, stats):
     ids = [e["id"] for e in request["events"]]
     assert "m063-s00100" not in ids                      # minute 20 is outside the window
     assert ids[0] == "m063-s01042" and len(ids) == 4
-    assert len(request["stat_sheet"]) == 19 * 2 * 2
+    assert len(request["stat_sheet"]) == len(STAT_UNITS) * 2 * 2      # every metric, both teams, both windows
     sheet = {(c["stat_ref"]["metric"], c["stat_ref"]["team"], tuple(c["stat_ref"]["window"])): c["value"]
              for c in request["stat_sheet"]}
     assert sheet[("threat_total", "home", (58, 63))] == 0.21
