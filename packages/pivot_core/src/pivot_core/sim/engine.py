@@ -39,6 +39,8 @@ BOX_DEPTH, BOX_Y = 16.5, (13.84, 54.16)
 PRESS_RADIUS, PRESS_RADIUS_GK = 4.6, 9.1          # EVT-006
 CLOSE_RADIUS, CLOSING_SPEED = 2.0, 1.0            # ATTR-001
 SIDES = ("home", "away")
+URGENCY_LEAD = (-1.0, -0.7, -0.4)                # ahead by 1, 2, 3+ (REAL-001)
+URGENCY_TRAIL = (1.0, 0.8, 0.3)                  # behind by 1, 2, 3+: a lost cause is chased less
 HALVES = ((1, 0), (2, 1))                         # period, side kicking off
 FORWARD = ("ST", "LW", "RW", "AM")
 
@@ -64,6 +66,7 @@ SHOT_TECHNIQUE_MIX = {
     ("loose", False): (("half_volley", 0.14), ("volley", 0.04), ("lob", 0.02)),
 }
 DIVING_HEADER_SHARE = 0.056
+FINISH_WEIGHT = 1.2               # xG x (1 + FINISH_WEIGHT * (finishing - 0.7)): a 90 finisher gets 1.24
 # The engine decides once a second, so "his first decision after the ball arrived" also
 # catches a quick touch and pass inside that second. Only this share of those passes is
 # recorded as first time, which brings one-touch passes to the 16 % StatsBomb shows
@@ -90,6 +93,17 @@ class Params:
     post_share: float = 0.05
     home_boost: float = 1.02                     # CTX-003, scaled by attendance in _success
     long_shot_rate: float = 0.006                # per second on the ball 18-32 m out, scaled by long_shots
+    # Game state (B12, REAL-001): urgency runs from -1 (protecting a lead late on) to +1 (chasing it).
+    state_line: float = 2.0                      # back-line shift in metres at full urgency, out of possession
+    state_press_at: float = 0.8                  # urgency beyond which a side presses one level higher or lower
+    man_line: float = 2.0                        # back-line shift per player more (+) or fewer (-) on the pitch
+    state_shot: float = 0.15                     # shot willingness x (1 + state_shot * urgency)
+    state_direct: float = 0.35                   # long-pass penalty x (1 - state_direct * urgency) when chasing
+    waste_s: float = 10.0                        # extra seconds the leading side takes over its restarts
+    # How much the ratings matter (B12): a better side should win more often.
+    skill_pass: float = 0.6                      # pass accuracy x (1 + skill_pass * (passing - 0.75))
+    skill_def: float = 1.0                       # lane cut-out x (1 + skill_def * (interceptions - 0.7))
+    skill_gk: float = 1.5                        # goal chance x (1 - skill_gk * (keeper - 0.88))
 
 
 @dataclass
@@ -146,7 +160,7 @@ def xg_model(v: np.ndarray, header: bool = False, blockers: int = 0, pressed: bo
     p *= 0.8 ** blockers
     if pressed:
         p *= 0.85
-    p *= (0.75 + 0.5 * finishing) / 1.1
+    p *= 1 + FINISH_WEIGHT * (finishing - 0.7)
     return float(np.clip(p, 0.005, 0.95))
 
 
@@ -216,6 +230,7 @@ class Engine:
         self.pending_subs: list[int] = []
         self.kept: set[str] = set()               # players automatic substitutions leave alone (What-if)
         self.score = [0, 0]
+        self.urgency = [0.0, 0.0]                 # game state per side, see _update_state
         self.half_counts = {"goals": 0, "subs": 0, "cards": 0}
 
         self.t = 0
@@ -399,7 +414,8 @@ class Engine:
         self.restart = {"kind": kind, "team": team, "spot": self.ball.copy(), "period_start": period_start,
                         "waited": 0}
         self.restart["taker"] = self._choose_taker(team, kind, self.ball)
-        self.dead = int(wait)
+        # a side protecting a lead takes its time over its own restarts (REAL-001)
+        self.dead = int(wait) + int(self.p.waste_s * max(-self.urgency[team], 0.0))
 
     def _restart_targets(self, targets: np.ndarray) -> None:
         """During a stoppage the taker walks to the ball; after a goal everyone walks back to their half."""
@@ -471,11 +487,13 @@ class Engine:
         if v[0] > 70:
             xg = xg_model(v, blockers=self._blockers(k, v), pressed=under, finishing=self._a(k, i, "finishing"))
             tendency = 1.2 if role in FORWARD else (0.5 if role in DEFENDER_ROLES else 0.9)
+            tendency *= 1 + self.p.state_shot * self.urgency[k]
             if xg >= self.p.shot_min_xg and self.rng.random() < min(0.6, (self.p.shot_base + self.p.shot_xg_weight * xg) * tendency):
                 return self._shoot(k, i, v, under, first_time=quick, incoming=last)
         dist = float(np.hypot(*(v - GOAL)))
         if 18 <= dist <= 32 and abs(v[1] - PITCH_WIDTH / 2) < 16 and not _in_box(v) and role != "GK":
-            if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0):
+            if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0) * (
+                    1 + self.p.state_shot * self.urgency[k]):
                 return self._shoot(k, i, v, under, first_time=quick, incoming=last)
         rate = self.p.pass_rate[self.tactics[k].tempo] + (self.p.pass_rate_pressed if under else 0.0)
         if role == "GK":
@@ -612,6 +630,7 @@ class Engine:
         offside = (mates[cand, 0] > back) & (mates[cand, 0] > max(v[0], PITCH_LENGTH / 2))
         style = self.tactics[k].passing
         long_pen = {"short": 1.4, "mixed": 1.0, "direct": 0.55}[style]
+        long_pen *= 1 - self.p.state_direct * max(self.urgency[k], 0.0)     # chasing: go longer sooner
         tgain = np.array([threat_value(mates[m]) for m in cand]) - threat_value(v)
         score = 0.05 * gains + 0.14 * np.minimum(open_, 10) - long_pen * (dists / 32) ** 2 + 12 * tgain
         score -= np.array([1.2 if shape.roles[m] == "GK" else 0.0 for m in cand])
@@ -631,6 +650,7 @@ class Engine:
         # Success probability from distance, skill, lane interceptions and marking (ATTR-007).
         passing = self._a(k, i, "short_passing") if dist < 25 else self._a(k, i, "long_passing")
         acc = 1 - (1 - math.exp(-dist / 80)) * (1.25 - passing)
+        acc *= 1 + self.p.skill_pass * (passing - 0.75)
         seg = end_v - v
         seg_len2 = float(seg @ seg) or 1e-6
         lane = []
@@ -643,6 +663,7 @@ class Engine:
         for n in np.flatnonzero((us > 0.05) & (dsegs < 2.5)):
             u, dseg = float(us[n]), float(dsegs[n])
             w = 0.22 * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
+            w *= 1 + self.p.skill_def * (self._a(1 - k, int(opp_idx[n]), "interceptions") - 0.7)
             lane.append((opp_idx[n], w, points[n].copy()))
             acc *= 1 - w
         marks = np.hypot(*(opp[opp_idx] - end_v).T)
@@ -878,8 +899,11 @@ class Engine:
                 xg = float(np.clip(xg * TECHNIQUE_XG[technique], 0.005, 0.95))
         foot = self.attr[self._pid(k, i)]["foot"]
         aim_y = PITCH_WIDTH / 2 + self.rng.uniform(-3.4, 3.4)
+        # xG is the chance itself; whether it goes in also depends on the keeper (B12)
+        keeper = np.mean([self._a(opp, gk_slot, a) for a in ("diving", "reflexes", "positioning")])
+        p_goal = float(clip1(xg * (1 - self.p.skill_gk * (keeper - 0.88)), 0.002, 0.97))
         r = self.rng.random()
-        if r < xg:
+        if r < p_goal:
             outcome = "goal"
         else:
             p_block = 0.0 if penalty else min(0.55, self.p.block_base + self.p.block_per_defender * blockers)
@@ -1195,6 +1219,7 @@ class Engine:
         self._apply_plants()
         self._pressures()
         self._maybe_subs()
+        self._update_state()
 
         carrier = self.owner
         flight_target = None
@@ -1216,6 +1241,23 @@ class Engine:
         self.fitness = np.clip(self.fitness - drain, 0, 1)
         self._record_frame()
         self._clock()
+
+    def _update_state(self) -> None:
+        """Game state (B12, REAL-001): the score, the clock and the players on the pitch change how
+        each side plays. Urgency grows from 30' to 85': a side ahead drops deeper, presses less and
+        slows its restarts; a side behind pushes up, presses, shoots sooner and goes longer. A side
+        with a player more pushes up; a side a man short drops off."""
+        minute = PERIOD_BASE_MINUTE.get(self.period, 90) + (self.t - self.period_start) / 60
+        w = clip1((minute - 30) / 55, 0.0, 1.0)
+        men = [int(np.count_nonzero(self._active(k))) for k in (0, 1)]
+        for k in (0, 1):
+            d = self.score[k] - self.score[1 - k]
+            u = 0.0 if d == 0 else (URGENCY_LEAD if d > 0 else URGENCY_TRAIL)[min(abs(d), 3) - 1]
+            self.urgency[k] = u * w
+            extra = max(min(men[k] - men[1 - k], 2), -2)
+            self.move.line_shift[k] = self.p.state_line * self.urgency[k] + self.p.man_line * extra
+            at = self.p.state_press_at
+            self.move.press_shift[k] = 1 if self.urgency[k] > at else -1 if self.urgency[k] < -at else 0
 
     def _stamina(self) -> np.ndarray:
         """(2, 11) stamina of whoever is in each slot, rebuilt only when the players on the pitch change."""

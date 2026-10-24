@@ -1,0 +1,128 @@
+{
+  "literature": {
+    "results_pct": {
+      "value": [
+        45,
+        25,
+        30
+      ],
+      "source": "top European leagues, long-run home/draw/away"
+    },
+    "back_line_m": {
+      "range": [
+        33,
+        45
+      ],
+      "source": "tracking studies: back line 35-45 m from own goal"
+    },
+    "keeper_x_m": {
+      "range": [
+        9,
+        16
+      ],
+      "source": "estimate from public tracking samples; check with Metrica"
+    },
+    "lead_line_shift": {
+      "range": [
+        -8,
+        -1
+      ],
+      "source": "B12 acceptance: leading side drops deeper late on"
+    },
+    "trail_line_shift": {
+      "range": [
+        1,
+        8
+      ],
+      "source": "score effects: trailing side pushes up"
+    },
+    "late_pass_acc_drop_pts": {
+      "range": [
+        2,
+        5
+      ],
+      "source": "B12 acceptance: last 15 minutes"
+    },
+    "var_overturns": {
+      "range": [
+        0.2,
+        0.4
+      ],
+      "source": "Premier League: about 0.3 decisions overturned per match"
+    },
+    "red_11_shot_share": {
+      "range": [
+        0.6,
+        0.7
+      ],
+      "source": "rough consensus for 11 v 10"
+    },
+    "red_11_possession": {
+      "range": [
+        0.55,
+        0.65
+      ],
+      "source": "red-card studies, top leagues"
+    },
+    "shootout_conversion": {
+      "range": [
+        0.75,
+        0.8
+      ],
+      "source": "B12 acceptance; long-run shootout average"
+    }
+  },
+  "wc2022": {
+    "goals": 2.625,
+    "shots": 22.0,
+    "shots_on_target": 7.6875,
+    "corners": 8.546875,
+    "offsides": 3.8125,
+    "fouls": 26.84375,
+    "yellow_cards": 3.359375,
+    "red_cards": 0.046875,
+    "passes": 1005.9375,
+    "final_third_passes": 62.546875,
+    "tackles_won_per_team": 9.859375,
+    "interceptions": 20.9375,
+    "clearances": 40.625,
+    "pressures": 252.46875,
+    "keeper_sweeps": 1.5625,
+    "keeper_claims": 2.78125,
+    "injuries": 6.15625,
+    "injury_subs": 0.609375,
+    "crosses": 22.03125,
+    "throw_ins": 39.921875,
+    "goal_kicks": 15.125,
+    "ball_recoveries": 88.828125,
+    "xg_per_shot": 0.10691115306926105,
+    "pass_accuracy_pct": 81.82854238552875,
+    "pass_ground_pct": 74.88058283292406,
+    "pass_low_pct": 8.160403709732204,
+    "pass_high_pct": 16.959013457343733,
+    "loose_first_time_shot_pct": 11.099500568087738,
+    "header_shot_pct": 18.031353920162324,
+    "counters": 2.859375,
+    "late_pass_acc_drop_pts": 3.140315473521741,
+    "leader_shot_share": 0.47246376811594204,
+    "leader_pass_share": 0.4777575605471201,
+    "red_11_shot_share": 0.8,
+    "red_11_pass_share": 0.7309644670050761,
+    "red_matches": 3,
+    "penalty_conversion": 0.7272727272727273,
+    "goal_minute_share": [
+      0.08928571428571429,
+      0.09523809523809523,
+      0.21428571428571427,
+      0.16666666666666666,
+      0.18452380952380953,
+      0.25
+    ],
+    "lead_line_shift": null,
+    "trail_line_shift": null,
+    "matches": 64,
+    "shootout_conversion": 0.6341463414634146,
+    "shootout_kicks": 41,
+    "extra_time_share_knockout": 0.3125
+  }
+}

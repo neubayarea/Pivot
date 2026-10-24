@@ -84,7 +84,7 @@ def test_b04_playing_on_from_a_save_gives_the_same_match(ref, saved37):
         out = play_on(saved37)
         out._finalise()
         assert strip(out.events) == strip(ref.events)
-        assert out.score == [1, 0]
+        assert out.score == [ref.match.score.home, ref.match.score.away]
     assert saved37.t == 37 * 60
 
 
@@ -99,10 +99,10 @@ def test_b04_reseeded_runs_share_the_history_and_then_differ(ref, saved37):
 # --- B08: scenarios --------------------------------------------------------------------
 
 def test_b08_remove_red_card_keeps_the_player_on(ref, saved37):
-    red = event_id(ref, is_red)
-    base, cf = prepare(saved37, spec("remove_red_card", 37, target_event_id=red, team="away"))
+    red = next(e for e in ref.events if is_red(e))
+    base, cf = prepare(saved37, spec("remove_red_card", 37, target_event_id=red["event_id"], team="away"))
     b, c = played(base, 4), played(cf, 4)
-    assert [e["player_id"] for e in b.events if is_red(e) and e["t"] >= 37 * 60] == ["a04"]
+    assert [e["player_id"] for e in b.events if is_red(e) and e["t"] >= 37 * 60] == [red["player_id"]]
     assert not [e for e in c.events if is_red(e) and e["t"] >= 37 * 60]
     assert sum(p is not None for p in c.shapes[1].player_ids) == 11
     assert sum(p is not None for p in b.shapes[1].player_ids) == 10
@@ -170,10 +170,12 @@ def test_b08_change_formation_and_lineup(saved64):
 
 
 def test_b08_remove_goal_takes_it_off_the_score(ref, saved37):
-    goal = event_id(ref, lambda e: e["type"] == "shot" and e["shot_outcome"] == "goal")
-    base, cf = prepare(saved37, spec("remove_goal", 56, target_event_id=goal, team="home"))
-    assert base.score == [1, 0] and cf.score == [0, 0]
-    assert base.t == cf.t and cf.restart["kind"] == "goal_kick" and cf.restart["team"] == 1
+    goal = next(e for e in ref.events if e["type"] == "shot" and e["shot_outcome"] == "goal" and e["t"] >= 37 * 60)
+    k = 0 if goal["team"] == "home" else 1
+    base, cf = prepare(saved37, spec("remove_goal", goal["t"] // 60 + 1, target_event_id=goal["event_id"],
+                                     team=goal["team"]))
+    assert base.score[k] == cf.score[k] + 1 and base.score[1 - k] == cf.score[1 - k]
+    assert base.t == cf.t and cf.restart["kind"] == "goal_kick" and cf.restart["team"] == 1 - k
 
 
 def test_b08_scenarios_reject_a_wrong_target(ref, saved37, saved64):

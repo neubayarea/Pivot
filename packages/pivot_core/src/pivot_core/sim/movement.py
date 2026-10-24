@@ -31,6 +31,12 @@ WIDTH_IN = {"narrow": 0.9, "normal": 1.05, "wide": 1.2}
 PRESS_PLAYERS = {"low": 1, "mid": 1, "high": 2}
 NEAR_OWN_BOX = 25.0                       # ball this close to our goal: at least two close down
 PRESS_ZONE = {"low": 45.0, "mid": 70.0, "high": PITCH_LENGTH}  # press when the ball is closer to our goal than this
+PRESS_LEVELS = ("low", "mid", "high")
+BOX_ATTACK_FROM = 60.0                    # ball this far up (team view): forwards start attacking the box
+# Anchor x out of possession, unless pressing high: wide forwards and the playmaker drop into
+# midfield, central midfielders sit level with the holding player.
+DEFENDING_X = {"LW": 48.0, "RW": 48.0, "AM": 52.0, "CM": 43.0}
+BOX_RUNNERS = {"ST": 1.0, "AM": 0.8, "LW": 1.0, "RW": 1.0, "LM": 0.5, "RM": 0.5, "CM": 0.35}
 SPRINT_MS = 8.5
 _FAR_CORNER = np.array([PITCH_LENGTH, PITCH_WIDTH])
 _ON_PITCH_LO = np.array([0.5, 0.5])
@@ -97,6 +103,8 @@ class MovementModel:
     offset_until: np.ndarray = field(default_factory=lambda: np.zeros((2, 11)))
     run_until: np.ndarray = field(default_factory=lambda: np.zeros((2, 11)))
     pressers: set = field(default_factory=set)   # (team, slot) sent to close down the ball this second
+    line_shift: list = field(default_factory=lambda: [0.0, 0.0])   # metres, set by the engine's game state
+    press_shift: list = field(default_factory=lambda: [0, 0])      # press levels up (+) or down (-)
 
     def _refresh_offsets(self, t: int) -> None:
         due = self.offset_until <= t
@@ -138,10 +146,15 @@ class MovementModel:
         else:
             # even a deep block holds its line around the penalty spot, not on the six-yard box
             line = clip1(LINE_HEIGHT[tac.line_height] + 0.3 * (bx - 52.5), 11.0, 55.0)
-            depth, width, follow = 0.8, 0.72, 0.4
+            # the nearer the ball to our goal, the tighter the gap between the lines (B12)
+            depth, width, follow = 0.55 + 0.25 * clip1((bx - 25.0) / 35.0, 0.0, 1.0), 0.72, 0.4
 
         follow_y = follow * (by - 34)
         anchors = shape.anchors.tolist()
+        if not in_poss and tac.press != "high":
+            # Out of possession the wide forwards and the playmaker drop into the midfield line:
+            # a 4-3-3 defends as 4-1-4-1 or 4-5-1, a 4-2-3-1 as 4-4-1-1 (B12, REAL-003).
+            anchors = [[min(ax, DEFENDING_X.get(r, ax)), ay] for (ax, ay), r in zip(anchors, shape.roles)]
         tx = [line + (ax - 26.0) * depth for ax, _ in anchors]
         ty = [34 + (ay - 34) * width + follow_y for _, ay in anchors]
 
@@ -154,6 +167,33 @@ class MovementModel:
                 ty[i] = 34 + (ty[i] - 34) * 0.6
             elif instr == "stay_wide" and in_poss:
                 ty[i] = 34 + (ty[i] - 34) * 1.15
+
+        # Attacking the box (B12): with the ball in the final third the forwards leave their
+        # anchors for the box, the far-side winger for the back post; wide midfielders go half way.
+        if in_poss and bx > BOX_ATTACK_FROM:
+            pull = min((bx - BOX_ATTACK_FROM) / 25, 1.0)
+            for i, r in enumerate(shape.roles):
+                if r not in BOX_RUNNERS:
+                    continue
+                if r == "ST":
+                    gx, gy = 96.0, 34 + 0.15 * (by - 34)
+                elif r == "AM":
+                    gx, gy = 86.0, 34 + 0.3 * (by - 34)
+                elif r == "CM":                            # a late run to the edge of the box, in his channel
+                    gx, gy = 84.0, 34 + (9.0 if ty[i] > 34 else -9.0)
+                elif (ty[i] - 34) * (by - 34) < 0:         # ball on the other flank: back post
+                    gx, gy = 95.0, 34 + (6.0 if ty[i] > 34 else -6.0)
+                else:                                      # ball on his flank: come inside off the line
+                    gx, gy = tx[i], 34 + (ty[i] - 34) * 0.6
+                weight = pull * BOX_RUNNERS[r]
+                tx[i] += (gx - tx[i]) * weight
+                ty[i] += (gy - ty[i]) * weight
+
+        # Game state (B12): out of possession the engine shifts the block up when chasing a game
+        # and down when protecting a lead or a man short. With the ball the shape stays as it is.
+        shift = self.line_shift[k]
+        if shift and not in_poss:
+            tx = [x + shift if r != "GK" else x for x, r in zip(tx, shape.roles)]
 
         # Forward runs in possession: attackers and midfielders now and then push on.
         if in_poss:
@@ -183,13 +223,14 @@ class MovementModel:
             for i in np.argsort(d)[:2]:
                 target[i] = b
         elif not in_poss and carrier is not None:
-            n = PRESS_PLAYERS[tac.press]
+            press = PRESS_LEVELS[min(max(PRESS_LEVELS.index(tac.press) + self.press_shift[k], 0), 2)]
+            n = PRESS_PLAYERS[press]
             counter = t - last_loss <= 5
             if counter:
                 n += 1
             if bx <= NEAR_OWN_BOX:
                 n = max(n, 2)                      # every team closes down near its own box
-            if counter or bx <= PRESS_ZONE[tac.press]:
+            if counter or bx <= PRESS_ZONE[press]:
                 d = self._distances_to_ball(k, shape, active, pos, b)
                 towards_goal = np.array([-2.5, 0.0])   # close down, do not run into him
                 for i in np.argsort(d)[:n]:
