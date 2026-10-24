@@ -10,7 +10,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .vocabulary import BANNED_TERMS, DOWN_WORDS, LIKELY_DOWN, LIKELY_UP, MAGNITUDE_WORDS, SIGNIFICANCE_WORDS, UP_WORDS
+from .vocabulary import (BANNED_TERMS, DOWN_WORDS, JARGON, LIKELY_DOWN, LIKELY_UP, MAGNITUDE_WORDS, OFF_PITCH_WORDS,
+                         SIGNIFICANCE_WORDS, UP_WORDS)
 
 INSTRUCTIONS = {
     "en": "Write in English.",
@@ -44,6 +45,13 @@ SIGNIFICANCE = {"zh": ("显著", "明显", "决定性"),
                 "es": ("significativo", "significativa", "significativamente", "claramente", "decisivo")}
 BANNED = {"zh": ("赌", "赔率", "投注", "下注", "博彩", "一定", "肯定", "绝对", "必然", "毫无疑问", "永远", "从不"),
           "es": ("apuesta", "apuestas", "cuotas", "siempre", "nunca", "garantizado", "sin duda", "definitivamente")}
+FAN_JARGON = {"zh": ("预期进球", "期望进球", "预期助攻", "期望助攻", "预期威胁"),
+              "es": ("goles esperados", "gol esperado", "asistencias esperadas", "amenaza esperada")}
+OFF_PITCH = {"zh": ("旧主", "老东家", "前东家", "旧东家", "老队友", "前队友", "老上司", "恩怨", "宿怨", "旧怨", "不和",
+                    "重返", "夜店", "场外", "合同纠纷", "转会传闻"),
+             "es": ("antiguo club", "exclub", "ex club", "antiguo equipo", "exequipo", "excompañero",
+                    "antiguo entrenador", "rencilla", "enemistad", "rencor", "reencuentro", "fuera del campo",
+                    "vida nocturna")}
 
 # Numbers written as words, which a headline may not carry any more than digits. "one", "un"
 # and "一" are left out: they double as articles ("one more push", "un cambio", "一张牌").
@@ -90,6 +98,14 @@ def number_words(text: str, lang: str) -> list[str]:
     words = NUMBER_WORDS + NUMBER.get(lang, ())
     found = [w for w in words if re.search(rf"\b{w}\b", text, re.I)]
     return found + (_ZH_COUNTED.findall(text) if lang == "zh" else [])
+
+
+def jargon(lang: str) -> tuple[str, ...]:
+    return JARGON + FAN_JARGON.get(lang, ())
+
+
+def off_pitch_words(lang: str) -> tuple[str, ...]:
+    return OFF_PITCH_WORDS + OFF_PITCH.get(lang, ())
 
 
 _CJK = re.compile(r"[㐀-鿿豈-﫿]")
@@ -216,8 +232,10 @@ PHRASES: dict[str, dict[str, str]] = {
         "tactical_shift": "{team} changed their shape at {at}.", "tactical_shift_h": "{team} switch shifts the balance",
         "injury": "{team} lost a player to injury at {at}.", "injury_h": "An injury changes the game",
         "stat": "{owner} {label} {verb} from {a} to {b} in the next five minutes.",
+        "stat_fan": "{owner} {label} {verb} to {b} in the next five minutes.",
         "rose": "rose", "fell": "fell",
         "momentum": "From there the momentum swung towards {team}.", "momentum_h": "Momentum swings to {team}",
+        "momentum_lost": "From there {team} lost their grip on the game.", "momentum_lost_h": "{team} lose their grip",
         "fallback": "The match turned around this point.", "fallback_h": "Momentum swings",
     },
     "zh": {
@@ -227,8 +245,10 @@ PHRASES: dict[str, dict[str, str]] = {
         "tactical_shift": "{team}在{at}调整了阵型。", "tactical_shift_h": "{team}变阵改变平衡",
         "injury": "{team}在{at}有球员受伤离场。", "injury_h": "伤病改变比赛",
         "stat": "此后五分钟，{team}的{label}从{a}{verb}到{b}。",
+        "stat_fan": "此后五分钟，{team}的{label}{verb}到{b}。",
         "rose": "上升", "fell": "下降",
         "momentum": "此后比赛势头倒向{team}。", "momentum_h": "势头倒向{team}",
+        "momentum_lost": "此后{team}失去了比赛势头。", "momentum_lost_h": "{team}失去势头",
         "fallback": "比赛在这一刻发生了转折。", "fallback_h": "比赛势头逆转",
     },
     "es": {
@@ -238,8 +258,10 @@ PHRASES: dict[str, dict[str, str]] = {
         "tactical_shift": "{team} cambió su dibujo en el {at}.", "tactical_shift_h": "El ajuste de {team} inclina la balanza",
         "injury": "{team} perdió a un jugador por lesión en el {at}.", "injury_h": "Una lesión cambia el partido",
         "stat": "En los cinco minutos siguientes, {label} de {team} {verb} de {a} a {b}.",
+        "stat_fan": "En los cinco minutos siguientes, {label} de {team} {verb} a {b}.",
         "rose": "subió", "fell": "bajó",
         "momentum": "A partir de ahí el impulso pasó a {team}.", "momentum_h": "El impulso pasa a {team}",
+        "momentum_lost": "A partir de ahí {team} perdió el impulso.", "momentum_lost_h": "{team} pierde el impulso",
         "fallback": "El partido cambió en este momento.", "fallback_h": "El partido da un giro",
     },
 }

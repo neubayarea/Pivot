@@ -41,7 +41,7 @@ from pivot_core.domain import (
 from pivot_core.ports import MatchRepository
 
 from . import explainer, judge
-from .context import ContextItem, from_match, known_ids
+from .context import ContextItem, from_match
 from .models import ModelClient, ModelReply, ModelUnavailable, Tier
 from .pipeline import Step, StepRecorder
 from .template import template_explain
@@ -134,7 +134,7 @@ def template_pivot(r: Run) -> tuple[Pivot, Narrative]:
     v = r.view
     narrative = template_explain(r.candidate, events=v.events, stats=v.stats, team_names=v.team_names,
                                  prefs=r.prefs, chain_id=r.chain_id, verifier_attempts=r.checks,
-                                 context=v.context)
+                                 context=explainer.shown_context(r.candidate, v.events, v.context))
     return r.pivot("degraded", narrative), narrative
 
 
@@ -218,9 +218,10 @@ class VerifierNode(Executor):
                 verdict = Verdict(passed=False,
                                   issues=[VerifierIssue(code="schema_invalid", message=r.schema_error or "")])
             else:
-                verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=r.view.events,
-                                 stats=r.view.stats, context_ids=known_ids(r.view.context),
-                                 team_names=r.view.team_names)
+                v = r.view
+                verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=v.events, stats=v.stats,
+                                 context=explainer.shown_context(r.candidate, v.events, v.context),
+                                 team_names=v.team_names)
             narrative = None
             if verdict.passed:
                 narrative = with_computed(r.draft, r.view.stats).model_copy(update={"verifier_attempts": r.checks})

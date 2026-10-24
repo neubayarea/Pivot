@@ -2,11 +2,13 @@
 
 The match context (B14 fills `effects` at kick-off) becomes a short list of citable items,
 each with the id a sentence puts in `context_ids`. The Verifier only accepts ids from this
-list, so an invented "back at his former club" is caught.
+list, so an invented "back at his former club" is caught: it only accepts items the writer was
+shown, about someone in the sentence, and a sentence that tells an off-pitch story must cite one.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
@@ -21,6 +23,7 @@ class ContextItem:
     kind: str                                 # "effect", "news", "relationship", "former_club"
     subject_ids: tuple[str, ...]              # people it is about
     text: str                                 # plain English, shown to the writer
+    subject_names: tuple[str, ...] = ()       # how a sentence may name them, matched by the Verifier
 
 
 def context_items(
@@ -35,17 +38,20 @@ def context_items(
     def who(person_id: str) -> str:
         return names.get(person_id, person_id)
 
-    items = [ContextItem(e.effect_id, "effect", (e.subject_id,), f"{who(e.subject_id)}: {e.note}")
+    def item(context_id: str, kind: str, subjects: tuple[str, ...], text: str) -> ContextItem:
+        return ContextItem(context_id, kind, subjects, text, tuple(who(s) for s in subjects))
+
+    items = [item(e.effect_id, "effect", (e.subject_id,), f"{who(e.subject_id)}: {e.note}")
              for e in context.effects]
-    items += [ContextItem(n.news_id, "news", (n.subject_id,), f"{who(n.subject_id)}: {n.headline}")
+    items += [item(n.news_id, "news", (n.subject_id,), f"{who(n.subject_id)}: {n.headline}")
               for n in context.news if n.public]
-    items += [ContextItem(r.relationship_id, "relationship", (r.person_id, r.other_id),
-                          f"{who(r.person_id)} and {who(r.other_id)}: {r.kind.replace('_', ' ')}")
+    items += [item(r.relationship_id, "relationship", (r.person_id, r.other_id),
+                   f"{who(r.person_id)} and {who(r.other_id)}: {r.kind.replace('_', ' ')}")
               for r in context.relationships]
     for person_id, stint in reunions:
         role = "coached" if stint.as_coach else "played for"
-        items.append(ContextItem(stint.stint_id, "former_club", (person_id,),
-                                 f"{who(person_id)} {role} {stint.club_name} before"))
+        items.append(item(stint.stint_id, "former_club", (person_id,),
+                          f"{who(person_id)} {role} {stint.club_name} before"))
     return items
 
 
@@ -77,3 +83,15 @@ def involved_in(event: MatchEvent) -> set[str]:
 
 def known_ids(items: Iterable[ContextItem]) -> frozenset[str]:
     return frozenset(i.context_id for i in items)
+
+
+def mentions(item: ContextItem, text: str, people: set[str]) -> bool:
+    """True if the item is about someone the sentence is about: in its evidence, or named in its text.
+
+    A name counts in full or by surname ("Okafor" for "R. Okafor"), not inside a longer Latin word.
+    """
+    if people & set(item.subject_ids):
+        return True
+    lowered = text.lower()
+    forms = {f for name in item.subject_names for f in (name, *name.split()[-1:]) if len(f) >= 3}
+    return any(re.search(rf"(?<![a-z]){re.escape(f.lower())}(?![a-z])", lowered) for f in forms)

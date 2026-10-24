@@ -12,8 +12,9 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
    follows the order of the windows, and doubled/halved-style words match the ratio; in
    comparisons, "more likely" style words match the outcome they describe
 5. significance: "significant"-style words only about outcomes whose what-if intervals do not overlap
-6. wording: no banned terms, and no jargon in fan versions
-7. context: every `context_ids` entry is a real item of the match context (D13)
+6. wording: no banned terms; fan versions use no jargon and at most one number per sentence
+7. context: every cited item was shown to the writer and is about someone in the sentence, and
+   any off-pitch story ("former club", "feud") cites one (D13)
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -21,7 +22,7 @@ Issue messages are written for the Explainer, which gets them back on a retry.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from functools import cache
 from typing import NamedTuple, Protocol
 
@@ -29,7 +30,8 @@ from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierI
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from . import languages as lang_rules
-from .vocabulary import JARGON, STAT_TERMS
+from .context import ContextItem, involved_in, mentions
+from .vocabulary import STAT_TERMS
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
 
@@ -238,7 +240,7 @@ def verify(
     significant: Mapping[str, bool] | None = None,
     outcomes: Callable[[str], list[OutcomeMention]] | None = None,
     allowed_evidence: Collection[str] | None = None,
-    context_ids: Collection[str] = frozenset(),
+    context: Sequence[ContextItem] = (),
     team_names: Mapping[str, str] | None = None,
     max_sentences: int = 3,
 ) -> Verdict:
@@ -247,7 +249,7 @@ def verify(
     `outcomes` is for comparisons: given a sentence, it returns each outcome the sentence
     names, so "more likely" style and significance words are checked against that outcome.
     `allowed_evidence`, when given, replaces the minute window: only those ids may be cited.
-    `context_ids` are the ids of the match-context items the writer was shown (context.py).
+    `context` is the match-context items the writer was shown (`explainer.shown_context`).
     `team_names` ("home"/"away" to display names) let the number check see which team a number is about.
     """
     issues: list[VerifierIssue] = []
@@ -274,9 +276,16 @@ def verify(
         issue("number_mismatch", "The headline must not contain digits.")
     if spelled := lang_rules.number_words(narrative.headline, lang):
         issue("number_mismatch", f"The headline must not contain numbers, even as words: remove '{spelled[0]}'.")
-    banned = lang_rules.banned_terms(lang) + (JARGON if narrative.prefs.audience == "fan" else ())
+    fan = narrative.prefs.audience == "fan"
+    jargon = lang_rules.jargon(lang) if fan else ()
+    banned = lang_rules.banned_terms(lang) + jargon
     for term in _has_word(narrative.headline, banned):
         issue("banned_term", f"Remove '{term}' from the headline.")
+    shown = {item.context_id: item for item in context}
+    off_pitch = lang_rules.off_pitch_words(lang)
+    if (story := _has_word(narrative.headline, off_pitch)) and not any(s.context_ids for s in narrative.sentences):
+        issue("context_invalid", f"The headline tells an off-pitch story ('{story[0]}'); cite its context item "
+              "in a sentence, or drop it.")
 
     lo, hi = pivot_minute - EVIDENCE_BEFORE, pivot_minute + EVIDENCE_AFTER
     any_significant = bool(significant) and any(significant.values())
@@ -316,7 +325,8 @@ def verify(
         plain = _plain(s.text, lang)
         teams = _mentions(plain, team_phrases)
         named_stats = {m for _, ms in _mentions(plain.lower(), _stat_names(lang)) for m in ms}
-        for at, n in _numbers(plain, names.values()):
+        numbers = _numbers(plain, names.values())
+        for at, n in numbers:
             before = {side for start, sides in teams if start < at for side in sides}
             same = [c for c, actual in zip(s.claims, actuals) if _matches(n, c, actual)]
             fits = [c for c in same if (not before or c.stat_ref.team in before)
@@ -330,6 +340,9 @@ def verify(
                                     for c in same)
                 issue("number_mismatch", f"The number {n} in sentence {i + 1} only matches {claimed}, but the "
                       f"sentence has it {' and '.join(said)}; cite the claim for what the sentence says.", i)
+        if fan and len(numbers) > 1:
+            issue("number_mismatch", f"Sentence {i + 1} has {len(numbers)} numbers; fan versions use at most one "
+                  "number per sentence (keep both claims, write only the newer value).", i)
 
         # 4. Direction words, the order of "from A to B", and magnitude words.
         pairs = _pairs(list(s.claims), stats)
@@ -370,12 +383,21 @@ def verify(
 
         # 6. Banned terms.
         for term in _has_word(s.text, banned):
-            hint = " Fan versions use everyday words." if term in JARGON else ""
+            hint = " Fan versions use everyday words." if term in jargon else ""
             issue("banned_term", f"Remove '{term}' from sentence {i + 1}.{hint}", i)
 
-        # 7. Context.
+        # 7. Context: only listed items, about someone in this sentence; off-pitch stories need one.
+        people = set().union(*(involved_in(events[e]) for e in s.evidence_ids if e in events))
         for cid in s.context_ids:
-            if cid not in context_ids:
+            item = shown.get(cid)
+            if item is None:
                 issue("context_invalid", f"Context {cid} is not in the match context; cite only listed items.", i)
+            elif not mentions(item, s.text, people):
+                who = " and ".join(item.subject_names or item.subject_ids)
+                issue("context_invalid", f"Context {cid} is about {who}, who is neither named in sentence {i + 1} "
+                      "nor in its evidence.", i)
+        if not s.context_ids and (story := _has_word(s.text, off_pitch)):
+            issue("context_invalid", f"'{story[0]}' tells an off-pitch story; cite the match-context item it "
+                  "comes from, or drop it.", i)
 
     return Verdict(passed=not issues, issues=issues)
