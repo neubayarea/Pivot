@@ -14,12 +14,16 @@ How it works, minute by minute within each period:
    swing (mean after minus mean before) still points the same way and is at least `min_swing`;
    both means use minutes of the same period only, at least `min_side_min` on each side, and a
    candidate still waiting when a new period starts is dropped (momentum restarts at the break,
-   which is not a turn in the match);
+   which is not a turn in the match); within `restart_min` minutes of the restart, a change
+   towards the side that was on top before the break, with momentum moving away from zero, is
+   dropped too: that is momentum climbing back to where it was, not a turn;
 5. candidates closer than `min_gap_min` minutes to the previous one are dropped, and at most
    `max_per_match` are kept.
 
-The same `PivotDetector` runs live (feed it one MinuteMetric at a time) or on a finished match
-(`detect_candidates`). Candidates go to the Judge (D03); its verdict decides the final severity.
+The same `PivotDetector` runs live (feed it one MinuteMetric at a time, with that minute's new
+events or all events so far: it keeps its own copy and ignores repeats) or on a finished match
+(`detect_candidates`). A minute pushed twice, or out of order, is ignored. Candidates go to the
+Judge (D03); its verdict decides the final severity.
 """
 
 from __future__ import annotations
@@ -41,6 +45,8 @@ class DetectorParams:
     confirm_min: int = 5             # the new level must hold this long (ADR-0010)
     min_swing: float = 0.3           # minimum |mean after - mean before|
     min_side_min: int = 3            # minutes of the same period needed on each side of the change
+    restart_min: int = 10            # after a restart, a climb back to the pre-break leader is not a turn
+    restart_lead: float = 0.2        # ... when that side's momentum before the break was at least this
     min_gap_min: int = 8             # minutes between two candidates (ADR-0010)
     max_per_match: int = 5           # ADR-0010
     window_before: int = 8           # evidence window handed to the Judge: [minute - 8, minute + 5)
@@ -90,6 +96,8 @@ class PivotDetector:
     _neg_start: int | None = None
     _period_start: int = 0
     _pending: list[_Pending] = field(default_factory=list)
+    _events: dict[str, MatchEvent] = field(default_factory=dict)   # every event seen so far, by id
+    _before_break: float = 0.0       # mean momentum of the last 5 minutes of the previous period
     emitted: list[PivotCandidate] = field(default_factory=list)
 
     def reset_period(self, minute: int) -> None:
@@ -97,15 +105,33 @@ class PivotDetector:
         change still waiting for confirmation is dropped (its after-window would be the restart)."""
         self._pos = self._neg = 0.0
         self._pos_start = self._neg_start = None
+        closing = self._momentum(max(self._period_start, minute - 5), minute)
+        self._before_break = float(np.mean(closing)) if closing else 0.0
         self._period_start = minute
         self._pending.clear()
+
+    def _climbing_back(self, c: _Pending, before: list[float], after: list[float]) -> bool:
+        """Momentum restarts at zero; rising back towards the side that led before the break is no turn."""
+        p, lead = self.params, self._before_break
+        if c.minute >= self._period_start + p.restart_min or abs(lead) < p.restart_lead:
+            return False
+        towards_leader = (c.direction == "home") == (lead > 0)
+        return towards_leader and abs(float(np.mean(after))) > abs(float(np.mean(before)))
+
+    def _seen_in_order(self) -> list[MatchEvent]:
+        return sorted(self._events.values(), key=lambda e: (e.t, e.seq))
 
     def _momentum(self, lo: int, hi: int) -> list[float]:
         return [m.momentum for m in self.series if lo <= m.minute < hi]
 
     def push(self, metric: MinuteMetric, events: list[MatchEvent] = ()) -> list[PivotCandidate]:
-        """Add one minute; returns the candidates confirmed by it (usually none)."""
+        """Add one minute; returns the candidates confirmed by it (usually none).
+        `events` may be just this minute's new events or everything so far."""
         p = self.params
+        for e in events:
+            self._events.setdefault(e.event_id, e)
+        if self.series and metric.minute <= self.series[-1].minute:
+            return []                         # a repeat or an earlier minute: already counted
         self.series.append(metric)
         t = metric.minute
         base = self._momentum(max(self._period_start, t - p.baseline_min), t)
@@ -129,9 +155,9 @@ class PivotDetector:
                 self._pending.append(_Pending(self._neg_start, "away", self._neg))
                 self._pos = self._neg = 0.0
                 self._pos_start = self._neg_start = None
-        return self._confirm(t, list(events))
+        return self._confirm(t)
 
-    def _confirm(self, now: int, events: list[MatchEvent]) -> list[PivotCandidate]:
+    def _confirm(self, now: int) -> list[PivotCandidate]:
         p = self.params
         out = []
         for c in list(self._pending):
@@ -145,6 +171,8 @@ class PivotDetector:
             swing = float(np.mean(after) - np.mean(before))
             if (swing > 0) != (c.direction == "home") or abs(swing) < p.min_swing:
                 continue
+            if self._climbing_back(c, before, after):
+                continue
             if self.emitted and c.minute - self.emitted[-1].minute < p.min_gap_min:
                 continue
             if len(self.emitted) >= p.max_per_match:
@@ -152,7 +180,7 @@ class PivotDetector:
             window = (max(0, c.minute - p.window_before), c.minute + p.window_after)
             cand = PivotCandidate(match_id=self.match_id, minute=c.minute, direction=c.direction,
                                   cusum_stat=round(c.stat, 4), swing=round(swing, 4),
-                                  key_event_ids=key_events(events, window), window=window)
+                                  key_event_ids=key_events(self._seen_in_order(), window), window=window)
             self.emitted.append(cand)
             out.append(cand)
         return out
@@ -162,15 +190,17 @@ def detect_candidates(match_id: str, metrics: list[MinuteMetric], events: list[M
                       params: DetectorParams | None = None) -> list[PivotCandidate]:
     """Run the detector over a finished match."""
     det = PivotDetector(match_id, params or DetectorParams())
-    period_of = {}
+    period_of: dict[int, int] = {}
+    by_minute: dict[int, list[MatchEvent]] = {}
     for e in events:
         if e.period != 5:
             period_of.setdefault(e.minute, e.period)
+            by_minute.setdefault(e.minute, []).append(e)
     last_period = None
-    for m in metrics:
+    for m in sorted(metrics, key=lambda m: m.minute):
         period = period_of.get(m.minute, last_period)
         if period != last_period:
             det.reset_period(m.minute)
             last_period = period
-        det.push(m, events)
+        det.push(m, by_minute.get(m.minute, []))      # as live: each minute brings its own events
     return det.emitted
