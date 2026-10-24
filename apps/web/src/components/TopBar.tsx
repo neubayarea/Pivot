@@ -4,6 +4,7 @@ import type { ViewerPrefs } from "@pivot/contracts";
 import { useMatch } from "../data/match";
 import { useT, type T } from "../i18n";
 import Button from "./Button";
+import MatchPicker from "./MatchPicker";
 import { PlayerPicker, TeamPicker } from "./FocusPickers";
 import Segmented from "./Segmented";
 import Stamp from "./Stamp";
@@ -64,6 +65,7 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
       </span>
       <span className="clock">{match.clockLabel}</span>
       <Stamp tone={STATUS_TONE[match.status]}>{t(`status.${match.status}`)}</Stamp>
+      <MatchPicker />
       <span className="sp" />
       <Segmented
         label={t("top.audience")}

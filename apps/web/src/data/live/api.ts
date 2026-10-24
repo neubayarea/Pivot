@@ -24,6 +24,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** `GET /api/sims`: the simulated matches the local API builds at startup (Ax6). */
+export type SimsStatus = { total: number; ready: number; failed: number; generating: boolean; match_ids: string[] };
+
 const m = (id: string) => `/matches/${encodeURIComponent(id)}`;
 
 /** `?lang=&audience=&team=&player=` for the pivot endpoints (A11); team and player only when set. */
@@ -54,6 +57,7 @@ function servedList(body: Served[] | { pivots: Served[]; prefs?: ViewerPrefs }):
 export const api = {
   listMatches: () => request<Match[]>("/matches"),
   getMatch: (id: string) => request<Match>(m(id)),
+  sims: () => request<SimsStatus>("/sims"),
   /** Events with seq > `since` (MatchEvent.seq, not the envelope seq), in seq order. */
   listEvents: (id: string, since = -1) => request<MatchEvent[]>(`${m(id)}/events?since=${since}`),
   getTimeline: (id: string) => request<MinuteMetric[]>(`${m(id)}/timeline`),

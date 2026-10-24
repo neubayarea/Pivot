@@ -71,6 +71,13 @@ async def list_matches(request: Request) -> list[Match]:
     return await _adapters(request).matches.list_matches()
 
 
+@router.get("/sims")
+async def sims_status(request: Request) -> dict:
+    """Progress of the simulated matches the local API builds at startup (Ax6): `generating` until all are stored."""
+    status = getattr(request.app.state, "sims", None)
+    return status.as_dict() if status else {"total": 0, "ready": 0, "failed": 0, "generating": False, "match_ids": []}
+
+
 @router.get("/matches/{match_id}")
 async def get_match(request: Request, match_id: str) -> Match:
     """Score, clock, status, teams and line-ups."""

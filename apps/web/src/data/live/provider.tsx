@@ -7,16 +7,25 @@ import { clockLabel } from "../../fixtures/demo-1021";
 import {
   ConnectionContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
+import type { MatchChoice } from "../choice";
 import { ApiError, api } from "./api";
 import { LiveSocket, type ConnectionStatus } from "./socket";
 import { applyEnvelope, applyPivot, applyPivots, applySnapshot, lastEventSeq, type LiveState } from "./state";
 
 class NoMatches extends Error {}
 
-/** `?match=<id>` if the API has it, else its most recent live match, else its most recent match. */
-async function pickMatch(): Promise<string> {
-  const asked = new URLSearchParams(window.location.search).get("match");
-  if (asked) return (await api.getMatch(asked)).match_id;
+/**
+ * The chosen match if the API has it, else its most recent live match, else its most recent match.
+ * A match named in the URL that is gone is an error; a saved one (from an older server run) is skipped.
+ */
+export async function pickMatch(choice: MatchChoice = { id: null, fromUrl: false }): Promise<string> {
+  if (choice.id) {
+    try {
+      return (await api.getMatch(choice.id)).match_id;
+    } catch (err) {
+      if (choice.fromUrl || !(err instanceof ApiError && err.status === 404)) throw err;
+    }
+  }
   const matches = await api.listMatches();
   const pick = matches.find((m) => m.status === "live") ?? matches[0];
   if (!pick) throw new NoMatches();
@@ -52,7 +61,10 @@ export async function listPivotsFor(id: string, prefs: ViewerPrefs): Promise<Piv
 
 const prefsKey = (p: ViewerPrefs) => `${p.language}|${p.audience}|${p.focus_team}|${p.focus_player_id}`;
 
-export default function LiveProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
+type Props = { children: ReactNode; fallback: ReactNode; choice?: MatchChoice };
+
+/** Follows one match for its lifetime; MatchProvider remounts it (key) when the viewer picks another. */
+export default function LiveProvider({ children, fallback, choice }: Props) {
   const [state, setState] = useState<LiveState | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>({ state: "connecting", attempt: 0 });
   const [problem, setProblem] = useState<LoadProblem | null>(null);
@@ -84,11 +96,11 @@ export default function LiveProvider({ children, fallback }: { children: ReactNo
     const socket = new LiveSocket({
       negotiate: async () => {
         try {
-          const url = await api.negotiate((matchIdRef.current ??= await pickMatch()));
+          const url = await api.negotiate((matchIdRef.current ??= await pickMatch(choice)));
           if (alive()) setProblem(null);
           return url;
         } catch (err) {
-          const p = classifyLoadError(err, new URLSearchParams(window.location.search).get("match"));
+          const p = classifyLoadError(err, choice?.fromUrl ? choice.id : null);
           if (alive()) setProblem(p);
           // Retrying will not make an unknown match appear; the socket keeps polling for everything else.
           if (p.kind === "not-found") socket.stop();

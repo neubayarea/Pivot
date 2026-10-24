@@ -26,6 +26,11 @@ export const en = {
   "top.player.search": "Search players",
   "top.player.empty": "No player matches",
 
+  "picker.label": "Match",
+  "picker.seed": "seed {seed}",
+  "picker.demo": "demo",
+  "picker.generating": "Generating matches… {ready}/{total}",
+
   "common.retryNow": "Retry now",
   "common.reload": "Reload",
 

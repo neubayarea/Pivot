@@ -1,0 +1,76 @@
+// Which match S1, S2 and the overlay show (Ax6). `?match=` wins, then the viewer's last pick
+// (localStorage), else the API's choice (its live match, else its latest). The picker in the top
+// bar lists the API's matches and polls while the server is still generating its simulated ones.
+import { createContext, useContext, useEffect, useState } from "react";
+import type { Match } from "@pivot/contracts";
+import type { T } from "../i18n";
+import { api, type SimsStatus } from "./live/api";
+
+const STORAGE_KEY = "pivot.match";
+export const DEMO_MATCH_ID = "M-api-demo";
+const POLL_MS = 2000;
+
+/** `fromUrl`: a match named in the link is shown as "not found" if missing; a saved one is just dropped. */
+export type MatchChoice = { id: string | null; fromUrl: boolean };
+
+export function readSavedMatch(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveMatch(id: string): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, id);
+  } catch {
+    // Not remembered across reloads, but the page still switches.
+  }
+}
+
+export function initialMatch(search: string, saved: string | null): MatchChoice {
+  const asked = new URLSearchParams(search).get("match");
+  return asked ? { id: asked, fromUrl: true } : { id: saved, fromUrl: false };
+}
+
+/** "HBC 4–5 ROV · seed 101"; the hand-made demo match says so instead of its seed. */
+export function matchLabel(m: Match, t: T): string {
+  const tag = m.match_id === DEMO_MATCH_ID ? t("picker.demo") : t("picker.seed", { seed: m.seed });
+  const status = m.status === "finished" ? "" : ` · ${t(`status.${m.status}`)}`;
+  return `${m.home.short_name} ${m.score.home}–${m.score.away} ${m.away.short_name} · ${tag}${status}`;
+}
+
+type ChoiceValue = { choice: MatchChoice; choose: (id: string) => void };
+
+/** Only set while following the API; the fixture replay has one match and no picker. */
+export const MatchChoiceContext = createContext<ChoiceValue | null>(null);
+
+export const useMatchChoice = () => useContext(MatchChoiceContext);
+
+export type MatchList = { matches: Match[]; sims: SimsStatus | null };
+
+/** The API's matches, refetched every couple of seconds until the simulated ones are all stored. */
+export function useMatchList(enabled: boolean): MatchList {
+  const [list, setList] = useState<MatchList>({ matches: [], sims: null });
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      const [matches, sims] = await Promise.all([
+        api.listMatches().catch(() => null),
+        api.sims().catch(() => null),
+      ]);
+      if (!alive) return;
+      setList((prev) => ({ matches: matches ?? prev.matches, sims }));
+      if (sims?.generating || matches === null) timer = setTimeout(load, POLL_MS);
+    };
+    load();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [enabled]);
+  return list;
+}
