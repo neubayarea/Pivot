@@ -22,9 +22,12 @@ Return one JSON object that matches this schema, and nothing else:
 - `sentences`: 1 to 3, each at most 30 words.
 - **Write no numbers at all.** The chart next to your text already shows every percentage
   and interval, recomputed. Leave `claims` empty.
-- `evidence_ids`: cite the event the scenario changed, from the request.
-- Name the outcome when you say it got more or less likely ("a {team} win", "a draw"), and
-  the word must match the request's `change` for that outcome.
+- `evidence_ids`: cite only ids from the request's `evidence_ids` (the event the scenario
+  changed, or, for a tactical change, events around the minute it starts from).
+- Name the outcome right before you say it got more or less likely ("a {team} win became
+  more likely", "a draw became less likely"), and the word must match the request's `change`
+  for that outcome. "X became more likely than Y" also needs X to have gained on Y.
+- These are replays of a simulation: say "in the replays", never that something will happen.
 
 ## Rules the Verifier enforces
 

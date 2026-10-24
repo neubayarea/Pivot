@@ -235,5 +235,5 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `PIVOT_WORKER` / `PIVOT_SIMULATOR` | `1` 在同一个进程里运行 AI 小组 / 模拟器，`0` 关掉（模拟器的实时入口还没做，做好后自动启用） |
 | `PIVOT_PIPELINE` | `fake` 用固定解释，`detect` 用真正的判定、写稿、核对流程（D06） |
 | `PIVOT_FOUNDRY_ENDPOINT`、`PIVOT_FOUNDRY_API_VERSION`、`PIVOT_MODEL_STANDARD`、`PIVOT_MODEL_MINI` | Foundry 模型的地址和部署名，D 线提供 |
-| `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供 |
+| `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供。三个要一起填；填了密钥就只用这个服务主体登录 |
 | `PIVOT_WEB_DIST` | 网页文件的位置，镜像里已经设好，不用填 |

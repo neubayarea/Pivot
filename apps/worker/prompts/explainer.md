@@ -18,7 +18,8 @@ Return one JSON object that matches this schema, and nothing else:
 {{schema}}
 ```
 
-- `headline`: at most 8 words, no digits, names the change rather than the score.
+- `headline`: at most 8 words, names the change rather than the score. No numbers at all:
+  no digits and no number words either (not "Two goals in three minutes").
 - `sentences`: 1 to 3, each at most 30 words, in the order trigger → what changed → what it led to.
 - `evidence_ids`: 1 to 4 per sentence, copied exactly from the event list in the request.
   Only events from 8 minutes before the pivot to 5 minutes after it are valid.
@@ -50,5 +51,5 @@ Return one JSON object that matches this schema, and nothing else:
 
 {{examples}}
 
-If the Verifier rejected your previous attempt, the request ends with its issues. Fix every
-one of them and change nothing else.
+If the Verifier rejected your previous attempt, the request ends with that card and the
+Verifier's issues. Start from that card, fix every issue, and keep everything else as it was.

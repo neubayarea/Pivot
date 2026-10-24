@@ -60,6 +60,18 @@ def test_language_specific_banned_and_significance_words(events, stats):
     assert codes(card("es", "Rovers siempre dominó."), events, stats) == ["banned_term"]
 
 
+@pytest.mark.parametrize("lang,headline,ok", [
+    ("es", "Dos goles en tres minutos", False),
+    ("es", "Un cambio inclina la balanza", True),
+    ("zh", "三分钟内两球", False),
+    ("zh", "一张牌改变比赛", True),
+    ("zh", "前场三区十分危险", True),
+])
+def test_headline_number_words_per_language(events, stats, lang, headline, ok):
+    assert codes(card(lang, "替补" if lang == "zh" else "Cambio.", headline=headline), events, stats) == (
+        [] if ok else ["number_mismatch"])
+
+
 def test_length_limits_per_language(events, stats):
     assert length("Rovers的前场传球明显增多", "zh") == 10
     assert codes(card("zh", "很" * 61), events, stats) == ["too_long"]

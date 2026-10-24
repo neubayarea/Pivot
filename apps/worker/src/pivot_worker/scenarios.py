@@ -2,19 +2,22 @@
 
 The rules follow prototype section B5. `options_for` turns the catalog into the S3 chips for
 one pivot: each option is either ready to run, or disabled with the reason shown on hover.
+`ScenarioOption.to_spec` turns a chosen chip into the ScenarioSpec the simulator runs.
 `list_scenario_types` is the Translator's tool (architecture §6.2).
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from typing import Literal
 
-from pivot_core.domain import MatchEvent, Pivot
+from pivot_core.domain import MatchEvent, Pivot, ScenarioSpec, TeamTactics
 
 PRIME = "′"
 MOVE_MIN, MOVE_MAX = 46, 85                   # a moved substitution must land in this range
 DEFAULT_MOVE_TO = 74                          # elapsed minute, shown as 75′
+PRESS_LEVELS = ("low", "mid", "high")
 
 
 @dataclass(frozen=True)
@@ -47,9 +50,9 @@ CATALOG: dict[str, CatalogEntry] = {e.type: e for e in (
                  "Replay from the goal as if it had been ruled out.",
                  "A goal that already happened.", ("target_event_id",),
                  "The minute of the goal.", "Should", "No goal in this match yet"),
-    CatalogEntry("change_press", "Press higher from {minute}",
-                 "One team presses one step higher (or lower) from the pivot onwards.",
-                 "Any pivot.", ("team", "delta", "from_minute"),
+    CatalogEntry("change_press", "Press {direction} from {minute}",
+                 "One team presses one step higher (or lower, if already high) from the pivot onwards.",
+                 "Any pivot.", ("team", "tactics"),
                  "The pivot minute.", "Could", ""),
 )}
 
@@ -66,6 +69,14 @@ class ScenarioOption:
     at_minute: int | None = None
     team: str | None = None
     params: dict[str, int | str] = field(default_factory=dict)
+    tactics: TeamTactics | None = None        # change_press: the team's tactics with the new press
+
+    def to_spec(self, pivot_id: str, *, seed_base: int, n_runs: Literal[200, 500, 1000] = 500) -> ScenarioSpec:
+        if not self.enabled or self.at_minute is None:
+            raise ValueError(f"{self.type} is not available: {self.disabled_reason}")
+        return ScenarioSpec(type=self.type, pivot_id=pivot_id, target_event_id=self.target_event_id,
+                            at_minute=self.at_minute, team=self.team, tactics=self.tactics, params=dict(self.params),
+                            n_runs=n_runs, seed_base=seed_base)
 
 
 def is_red_card(e: MatchEvent) -> bool:
@@ -89,11 +100,13 @@ def _closest(events: list[MatchEvent], pivot: Pivot) -> MatchEvent | None:
     return (triggers or sorted(events, key=lambda e: abs(e.minute - pivot.minute)))[0]
 
 
-def options_for(pivot: Pivot, events: Iterable[MatchEvent]) -> list[ScenarioOption]:
+def options_for(pivot: Pivot, events: Iterable[MatchEvent],
+                tactics: Mapping[str, TeamTactics] | None = None) -> list[ScenarioOption]:
     """The five catalog chips for a pivot, most relevant target first, unavailable ones disabled.
 
     `events` is everything played so far, so a chip can target an event after the pivot
-    (the prototype offers "Disallow 71′ goal" from the 63′ pivot).
+    (the prototype offers "Disallow 71′ goal" from the 63′ pivot). `tactics` is each side's
+    tactics at the pivot (defaults if unknown), so change_press can move the press one step.
     """
     played = list(events)
     subs = [e for e in played if e.type == "substitution"]
@@ -121,9 +134,14 @@ def options_for(pivot: Pivot, events: Iterable[MatchEvent]) -> list[ScenarioOpti
     options.append(target_option("remove_goal", goals))
     # The side the match turned against is the one a coach would ask to press higher.
     losing = "away" if pivot.direction == "home" else "home"
-    options.append(ScenarioOption("change_press", CATALOG["change_press"].label.format(minute=_minute(pivot.minute)),
-                                  True, at_minute=pivot.minute, team=losing,
-                                  params={"delta": 1, "from_minute": pivot.minute}))
+    current = (tactics or {}).get(losing) or TeamTactics()
+    level = PRESS_LEVELS.index(current.press)
+    higher = level < len(PRESS_LEVELS) - 1
+    press = PRESS_LEVELS[level + 1 if higher else level - 1]
+    label = CATALOG["change_press"].label.format(direction="higher" if higher else "lower",
+                                                 minute=_minute(pivot.minute))
+    options.append(ScenarioOption("change_press", label, True, at_minute=pivot.minute, team=losing,
+                                  tactics=current.model_copy(update={"press": press})))
     # Chips for the pivot's own trigger come first, then the rest in catalog order.
     return sorted(options, key=lambda o: (not o.enabled, o.target_event_id not in pivot.trigger_event_ids))
 
