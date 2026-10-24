@@ -37,3 +37,25 @@ def test_slow_subscriber_drops_overflow(make_envelope):
             assert sub.dropped == 3
             assert [(await sub.get(1)).seq for _ in range(2)] == [0, 1]
     asyncio.run(run())
+
+
+def test_seq_stays_increasing_across_publishers(make_envelope):
+    async def run():
+        live = InMemoryLivePublisher()
+        async with live.subscribe("m1") as sub:
+            for seq in (1, 2, 1, 5, 3):           # two publishers counting on their own
+                await live.publish(make_envelope(seq))
+            assert [(await sub.get(1)).seq for _ in range(5)] == [1, 2, 3, 5, 6]
+        assert live.last_seq("m1") == 6 and live.last_seq("m2") == -1
+    asyncio.run(run())
+
+
+def test_replay_returns_what_came_after_since(make_envelope):
+    async def run():
+        live = InMemoryLivePublisher(history=3)
+        for seq in range(1, 6):
+            await live.publish(make_envelope(seq))
+        assert [e.seq for e in live.replay("m1", 3)] == [4, 5]
+        assert [e.seq for e in live.replay("m1")] == [3, 4, 5]   # 1 and 2 were evicted
+        assert live.replay("m2") == []
+    asyncio.run(run())
