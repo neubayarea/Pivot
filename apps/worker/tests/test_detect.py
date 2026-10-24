@@ -1,11 +1,14 @@
 import asyncio
 import json
+import time
 
 import pytest
+from azure.core.exceptions import ClientAuthenticationError
 
 from pivot_adapters import build_adapters
 from pivot_core.domain import PivotCandidate
 from pivot_core.ports import PIVOT_CANDIDATES
+from pivot_worker import detect
 from pivot_worker.detect import DetectWorkflow, NoStats
 from pivot_worker.models import ModelUnavailable, ScriptedModelClient
 from pivot_worker.testing import claim
@@ -140,6 +143,35 @@ def test_a_bug_in_the_stat_calculator_degrades_to_the_template_instead_of_crashi
     assert steps == [("judge", "ok"), ("explainer", "ok"), ("verifier", "error"), ("template", "degraded")]
 
 
+AUTH = ClientAuthenticationError("bad client secret")
+SERVER = RuntimeError("Error code: 500 - internal server error")
+BAD_REQUEST = ValueError("Error code: 400 - content filter")
+
+
+@pytest.mark.parametrize("error", [AUTH, SERVER, BAD_REQUEST, KeyError("deployment")])
+def test_any_judge_error_degrades_to_the_template(events, stats, error):
+    pivot, steps = run(events, stats, ScriptedModelClient(mini=[error]))
+    assert pivot.status == "degraded" and pivot.narrative.source == "template"
+    assert steps == [("judge", "degraded"), ("template", "degraded")]
+
+
+@pytest.mark.parametrize("error", [AUTH, SERVER, BAD_REQUEST, KeyError("deployment")])
+def test_any_explainer_error_degrades_to_the_template(events, stats, error):
+    pivot, steps = run(events, stats, ScriptedModelClient(standard=[error], mini=[YES]))
+    assert pivot.status == "degraded" and pivot.narrative.source == "template"
+    assert steps == [("judge", "ok"), ("explainer", "error"), ("template", "degraded")]
+
+
+def test_a_verifier_error_degrades_to_the_template(events, stats, monkeypatch):
+    def broken(narrative, stats):
+        raise ZeroDivisionError("stat calculator blew up")
+
+    monkeypatch.setattr(detect, "with_computed", broken)
+    pivot, steps = run(events, stats, ScriptedModelClient(standard=[draft(9)], mini=[YES]))
+    assert pivot.status == "degraded" and pivot.narrative.source == "template"
+    assert steps == [("judge", "ok"), ("explainer", "ok"), ("verifier", "error"), ("template", "degraded")]
+
+
 def test_the_verifier_checks_numbers_against_the_named_team(events, stats):
     wrong_team = json.dumps({"headline": "Okafor's arrival flips the left flank", "sentences": [{
         "text": "Away's final-third passes rose from 3 to 9 after the change.", "evidence_ids": ["m063-s01042"],
@@ -147,3 +179,59 @@ def test_the_verifier_checks_numbers_against_the_named_team(events, stats):
                    claim("passes_final_third", "home", (61, 66), 9).model_dump()]}]})
     pivot, steps = run(events, stats, ScriptedModelClient(standard=[wrong_team] * 3, mini=[YES]))
     assert pivot.status == "degraded" and steps.count(("verifier", "rejected")) == 3
+
+
+class SlowModels(ScriptedModelClient):
+    async def complete_json(self, tier, messages, *, timeout):
+        self.calls.append((tier, timeout))
+        await asyncio.sleep(timeout)
+        raise ModelUnavailable("timed out")
+
+
+def test_the_deadline_bounds_the_whole_chain(events, stats):
+    adapters = build_adapters("local")
+    models = SlowModels()
+    steps = []
+
+    async def record(step):
+        steps.append((step.agent, step.status))
+
+    async def go():
+        await adapters.matches.append_events(list(events.values()))
+        return await DetectWorkflow(adapters.matches, models, lambda m, e, x: stats, deadline=0.3).run(
+            CANDIDATE, "chain-1", record)
+
+    started = time.monotonic()
+    pivot = asyncio.run(go())
+    assert time.monotonic() - started < 1.0
+    assert pivot.status == "degraded" and steps == [("judge", "degraded"), ("template", "degraded")]
+    assert models.calls[0][1] <= 0.3                     # the per-try timeout shrinks to what is left
+
+
+def test_if_the_graph_itself_fails_the_template_is_written_anyway(events, stats, monkeypatch):
+    class Broken:
+        async def run(self, message):
+            raise RuntimeError("workflow engine crashed")
+
+    monkeypatch.setattr(DetectWorkflow, "build", lambda self: Broken())
+    pivot, steps = run(events, stats, ScriptedModelClient())
+    assert pivot.status == "degraded" and pivot.narrative.source == "template"
+    assert steps == [("template", "degraded")]
+
+
+def test_explainer_errors_are_traced_under_the_explainer_and_the_message_completes(events, stats):
+    adapters = build_adapters("local")
+    models = ScriptedModelClient(standard=[AUTH], mini=[YES])
+    worker = Worker(adapters, DetectWorkflow(adapters.matches, models, stats_factory=lambda m, e, x: stats))
+
+    async def go():
+        await adapters.matches.append_events(list(events.values()))
+        await adapters.queue.send(PIVOT_CANDIDATES, "M-test:63", CANDIDATE.model_dump(mode="json", round_trip=True))
+        await worker.run_once(timeout=1)
+        left = await adapters.queue.receive(PIVOT_CANDIDATES, timeout=0.1)
+        return await adapters.matches.get_pivot("M-test", "M-test:p63"), await adapters.traces.list_traces("M-test"), left
+
+    pivot, traces, left = asyncio.run(go())
+    assert pivot.status == "degraded" and left is None
+    assert [(t.agent, t.status) for t in traces] == [("judge", "ok"), ("explainer", "error"), ("template", "degraded")]
+    assert "ClientAuthenticationError" in traces[1].output_summary
