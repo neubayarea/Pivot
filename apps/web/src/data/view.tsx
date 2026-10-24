@@ -51,6 +51,8 @@ export type LoadProblem =
 export type Connection = ConnectionStatus & { retryNow: () => void; problem: LoadProblem | null };
 
 export const MatchContext = createContext<MatchView | null>(null);
+/** True when the page runs on the fixture replay (`?fixture=1`), so other data (What-if runs) is mocked too. */
+export const FixtureContext = createContext(false);
 export const ConnectionContext = createContext<Connection | null>(null);
 
 export function useMatch(): MatchView {
@@ -63,6 +65,8 @@ export function useMatch(): MatchView {
 export const useMaybeMatch = () => useContext(MatchContext);
 
 export const useConnection = () => useContext(ConnectionContext);
+
+export const useFixture = () => useContext(FixtureContext);
 
 /** Shirt order, players without a number last. */
 export const byShirt = (a: SquadPlayer, b: SquadPlayer) => (a.shirt ?? 999) - (b.shirt ?? 999) || a.name.localeCompare(b.name);

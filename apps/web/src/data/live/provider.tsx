@@ -9,6 +9,7 @@ import {
 } from "../view";
 import { isRecordedDemo, type MatchChoice } from "../choice";
 import { ApiError, api } from "./api";
+import { isScenarioEnvelope, publishScenario } from "./scenarioFeed";
 import { LiveSocket, type ConnectionStatus } from "./socket";
 import { applyEnvelope, applyPivot, applyPivots, applySnapshot, lastEventSeq, type LiveState } from "./state";
 
@@ -122,6 +123,7 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
       },
       onEnvelope: (env) => {
         if (!alive()) return;
+        if (isScenarioEnvelope(env.type)) return publishScenario(env.payload);
         const asked = prefsRef.current;
         const id = (env.payload as { pivot_id?: unknown } | null)?.pivot_id;
         const settled = env.type === "pivot.confirmed" || env.type === "pivot.degraded";

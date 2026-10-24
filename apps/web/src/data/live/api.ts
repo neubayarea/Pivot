@@ -1,7 +1,8 @@
 // REST client for the endpoints in apps/api/src/pivot_api/routes.py. Paths are relative, so the
 // Vite dev server proxies them to the local API and a same-origin deploy needs nothing else.
 import type {
-  Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, TrackingFrame, ViewerPrefs,
+  Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, Scenario, ScenarioSpec, TrackingFrame,
+  ViewerPrefs,
 } from "@pivot/contracts";
 
 export class ApiError extends Error {
@@ -26,6 +27,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 /** `GET /api/sims`: the simulated matches the local API builds at startup (Ax6). */
 export type SimsStatus = { total: number; ready: number; failed: number; generating: boolean; match_ids: string[] };
+
+/** One chip in the What-if Lab, from `GET /api/pivots/{id}/scenarios` (A09; worker scenarios.py). */
+export type ScenarioOption = {
+  type: ScenarioSpec["type"];
+  /** English, with the minute filled in: "Cancel 64′ substitution". */
+  label: string;
+  enabled: boolean;
+  /** Why the chip is greyed out; null when it is enabled. */
+  disabled_reason: string | null;
+  target_event_id: string | null;
+  /** Elapsed minute (0-based) the replay resumes from. */
+  at_minute: number | null;
+  team: "home" | "away" | null;
+  /** move_substitution: `new_minute`, an elapsed minute (0-based). */
+  params: Record<string, number | string>;
+};
+
+export type RunCount = ScenarioSpec["n_runs"];
+
+/** `POST /api/scenarios`; the API fills the rest of the ScenarioSpec from the chip it matches. */
+export type StartScenario = {
+  pivot_id: string;
+  type: ScenarioSpec["type"];
+  n_runs?: RunCount;
+  params?: Record<string, number | string>;
+};
 
 const m = (id: string) => `/matches/${encodeURIComponent(id)}`;
 
@@ -72,6 +99,16 @@ export const api = {
   getOverlay: (id: string, clock?: number) =>
     request<OverlayFrame>(`${m(id)}/overlay${clock === undefined ? "" : `?clock=${clock}`}`),
   getOverlayTimeline: (id: string) => request<OverlayTimeline>(`${m(id)}/overlay/timeline`),
+  /** The What-if chips for one pivot, disabled ones with their reason. */
+  listScenarioOptions: (pivotId: string) => request<ScenarioOption[]>(`/pivots/${encodeURIComponent(pivotId)}/scenarios`),
+  /** Queues a paired replay; 202 with the Scenario (queued, or completed when the API had it cached). */
+  startScenario: (body: StartScenario) =>
+    request<Scenario>("/scenarios", {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  getScenario: (scenarioId: string) => request<Scenario>(`/scenarios/${encodeURIComponent(scenarioId)}`),
   /** The WebSocket URL for one match's feed. */
   negotiate: async (id: string) => {
     const { url } = await request<{ url: string }>(`/negotiate?match_id=${encodeURIComponent(id)}`, { method: "POST" });
