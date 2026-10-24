@@ -65,9 +65,10 @@ def stat_sheet(candidate: PivotCandidate, stats: StatSource) -> list[Claim]:
     return sheet
 
 
-def window_events(candidate: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[MatchEvent]:
+def window_events(candidate: PivotCandidate, events: Mapping[str, MatchEvent], *,
+                  before: int = EVIDENCE_BEFORE, after: int = EVIDENCE_AFTER) -> list[MatchEvent]:
     """Events the model may cite: key events first, then the notable ones, capped."""
-    lo, hi = candidate.minute - EVIDENCE_BEFORE, candidate.minute + EVIDENCE_AFTER
+    lo, hi = candidate.minute - before, candidate.minute + after
     in_window = [e for e in events.values() if lo <= e.minute <= hi]
     keys = set(candidate.key_event_ids)
 
@@ -79,7 +80,7 @@ def window_events(candidate: PivotCandidate, events: Mapping[str, MatchEvent]) -
     return sorted(chosen, key=lambda e: e.seq)
 
 
-def _event_line(e: MatchEvent, team_names: Mapping[str, str]) -> dict:
+def event_line(e: MatchEvent, team_names: Mapping[str, str]) -> dict:
     line = {"id": e.event_id, "clock": e.clock_label, "type": e.type, "team": team_names[e.team]}
     for key in ("player_id", "receiver_id", "outcome", "shot_outcome", "xg"):
         if (value := getattr(e, key)) is not None:
@@ -148,7 +149,7 @@ def build_request(
                   "towards": team_names[candidate.direction], "swing": round(candidate.swing, 3),
                   "key_event_ids": candidate.key_event_ids},
         "teams": dict(team_names),
-        "events": [_event_line(e, team_names) for e in window_events(candidate, events)],
+        "events": [event_line(e, team_names) for e in window_events(candidate, events)],
         "stat_sheet": [c.model_dump() for c in stat_sheet(candidate, stats)],
     }
     text = json.dumps(request, ensure_ascii=False)
