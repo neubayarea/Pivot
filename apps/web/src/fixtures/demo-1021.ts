@@ -2,6 +2,7 @@
 // Not the official B02 fixture: everything here is generated from a fixed seed so the
 // board replays identically every time. Types follow @pivot/contracts exactly.
 import type {
+  Claim,
   ExplanationSentence,
   MatchEvent,
   MinuteMetric,
@@ -9,6 +10,7 @@ import type {
   Team,
   ViewerPrefs,
 } from "@pivot/contracts";
+import { buildPivotDetails, momentumAvg, type BeforeAfterRow, type PivotDetailData } from "./pivot-detail";
 
 export const MATCH_ID = "demo-1021";
 
@@ -25,6 +27,8 @@ export type MatchFixture = {
   events: MatchEvent[];
   metrics: MinuteMetric[];
   pivots: PivotTimeline[];
+  /** S2 data per pivot: the timeline window, per-second positions and the before/after table. */
+  details: Record<string, PivotDetailData>;
   /** Match second the replay starts from, just before the 74′ pivot is flagged. */
   startAt: number;
   endAt: number;
@@ -52,14 +56,14 @@ const PLAYERS = Object.fromEntries([...ROSTER.home, ...ROSTER.away]);
 // Who is on the pitch at a given second: Petrov is sent off at 37:52, Rossi replaces Moreau at 62:40.
 const RED_AT = 37 * 60 + 52;
 const SUB_AT = 62 * 60 + 40;
-function onPitch(team: Side, t: number): string[] {
+function onPitch(team: Side, t: number, keepers = false): string[] {
   return ROSTER[team]
     .map(([id]) => id)
     .filter((id) => {
       if (id === "hcy-17") return t >= SUB_AT;
       if (id === "hcy-11") return t < SUB_AT;
       if (id === "nvr-5") return t < RED_AT;
-      return !id.endsWith("-1"); // keepers stay out of the open-play feed
+      return keepers || !id.endsWith("-1"); // keepers stay out of the open-play feed
     });
 }
 
@@ -110,7 +114,12 @@ function push(team: Side, t: number, type: MatchEvent["type"], extra: Partial<Ma
     play_pattern: null, player_id: null, possession_id: null, receiver_id: null, related_event_ids: [],
     schema_version: 1, seq: 0, shootout_round: null, shot_end_height_m: null, shot_outcome: null,
     substitution: null, success_prob: null, t, tactics: null, team, team_sheet: null, third: null,
-    threat: 0, to_zone: null, type, under_pressure: false, xg: null, ...extra,
+    threat: 0, to_zone: null, type, under_pressure: false, xg: null,
+    // Fields added to the data format after B01 was first merged (PR #71).
+    counterpress: false, deflected: false, delivery: null, duel_type: null, first_time: false,
+    foul: null, injury: null, keeper_action: null, keeper_location: null, keeper_technique: null,
+    pass_technique: null, shot_technique: null, var: null,
+    ...extra,
   };
   events.push(e);
   return e;
@@ -247,6 +256,25 @@ const pivots: PivotTimeline[] = [
   },
 ];
 
+// Before/after table for S2: ten minutes either side, matching the figures the sentences quote.
+const row = (label: string, c: Claim, before: number): BeforeAfterRow => {
+  const [a, b] = c.stat_ref.window;
+  return { label, after: c, before: { ...c, value: before, stat_ref: { ...c.stat_ref, window: [2 * a - b, a] } } };
+};
+const momentumRow = (minute: number): BeforeAfterRow => ({
+  label: "Momentum (avg)",
+  before: momentumAvg(metrics, [minute - 10, minute]),
+  after: momentumAvg(metrics, [minute, minute + 10]),
+});
+const claims = (id: string) => pivots.find((p) => p.pivot.pivot_id === id)!.pivot.narrative!.sentences.flatMap((s) => s.claims);
+const [c38, c63, c74] = [claims("pv-38"), claims("pv-63"), claims("pv-74")];
+const BEFORE_AFTER: Record<string, BeforeAfterRow[]> = {
+  "pv-38": [row("HCY possession", c38[0], 48), row("HCY box entries", c38[1], 2), momentumRow(38)],
+  "pv-63": [row("HCY final-third passes", c63[0], 9), row("NVR duels won", c63[1], 3),
+    row("NVR pressures", c63[2], 6), momentumRow(63)],
+  "pv-74": [row("NVR pressures", c74[0], 12), row("HCY pass accuracy from defence", c74[1], 55), momentumRow(74)],
+};
+
 export const DEMO_1021: MatchFixture = {
   matchId: MATCH_ID,
   teams: TEAMS,
@@ -254,6 +282,10 @@ export const DEMO_1021: MatchFixture = {
   events,
   metrics,
   pivots,
+  details: buildPivotDetails({
+    matchId: MATCH_ID, events, metrics, pivots: pivots.map((p) => p.pivot), beforeAfter: BEFORE_AFTER,
+    onPitch: (team, t) => onPitch(team, t, true),
+  }),
   startAt: 73 * 60 + 30,
   endAt: 90 * 60,
 };
