@@ -136,6 +136,13 @@ describe("live board states", () => {
     expect(html).not.toContain("70′");
   });
 
+  it("has a pitch board once the match has started", () => {
+    const html = render(<LiveBoard />, matchView());
+    expect(html).toContain("On the pitch");
+    expect(html).toContain("No player positions for this match.");
+    expect(render(<LiveBoard />, matchView({}, "scheduled"))).not.toContain("On the pitch");
+  });
+
   it("says when the event feed is empty", () => {
     expect(render(<EventFeed highlight={new Set()} />, matchView())).toContain("No events yet");
   });

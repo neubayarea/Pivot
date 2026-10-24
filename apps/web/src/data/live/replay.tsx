@@ -125,8 +125,10 @@ export default function ReplayProvider({ children, fallback, choice, from }: Pro
         setClock(from);
         setPlaying(true);
       },
+      seek: (t: number) => setClock(Math.min(end, Math.max(0, t))),
+      end,
     },
-  }, [data, playing, speed, from]);
+  }, [data, playing, speed, from, end]);
 
   return (
     <ConnectionContext.Provider value={connection}>

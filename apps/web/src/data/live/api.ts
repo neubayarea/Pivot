@@ -1,7 +1,7 @@
 // REST client for the endpoints in apps/api/src/pivot_api/routes.py. Paths are relative, so the
 // Vite dev server proxies them to the local API and a same-origin deploy needs nothing else.
 import type {
-  Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, ViewerPrefs,
+  Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, TrackingFrame, ViewerPrefs,
 } from "@pivot/contracts";
 
 export class ApiError extends Error {
@@ -61,6 +61,9 @@ export const api = {
   /** Events with seq > `since` (MatchEvent.seq, not the envelope seq), in seq order. */
   listEvents: (id: string, since = -1) => request<MatchEvent[]>(`${m(id)}/events?since=${since}`),
   getTimeline: (id: string) => request<MinuteMetric[]>(`${m(id)}/timeline`),
+  /** Player and ball positions with from <= t <= to (elapsed seconds); 404 when the match has none (Ax9). */
+  listFrames: (id: string, from: number, to: number) =>
+    request<TrackingFrame[]>(`${m(id)}/frames?from=${from}&to=${to}`),
   listPivots: async (id: string, prefs?: ViewerPrefs) =>
     servedList(await request<Parameters<typeof servedList>[0]>(`${m(id)}/pivots${prefs ? prefsQuery(prefs) : ""}`)),
   getPivot: async (pivotId: string, prefs?: ViewerPrefs) =>
