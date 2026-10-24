@@ -14,7 +14,7 @@ from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotC
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from .context import ContextItem, involved_in
-from .languages import LABELS, MAX_HEADLINE, PHRASES
+from .languages import FAN_LABELS, LABELS, MAX_HEADLINE, PHRASES, length
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
 from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 
@@ -42,7 +42,7 @@ def _trigger(event: MatchEvent, team: str, lang: str = "en") -> tuple[str, str]:
 
 def _label(metric: str, lang: str, fan: bool) -> str:
     if lang in LABELS:
-        return LABELS[lang][metric]
+        return (FAN_LABELS if fan else LABELS)[lang][metric]
     term = STAT_TERMS[metric]
     return term.fan_label if fan else term.label
 
@@ -105,8 +105,10 @@ def clean_headline(text: str, lang: str = "en") -> str:
     """No digits, and cut to the language's headline limit."""
     text = re.sub(r"\d", "", text).strip()
     limit = MAX_HEADLINE[lang]
-    if lang == "zh":
-        return text[:limit] or PHRASES["zh"]["fallback_h"]
+    if lang == "zh":                              # Latin words (team names) count as one each
+        while length(text, lang) > limit:
+            text = text[:-1].rstrip()
+        return text or PHRASES["zh"]["fallback_h"]
     return " ".join(text.split()[:limit]) or PHRASES[lang]["fallback_h"]
 
 

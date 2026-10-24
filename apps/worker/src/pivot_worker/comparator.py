@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, SimResult, Verdict, ViewerPrefs
 
 from .explainer import ExplainerDraft, audience_brief
+from .languages import COMPARISON, has_cjk
 from .prompts import Prompt, render
 from .template import clean_headline
 from .verifier import StatSource, verify
@@ -33,15 +34,34 @@ EXAMPLE = ExplainerDraft(
 )
 
 
-def outcome_names(team_names: Mapping[str, str]) -> dict[str, tuple[str, ...]]:
-    """Phrases that name each outcome in a sentence."""
+def outcome_names(team_names: Mapping[str, str], lang: str = "en") -> dict[str, tuple[str, ...]]:
+    """Phrases that name each outcome in a sentence; English ones are accepted in every language."""
     home, away = team_names["home"], team_names["away"]
-    return {
-        "home_win": (f"{home} win", f"{home} victory", "home win"),
-        "away_win": (f"{away} win", f"{away} victory", "away win"),
-        "draw": ("draw",),
-        "home_advance": (f"{home} go through", f"{home} going through", f"{away} go out"),
+    names = {
+        "home_win": [f"{home} win", f"{home} victory", "home win"],
+        "away_win": [f"{away} win", f"{away} victory", "away win"],
+        "draw": ["draw"],
+        "home_advance": [f"{home} go through", f"{home} going through", f"{away} go out"],
     }
+    if lang == "zh":
+        for k, team, side in (("home_win", home, "主"), ("away_win", away, "客")):
+            names[k] += [f"{team}获胜", f"{team}取胜", f"{team}赢球", f"{team}胜出", f"{side}队获胜", f"{side}胜"]
+        names["draw"] += ["平局", "战平", "打平", "握手言和"]
+        names["home_advance"] += [f"{home}晋级", f"{away}出局", f"{away}被淘汰"]
+    elif lang == "es":
+        for k, team, side in (("home_win", home, "local"), ("away_win", away, "visitante")):
+            names[k] += [f"victoria de {team}", f"victoria del {team}", f"triunfo de {team}", f"gane {team}",
+                         f"{team} gane", f"victoria {side}"]
+        names["draw"] += ["empate"]
+        names["home_advance"] += [f"{home} pase", f"{home} se clasifique", f"clasificación de {home}",
+                                  f"{away} quede eliminado"]
+    return {k: tuple(v) for k, v in names.items()}
+
+
+def _names(text: str, phrase: str) -> bool:
+    if has_cjk(phrase):                           # no word boundaries in Chinese
+        return phrase.lower() in text
+    return bool(re.search(rf"\b{re.escape(phrase.lower())}\b", text))
 
 
 def changes(result: SimResult) -> dict[str, float]:
@@ -49,13 +69,13 @@ def changes(result: SimResult) -> dict[str, float]:
     return {k: (getattr(result.counterfactual, k) or 0) - (getattr(result.baseline, k) or 0) for k in keys}
 
 
-def outcome_deltas(result: SimResult, team_names: Mapping[str, str]):
-    deltas, names = changes(result), outcome_names(team_names)
+def outcome_deltas(result: SimResult, team_names: Mapping[str, str], lang: str = "en"):
+    deltas, names = changes(result), outcome_names(team_names, lang)
 
     def mentioned(text: str) -> list[float]:
         lowered = text.lower()
         return [deltas[k] for k, phrases in names.items()
-                if k in deltas and any(re.search(rf"\b{re.escape(p.lower())}\b", lowered) for p in phrases)]
+                if k in deltas and any(_names(lowered, p) for p in phrases)]
 
     return mentioned
 
@@ -93,30 +113,33 @@ def build_messages(result: SimResult, *, scenario_label: str, target_event_id: s
 def verify_comparison(narrative: Narrative, result: SimResult, *, at_minute: int, events: Mapping[str, MatchEvent],
                       stats: StatSource, team_names: Mapping[str, str]) -> Verdict:
     return verify(narrative, pivot_minute=at_minute, events=events, stats=stats, significant=result.significant,
-                  outcome_deltas=outcome_deltas(result, team_names))
+                  outcome_deltas=outcome_deltas(result, team_names, narrative.prefs.language))
 
 
-def _phrase(outcome: str, team_names: Mapping[str, str]) -> str:
-    return "a draw" if outcome == "draw" else f"a {team_names[outcome.split('_')[0]]} win"
+def _phrase(outcome: str, team_names: Mapping[str, str], lang: str = "en", key: str = "win") -> str:
+    phrases = COMPARISON[lang]
+    if outcome == "draw":
+        return phrases[key.replace("win", "draw")]
+    return phrases[key].format(team=team_names[outcome.split("_")[0]])
 
 
 def template_comparison(result: SimResult, *, evidence_id: str, team_names: Mapping[str, str],
                         prefs: ViewerPrefs | None = None, chain_id: str | None = None,
                         verifier_attempts: int = 0) -> Narrative:
     """Fallback that only states the direction of the biggest change and whether it is noise."""
+    prefs = prefs or ViewerPrefs()
+    lang = prefs.language
+    phrases = COMPARISON[lang]
     deltas = changes(result)
     k = max(OUTCOMES, key=lambda o: abs(deltas[o]))
-    phrase = _phrase(k, team_names)
     if abs(deltas[k]) < 1e-9:
-        first = "The change made no difference to the results in the replays."
-        headline = "The change makes no difference"
+        first, headline = phrases["none"], phrases["none_h"]
     else:
-        word = "more likely" if deltas[k] > 0 else "less likely"
-        first = f"With the change, {phrase} became {word} in the replays."
-        headline = f"{phrase[2].upper()}{phrase[3:]} becomes {word}"
-    second = ("The two intervals do not overlap, so this is more than noise." if result.significant.get(k)
-              else "The two intervals overlap, so the difference is within noise.")
-    return Narrative(prefs=prefs or ViewerPrefs(), headline=clean_headline(headline),
+        word = phrases["more" if deltas[k] > 0 else "less"]
+        first = phrases["first"].format(outcome=_phrase(k, team_names, lang), word=word)
+        headline = phrases["first_h"].format(outcome=_phrase(k, team_names, lang, "win_h"), word=word)
+    second = phrases["apart" if result.significant.get(k) else "noise"]
+    return Narrative(prefs=prefs, headline=clean_headline(headline, lang),
                      sentences=[ExplanationSentence(text=first, evidence_ids=[evidence_id]),
                                 ExplanationSentence(text=second, evidence_ids=[evidence_id])],
                      source="template", verifier_attempts=verifier_attempts, chain_id=chain_id)

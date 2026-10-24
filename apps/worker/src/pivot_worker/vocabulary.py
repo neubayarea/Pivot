@@ -91,10 +91,12 @@ UNIT_SUFFIX: dict[str, str] = {"count": "", "pct": "%", "xg": " xG", "index": ""
 
 # Direction words. A sentence that uses one must have a claim pair (same metric and team,
 # two windows) whose difference has the matching sign; the Verifier checks this.
-UP_WORDS = ("rose", "rise", "rising", "increased", "climbed", "jumped", "grew", "doubled", "surged", "up from",
-            "more likely")
-DOWN_WORDS = ("fell", "fall", "falling", "dropped", "decreased", "declined", "halved", "slumped", "down from",
-              "less likely")
+UP_WORDS = ("rose", "rise", "rising", "increased", "climbed", "jumped", "grew", "doubled", "tripled", "trebled",
+            "quadrupled", "surged", "went up", "up from", "more likely")
+DOWN_WORDS = ("fell", "fall", "falling", "dropped", "decreased", "declined", "halved", "slumped", "dipped",
+              "went down", "down from", "less likely")
+# Magnitude words: the later value must be about this many times the earlier one.
+MAGNITUDE_WORDS = {"doubled": 2.0, "tripled": 3.0, "trebled": 3.0, "quadrupled": 4.0, "halved": 0.5}
 
 # Significance words are only allowed when the what-if confidence intervals do not overlap.
 SIGNIFICANCE_WORDS = ("significant", "significantly", "clearly", "decisive", "decisively", "proven", "conclusive")
