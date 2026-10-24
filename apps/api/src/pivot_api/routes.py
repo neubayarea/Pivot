@@ -8,7 +8,16 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from pivot_adapters import Adapters
-from pivot_core.domain import Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot, ViewerPrefs
+from pivot_core.domain import (
+    AgentTrace,
+    Match,
+    MatchEvent,
+    MinuteMetric,
+    OverlayFrame,
+    OverlayTimeline,
+    Pivot,
+    ViewerPrefs,
+)
 from pivot_core.domain.common import Side
 from pivot_core.domain.narrative import Audience, Language
 
@@ -107,6 +116,31 @@ async def get_pivot(request: Request, pivot_id: str, lang: Language = "en", audi
     if pivot is None or match is None:
         raise HTTPException(404, f"pivot {pivot_id!r} not found")
     return await _personalized(request, pivot, _prefs(match, lang, audience, team, player))
+
+
+@router.get("/matches/{match_id}/traces")
+async def list_match_traces(request: Request, match_id: str) -> list[AgentTrace]:
+    """Every agent step of the match (S4), grouped by `chain_id` and in `step` order within each chain.
+
+    Candidates the judge turned down are here too: their chain has `input_ref` = the candidate id.
+    """
+    await _match_or_404(request, match_id)
+    return await _adapters(request).traces.list_traces(match_id)
+
+
+@router.get("/pivots/{pivot_id}/traces")
+async def list_pivot_traces(request: Request, pivot_id: str) -> list[AgentTrace]:
+    """Every chain that worked on this pivot ("{match_id}:p{minute}"), same order as the match list.
+
+    Rewrites, template fallbacks and redeliveries all count; a candidate judged "not a pivot" has the
+    same id, so it is found here even when no pivot was stored for it.
+    """
+    match_id, sep, _ = pivot_id.rpartition(":p")
+    adapters = _adapters(request)
+    traces = [t for t in await adapters.traces.list_traces(match_id) if t.input_ref == pivot_id] if sep else []
+    if not traces and (not sep or await adapters.matches.get_pivot(match_id, pivot_id) is None):
+        raise HTTPException(404, f"pivot {pivot_id!r} not found")
+    return traces
 
 
 async def _overlay_timeline(request: Request, match_id: str) -> tuple[Match, OverlayTimeline, list[MatchEvent]]:

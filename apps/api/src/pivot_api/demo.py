@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 
 from pivot_core.domain import (
+    AgentTrace,
     Claim,
     Coach,
     Competition,
@@ -30,9 +31,11 @@ from pivot_core.domain import (
     Team,
     TeamSheet,
     TeamTactics,
+    Verdict,
+    VerifierIssue,
     ViewerPrefs,
 )
-from pivot_core.ports import MatchRepository
+from pivot_core.ports import MatchRepository, TraceRepository
 
 DEMO_MATCH_ID = "M-api-demo"
 HALF = 45 * 60
@@ -148,7 +151,7 @@ def demo_pivots(events: list[MatchEvent]) -> list[Pivot]:
     ids = {(e.type, e.minute): e.event_id for e in events}
     sub, goal = ids[("substitution", 61)], ids[("shot", 64)]
     narrative = Narrative(
-        prefs=ViewerPrefs(), headline="Rovers seize control after the change", source="llm", verifier_attempts=1,
+        prefs=ViewerPrefs(), headline="Rovers seize control after the change", source="llm", verifier_attempts=2,
         sentences=[
             ExplanationSentence(
                 text="Rovers levelled within minutes of the substitution, with their only shot of the spell.",
@@ -162,6 +165,58 @@ def demo_pivots(events: list[MatchEvent]) -> list[Pivot]:
               status="confirmed", trigger_event_ids=[sub, goal], narrative=narrative, chain_id="c-demo-61"),
         Pivot(pivot_id=f"{DEMO_MATCH_ID}:p71", match_id=DEMO_MATCH_ID, minute=71, direction="away", severity=1,
               status="pending", trigger_event_ids=[ids[("shot", 71)]], chain_id="c-demo-71"),
+    ]
+
+
+def _chain(chain_id: str, pivot_id: str, steps: list[tuple]) -> list[AgentTrace]:
+    """Number the steps of one chain the way the worker does: trace_id "{chain_id}:{step}", input_ref the pivot id."""
+    traces = []
+    for step, (agent, summary, status, latency_ms, *rest) in enumerate(steps):
+        verdict = rest[0] if rest else None
+        llm = agent in ("judge", "explainer")
+        traces.append(AgentTrace(
+            trace_id=f"{chain_id}:{step}", chain_id=chain_id, step=step, match_id=DEMO_MATCH_ID, agent=agent,
+            model="demo" if llm else None, prompt_hash=f"demo-{agent}" if llm else None,
+            input_ref=pivot_id, output_summary=summary, latency_ms=latency_ms, tokens=900 if llm else 0,
+            status=status, verdict=verdict,
+        ))
+    return traces
+
+
+def _rejected(*codes: str) -> Verdict:
+    return Verdict(passed=False, issues=[VerifierIssue(code=c, message=f"demo: {c}", sentence_index=0) for c in codes])
+
+
+def demo_traces() -> list[AgentTrace]:
+    """One chain per story the S4 page has to show.
+
+    61': rewritten once after the verifier's feedback, then published (the confirmed pivot).
+    71': three drafts rejected, so the template text took over. The pivot is still pending because
+         the worker writes the last trace just before it stores the pivot; this freezes that moment.
+    38': the judge said "not a pivot", so there is no pivot, only the candidate id in input_ref.
+    """
+    p = f"{DEMO_MATCH_ID}:p"
+    return [
+        *_chain("c-demo-38", f"{p}38", [
+            ("judge", "is_pivot=false: a yellow card with no change in momentum", "rejected", 820),
+        ]),
+        *_chain("c-demo-61", f"{p}61", [
+            ("judge", "is_pivot=true severity=2", "ok", 910),
+            ("explainer", "Rovers take over after the change", "ok", 1840),
+            ("verifier", "number_mismatch", "rejected", 12, _rejected("number_mismatch")),
+            ("explainer", "Rovers seize control after the change", "retried", 1620),
+            ("verifier", "pass", "ok", 9, Verdict(passed=True)),
+        ]),
+        *_chain("c-demo-71", f"{p}71", [
+            ("judge", "is_pivot=true severity=1", "ok", 880),
+            ("explainer", "Rovers pull ahead", "ok", 1710),
+            ("verifier", "evidence_count", "rejected", 11, _rejected("evidence_count")),
+            ("explainer", "Rovers pull ahead with a header", "retried", 1550),
+            ("verifier", "significance_unsupported", "rejected", 10, _rejected("significance_unsupported")),
+            ("explainer", "Rovers pull ahead from a set piece", "retried", 1490),
+            ("verifier", "number_mismatch", "rejected", 10, _rejected("number_mismatch")),
+            ("template", "Northgate Rovers go 2-1 up", "degraded", 3),
+        ]),
     ]
 
 
@@ -179,12 +234,15 @@ def demo_match() -> Match:
     )
 
 
-async def seed_demo(repo: MatchRepository) -> str:
-    """Store the demo match with its events, metrics and pivots. Safe to call twice."""
+async def seed_demo(repo: MatchRepository, traces: TraceRepository | None = None) -> str:
+    """Store the demo match with its events, metrics, pivots and (given a trace store) agent traces. Safe to call twice."""
     events = demo_events()
     await repo.upsert_match(demo_match())
     await repo.append_events(events)
     await repo.upsert_metrics(demo_metrics())
     for pivot in demo_pivots(events):
         await repo.upsert_pivot(pivot)
+    if traces is not None:
+        for trace in demo_traces():
+            await traces.append_trace(trace)
     return DEMO_MATCH_ID
