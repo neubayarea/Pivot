@@ -118,6 +118,21 @@ class TraceRepository(Protocol):
         ...
 
 
+class ResultCache(Protocol):
+    """Keeps the AI's results (pivots, narrative versions, agent traces) of a match across restarts (Ax10).
+
+    Results belong to one version of a match's source data: opening the match at another version
+    starts it empty, so a changed match is written again instead of reusing stale text.
+    """
+
+    async def open_match(self, match_id: str, version: str) -> int:
+        """Put this version's stored results back into the repositories and keep storing new ones. Returns the pivot count.
+
+        Call it after storing the match and before its candidates go on the queue.
+        """
+        ...
+
+
 class LivePublisher(Protocol):
     """Push envelopes to every browser watching a match (Web PubSub group per match in the cloud)."""
 
