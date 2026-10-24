@@ -293,11 +293,15 @@ name = "pivot-worker"
 version = "0.1.0"
 source = { editable = "apps/worker" }
 dependencies = [
+    { name = "pivot-adapters" },
     { name = "pivot-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pivot-core", editable = "packages/pivot_core" }]
+requires-dist = [
+    { name = "pivot-adapters", editable = "packages/pivot_adapters" },
+    { name = "pivot-core", editable = "packages/pivot_core" },
+]
 
 [[package]]
 name = "pluggy"
