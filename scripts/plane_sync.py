@@ -157,7 +157,7 @@ def main() -> None:
     proj = next(x for x in p.list("/projects/") if x["name"] == PROJECT)
     pid = proj["id"]
     states = {s["name"]: s["id"] for s in p.list(f"/projects/{pid}/states/")}
-    labels = {l["name"]: l["id"] for l in p.list(f"/projects/{pid}/labels/")}
+    labels = {lb["name"]: lb["id"] for lb in p.list(f"/projects/{pid}/labels/")}
     existing = {i["name"].split(" ", 1)[0]: i for i in p.list(f"/projects/{pid}/issues/")}
     cycles = {c["name"]: c for c in p.list(f"/projects/{pid}/cycles/")}
     print(f"[{'APPLY' if args.apply else 'DRY RUN'}] project {PROJECT}, {len(existing)} items, cycles {list(cycles)}")
