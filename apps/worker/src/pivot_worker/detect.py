@@ -182,8 +182,13 @@ class VerifierNode(Executor):
         if r.draft is None:
             verdict = Verdict(passed=False, issues=[VerifierIssue(code="schema_invalid", message=r.schema_error or "")])
         else:
-            verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=r.view.events, stats=r.view.stats,
-                             context_ids=known_ids(r.view.context))
+            try:
+                verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=r.view.events, stats=r.view.stats,
+                                 context_ids=known_ids(r.view.context), team_names=r.view.team_names)
+            except Exception as e:           # a bug in the stat source: rewriting cannot fix it
+                await r.record(Step("verifier", f"stat source failed: {type(e).__name__}: {e}"[:200], "error"))
+                await ctx.send_message(replace(r, next="template"))
+                return
         summary = "pass" if verdict.passed else "; ".join(i.code for i in verdict.issues)
         await r.record(Step("verifier", summary, "ok" if verdict.passed else "rejected", verdict=verdict))
         if verdict.passed:

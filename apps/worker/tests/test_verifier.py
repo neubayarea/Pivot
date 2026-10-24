@@ -1,7 +1,8 @@
 import pytest
 
-from pivot_core.domain import ExplanationSentence, Narrative, ViewerPrefs
-from pivot_worker.testing import claim
+from pivot_core.domain import ExplanationSentence, Narrative, StatRef, ViewerPrefs
+from pivot_core.domain.stats import Claim
+from pivot_worker.testing import FakeStats, claim
 from pivot_worker.verifier import numbers_in, verify
 
 PIVOT = 63
@@ -128,3 +129,83 @@ def test_banned_terms(events, stats):
 
 def test_banned_terms_match_whole_words_only(events, stats):
     assert check(card(s("The neverending pressure told.")), events, stats).passed
+
+
+# Gaps found in the #76 review (Dx1). Each test failed before the fix.
+NAMES = {"home": "Rovers", "away": "Harbour"}
+
+
+def test_a_number_must_come_from_a_claim_on_the_team_it_is_written_about(events):
+    away_only = FakeStats({("shots", "away", (61, 66)): 3})
+    claims = [claim("shots", "away", (61, 66), 3)]
+    wrong = check(card(s("Rovers had 3 shots after the change.", claims=claims)), events, away_only, team_names=NAMES)
+    assert codes(wrong) == ["number_mismatch"]
+    assert "Rovers" in wrong.issues[0].message
+    assert check(card(s("Harbour had 3 shots after the change.", claims=claims)), events, away_only,
+                 team_names=NAMES).passed
+
+
+def test_a_number_must_come_from_a_claim_on_a_stat_the_sentence_names(events, stats):
+    passes = [claim("passes_final_third", "home", (56, 61), 3)]
+    assert codes(check(card(s("Rovers had 3 shots before the change.", claims=passes)), events, stats,
+                       team_names=NAMES)) == ["number_mismatch"]
+    assert check(card(s("Rovers had 3 final-third passes before the change.", claims=passes)), events, stats,
+                 team_names=NAMES).passed
+
+
+def test_team_and_stat_checks_allow_natural_wording(events, stats):
+    pair = [claim("passes_final_third", "home", (56, 61), 3), claim("passes_final_third", "home", (61, 66), 9)]
+    fan = s("Their passes into the attacking third rose from 3 to 9, and Harbour were hanging on.", claims=pair)
+    pinned = s("Rovers pinned Harbour back as their final-third passes rose from 3 to 9.", claims=pair)
+    for sentence in (fan, pinned):
+        verdict = check(card(sentence), events, stats, team_names=NAMES)
+        assert verdict.passed, verdict.issues
+
+
+def test_negative_numbers_keep_their_sign(events):
+    momentum = FakeStats({("momentum_avg", "home", (61, 66)): -0.32})
+    claims = [claim("momentum_avg", "home", (61, 66), -0.32)]
+    assert check(card(s("Rovers' momentum was -0.32 after the change.", claims=claims)), events, momentum).passed
+    assert check(card(s("Rovers' momentum was −0.32 after the change.", claims=claims)), events, momentum).passed
+    assert codes(check(card(s("Rovers' momentum was 0.32 after the change.", claims=claims)), events,
+                       momentum)) == ["number_mismatch"]
+    assert numbers_in("momentum -0.32, a 3-1 lead, U-21 side") == ["-0.32", "3", "1", "21"]
+
+
+def test_rounding_slack_is_not_added_on_top_of_the_claim_tolerance(events):
+    accuracy = FakeStats({("pass_accuracy_pct", "home", (61, 66)): 68.1})
+    claims = [claim("pass_accuracy_pct", "home", (61, 66), 68.6)]     # within 0.5 of the real value
+    assert codes(check(card(s("Pass accuracy was 69% after the change.", claims=claims)), events,
+                       accuracy)) == ["number_mismatch"]
+    assert check(card(s("Pass accuracy was 68% after the change.", claims=claims)), events, accuracy).passed
+
+
+class Raising:
+    def __init__(self, error):
+        self.error = error
+
+    def compute(self, ref):
+        raise self.error
+
+
+def test_missing_data_is_a_number_mismatch_but_a_stat_bug_is_not_swallowed(events):
+    sent = card(s("Rovers had 3 shots.", claims=[claim("shots", "home", (61, 66), 3)]))
+    assert codes(check(sent, events, Raising(LookupError("no data")))) == ["number_mismatch"]
+    assert codes(check(sent, events, Raising(KeyError("shots")))) == ["number_mismatch"]
+    with pytest.raises(ZeroDivisionError):
+        check(sent, events, Raising(ZeroDivisionError("bug in the stat calculator")))
+
+
+def test_claim_unit_must_be_the_stat_unit(events, stats):
+    wrong_unit = Claim(value=9, unit="pct",
+                       stat_ref=StatRef(metric="passes_final_third", team="home", window=(61, 66)))
+    verdict = check(card(s("Final-third passes reached 9 after the change.", claims=[wrong_unit])), events, stats)
+    assert codes(verdict) == ["number_mismatch"]
+    assert "count" in verdict.issues[0].message
+
+
+def test_digits_in_a_team_name_are_not_numbers(events, stats):
+    names = {"home": "FC 1899", "away": "Harbour"}
+    sent = s("FC 1899 had 9 final-third passes after the change.",
+             claims=[claim("passes_final_third", "home", (61, 66), 9)])
+    assert check(card(sent), events, stats, team_names=names).passed

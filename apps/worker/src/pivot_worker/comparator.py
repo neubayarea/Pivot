@@ -93,7 +93,7 @@ def build_messages(result: SimResult, *, scenario_label: str, target_event_id: s
 def verify_comparison(narrative: Narrative, result: SimResult, *, at_minute: int, events: Mapping[str, MatchEvent],
                       stats: StatSource, team_names: Mapping[str, str]) -> Verdict:
     return verify(narrative, pivot_minute=at_minute, events=events, stats=stats, significant=result.significant,
-                  outcome_deltas=outcome_deltas(result, team_names))
+                  outcome_deltas=outcome_deltas(result, team_names), team_names=team_names)
 
 
 def _phrase(outcome: str, team_names: Mapping[str, str]) -> str:

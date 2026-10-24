@@ -86,6 +86,18 @@ def _evidence(c: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[Match
     return nearby[:1]
 
 
+def _closest_ids(c: PivotCandidate, events: Mapping[str, MatchEvent] | None) -> list[str]:
+    """Real event ids to cite when nothing falls in the evidence window: never made-up ones.
+
+    Such a card cannot pass the Verifier's window check, but it points at real data.
+    """
+    known = [e for e in c.key_event_ids if events is None or e in events]
+    if known:
+        return known[:1]
+    closest = sorted((events or {}).values(), key=lambda e: abs(e.minute - c.minute))
+    return [e.event_id for e in closest[:1]] or list(c.key_event_ids[:1])
+
+
 def _context_sentence(trigger: MatchEvent, context: Sequence[ContextItem],
                       evidence: list[str]) -> ExplanationSentence | None:
     """Cite the first context item about someone in the trigger event, if it reads cleanly."""
@@ -128,7 +140,7 @@ def template_explain(
     try:
         phrases = PHRASES[lang]
         found = _evidence(candidate, events)
-        ids = [e.event_id for e in found][:4] or [f"{candidate.match_id}:{candidate.minute}"]
+        ids = [e.event_id for e in found][:4] or _closest_ids(candidate, events)
         headline, first = _trigger(found[0], names[found[0].team], lang) if found else ("", "")
         sentences = []
         if first:
@@ -145,9 +157,13 @@ def template_explain(
                          chain_id=chain_id)
     except Exception:
         phrases = PHRASES.get(lang, PHRASES["en"])
+        try:
+            ids = _closest_ids(candidate, events)
+        except Exception:
+            ids = list(candidate.key_event_ids[:1])
         return Narrative(
             prefs=prefs, headline=phrases["fallback_h"],
             sentences=[ExplanationSentence(text=phrases["fallback"],
-                                           evidence_ids=list(candidate.key_event_ids[:1]) or [candidate.match_id])],
+                                           evidence_ids=ids or [candidate.match_id])],
             source="template", verifier_attempts=verifier_attempts, chain_id=chain_id,
         )
