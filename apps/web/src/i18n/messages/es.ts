@@ -77,7 +77,7 @@ export const es: Messages = {
   "board.pitchNote": "{team} ataca →",
   "board.pitchNone": "No hay posiciones de jugadores para este partido.",
   "board.pitchLoading": "Cargando posiciones de los jugadores…",
-  "board.pitchHint": "Pulsa reproducir o arrastra la barra para ver moverse a los jugadores.",
+  "board.pitchHint": "Inicia la demo para ver moverse a los jugadores; la barra de repetición también los mueve.",
   "board.events": "Eventos",
   "board.autoScroll": "desplazamiento automático",
   "board.pivots": "Giros",

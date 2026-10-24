@@ -33,7 +33,7 @@ export type MatchView = {
     setPlaying: (playing: boolean) => void;
     setSpeed: (speed: Speed) => void;
     restart: () => void;
-    /** Move the replay clock to elapsed second `t` (the pitch board's scrubber). */
+    /** Move the replay clock to elapsed second `t`; everything on the page is worked out again from there. */
     seek: (t: number) => void;
     /** Where the replay stops, in elapsed seconds. */
     end: number;

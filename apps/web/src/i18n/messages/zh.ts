@@ -76,7 +76,7 @@ export const zh: Messages = {
   "board.pitchNote": "{team} 向右进攻 →",
   "board.pitchNone": "这场比赛没有球员位置数据。",
   "board.pitchLoading": "正在载入球员位置…",
-  "board.pitchHint": "点播放或拖动进度条，看球员和球怎么跑。",
+  "board.pitchHint": "点「开始演示」看球员和球怎么跑，拖动回放进度条也会跟着动。",
   "board.events": "比赛事件",
   "board.autoScroll": "自动滚动",
   "board.pivots": "转折点",

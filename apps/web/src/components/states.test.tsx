@@ -14,6 +14,7 @@ import PivotDetail from "../pages/PivotDetail";
 import { ErrorScreen } from "./ErrorBoundary";
 import EventFeed from "./EventFeed";
 import PivotList from "./PivotList";
+import Playback from "./Playback";
 import { Startup } from "./StartupScreen";
 
 const narrative = {
@@ -141,6 +142,16 @@ describe("live board states", () => {
     expect(html).toContain("On the pitch");
     expect(html).toContain("No player positions for this match.");
     expect(render(<LiveBoard />, matchView({}, "scheduled"))).not.toContain("On the pitch");
+  });
+
+  it("puts one timeline over the whole replay, and none on the live feed", () => {
+    const playback = { playing: true, setPlaying: () => {}, setSpeed: () => {}, restart: () => {}, seek: () => {}, end: 5700 };
+    const html = render(<Playback />, matchView({ playback, pivots: [pivot(63, "confirmed")] }));
+    expect(html).toContain('type="range"');
+    expect(html).toContain('max="5700"');
+    expect(html).toContain("63′");
+    expect(html).toContain("Restart");
+    expect(render(<Playback />, matchView())).toBe("");
   });
 
   it("says when the event feed is empty", () => {

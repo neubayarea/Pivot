@@ -76,7 +76,7 @@ export const en = {
   "board.pitchNote": "{team} attack →",
   "board.pitchNone": "No player positions for this match.",
   "board.pitchLoading": "Loading player positions…",
-  "board.pitchHint": "Press play or drag the bar to watch the players move.",
+  "board.pitchHint": "Start demo to watch the players move; the replay bar moves them too.",
   "board.events": "Events",
   "board.autoScroll": "auto-scroll",
   "board.pivots": "Pivots",

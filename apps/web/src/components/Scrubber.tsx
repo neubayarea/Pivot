@@ -7,13 +7,13 @@ type Props = {
   onChange: (t: number) => void;
   playing: boolean;
   onPlayingChange: (playing: boolean) => void;
-  /** Minutes marked in red on the track: the pivot itself on S2, every pivot so far on S1. */
+  /** Minutes marked in red on the track: the pivot itself on S2, every pivot so far in the replay bar. */
   pivotMinutes: number[];
   /** Seconds of the evidence events, drawn as gold ticks; `on` is the selected one, `mine` the followed player's. */
   marks: { t: number; on: boolean; mine?: boolean }[];
 };
 
-/** Pitch timeline: drag or play through a window of the match (around a pivot, or all of it), one frame per second. */
+/** Timeline: drag or play through a window of the match (around a pivot, or all of it), one second a step. */
 export default function Scrubber({ window: [from, to], t, onChange, playing, onPlayingChange, pivotMinutes, marks }: Props) {
   const tr = useT();
   const pct = (s: number) => `${((s - from) / Math.max(1, to - from)) * 100}%`;

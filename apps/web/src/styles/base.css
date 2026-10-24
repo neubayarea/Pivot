@@ -98,10 +98,15 @@ button { font: inherit; color: inherit; }
 .pick em { font-style: normal; color: var(--pv-gold); }
 .headline .latest { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; animation: pv-in .5s ease-out; }
 @keyframes pv-in { from { opacity: 0; transform: translateY(-6px); } }
-.playback { display: inline-flex; align-items: center; gap: 8px; align-self: center; }
+/* The replay bar: under the top bar, stuck to the top of the window while the page scrolls. */
+.playback { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 6px 20px 2px; background: var(--pv-sheet); border-bottom: 2px solid var(--pv-ink); }
 .playback .lbl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; color: var(--pv-ink-2); }
 .playback .btn { padding: 3px 10px; font-size: 12px; }
-.playback .btn:disabled { opacity: .5; cursor: default; }
+@media (max-width: 720px) {
+  .playback { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding-inline: 16px; }
+  .playback .lbl { display: none; }
+  .playback .scrub { grid-column: 1 / -1; }
+}
 .mom { display: block; width: 100%; height: auto; }
 .mom .mom-pending { animation: blink 1.4s steps(2, start) infinite; }
 svg text { font-family: var(--pv-label); }
