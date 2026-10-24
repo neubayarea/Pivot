@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
-import math
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -79,8 +78,10 @@ def team_stats(calc: StatCalculator) -> list[dict]:
         for team in ("home", "away"):
             values = {}
             for metric in STAT_UNITS:
-                v = calc.compute(StatRef(metric=metric, team=team, window=window), period=period)
-                values[metric] = None if math.isnan(v) else v
+                try:
+                    values[metric] = calc.compute(StatRef(metric=metric, team=team, window=window), period=period)
+                except LookupError:                 # no data for it (no frames, nothing to divide by)
+                    values[metric] = None
             row[team] = values
         out.append(row)
     return out
