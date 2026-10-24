@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from pivot_core.domain import AgentTrace, Match, MatchEvent, MinuteMetric, Pivot
+from pivot_core.domain import AgentTrace, Match, MatchEvent, MinuteMetric, Narrative, Pivot, ViewerPrefs
 
 
 class InMemoryMatchRepository:
@@ -13,6 +13,8 @@ class InMemoryMatchRepository:
         self._metrics: defaultdict[str, dict[int, MinuteMetric]] = defaultdict(dict)  # match_id -> minute -> metric
         self._events: defaultdict[str, dict[int, MatchEvent]] = defaultdict(dict)   # match_id -> seq -> event
         self._pivots: defaultdict[str, dict[str, Pivot]] = defaultdict(dict)        # match_id -> pivot_id -> pivot
+        # match_id -> (pivot_id, prefs) -> one personalised version of the pivot's text
+        self._narratives: defaultdict[str, dict[tuple[str, ViewerPrefs], Narrative]] = defaultdict(dict)
 
     async def upsert_match(self, match: Match) -> None:
         self._matches.pop(match.match_id, None)   # re-insert so the latest write comes first in list_matches
@@ -56,6 +58,13 @@ class InMemoryMatchRepository:
     async def list_pivots(self, match_id: str) -> list[Pivot]:
         pivots = sorted(self._pivots.get(match_id, {}).values(), key=lambda p: (p.minute, p.pivot_id))
         return [p.model_copy(deep=True) for p in pivots]
+
+    async def upsert_narrative(self, match_id: str, pivot_id: str, narrative: Narrative) -> None:
+        self._narratives[match_id][(pivot_id, narrative.prefs)] = narrative.model_copy(deep=True)
+
+    async def get_narrative(self, match_id: str, pivot_id: str, prefs: ViewerPrefs) -> Narrative | None:
+        narrative = self._narratives.get(match_id, {}).get((pivot_id, prefs))
+        return narrative.model_copy(deep=True) if narrative else None
 
 
 class InMemoryTraceRepository:
