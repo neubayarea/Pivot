@@ -90,7 +90,9 @@ def test_rejected_draft_is_rewritten_with_the_verifier_feedback(client):
     use_models(models)
     pivot = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "zh"}).json()
     assert pivot["narrative"]["source"] == "llm" and pivot["narrative"]["verifier_attempts"] == 2
-    assert "The Verifier rejected your previous card" in models.calls[1][1][1]["content"]
+    rewrite = models.calls[1][1][1]["content"]
+    assert "The Verifier rejected your previous card" in rewrite
+    assert "Your previous card:" in rewrite and "坏稿" in rewrite
 
 
 def test_explainer_down_falls_back_to_the_template_in_that_language(client):
@@ -110,6 +112,51 @@ def test_nothing_passes_the_verifier_so_english_is_served(client, monkeypatch):
     assert pivot["prefs"] == DEFAULT
     assert pivot["narrative"]["headline"] == "Rovers seize control after the change"
     assert stored(ViewerPrefs(language="zh")) is None             # not remembered: tried again next time
+
+
+def test_verifier_bug_serves_english_and_is_tried_again(client, monkeypatch):
+    calls = []
+
+    def broken_verify(*args, **kwargs):
+        calls.append(1)
+        raise RuntimeError("stat source bug")
+
+    monkeypatch.setattr(personalize, "verify", broken_verify)
+    use_models(ScriptedModelClient(standard=[ZH_DRAFT, ZH_DRAFT]))
+    pivot = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "zh", "audience": "fan"})
+    assert pivot.status_code == 200 and pivot.json()["prefs"] == DEFAULT
+    assert pivot.json()["narrative"]["headline"] == "Rovers seize control after the change"
+    assert len(calls) == 2                                      # the draft, then the template: no rewrite
+    assert stored(ViewerPrefs(language="zh", audience="fan")) is None
+
+    monkeypatch.undo()
+    again = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "zh", "audience": "fan"}).json()
+    assert again["prefs"]["language"] == "zh" and again["narrative"]["source"] == "llm"
+
+
+def test_explainer_bug_falls_back_to_the_template(client):
+    use_models(ScriptedModelClient(standard=[RuntimeError("bad reply object")]))
+    pivot = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "zh"})
+    assert pivot.status_code == 200
+    assert pivot.json()["prefs"]["language"] == "zh" and pivot.json()["narrative"]["source"] == "template"
+
+
+def test_any_failure_writing_a_version_serves_english_and_is_tried_again(client, monkeypatch):
+    def broken_template(*args, **kwargs):
+        raise RuntimeError("template bug")
+
+    monkeypatch.setattr(personalize, "template_explain", broken_template)
+    use_models(ScriptedModelClient(standard=[RuntimeError("explainer bug")]))
+    pivot = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "es"})
+    assert pivot.status_code == 200 and pivot.json()["prefs"] == DEFAULT
+    listed = client.get(f"/api/matches/{DEMO_MATCH_ID}/pivots", params={"lang": "es"})
+    assert listed.status_code == 200 and listed.json()[0]["prefs"] == DEFAULT
+    assert stored(ViewerPrefs(language="es")) is None
+
+    monkeypatch.undo()
+    use_models(None)
+    again = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "es"}).json()
+    assert again["prefs"]["language"] == "es" and again["narrative"]["source"] == "template"
 
 
 def test_new_run_of_the_pivot_drops_the_stored_versions(client):
