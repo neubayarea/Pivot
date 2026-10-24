@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .vocabulary import BANNED_TERMS, DOWN_WORDS, MAGNITUDE_WORDS, SIGNIFICANCE_WORDS, UP_WORDS
+from .vocabulary import BANNED_TERMS, DOWN_WORDS, LIKELY_DOWN, LIKELY_UP, MAGNITUDE_WORDS, SIGNIFICANCE_WORDS, UP_WORDS
 
 INSTRUCTIONS = {
     "en": "Write in English.",
@@ -26,18 +26,20 @@ MAX_HEADLINE = {"en": 8, "es": 10, "zh": 16}
 
 # The English lists apply to every language (names and loanwords stay English); these are added.
 UP = {"zh": ("上升", "增加", "增多", "增长", "提高", "提升", "上涨", "回升", "攀升", "升至", "涨到", "涨至", "翻倍",
-             "翻番", "翻了一番", "翻了一倍", "翻两番", "翻了两番", "更有可能", "可能性更大"),
+             "翻番", "翻了一番", "翻了一倍", "翻两番", "翻了两番"),
       "es": ("subió", "subieron", "aumentó", "aumentaron", "creció", "crecieron", "ascendió", "ascendieron",
              "se disparó", "se dispararon", "duplicó", "duplicaron", "triplicó", "triplicaron", "cuadruplicó",
-             "cuadruplicaron", "más probable")}
+             "cuadruplicaron")}
 DOWN = {"zh": ("下降", "减少", "降低", "降至", "降到", "下滑", "下跌", "跌至", "跌到", "跌了", "回落", "减半", "减少一半",
-               "少了一半", "可能性更小", "更不可能"),
+               "少了一半"),
         "es": ("bajó", "bajaron", "cayó", "cayeron", "disminuyó", "disminuyeron", "descendió", "descendieron",
-               "se redujo", "se redujeron", "se desplomó", "se desplomaron", "a la mitad", "menos probable")}
+               "se redujo", "se redujeron", "se desplomó", "se desplomaron", "a la mitad")}
 MAGNITUDE = {"zh": {"翻倍": 2.0, "翻番": 2.0, "翻了一番": 2.0, "翻了一倍": 2.0, "翻两番": 4.0, "翻了两番": 4.0,
                     "减半": 0.5, "减少一半": 0.5, "少了一半": 0.5},
              "es": {"duplicó": 2.0, "duplicaron": 2.0, "triplicó": 3.0, "triplicaron": 3.0, "cuadruplicó": 4.0,
                     "cuadruplicaron": 4.0, "a la mitad": 0.5}}
+LIKELY_MORE = {"zh": ("更有可能", "可能性更大"), "es": ("más probable",)}
+LIKELY_LESS = {"zh": ("可能性更小", "更不可能"), "es": ("menos probable",)}
 SIGNIFICANCE = {"zh": ("显著", "明显", "决定性"),
                 "es": ("significativo", "significativa", "significativamente", "claramente", "decisivo")}
 BANNED = {"zh": ("赌", "赔率", "投注", "下注", "博彩", "一定", "肯定", "绝对", "必然", "毫无疑问", "永远", "从不"),
@@ -65,6 +67,14 @@ def down_words(lang: str) -> tuple[str, ...]:
 
 def magnitude_words(lang: str) -> dict[str, float]:
     return {**MAGNITUDE_WORDS, **MAGNITUDE.get(lang, {})}
+
+
+def likely_up(lang: str) -> tuple[str, ...]:
+    return LIKELY_UP + LIKELY_MORE.get(lang, ())
+
+
+def likely_down(lang: str) -> tuple[str, ...]:
+    return LIKELY_DOWN + LIKELY_LESS.get(lang, ())
 
 
 def significance_words(lang: str) -> tuple[str, ...]:
@@ -251,28 +261,29 @@ FAN_LABELS = {
 # Fallback wording for what-if comparisons (comparator.template_comparison).
 COMPARISON: dict[str, dict[str, str]] = {
     "en": {
-        "win": "a {team} win", "draw": "a draw", "win_h": "{team} win", "draw_h": "Draw",
-        "first": "With the change, {outcome} became {word} in the replays.", "first_h": "{outcome} becomes {word}",
+        "win": "a {team} win", "draw": "a draw", "win_h": "{team} win", "draw_h": "draw",
+        "first": "With the change, {outcome} became {word} in the replays.", "first_h": "Replays: {outcome} {word}",
         "more": "more likely", "less": "less likely",
-        "none": "The change made no difference to the results in the replays.",
-        "none_h": "The change makes no difference",
+        "none": "The replays with the change show no clear difference from the ones without it.",
+        "none_h": "Replays show no clear difference",
         "apart": "The intervals do not overlap, so this is more than noise.",
-        "noise": "The intervals overlap, so the difference is within noise.",
+        "noise": "The intervals overlap for every result, so any gap is within noise.",
     },
     "zh": {
         "win": "{team}获胜", "draw": "平局", "win_h": "{team}获胜", "draw_h": "平局",
-        "first": "做出这一改变后，{outcome}在模拟中变得{word}。", "first_h": "{outcome}{word}",
+        "first": "做出这一改变后，{outcome}在模拟中变得{word}。", "first_h": "模拟结果：{outcome}{word}",
         "more": "更有可能", "less": "更不可能",
-        "none": "这一改变没有影响模拟结果。", "none_h": "这一改变没有影响",
+        "none": "有没有这一改变，模拟结果都看不出差别。", "none_h": "模拟结果看不出差别",
         "apart": "两组结果的区间没有重叠，不只是随机波动。",
-        "noise": "两组结果的区间有重叠，差异在随机波动范围内。",
+        "noise": "每种结果的区间都有重叠，差异在随机波动范围内。",
     },
     "es": {
-        "win": "una victoria de {team}", "draw": "un empate", "win_h": "Victoria de {team}", "draw_h": "Empate",
-        "first": "Con el cambio, {outcome} se volvió {word} en las simulaciones.", "first_h": "{outcome} se vuelve {word}",
+        "win": "una victoria de {team}", "draw": "un empate", "win_h": "victoria de {team}", "draw_h": "empate",
+        "first": "Con el cambio, {outcome} se volvió {word} en las simulaciones.", "first_h": "Simulaciones: {outcome} {word}",
         "more": "más probable", "less": "menos probable",
-        "none": "El cambio no alteró los resultados de las simulaciones.", "none_h": "El cambio no altera el resultado",
+        "none": "Las simulaciones con el cambio no se distinguen de las que no lo tienen.",
+        "none_h": "Las simulaciones no muestran diferencias",
         "apart": "Los intervalos no se solapan, así que es más que ruido.",
-        "noise": "Los intervalos se solapan, así que la diferencia está dentro del ruido.",
+        "noise": "Los intervalos se solapan en todos los resultados, así que la diferencia está dentro del ruido.",
     },
 }

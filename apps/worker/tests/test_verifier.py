@@ -209,3 +209,8 @@ def test_digits_in_a_team_name_are_not_numbers(events, stats):
     sent = s("FC 1899 had 9 final-third passes after the change.",
              claims=[claim("passes_final_third", "home", (61, 66), 9)])
     assert check(card(sent), events, stats, team_names=names).passed
+
+
+def test_likelihood_words_are_not_direction_words_on_pivot_cards(events, stats):
+    text = s("After Okafor came on at 61', Harbour City looked more likely to score.")
+    assert check(card(text), events, stats).passed

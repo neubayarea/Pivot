@@ -112,7 +112,7 @@ def compare(lang, *texts):
     narrative = Narrative(prefs=ViewerPrefs(language=lang), headline="Harbour City", source="llm",
                           sentences=[ExplanationSentence(text=t, evidence_ids=["m063-s02302"]) for t in texts])
     verdict = cmp.verify_comparison(narrative, sim(), at_minute=62, events=CMP_EVENTS, stats=FakeStats({}),
-                                    team_names=CMP_TEAMS)
+                                    team_names=CMP_TEAMS, target_event_id="m063-s02302")
     return [i.code for i in verdict.issues]
 
 
@@ -127,12 +127,16 @@ def test_comparison_outcomes_are_named_in_every_language(lang, good, bad):
 
 
 @pytest.mark.parametrize("lang,word", [("zh", "更有可能"), ("es", "más probable")])
-def test_comparison_fallback_is_in_the_language_and_passes(lang, word):
-    narrative = cmp.template_comparison(sim(), evidence_id="m063-s02302", team_names=CMP_TEAMS,
+@pytest.mark.parametrize("significant", [True, False])
+def test_comparison_fallback_is_in_the_language_and_passes(lang, word, significant):
+    narrative = cmp.template_comparison(sim(significant), evidence_id="m063-s02302", team_names=CMP_TEAMS,
                                         prefs=ViewerPrefs(language=lang))
-    assert word in narrative.sentences[0].text
-    assert cmp.verify_comparison(narrative, sim(), at_minute=62, events=CMP_EVENTS, stats=FakeStats({}),
-                                 team_names=CMP_TEAMS).passed
+    # Only a clear change is named (Dx3); within noise the fallback stays neutral, still in the language.
+    assert (word in narrative.sentences[0].text) == significant
+    assert narrative.headline.startswith("模拟结果" if lang == "zh" else "Las simulaciones" if not significant
+                                         else "Simulaciones")
+    assert cmp.verify_comparison(narrative, sim(significant), at_minute=62, events=CMP_EVENTS, stats=FakeStats({}),
+                                 team_names=CMP_TEAMS, target_event_id="m063-s02302").passed
 
 
 # 7. Fan and analyst fallbacks differ in Chinese and Spanish.
