@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Narrative, Pivot, ViewerPrefs
+from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Narrative, Pivot, Scenario, ViewerPrefs
 
 # Service Bus queue names (architecture §7.2).
 PIVOT_CANDIDATES = "pivot-candidates"
@@ -130,6 +130,14 @@ class ResultCache(Protocol):
 
         Call it after storing the match and before its candidates go on the queue.
         """
+        ...
+
+    def scenarios(self, match_id: str) -> dict[str, Scenario]:
+        """Finished what-if scenarios read back or stored for this version of the match, by cache key (A09)."""
+        ...
+
+    async def store_scenario(self, match_id: str, key: str, scenario: Scenario) -> None:
+        """Keep a finished what-if scenario under the caller's cache key. Ignored for a match never opened."""
         ...
 
     async def close(self) -> None:

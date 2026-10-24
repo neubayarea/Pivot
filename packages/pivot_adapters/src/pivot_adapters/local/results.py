@@ -1,4 +1,4 @@
-"""The AI's results kept across restarts: pivots, personalised narratives and agent traces (Ax10).
+"""The AI's results kept across restarts: pivots, personalised narratives, agent traces and what-ifs (Ax10, A09).
 
 Reads still come from the in-memory repositories. On top of them, every pivot, narrative version
 and trace of an *opened* match is also written to a backend, and opening the match again after a
@@ -8,6 +8,7 @@ is a folder on disk here (`ResultFiles`), or Cosmos DB (`pivot_adapters.azure.co
   <root>/<match_id>/<version>/pivots/<pivot_id>.json
   <root>/<match_id>/<version>/narratives/<pivot_id>.<prefs hash>.json
   <root>/<match_id>/<version>/traces/<trace_id>.json
+  <root>/<match_id>/<version>/scenarios/<cache key>.json   finished what-if scenarios (A09)
 
 `version` names the source data the results were written from (the simulator version, the
 fixture's content hash), plus the optional tag; opening a match at a new version starts empty
@@ -18,6 +19,8 @@ that cannot be read is logged and skipped, and a failed write is logged and the 
 Only what the model actually produced is served again: a pivot that fell back to the template
 because a call failed (`fell_back`), with its traces and narrative versions, and every template
 narrative version, are dropped on read-back and deleted from the backend, so that start asks the model again.
+A finished what-if scenario is kept whole, with the traces of its chain: the replays are the costly part,
+and the API writes its comparison again itself if it came from the template.
 """
 
 from __future__ import annotations
@@ -29,20 +32,20 @@ import logging
 import os
 import shutil
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from pivot_core.domain import AgentTrace, Narrative, Pivot
+from pivot_core.domain import AgentTrace, Narrative, Pivot, Scenario
 
 from .store import InMemoryMatchRepository, InMemoryTraceRepository
 
 log = logging.getLogger("pivot_adapters.results")
 
-KINDS = ("pivots", "narratives", "traces")
+KINDS = ("pivots", "narratives", "traces", "scenarios")
 Stored = dict[str, list[tuple[str, Any]]]     # kind -> (backend's handle on the item, its JSON), in name order
 
 
@@ -77,6 +80,7 @@ class ResultStore:
         self._connected = False
         self._lock = asyncio.Lock()
         self._keys: dict[str, str] = {}       # match_id -> its opened version
+        self._scenarios: dict[str, dict[str, Scenario]] = {}   # match_id -> cache key -> finished scenario
         self.matches = StoredMatchRepository(self)
         self.traces = StoredTraceRepository(self)
 
@@ -90,7 +94,9 @@ class ResultStore:
             log.warning("could not read back the results of %s; the model writes them again", match_id,
                         exc_info=True)
             stored = {}
-        pivots, narratives, traces, drop = keep(match_id, stored)
+        scenarios = _parse(match_id, stored.get("scenarios", ()),
+                           lambda d: (str(d["key"]), Scenario.model_validate(d["scenario"])))
+        pivots, narratives, traces, drop = keep(match_id, stored, {s.scenario_id for _, (_, s) in scenarios})
         if drop:
             log.info("%s: %d stored results fell back without the model; written again this run", match_id, len(drop))
             try:
@@ -103,10 +109,21 @@ class ResultStore:
             await InMemoryMatchRepository.upsert_narrative(self.matches, match_id, pivot_id, narrative)
         for trace in traces:
             await InMemoryTraceRepository.append_trace(self.traces, trace)
+        self._scenarios[match_id] = dict(s for _, s in scenarios)
         self._keys[match_id] = key
         log.debug("%s: read back %d pivots, %d narratives, %d traces", match_id, len(pivots), len(narratives),
                   len(traces))
         return len(pivots)
+
+    def scenarios(self, match_id: str) -> dict[str, Scenario]:
+        """Finished what-if scenarios of an opened match, by the cache key they were stored under."""
+        return dict(self._scenarios.get(match_id, {}))
+
+    async def store_scenario(self, match_id: str, key: str, scenario: Scenario) -> None:
+        if match_id not in self._keys:
+            return
+        self._scenarios.setdefault(match_id, {})[key] = scenario
+        await self.write(match_id, "scenarios", _name(key), {"key": key, "scenario": _dump(scenario)})
 
     async def write(self, match_id: str, kind: str, name: str, data: dict) -> None:
         key = self._keys.get(match_id)
@@ -132,8 +149,12 @@ class ResultStore:
                 await self.backend.connect()
 
 
-def keep(match_id: str, stored: Stored) -> tuple[list[Pivot], list[tuple[str, Narrative]], list[AgentTrace], list[str]]:
-    """What is worth serving again, and the handles of everything else, which the backend deletes."""
+def keep(match_id: str, stored: Stored, scenario_ids: Collection[str] = ()
+         ) -> tuple[list[Pivot], list[tuple[str, Narrative]], list[AgentTrace], list[str]]:
+    """What is worth serving again, and the handles of everything else, which the backend deletes.
+
+    Traces of the what-if scenarios in `scenario_ids` are kept along with them.
+    """
     pivots = _parse(match_id, stored.get("pivots", ()), Pivot.model_validate)
     narratives = _parse(match_id, stored.get("narratives", ()),
                         lambda d: (d["pivot_id"], Narrative.model_validate(d["narrative"])))
@@ -144,7 +165,7 @@ def keep(match_id: str, stored: Stored) -> tuple[list[Pivot], list[tuple[str, Na
     kept = {p.pivot_id for _, p in pivots if not fell_back(p, chains[p.chain_id])}
     drop = [h for h, p in pivots if p.pivot_id not in kept]
     drop += [h for h, (pivot_id, n) in narratives if pivot_id not in kept or n.source != "llm"]
-    drop += [h for h, t in traces if t.input_ref not in kept]
+    drop += [h for h, t in traces if t.input_ref not in kept and t.input_ref not in scenario_ids]
     dropped = set(drop)
     return ([p for h, p in pivots if h not in dropped],
             [n for h, n in narratives if h not in dropped],
