@@ -32,6 +32,17 @@ button { font: inherit; color: inherit; }
 .top .seg button[aria-pressed="true"] { color: var(--pv-on-gold); }
 .top .btn { padding: 4px 10px; font-size: 12px; background: transparent; color: var(--pv-on-bar); border-color: var(--pv-on-bar); }
 .top .btn:hover { background: var(--pv-bar-line); }
+.top .tm-short { display: none; }
+/* Mid-width screens: team codes instead of names, then icon-only pickers, so the bar never scrolls sideways. */
+@media (max-width: 1279px) {
+  .top .tm-full { display: none; }
+  .top .tm-short { display: inline; }
+}
+@media (max-width: 1099px) {
+  /* Wrap only as a last resort, e.g. a longer status stamp such as "Full time". */
+  .top { gap: 8px; padding-inline: 14px; flex-wrap: wrap; row-gap: 8px; }
+  .top .pick-label { display: none; }
+}
 
 /* Under the top bar while the live feed is down; the board below keeps the last data. */
 .banner { display: flex; align-items: center; gap: 12px; padding: 7px 18px; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); border-bottom: 2px solid var(--pv-ink); }
