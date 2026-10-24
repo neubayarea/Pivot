@@ -1,6 +1,8 @@
-"""Ax10: a restart reads the AI's results back from PIVOT_DATA_DIR and makes no model call for them."""
+"""Ax10: a restart reads the AI's results back from PIVOT_DATA_DIR and makes no model call for them,
+except for those that fell back to the template because the model failed: those are written again."""
 
 import asyncio
+import json
 import os
 from pathlib import Path
 
@@ -12,11 +14,31 @@ from pivot_api.personalize import Personalizer
 from pivot_api.sims import SPECS, build_one, paths, store_one
 from pivot_core.domain import ViewerPrefs
 from pivot_worker.detect import DetectWorkflow
-from pivot_worker.models import OfflineModelClient, ScriptedModelClient
+from pivot_worker.models import ModelReply, ModelUnavailable, OfflineModelClient, ScriptedModelClient
 from pivot_worker.worker import Worker
 
 SPEC = SPECS[0]
 ZH = ViewerPrefs(language="zh")
+
+
+class AnsweringModel:
+    """A model that always answers: "yes, a pivot" from the Judge, a one-sentence card from the Explainer."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete_json(self, tier, messages, *, timeout):
+        self.calls += 1
+        request, _ = json.JSONDecoder().raw_decode(messages[-1]["content"])
+        shown = [e["id"] for e in request["events"]]
+        key = request.get("alarm", request.get("pivot"))["key_event_ids"]
+        evidence = [i for i in key if i in shown][:1] or shown[:1]
+        if tier == "mini":
+            reply = {"is_pivot": True, "severity": 2, "trigger_event_ids": evidence, "reason": "momentum swung"}
+        else:
+            reply = {"headline": "The game turns here",
+                     "sentences": [{"text": "The momentum swung after this moment.", "evidence_ids": evidence}]}
+        return ModelReply(text=json.dumps(reply), model=f"answering-{tier}", tokens=10)
 
 
 @pytest.fixture(scope="module")
@@ -45,13 +67,14 @@ async def start(sim_dir: Path, models, version: str = sims.SIM_VERSION):
 
 def test_restart_serves_every_pivot_without_calling_the_model(sim_dir):
     async def run():
-        first = await start(sim_dir, OfflineModelClient())
+        first = await start(sim_dir, AnsweringModel())
         pivots = await first.matches.list_pivots(SPEC.match_id)
         traces = await first.traces.list_traces(SPEC.match_id)
-        assert pivots and traces
+        assert pivots and traces and any(p.narrative and p.narrative.source == "llm" for p in pivots)
         confirmed = next(p for p in pivots if p.narrative is not None)
-        zh = await Personalizer(first.matches).personalize(confirmed, ZH)
-        assert zh.prefs == ZH
+        writer = AnsweringModel()
+        zh = await Personalizer(first.matches, writer).personalize(confirmed, ZH)
+        assert zh.prefs == ZH and zh.pivot.narrative.source == "llm"
 
         models = ScriptedModelClient()                            # any call raises ModelUnavailable
         second = await start(sim_dir, models)
@@ -62,13 +85,45 @@ def test_restart_serves_every_pivot_without_calling_the_model(sim_dir):
     asyncio.run(run())
 
 
+def test_fallbacks_from_a_failing_model_are_written_again_next_start(sim_dir):
+    async def run():
+        failing = ScriptedModelClient(mini=[ModelUnavailable("429")] * 50)
+        first = await start(sim_dir, failing)
+        assert failing.calls
+        fallbacks = await first.matches.list_pivots(SPEC.match_id)
+        assert fallbacks and all(p.status == "degraded" for p in fallbacks)
+
+        working = AnsweringModel()
+        second = await start(sim_dir, working)
+        assert working.calls >= 2 * len(fallbacks)              # judge and explainer, for every one of them
+        pivots = await second.matches.list_pivots(SPEC.match_id)
+        assert [p.pivot_id for p in pivots] == [p.pivot_id for p in fallbacks]
+        assert all(p.narrative.source == "llm" for p in pivots if p.status == "confirmed")
+        assert any(p.status == "confirmed" for p in pivots)
+        traces = await second.traces.list_traces(SPEC.match_id)
+        assert {t.chain_id for t in traces} == {p.chain_id for p in pivots}   # no steps of the failed runs left
+
+        third = await start(sim_dir, ScriptedModelClient())      # and those are kept from now on
+        assert await third.matches.list_pivots(SPEC.match_id) == pivots
+    asyncio.run(run())
+
+
 def test_changed_sim_version_does_not_reuse_old_results(sim_dir):
     async def run():
-        await start(sim_dir, OfflineModelClient(), "v1")
-        models = ScriptedModelClient()
+        await start(sim_dir, AnsweringModel(), "v1")
+        models = AnsweringModel()
         second = await start(sim_dir, models, "v2")
         assert models.calls                                       # the worker wrote them again
         results = Path(os.environ["PIVOT_DATA_DIR"]) / "results" / SPEC.match_id
         assert [p.name for p in results.iterdir()] == ["v2"]
         assert await second.matches.list_pivots(SPEC.match_id)
+    asyncio.run(run())
+
+
+def test_offline_model_results_are_not_kept(sim_dir):
+    async def run():
+        await start(sim_dir, OfflineModelClient())
+        models = AnsweringModel()
+        await start(sim_dir, models)
+        assert models.calls
     asyncio.run(run())

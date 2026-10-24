@@ -13,6 +13,10 @@ fixture's content hash), plus the optional tag; opening a match at a new version
 and removes the other versions of that match. Matches never opened (the hand-made demo, the
 worker's --demo) stay in memory only. Files are written whole to a temp file and renamed; one
 that cannot be read is logged and skipped, and a failed write is logged and the result kept in memory.
+
+Only what the model actually produced is served again: a pivot that fell back to the template
+because a call failed (`fell_back`), with its traces and narrative versions, and every template
+narrative version, are dropped on read-back, so that start asks the model again.
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ import json
 import logging
 import os
 import shutil
+from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -87,16 +92,50 @@ class ResultFiles:
             log.warning("could not write %s; kept in memory only", path, exc_info=True)
 
     def _read(self, folder: Path) -> tuple[list[Pivot], list[tuple[str, Narrative]], list[AgentTrace]]:
-        return (_parse(folder / "pivots", Pivot.model_validate),
-                _parse(folder / "narratives", lambda d: (d["pivot_id"], Narrative.model_validate(d["narrative"]))),
-                _parse(folder / "traces", AgentTrace.model_validate))
+        """What is worth serving again; the files of everything else are deleted, so the worker writes it anew."""
+        pivots = _parse(folder / "pivots", Pivot.model_validate)
+        narratives = _parse(folder / "narratives",
+                            lambda d: (d["pivot_id"], Narrative.model_validate(d["narrative"])))
+        traces = _parse(folder / "traces", AgentTrace.model_validate)
+        chains: defaultdict[str | None, list[AgentTrace]] = defaultdict(list)
+        for _, t in sorted(traces, key=lambda pt: pt[1].step):
+            chains[t.chain_id].append(t)
+        kept = {p.pivot_id for _, p in pivots if not fell_back(p, chains[p.chain_id])}
+        drop = [path for path, p in pivots if p.pivot_id not in kept]
+        drop += [path for path, (pivot_id, n) in narratives if pivot_id not in kept or n.source != "llm"]
+        drop += [path for path, t in traces if t.input_ref not in kept]
+        for path in drop:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                log.warning("could not remove %s", path, exc_info=True)
+        if drop:
+            log.info("%s: %d result files fell back without the model; written again this run", folder, len(drop))
+        dropped = set(drop)
+        return ([p for path, p in pivots if path not in dropped],
+                [n for path, n in narratives if path not in dropped],
+                [t for path, t in traces if path not in dropped])
 
 
-def _parse[T](folder: Path, parse: Callable[[Any], T]) -> list[T]:
+def fell_back(pivot: Pivot, chain: list[AgentTrace]) -> bool:
+    """True if the pivot holds template text only because a step failed (no model, a timeout, a 429, an error).
+
+    A degraded pivot is a real result only when the step before the template was the Verifier
+    rejecting the model's last draft: the model answered, its drafts just did not pass. Any other
+    way to the template (Judge unavailable, Explainer or Verifier error, the workflow failing)
+    is tried again on the next start. Confirmed and rejected pivots come from the model.
+    """
+    if pivot.status != "degraded":
+        return False
+    before = [t for t in chain if t.agent != "template"]
+    return not (before and before[-1].agent == "verifier" and before[-1].status == "rejected")
+
+
+def _parse[T](folder: Path, parse: Callable[[Any], T]) -> list[tuple[Path, T]]:
     out = []
     for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
         try:
-            out.append(parse(json.loads(path.read_text(encoding="utf-8"))))
+            out.append((path, parse(json.loads(path.read_text(encoding="utf-8")))))
         except (OSError, ValueError, KeyError, TypeError) as exc:   # ValidationError is a ValueError
             log.warning("skipping unreadable result file %s: %s", path, exc)
     return out
@@ -119,6 +158,8 @@ class FileBackedMatchRepository(InMemoryMatchRepository):
 
     async def upsert_narrative(self, match_id: str, pivot_id: str, narrative: Narrative) -> None:
         await super().upsert_narrative(match_id, pivot_id, narrative)
+        if narrative.source != "llm":         # a template version is free to write again, and the model may do better
+            return
         prefs = hashlib.sha256(narrative.prefs.model_dump_json().encode()).hexdigest()[:12]
         self._files.write(match_id, "narratives", f"{_name(pivot_id)}.{prefs}",
                           {"pivot_id": pivot_id, "narrative": _dump(narrative)})
