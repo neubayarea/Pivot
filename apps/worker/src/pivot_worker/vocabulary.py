@@ -91,10 +91,17 @@ UNIT_SUFFIX: dict[str, str] = {"count": "", "pct": "%", "xg": " xG", "index": ""
 
 # Direction words. A sentence that uses one must have a claim pair (same metric and team,
 # two windows) whose difference has the matching sign; the Verifier checks this.
-UP_WORDS = ("rose", "rise", "rising", "increased", "climbed", "jumped", "grew", "doubled", "surged", "up from",
-            "more likely")
-DOWN_WORDS = ("fell", "fall", "falling", "dropped", "decreased", "declined", "halved", "slumped", "down from",
-              "less likely")
+UP_WORDS = ("rose", "rise", "rising", "increased", "climbed", "jumped", "grew", "doubled", "tripled", "trebled",
+            "quadrupled", "surged", "went up", "up from")
+DOWN_WORDS = ("fell", "fall", "falling", "dropped", "decreased", "declined", "halved", "slumped", "dipped",
+              "went down", "down from")
+# Magnitude words: the later value must be about this many times the earlier one.
+MAGNITUDE_WORDS = {"doubled": 2.0, "tripled": 3.0, "trebled": 3.0, "quadrupled": 4.0, "halved": 0.5}
+
+# Likelihood words are direction words only in what-if comparisons, where they must match the
+# change of the outcome they describe. On pivot cards ("looked more likely to score") they are free.
+LIKELY_UP = ("more likely", "likelier")
+LIKELY_DOWN = ("less likely",)
 
 # Significance words are only allowed when the what-if confidence intervals do not overlap.
 SIGNIFICANCE_WORDS = ("significant", "significantly", "clearly", "decisive", "decisively", "proven", "conclusive")
@@ -106,8 +113,21 @@ BANNED_TERMS = (
     "single-handedly", "choked", "disgrace", "pathetic", "useless",
 )
 
-# Abbreviations the fan audience should not see (D11 checks fan versions against this).
-JARGON = ("xG", "xA", "xT", "PPDA", "half-space", "low block", "rest defence", "progressive")
+# Abbreviations and terms the fan audience should not see, spelled out too (D11 checks fan versions).
+JARGON = ("xG", "xA", "xT", "PPDA", "half-space", "low block", "rest defence", "progressive",
+          "expected goals", "expected-goals", "expected assists", "expected-assists", "expected threat")
+
+# Off-pitch story words. A sentence that uses one must cite a match-context item (D13).
+OFF_PITCH_WORDS = (
+    "former club", "old club", "former side", "old side", "former team", "old team", "ex-club",
+    "former employer", "old employer", "former boss", "old boss", "former manager", "former coach",
+    "former teammate", "old teammate", "the club that sold", "sold him", "sold her", "first game back",
+    "returns to face", "back against", "reunion", "feud", "grudge", "bad blood", "nightlife", "night out",
+    "out late", "contract dispute", "transfer rumour", "off the pitch", "off-pitch",
+    "that let him go", "who let him go", "that let her go", "who let her go", "that released him",
+    "that released her", "old ground", "stomping ground", "boyhood club", "old teammates", "former teammates",
+    "homecoming",
+)
 
 
 def vocabulary_markdown(audience: Literal["analyst", "fan"] = "analyst") -> str:

@@ -1,4 +1,4 @@
-from pivot_core.domain import Pivot, Substitution
+from pivot_core.domain import Pivot, Substitution, TeamTactics
 from pivot_worker import scenarios as sc
 from pivot_worker.testing import event
 
@@ -66,3 +66,18 @@ def test_list_scenario_types_for_the_translator():
     tools = sc.list_scenario_types()
     assert [t["type"] for t in tools] == list(sc.CATALOG)
     assert tools[2]["params"] == ["target_event_id", "new_minute"]
+
+
+def test_change_press_becomes_a_spec_with_tactics():
+    press = by_type(sc.options_for(pivot(), DEMO))["change_press"]
+    spec = press.to_spec("M-test:p62", seed_base=7)
+    assert spec.type == "change_press" and spec.team == "home" and spec.at_minute == 62
+    assert spec.tactics == TeamTactics(press="high") and "delta" not in spec.params
+    high = by_type(sc.options_for(pivot(), DEMO, tactics={"home": TeamTactics(press="high", width="wide")}))
+    assert high["change_press"].label == "Press lower from 63′"
+    assert high["change_press"].to_spec("M-test:p62", seed_base=7).tactics == TeamTactics(press="mid", width="wide")
+
+
+def test_other_options_become_specs_too():
+    move = by_type(sc.options_for(pivot(), DEMO))["move_substitution"].to_spec("M-test:p62", seed_base=1, n_runs=200)
+    assert move.target_event_id == "m063-s02302" and move.params == {"new_minute": 74} and move.n_runs == 200

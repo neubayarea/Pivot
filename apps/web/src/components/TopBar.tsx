@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import { useMatch } from "../data/match";
 import { useT, type T } from "../i18n";
 import Button from "./Button";
+import { PlayerPicker, TeamPicker } from "./FocusPickers";
 import Segmented from "./Segmented";
 import Stamp from "./Stamp";
 
@@ -25,10 +27,11 @@ type Props = {
   onPrefsChange: (prefs: ViewerPrefs) => void;
 };
 
-// Both names render; CSS swaps to the three-letter code when the bar is short of room.
-function TeamName({ name, short }: { name: string; short: string }) {
+// Both names render; CSS swaps to the three-letter code when the bar is short of room. The viewer's
+// own team gets a ♥ and its colour underneath.
+function TeamName({ name, short, fav }: { name: string; short: string; fav: boolean }) {
   return (
-    <span className="tm">
+    <span className={`tm${fav ? " fav" : ""}`}>
       <span className="tm-full">{name}</span>
       <span className="tm-short">{short}</span>
     </span>
@@ -36,8 +39,17 @@ function TeamName({ name, short }: { name: string; short: string }) {
 }
 
 export default function TopBar({ prefs, onPrefsChange }: Props) {
-  const { match, teams, pivots } = useMatch();
+  const { match, teams, pivots, squads } = useMatch();
   const t = useT();
+  const fav = prefs.focus_team;
+
+  // A player saved while watching another match is not in this one; the API would refuse him.
+  const player = prefs.focus_player_id;
+  const known = !player || squads.home.length + squads.away.length === 0
+    || [...squads.home, ...squads.away].some((p) => p.player_id === player);
+  useEffect(() => {
+    if (!known) onPrefsChange({ ...prefs, focus_player_id: null });
+  }, [known]);
 
   return (
     <header className="top">
@@ -45,10 +57,10 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
         Pivot
       </Link>
       <span className="score" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
-        <TeamName name={teams.home.name} short={teams.home.short_name} />
+        <TeamName name={teams.home.name} short={teams.home.short_name} fav={fav === "home"} />
         <span className="sc num">{match.score.home}</span>
         <span className="sc num">{match.score.away}</span>
-        <TeamName name={teams.away.name} short={teams.away.short_name} />
+        <TeamName name={teams.away.name} short={teams.away.short_name} fav={fav === "away"} />
       </span>
       <span className="clock">{match.clockLabel}</span>
       <Stamp tone={STATUS_TONE[match.status]}>{t(`status.${match.status}`)}</Stamp>
@@ -59,13 +71,9 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
         value={prefs.audience}
         onChange={(audience) => onPrefsChange({ ...prefs, audience })}
       />
-      {/* Team and player focus pickers: placeholders until C08. Labels hide on mid-width screens. */}
-      <span className="pick" title={t("top.team", { team: teams.home.short_name })}>
-        ♥ <em><span className="pick-label">{teams.home.short_name} </span>▾</em>
-      </span>
-      <span className="pick" title={t("top.player", { player: "Moreau" })}>
-        ★ <em><span className="pick-label">Moreau </span>▾</em>
-      </span>
+      {/* Labels hide on mid-width screens, leaving ♥ ▾ and ★ ▾. */}
+      <TeamPicker prefs={prefs} onPrefsChange={onPrefsChange} />
+      <PlayerPicker prefs={prefs} onPrefsChange={onPrefsChange} />
       <Segmented
         label={t("top.language")}
         options={LANGUAGES}
