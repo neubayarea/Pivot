@@ -182,7 +182,10 @@ def main() -> None:
             print(f"  update cycle {ph['name']}")
             cycle_ids[ph["key"]] = cycles[ph["name"]]["id"]
             if args.apply:
-                p.call("PATCH", f"/projects/{pid}/cycles/{cycle_ids[ph['key']]}/", body)
+                try:
+                    p.call("PATCH", f"/projects/{pid}/cycles/{cycle_ids[ph['key']]}/", body)
+                except SystemExit as e:  # Plane refuses to edit a cycle whose end date has passed.
+                    print(f"    skipped: {e}")
         else:
             print(f"  create cycle {ph['name']} ({ph['start']} → {ph['end']})")
             if args.apply:
@@ -205,8 +208,11 @@ def main() -> None:
     if args.apply:
         for key, ids in per_cycle.items():
             if ids and key in cycle_ids:
-                p.call("POST", f"/projects/{pid}/cycles/{cycle_ids[key]}/cycle-issues/", {"issues": ids})
-                print(f"  cycle {key}: {len(ids)} items")
+                try:
+                    p.call("POST", f"/projects/{pid}/cycles/{cycle_ids[key]}/cycle-issues/", {"issues": ids})
+                    print(f"  cycle {key}: {len(ids)} items")
+                except SystemExit as e:
+                    print(f"  cycle {key} skipped: {e}")
     print("done" if args.apply else "dry run only; re-run with --apply")
 
 

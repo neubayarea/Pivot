@@ -3,7 +3,7 @@ name = "pivot-api"
 version = "0.1.0"
 description = "Pivot API: FastAPI BFF for the web app."
 requires-python = ">=3.12"
-dependencies = ["pivot-core", "fastapi>=0.115", "uvicorn>=0.32"]
+dependencies = ["pivot-core", "pivot-adapters", "fastapi>=0.115", "uvicorn>=0.32"]
 
 [build-system]
 requires = ["hatchling"]
