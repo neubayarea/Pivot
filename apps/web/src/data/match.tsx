@@ -13,7 +13,7 @@ import { useLang, type Lang } from "../i18n";
 import { MatchChoiceContext, initialMatch, readSavedMatch, saveMatch, type MatchChoice } from "./choice";
 import LiveProvider from "./live/provider";
 import ReplayProvider, { replayStart } from "./live/replay";
-import { MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
+import { FixtureContext, MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
 
 export * from "./view";
 
@@ -91,7 +91,9 @@ type ProviderProps = {
 export function MatchProvider({ children, fallback = null }: ProviderProps) {
   // Decided once: in-app links drop `?fixture=1`, and the source must not switch under the pages.
   const [fixture] = useState(() => fixtureMode());
-  return fixture ? <FixtureProvider>{children}</FixtureProvider> : <ChosenLiveProvider fallback={fallback}>{children}</ChosenLiveProvider>;
+  return fixture
+    ? <FixtureContext.Provider value={true}><FixtureProvider>{children}</FixtureProvider></FixtureContext.Provider>
+    : <ChosenLiveProvider fallback={fallback}>{children}</ChosenLiveProvider>;
 }
 
 /**

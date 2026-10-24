@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Card from "../components/Card";
 import EventFeed from "../components/EventFeed";
 import Kicker from "../components/Kicker";
@@ -54,6 +55,11 @@ export default function LiveBoard() {
           </div>
         )}
         <span className="sp" />
+        {latest && (
+          <Link to={`/whatif/${latest.pivot_id}`} className="btn" aria-label={`${t("detail.whatIf")} ${t("board.latest", { minute: latest.minute })}`}>
+            {t("detail.whatIf")}
+          </Link>
+        )}
         {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
       </div>
       <div className="grid1">
