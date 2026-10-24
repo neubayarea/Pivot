@@ -94,9 +94,8 @@ def card(context_ids):
 
 
 def test_real_context_passes_and_invented_context_is_caught(events, stats):
-    known = ctx.known_ids(items())
-    assert verify(card(["e1", "h09-c1"]), pivot_minute=63, events=events, stats=stats, context_ids=known).passed
-    verdict = verify(card(["e9"]), pivot_minute=63, events=events, stats=stats, context_ids=known)
+    assert verify(card(["e1", "h09-c1"]), pivot_minute=63, events=events, stats=stats, context=items()).passed
+    verdict = verify(card(["e9"]), pivot_minute=63, events=events, stats=stats, context=items())
     assert [i.code for i in verdict.issues] == ["context_invalid"]
     assert [i.code for i in verify(card(["e1"]), pivot_minute=63, events=events, stats=stats).issues] == [
         "context_invalid"]
@@ -107,4 +106,4 @@ def test_template_cites_context_about_the_trigger_player(events, stats):
     narrative = template_explain(candidate(), events=evs, stats=stats, team_names=TEAMS, context=items())
     cited = [s for s in narrative.sentences if s.context_ids]
     assert cited and cited[0].context_ids == ["e1"] and len(narrative.sentences) == 3
-    assert verify(narrative, pivot_minute=63, events=evs, stats=stats, context_ids=ctx.known_ids(items())).passed
+    assert verify(narrative, pivot_minute=63, events=evs, stats=stats, context=items()).passed

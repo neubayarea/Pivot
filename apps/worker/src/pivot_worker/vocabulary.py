@@ -106,8 +106,18 @@ BANNED_TERMS = (
     "single-handedly", "choked", "disgrace", "pathetic", "useless",
 )
 
-# Abbreviations the fan audience should not see (D11 checks fan versions against this).
-JARGON = ("xG", "xA", "xT", "PPDA", "half-space", "low block", "rest defence", "progressive")
+# Abbreviations and terms the fan audience should not see, spelled out too (D11 checks fan versions).
+JARGON = ("xG", "xA", "xT", "PPDA", "half-space", "low block", "rest defence", "progressive",
+          "expected goals", "expected-goals", "expected assists", "expected-assists", "expected threat")
+
+# Off-pitch story words. A sentence that uses one must cite a match-context item (D13).
+OFF_PITCH_WORDS = (
+    "former club", "old club", "former side", "old side", "former team", "old team", "ex-club",
+    "former employer", "old employer", "former boss", "old boss", "former manager", "former coach",
+    "former teammate", "old teammate", "the club that sold", "sold him", "sold her", "first game back",
+    "returns to face", "back against", "reunion", "feud", "grudge", "bad blood", "nightlife", "night out",
+    "out late", "contract dispute", "transfer rumour", "off the pitch", "off-pitch",
+)
 
 
 def vocabulary_markdown(audience: Literal["analyst", "fan"] = "analyst") -> str:

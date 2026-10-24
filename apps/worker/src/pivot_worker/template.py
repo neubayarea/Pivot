@@ -1,8 +1,10 @@
 """TemplateExplainer: the fallback card when the Explainer cannot pass the Verifier (D05).
 
 It builds up to three sentences from the key events and one recomputed stat change, so
-what it writes passes the same Verifier. It must never raise: if anything goes wrong it
-returns a minimal card that still fits the Narrative contract.
+what it writes passes the same Verifier. With a focus team it tells the story from their side,
+even when the match turned against them; fan versions write only the newer value of the change.
+It must never raise: if anything goes wrong it returns a minimal card that still fits the
+Narrative contract.
 """
 
 from __future__ import annotations
@@ -47,30 +49,33 @@ def _label(metric: str, lang: str, fan: bool) -> str:
     return term.fan_label if fan else term.label
 
 
-def _stat_sentence(c: PivotCandidate, team: str, stats: StatSource, evidence: list[str],
+def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, evidence: list[str],
                    fan: bool = False, lang: str = "en") -> ExplanationSentence | None:
+    """The biggest change for `side`: a rise if the match turned their way, a fall if it turned against them."""
     m = c.minute
     before, after = (max(0, m - COMPARE_MINUTES), m), (m, m + COMPARE_MINUTES)
+    gaining = side == c.direction
     best = None
     for metric in FAN_METRICS if fan else CANDIDATE_METRICS:
         try:
-            refs = [StatRef(metric=metric, team=c.direction, window=w) for w in (before, after)]
+            refs = [StatRef(metric=metric, team=side, window=w) for w in (before, after)]
             a, b = (stats.compute(r) for r in refs)
         except Exception:
             continue
         unit = STAT_UNITS[metric]
         if format_value(a, unit) == format_value(b, unit):
             continue
-        if best is None or (b - a > 0, abs(b - a) / (abs(a) + 1)) > best[0]:
-            best = ((b - a > 0, abs(b - a) / (abs(a) + 1)), metric, refs, a, b)
+        score = ((b - a > 0) == gaining, abs(b - a) / (abs(a) + 1))
+        if best is None or score > best[0]:
+            best = (score, metric, refs, a, b)
     if best is None:
         return None
     _, metric, refs, a, b = best
     unit = STAT_UNITS[metric]
     phrases = PHRASES[lang]
-    text = phrases["stat"].format(team=team, owner=possessive(team), label=_label(metric, lang, fan),
-                                  verb=phrases["rose" if b > a else "fell"],
-                                  a=format_value(a, unit), b=format_value(b, unit))
+    text = phrases["stat_fan" if fan else "stat"].format(
+        team=team, owner=possessive(team), label=_label(metric, lang, fan), verb=phrases["rose" if b > a else "fell"],
+        a=format_value(a, unit), b=format_value(b, unit))
     if lang == "es":
         text = text[0].upper() + text[1:]
     claims = [Claim(value=v, unit=unit, stat_ref=r) for v, r in ((a, refs[0]), (b, refs[1]))]
@@ -124,7 +129,9 @@ def template_explain(
     prefs = prefs or ViewerPrefs()
     lang = prefs.language
     names = {"home": "Home", "away": "Away", **(team_names or {})}
-    team = names[candidate.direction]
+    side = prefs.focus_team or candidate.direction
+    team = names[side]
+    gaining = side == candidate.direction
     try:
         phrases = PHRASES[lang]
         found = _evidence(candidate, events)
@@ -136,11 +143,13 @@ def template_explain(
         note = _context_sentence(found[0], context, ids[:1]) if found and lang == "en" else None
         if note:
             sentences.append(note)
-        stat = _stat_sentence(candidate, team, stats, ids[:4], fan=prefs.audience == "fan", lang=lang)
+        stat = _stat_sentence(candidate, side, team, stats, ids[:4], fan=prefs.audience == "fan", lang=lang)
         if stat:
             sentences.append(stat)
-        sentences.append(ExplanationSentence(text=phrases["momentum"].format(team=team), evidence_ids=ids[:4]))
-        return Narrative(prefs=prefs, headline=clean_headline(headline or phrases["momentum_h"].format(team=team), lang),
+        momentum = "momentum" if gaining else "momentum_lost"
+        sentences.append(ExplanationSentence(text=phrases[momentum].format(team=team), evidence_ids=ids[:4]))
+        fallback_headline = phrases[f"{momentum}_h"].format(team=team)
+        return Narrative(prefs=prefs, headline=clean_headline(headline or fallback_headline, lang),
                          sentences=sentences[:3], source="template", verifier_attempts=verifier_attempts,
                          chain_id=chain_id)
     except Exception:

@@ -8,8 +8,9 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 3. numbers: every claim recomputes within tolerance, and every number in the text has a claim
 4. direction: rose/fell words match the sign of the change between two claimed windows
 5. significance: "significant"-style words only when the what-if intervals do not overlap
-6. wording: no banned terms, and no jargon in fan versions
-7. context: every `context_ids` entry is a real item of the match context (D13)
+6. wording: no banned terms; fan versions use no jargon and at most one number per sentence
+7. context: every cited item was shown to the writer and is about someone in the sentence, and
+   any off-pitch story ("former club", "feud") cites one (D13)
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -17,14 +18,14 @@ Issue messages are written for the Explainer, which gets them back on a retry.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Protocol
 
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
 from pivot_core.domain.stats import Claim
 
 from . import languages as lang_rules
-from .vocabulary import JARGON
+from .context import ContextItem, involved_in, mentions
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
 
@@ -97,14 +98,14 @@ def verify(
     stats: StatSource,
     significant: Mapping[str, bool] | None = None,
     outcome_deltas: Callable[[str], list[float]] | None = None,
-    context_ids: Collection[str] = frozenset(),
+    context: Sequence[ContextItem] = (),
     max_sentences: int = 3,
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
 
     `outcome_deltas` is for comparisons: given a sentence, it returns the change in each
     outcome the sentence mentions, so "more likely" style words can be checked without claims.
-    `context_ids` are the ids of the match-context items the writer was shown (context.py).
+    `context` is the match-context items the writer was shown (`explainer.shown_context`).
     """
     issues: list[VerifierIssue] = []
 
@@ -123,9 +124,16 @@ def verify(
         issue("too_long", f"The headline must be at most {max_headline} {unit_name}.")
     if re.search(r"\d", narrative.headline):
         issue("number_mismatch", "The headline must not contain digits.")
-    banned = lang_rules.banned_terms(lang) + (JARGON if narrative.prefs.audience == "fan" else ())
+    fan = narrative.prefs.audience == "fan"
+    jargon = lang_rules.jargon(lang) if fan else ()
+    banned = lang_rules.banned_terms(lang) + jargon
     for term in _has_word(narrative.headline, banned):
         issue("banned_term", f"Remove '{term}' from the headline.")
+    shown = {item.context_id: item for item in context}
+    off_pitch = lang_rules.off_pitch_words(lang)
+    if (story := _has_word(narrative.headline, off_pitch)) and not any(s.context_ids for s in narrative.sentences):
+        issue("context_invalid", f"The headline tells an off-pitch story ('{story[0]}'); cite its context item "
+              "in a sentence, or drop it.")
 
     lo, hi = pivot_minute - EVIDENCE_BEFORE, pivot_minute + EVIDENCE_AFTER
     allow_significance = bool(significant) and any(significant.values())
@@ -154,9 +162,13 @@ def verify(
             elif abs(c.value - actual) > TOLERANCE[c.unit] + 1e-9:
                 issue("number_mismatch",
                       f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]} is {actual:g}, not {c.value:g}.", i)
-        for n in numbers_in(s.text, lang):
+        numbers = numbers_in(s.text, lang)
+        for n in numbers:
             if not any(_matches(n, c) for c in s.claims):
                 issue("number_mismatch", f"The number {n} in sentence {i + 1} has no matching claim.", i)
+        if fan and len(numbers) > 1:
+            issue("number_mismatch", f"Sentence {i + 1} has {len(numbers)} numbers; fan versions use at most one "
+                  "number per sentence (keep both claims, write only the newer value).", i)
 
         # 4. Direction words.
         up, down = _has_word(s.text, up_words), _has_word(s.text, down_words)
@@ -179,12 +191,21 @@ def verify(
 
         # 6. Banned terms.
         for term in _has_word(s.text, banned):
-            hint = " Fan versions use everyday words." if term in JARGON else ""
+            hint = " Fan versions use everyday words." if term in jargon else ""
             issue("banned_term", f"Remove '{term}' from sentence {i + 1}.{hint}", i)
 
-        # 7. Context.
+        # 7. Context: only listed items, about someone in this sentence; off-pitch stories need one.
+        people = set().union(*(involved_in(events[e]) for e in s.evidence_ids if e in events))
         for cid in s.context_ids:
-            if cid not in context_ids:
+            item = shown.get(cid)
+            if item is None:
                 issue("context_invalid", f"Context {cid} is not in the match context; cite only listed items.", i)
+            elif not mentions(item, s.text, people):
+                who = " and ".join(item.subject_names or item.subject_ids)
+                issue("context_invalid", f"Context {cid} is about {who}, who is neither named in sentence {i + 1} "
+                      "nor in its evidence.", i)
+        if not s.context_ids and (story := _has_word(s.text, off_pitch)):
+            issue("context_invalid", f"'{story[0]}' tells an off-pitch story; cite the match-context item it "
+                  "comes from, or drop it.", i)
 
     return Verdict(passed=not issues, issues=issues)

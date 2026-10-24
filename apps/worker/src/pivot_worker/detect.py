@@ -34,7 +34,7 @@ from pivot_core.domain import (
 from pivot_core.ports import MatchRepository
 
 from . import explainer, judge
-from .context import ContextItem, from_match, known_ids
+from .context import ContextItem, from_match
 from .models import ModelClient, ModelUnavailable
 from .pipeline import Step, StepRecorder
 from .template import template_explain
@@ -180,8 +180,9 @@ class VerifierNode(Executor):
         if r.draft is None:
             verdict = Verdict(passed=False, issues=[VerifierIssue(code="schema_invalid", message=r.schema_error or "")])
         else:
-            verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=r.view.events, stats=r.view.stats,
-                             context_ids=known_ids(r.view.context))
+            v = r.view
+            verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=v.events, stats=v.stats,
+                             context=explainer.shown_context(r.candidate, v.events, v.context))
         summary = "pass" if verdict.passed else "; ".join(i.code for i in verdict.issues)
         await r.record(Step("verifier", summary, "ok" if verdict.passed else "rejected", verdict=verdict))
         if verdict.passed:
@@ -200,7 +201,7 @@ class TemplateNode(Executor):
         v = r.view
         narrative = template_explain(r.candidate, events=v.events, stats=v.stats, team_names=v.team_names,
                                      prefs=r.prefs, chain_id=r.chain_id, verifier_attempts=r.checks,
-                                     context=v.context)
+                                     context=explainer.shown_context(r.candidate, v.events, v.context))
         await r.record(Step("template", narrative.headline, "degraded"))
         await ctx.yield_output(r.pivot("degraded", narrative))
 

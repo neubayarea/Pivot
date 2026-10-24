@@ -17,12 +17,12 @@ from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotC
 from pivot_core.domain.common import Model
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
-from .context import ContextItem, relevant
-from .languages import INSTRUCTIONS
+from .context import ContextItem, involved_in, relevant
+from .languages import INSTRUCTIONS, jargon
 from .prompts import Prompt, render
 from .template import possessive
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
-from .vocabulary import BANNED_TERMS, DOWN_WORDS, JARGON, SIGNIFICANCE_WORDS, UP_WORDS, vocabulary_markdown
+from .vocabulary import BANNED_TERMS, DOWN_WORDS, SIGNIFICANCE_WORDS, UP_WORDS, vocabulary_markdown
 
 COMPARE_MINUTES = 5
 MAX_EVENTS = 30
@@ -50,8 +50,9 @@ def audience_brief(prefs: ViewerPrefs, team_names: Mapping[str, str],
         lines.append(
             "A fan watching the match, not an analyst. Tell it as a short story: who did what, and how it "
             "changed the game. Use everyday words and the fan wording from the stat table. Never use "
-            f"abbreviations or tactics jargon ({', '.join(JARGON)}). Use at most one number per sentence, "
-            "and only if it makes the story clearer.")
+            f"abbreviations or tactics jargon ({', '.join(jargon(prefs.language))}). Use at most one number per "
+            "sentence, and only if it makes the story clearer: keep both claims of a change, but write only the "
+            "newer value (\"rose to 9\").")
     else:
         lines.append(
             "A match analyst. Be precise and tactical: name the mechanism (shape, pressing, space, "
@@ -152,7 +153,7 @@ FAN_EXAMPLE = ExplainerDraft(
         text="Okafor came on at 61' and suddenly Rovers kept finding a way into Harbour's half.",
         evidence_ids=["m063-s01042", "m063-s01077"],
     ), ExplanationSentence(
-        text="Their passes into the attacking third rose from 3 to 9 in five minutes, and Harbour were hanging on.",
+        text="Their passes into the attacking third rose to 9 in five minutes, and Harbour were hanging on.",
         evidence_ids=["m063-s01077"],
         claims=[
             Claim(value=3, unit="count", stat_ref=StatRef(metric="passes_final_third", team="home", window=(56, 61))),
@@ -179,7 +180,14 @@ def system_prompt(prefs: ViewerPrefs, team_names: Mapping[str, str],
 
 
 def _player_team(player_id: str | None, events: Mapping[str, MatchEvent]) -> str | None:
-    return next((e.team for e in events.values() if player_id and e.player_id == player_id), None)
+    """The focus player's side, from any event they took part in (as the player, receiver or substitute)."""
+    return next((e.team for e in events.values() if player_id and player_id in involved_in(e)), None)
+
+
+def shown_context(candidate: PivotCandidate, events: Mapping[str, MatchEvent],
+                  context: Sequence[ContextItem]) -> list[ContextItem]:
+    """The match-context items the writer sees; the Verifier accepts only these."""
+    return relevant(context, window_events(candidate, events)) if context else []
 
 
 def build_request(
@@ -206,7 +214,7 @@ def build_request(
     }
     if context:
         request["match_context"] = [{"id": i.context_id, "about": list(i.subject_ids), "note": i.text}
-                                    for i in relevant(context, shown)]
+                                    for i in shown_context(candidate, events, context)]
     text = json.dumps(request, ensure_ascii=False)
     if feedback and not feedback.passed:
         fixes = "\n".join(f"- {i.code}: {i.message}" for i in feedback.issues)
