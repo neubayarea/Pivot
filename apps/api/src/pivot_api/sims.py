@@ -11,9 +11,11 @@ SIM_VERSION hashes the simulator and analytics source, so editing either re-runs
 next start; an unchanged one is read straight back. The frames stay on disk; `GET
 /api/matches/{id}/frames` reads them from there (`read_frames`). Candidates go on `pivot-candidates`, so the
 worker writes the pivots; its message ids are "{match_id}:{minute}", so a second load adds nothing.
+Before that, `adapters.results` reads back the pivots the worker wrote for this SIM_VERSION in an
+earlier run (Ax10), so the worker skips them instead of calling the model again.
 
 The recorded demo (B02) is stored the same way, from the files committed in `eval/fixtures/`
-(`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`.
+(`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`. Its results are keyed by the fixture file's content hash.
 """
 
 from __future__ import annotations
@@ -149,15 +151,19 @@ class SimStatus:
 
 async def store_one(adapters: Adapters, data_path: Path) -> str:
     """Put one cached match into the store and its candidates on the worker queue."""
-    return await store_data(adapters, await asyncio.to_thread(_read_json_gz, data_path))
+    data = await asyncio.to_thread(_read_json_gz, data_path)
+    return await store_data(adapters, data, data.get("sim_version") or SIM_VERSION)
 
 
-async def store_data(adapters: Adapters, data: dict) -> str:
-    """Store a match file's match, events and metrics, and put its candidates on the worker queue."""
+async def store_data(adapters: Adapters, data: dict, version: str) -> str:
+    """Store a match file's match, events and metrics, read back the AI's results for this version of
+    it, and put its candidates on the worker queue."""
     match = Match.model_validate(data["match"])
     await adapters.matches.upsert_match(match)
     await adapters.matches.append_events([MatchEvent.model_validate(e) for e in data["events"]])
     await adapters.matches.upsert_metrics([MinuteMetric.model_validate(m) for m in data["metrics"]])
+    if adapters.results is not None and (known := await adapters.results.open_match(match.match_id, version)):
+        log.info("%s: %d pivots read back from earlier runs (results version %s)", match.match_id, known, version)
     for raw in data["candidates"]:
         c = PivotCandidate.model_validate(raw)
         await adapters.queue.send(PIVOT_CANDIDATES, f"{c.match_id}:{c.minute}", c.model_dump(mode="json", round_trip=True))
@@ -178,8 +184,8 @@ def fixture_from_env() -> Path | None:
 
 async def load_fixture(adapters: Adapters, path: Path) -> tuple[str, Path | None]:
     """Store the recorded demo; returns its match id and its frames file (None if it is missing)."""
-    data = await asyncio.to_thread(lambda: json.loads(path.read_text(encoding="utf-8")))
-    match_id = await store_data(adapters, data)
+    raw = await asyncio.to_thread(path.read_bytes)
+    match_id = await store_data(adapters, json.loads(raw), "fx-" + hashlib.sha256(raw).hexdigest()[:12])
     frames = path.with_name(path.name.removesuffix(".json") + ".frames.json.gz")
     return match_id, frames if frames.is_file() else None
 
