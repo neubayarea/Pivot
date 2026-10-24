@@ -158,6 +158,8 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
           setClock(startClock(fixture));
           setPlaying(true);
         },
+        seek: (t: number) => setClock(Math.min(fixture.endAt, Math.max(0, t))),
+        end: fixture.endAt,
       },
     }),
     [data, playing, fixture],

@@ -5,7 +5,6 @@ import Kicker from "../components/Kicker";
 import MatchStats from "../components/MatchStats";
 import MomentumChart from "../components/MomentumChart";
 import PivotList, { pivotHeadline } from "../components/PivotList";
-import Playback from "../components/Playback";
 import StartDemoButton from "../components/StartDemoButton";
 import WhyItTurned from "../components/WhyItTurned";
 import { useMatch } from "../data/match";
@@ -55,7 +54,6 @@ export default function LiveBoard() {
         )}
         <span className="sp" />
         {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
-        <Playback />
       </div>
       <div className="grid1">
         <div className="stack">

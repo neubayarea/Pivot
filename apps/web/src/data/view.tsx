@@ -27,12 +27,16 @@ export type MatchView = {
   playerName: (id: string | null) => string;
   eventById: (id: string) => MatchEvent | undefined;
   pivotDetail: (id: string) => PivotDetail | undefined;
-  /** Replay controls; only the fixture has them. */
+  /** Replay controls; only the fixture and a replay of a stored match (Start demo) have them. */
   playback: {
     playing: boolean;
     setPlaying: (playing: boolean) => void;
     setSpeed: (speed: Speed) => void;
     restart: () => void;
+    /** Move the replay clock to elapsed second `t`; everything on the page is worked out again from there. */
+    seek: (t: number) => void;
+    /** Where the replay stops, in elapsed seconds. */
+    end: number;
   } | null;
 };
 
