@@ -1,5 +1,8 @@
 """Run the worker: `PIVOT_PROFILE=local uv run python -m pivot_worker [--demo]`.
 
+`PIVOT_PIPELINE=detect` runs the real Agent Framework workflow (D06) instead of the fake one;
+without `PIVOT_FOUNDRY_ENDPOINT` it has no model, so every pivot degrades to the template.
+
 With `--demo` it enqueues one sample candidate on the local queue, handles it and prints the
 stored pivot, traces and pushed envelopes, then exits. Without it, it consumes until Ctrl-C.
 """
@@ -10,13 +13,16 @@ import argparse
 import asyncio
 import contextlib
 import logging
+import os
 import signal
 
 from pivot_adapters import build_adapters
 from pivot_core.domain import PivotCandidate
 from pivot_core.ports import PIVOT_CANDIDATES
 
-from .pipeline import FakePipeline
+from .detect import DetectWorkflow
+from .models import model_client_from_env
+from .pipeline import FakePipeline, Pipeline
 from .worker import Worker
 
 SAMPLE = PivotCandidate(
@@ -53,12 +59,19 @@ async def serve(worker: Worker) -> None:
     await worker.run(stop)
 
 
+def build_pipeline(adapters) -> Pipeline:
+    if os.getenv("PIVOT_PIPELINE", "fake") == "detect":
+        return DetectWorkflow(adapters.matches, model_client_from_env())
+    return FakePipeline()
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="pivot_worker")
     parser.add_argument("--demo", action="store_true", help="handle one sample candidate and exit")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    worker = Worker(build_adapters(), FakePipeline())
+    adapters = build_adapters()
+    worker = Worker(adapters, build_pipeline(adapters))
     asyncio.run(demo(worker) if args.demo else serve(worker))
 
 

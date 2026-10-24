@@ -40,6 +40,14 @@ class StatSource(Protocol):
     def compute(self, ref: StatRef) -> float: ...
 
 
+def _compute(stats: StatSource, ref: StatRef) -> float | None:
+    """Recompute a stat; None if the source cannot (missing data, or no StatCalculator yet)."""
+    try:
+        return stats.compute(ref)
+    except Exception:
+        return None
+
+
 def numbers_in(text: str, lang: str = "en") -> list[str]:
     return _NUMBER.findall(lang_rules.MINUTES.sub(" ", lang_rules.normalise(text, lang)))
 
@@ -75,8 +83,9 @@ def _deltas(claims: list[Claim], stats: StatSource) -> list[float]:
     for group in by_stat.values():
         group = sorted(group, key=lambda c: c.stat_ref.window)
         for a, b in zip(group, group[1:]):
-            if a.stat_ref.window != b.stat_ref.window:
-                deltas.append(stats.compute(b.stat_ref) - stats.compute(a.stat_ref))
+            va, vb = _compute(stats, a.stat_ref), _compute(stats, b.stat_ref)
+            if a.stat_ref.window != b.stat_ref.window and va is not None and vb is not None:
+                deltas.append(vb - va)
     return deltas
 
 
@@ -138,9 +147,11 @@ def verify(
 
         # 3. Numbers: claims recompute, and the text carries no unclaimed numbers.
         for c in s.claims:
-            actual = stats.compute(c.stat_ref)
-            if abs(c.value - actual) > TOLERANCE[c.unit] + 1e-9:
-                ref = c.stat_ref
+            actual, ref = _compute(stats, c.stat_ref), c.stat_ref
+            if actual is None:
+                issue("number_mismatch", f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]} "
+                      "cannot be recomputed; drop the number.", i)
+            elif abs(c.value - actual) > TOLERANCE[c.unit] + 1e-9:
                 issue("number_mismatch",
                       f"{ref.metric} for {ref.team} in {ref.window[0]}-{ref.window[1]} is {actual:g}, not {c.value:g}.", i)
         for n in numbers_in(s.text, lang):
