@@ -9,8 +9,8 @@ type Props = {
   onPlayingChange: (playing: boolean) => void;
   /** Minute marked in red on the track: the pivot itself. */
   pivotMinute: number;
-  /** Seconds of the evidence events, drawn as gold ticks; `on` is the selected one. */
-  marks: { t: number; on: boolean }[];
+  /** Seconds of the evidence events, drawn as gold ticks; `on` is the selected one, `mine` the followed player's. */
+  marks: { t: number; on: boolean; mine?: boolean }[];
 };
 
 /** Pitch timeline: drag or play through the window around a pivot, one frame per second. */
@@ -24,7 +24,7 @@ export default function Scrubber({ window: [from, to], t, onChange, playing, onP
       </button>
       <div className="track">
         {marks.map((m) => (
-          <i key={m.t} className={`mk${m.on ? " on" : ""}`} style={{ left: pct(m.t) }} />
+          <i key={m.t} className={`mk${m.on ? " on" : ""}${m.mine ? " mine" : ""}`} style={{ left: pct(m.t) }} />
         ))}
         <i className="pv-mk" style={{ left: pct(pivotMinute * 60) }} />
         <input type="range" min={from} max={to} step={1} value={t} aria-label={tr("scrub.time")}

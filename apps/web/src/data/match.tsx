@@ -5,11 +5,11 @@
 // explanations come in the viewer's language (fixtures/demo-1021-i18n). Pages call useMatch() either way.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Match, Pivot1 as Pivot, Score } from "@pivot/contracts";
-import { DEMO_1021, clockLabel, type MatchFixture } from "../fixtures/demo-1021";
+import { DEMO_1021, ROSTER, clockLabel, type MatchFixture } from "../fixtures/demo-1021";
 import { localisePivot, localiseRowLabel } from "../fixtures/demo-1021-i18n";
 import { useLang, type Lang } from "../i18n";
 import LiveProvider from "./live/provider";
-import { MatchContext, computeStats, type MatchView, type Speed } from "./view";
+import { MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
 
 export * from "./view";
 
@@ -21,6 +21,12 @@ export function fixtureMode(search = window.location.search): boolean {
 }
 
 const TICK_MS = 250;
+
+// The fixture's ids end in the shirt number: "hcy-11" is Harbour City's number 11.
+const FIXTURE_SQUADS = Object.fromEntries((["home", "away"] as Side[]).map((side) => [
+  side,
+  ROSTER[side].map(([player_id, name]) => ({ player_id, name, shirt: Number(player_id.split("-").pop()) || null })).sort(byShirt),
+])) as MatchView["squads"];
 
 /** What a pivot looks like when the Explainer timed out and the template wrote the summary. */
 function degrade(p: Pivot): Pivot {
@@ -52,6 +58,7 @@ function view(
     metrics: fx.metrics.filter((m) => m.minute <= minute),
     pivots,
     stats: computeStats(shown),
+    squads: FIXTURE_SQUADS,
     playerName: (id) => (id ? (fx.players[id] ?? id) : ""),
     eventById: (id) => fx.events.find((e) => e.event_id === id),
     pivotDetail: (id) => {

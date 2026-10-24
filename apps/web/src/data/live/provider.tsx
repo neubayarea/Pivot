@@ -5,7 +5,7 @@ import type { Match, Pivot1 as Pivot, TrackingFrame, ViewerPrefs } from "@pivot/
 import { needsLocalised, usePrefs } from "../../i18n";
 import { clockLabel } from "../../fixtures/demo-1021";
 import {
-  ConnectionContext, MatchContext, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
+  ConnectionContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
 import { ApiError, api } from "./api";
 import { LiveSocket, type ConnectionStatus } from "./socket";
@@ -35,6 +35,21 @@ export function classifyLoadError(err: unknown, asked: string | null): LoadProbl
   return { kind: "unreachable" };
 }
 
+/**
+ * Pivots written for these prefs. A focus player the API does not know (saved while watching
+ * another match) gets a 422; drop him rather than fail the load. TopBar clears the setting too.
+ */
+export async function listPivotsFor(id: string, prefs: ViewerPrefs): Promise<Pivot[]> {
+  try {
+    return await api.listPivots(id, prefs);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 422 && prefs.focus_player_id) {
+      return api.listPivots(id, { ...prefs, focus_player_id: null });
+    }
+    throw err;
+  }
+}
+
 const prefsKey = (p: ViewerPrefs) => `${p.language}|${p.audience}|${p.focus_team}|${p.focus_player_id}`;
 
 export default function LiveProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
@@ -57,7 +72,7 @@ export default function LiveProvider({ children, fallback }: { children: ReactNo
     const id = matchIdRef.current;
     if (!id || !stateRef.current) return;
     const asked = prefsRef.current;
-    api.listPivots(id, asked).then(
+    listPivotsFor(id, asked).then(
       (pivots) => current(asked) && setState((prev) => (prev ? applyPivots(prev, pivots) : prev)),
       (err) => console.warn("Could not refetch pivots for", prefsKey(asked), err),
     );
@@ -85,7 +100,7 @@ export default function LiveProvider({ children, fallback }: { children: ReactNo
         const since = full ? -1 : lastEventSeq(stateRef.current);
         const asked = prefsRef.current;
         const [match, events, metrics, pivots] = await Promise.all([
-          api.getMatch(id), api.listEvents(id, since), api.getTimeline(id), api.listPivots(id, asked),
+          api.getMatch(id), api.listEvents(id, since), api.getTimeline(id), listPivotsFor(id, asked),
         ]);
         if (!alive()) return;
         setState((prev) => applySnapshot(prev, { match, events, metrics, pivots, full }));
@@ -154,6 +169,10 @@ function toView({ match, events, metrics, pivots }: LiveState): MatchView {
     metrics,
     pivots: shown.slice().reverse(),
     stats: computeStats(events),
+    squads: {
+      home: match.home.squad.map(squadPlayer).sort(byShirt),
+      away: match.away.squad.map(squadPlayer).sort(byShirt),
+    },
     playerName: (id) => (id ? (players.get(id) ?? id) : ""),
     eventById: (id) => byId.get(id),
     pivotDetail: (id) => {
@@ -163,6 +182,9 @@ function toView({ match, events, metrics, pivots }: LiveState): MatchView {
     playback: null,
   };
 }
+
+const squadPlayer = ({ player_id, name, shirt_number }: Match["home"]["squad"][number]) =>
+  ({ player_id, name, shirt: shirt_number ?? null });
 
 const teamInfo = ({ name, short_name, side, color }: Match["home"]) => ({ name, short_name, side, color });
 

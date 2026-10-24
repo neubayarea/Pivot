@@ -33,6 +33,11 @@ button { font: inherit; color: inherit; }
 .top .btn { padding: 4px 10px; font-size: 12px; background: transparent; color: var(--pv-on-bar); border-color: var(--pv-on-bar); }
 .top .btn:hover { background: var(--pv-bar-line); }
 .top .tm-short { display: none; }
+/* Only the team names give way when the bar is tight (long Spanish labels at 1280px); the controls keep their size. */
+.top > * { flex-shrink: 0; }
+.top > .sp, .top > .score { flex-shrink: 1; }
+.top > .score { min-width: 0; }
+.score .tm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Mid-width screens: team codes instead of names, then icon-only pickers, so the bar never scrolls sideways. */
 @media (max-width: 1279px) {
   .top .tm-full { display: none; }
@@ -224,3 +229,38 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 400; font-size: 1
 
 /* "Showing English": the API could not write the explanation in the viewer's language. */
 .lang-note { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .04em; color: var(--pv-warn-fg); background: var(--pv-warn-bg); padding: 3px 8px; margin: 8px 0 4px; display: inline-block; }
+
+/* ---------- Viewer settings (C08) ---------- */
+/* ♥ team and ★ player pickers: the select sits invisibly over the label so the native menu still opens. */
+.pick { position: relative; display: inline-flex; align-items: center; gap: 4px; color: var(--pv-on-bar); background: transparent; cursor: pointer; }
+.pick.set { border-color: var(--pv-gold); }
+.pick select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.pick:focus-within { outline: 3px solid var(--pv-gold); outline-offset: 2px; }
+.picker { position: relative; }
+.pick-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 260px; background: var(--pv-sheet); color: var(--pv-ink); border: 2px solid var(--pv-ink); box-shadow: 4px 4px 0 var(--pv-ink); padding: 8px; display: grid; gap: 6px; }
+.pick-pop input { font: inherit; font-family: var(--pv-label); font-size: 14px; padding: 5px 8px; border: 2px solid var(--pv-ink); background: var(--pv-paper); color: var(--pv-ink); }
+.pick-list { max-height: 320px; overflow-y: auto; display: grid; font-family: var(--pv-label); font-size: 13px; }
+.pick-list button { display: flex; gap: 8px; width: 100%; text-align: left; padding: 4px 6px; border: 0; background: transparent; cursor: pointer; }
+.pick-list button:hover { background: var(--pv-gold-soft); }
+.pick-list button[aria-pressed="true"] { background: var(--pv-gold); color: var(--pv-on-gold); font-weight: 700; }
+.pick-list .no { min-width: 1.6em; text-align: right; color: var(--pv-ink-2); }
+.pick-list button[aria-pressed="true"] .no { color: inherit; }
+.pick-list .grp { display: block; padding: 6px 6px 2px; font-size: var(--pv-fs-xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; border-bottom: 1px solid var(--pv-hair); }
+.pick-list .grp.h { color: var(--pv-home); }
+.pick-list .grp.a { color: var(--pv-away); }
+.pick-list .none { color: var(--pv-ink-2); padding: 4px 6px; margin: 0; }
+
+/* The viewer's team: ♥ and a gold underline in the score, its colour on the cards. */
+.score .tm.fav { box-shadow: inset 0 -3px var(--pv-gold); }
+.score .tm.fav::before { content: "♥ "; color: var(--pv-gold); }
+.page[data-fav="home"] { --pv-fav: var(--pv-home); }
+.page[data-fav="away"] { --pv-fav: var(--pv-away); }
+.page[data-fav] .why { box-shadow: inset 6px 0 var(--pv-fav); padding-left: 22px; }
+.stat .fav { color: var(--pv-fav); text-decoration: underline 3px var(--pv-fav); text-underline-offset: 3px; }
+.page[data-fav="home"] .pv.to-home .to::before, .page[data-fav="away"] .pv.to-away .to::before { content: "♥ "; color: var(--pv-fav); }
+
+/* The followed player: ★ on his evidence chips and feed rows; his name gets .hl in the explanation. */
+.ev.star { border-color: var(--pv-gold); box-shadow: 0 0 0 2px var(--pv-gold); }
+.feed div.mine > span:last-child::before { content: "★ "; color: var(--pv-gold); text-shadow: 0 0 1px var(--pv-ink); }
+.scrub .mk.mine { box-shadow: 0 0 0 2px var(--pv-gold); }
+.focus-key { color: var(--pv-ink); font-weight: 700; box-shadow: inset 0 -3px var(--pv-gold); }

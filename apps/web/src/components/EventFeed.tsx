@@ -1,6 +1,6 @@
 import type { MatchEvent } from "@pivot/contracts";
-import { useMatch } from "../data/match";
-import { isMessageKey, useT, type T } from "../i18n";
+import { involves, useMatch } from "../data/match";
+import { isMessageKey, usePrefs, type T } from "../i18n";
 
 const ROWS = 8;
 const TICK = { success: " ✓", fail: " ✗" } as const;
@@ -46,7 +46,7 @@ const KEY_TYPES = new Set<MatchEvent["type"]>(["card", "substitution", "tactical
 
 export default function EventFeed({ highlight }: { highlight: ReadonlySet<string> }) {
   const { events, teams, playerName } = useMatch();
-  const t = useT();
+  const { prefs, t } = usePrefs();
   if (!events.length) return <p className="muted">{t("feed.empty")}</p>;
   return (
     <div className="feed" aria-live="polite">
@@ -54,7 +54,8 @@ export default function EventFeed({ highlight }: { highlight: ReadonlySet<string
       {events.filter((e, i) => i < ROWS || highlight.has(e.event_id)).map((e) => {
         const key = KEY_TYPES.has(e.type) || e.shot_outcome === "goal";
         return (
-          <div key={e.event_id} className={`${key ? "key" : ""}${highlight.has(e.event_id) ? " on" : ""}`}>
+          <div key={e.event_id}
+            className={`${key ? "key" : ""}${highlight.has(e.event_id) ? " on" : ""}${involves(e, prefs.focus_player_id) ? " mine" : ""}`}>
             <span className="t">{e.clock_label}</span>
             <span className={e.team === "home" ? "h" : "a"}>{teams[e.team].short_name}</span>
             <span>{describe(e, playerName, t)}</span>
