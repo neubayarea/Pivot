@@ -9,9 +9,10 @@ const SPEEDS = [
   { value: "60", label: "60×" },
 ] as const;
 
-/** Replay controls for the local fixture, so demo recordings can pause and rewind. */
+/** Replay controls for the local fixture, so demo recordings can pause and rewind. Hidden on the live feed. */
 export default function Playback() {
   const { match, playback } = useMatch();
+  if (!playback) return null;
   const done = match.status === "finished";
   return (
     <span className="playback">
