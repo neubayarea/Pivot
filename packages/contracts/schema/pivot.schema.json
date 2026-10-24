@@ -437,6 +437,10 @@
         "competition_id": {
           "type": "string"
         },
+        "extra_time": {
+          "default": false,
+          "type": "boolean"
+        },
         "importance": {
           "maximum": 5,
           "minimum": 1,
@@ -456,6 +460,10 @@
           "type": "string"
         },
         "neutral_venue": {
+          "default": false,
+          "type": "boolean"
+        },
+        "penalty_shootout": {
           "default": false,
           "type": "boolean"
         },
@@ -487,7 +495,9 @@
         "tier",
         "stage",
         "importance",
-        "neutral_venue"
+        "neutral_venue",
+        "extra_time",
+        "penalty_shootout"
       ],
       "title": "Competition",
       "type": "object"
@@ -780,12 +790,28 @@
         },
         "clock": {
           "default": 0,
-          "maximum": 5400,
+          "maximum": 10800,
           "minimum": 0,
           "type": "integer"
         },
         "context": {
           "$ref": "#/$defs/MatchContext"
+        },
+        "decided_by": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal_time",
+                "extra_time",
+                "penalties"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "home": {
           "$ref": "#/$defs/Team"
@@ -797,9 +823,19 @@
           "default": 1,
           "enum": [
             1,
-            2
+            2,
+            3,
+            4,
+            5
           ],
           "type": "integer"
+        },
+        "periods": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PeriodInfo"
+          },
+          "type": "array"
         },
         "preset": {
           "anyOf": [
@@ -816,7 +852,9 @@
           "$ref": "#/$defs/Score",
           "default": {
             "away": 0,
-            "home": 0
+            "away_penalties": null,
+            "home": 0,
+            "home_penalties": null
           }
         },
         "seed": {
@@ -853,7 +891,9 @@
         "speed",
         "clock",
         "period",
-        "score"
+        "periods",
+        "score",
+        "decided_by"
       ],
       "title": "Match",
       "type": "object"
@@ -945,6 +985,19 @@
     "MatchEvent": {
       "additionalProperties": false,
       "properties": {
+        "added_minutes": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "area": {
           "anyOf": [
             {
@@ -993,6 +1046,11 @@
             }
           ],
           "default": null
+        },
+        "clock_label": {
+          "description": "What a broadcast would show: 63', 45+2', 105+1', or PEN in the shootout.",
+          "readOnly": true,
+          "type": "string"
         },
         "end_location": {
           "anyOf": [
@@ -1102,7 +1160,7 @@
           "type": "object"
         },
         "minute": {
-          "description": "Match minute the event belongs to (0-based, so 62:30 is minute 62).",
+          "description": "Elapsed match minute (0-based, stoppage and extra time included): t // 60.",
           "readOnly": true,
           "type": "integer"
         },
@@ -1165,8 +1223,16 @@
         "period": {
           "enum": [
             1,
-            2
+            2,
+            3,
+            4,
+            5
           ],
+          "type": "integer"
+        },
+        "period_t": {
+          "maximum": 3600,
+          "minimum": 0,
           "type": "integer"
         },
         "play_pattern": {
@@ -1240,6 +1306,19 @@
           "minimum": 0,
           "type": "integer"
         },
+        "shootout_round": {
+          "anyOf": [
+            {
+              "maximum": 30,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "shot_end_height_m": {
           "anyOf": [
             {
@@ -1296,7 +1375,7 @@
           "default": null
         },
         "t": {
-          "maximum": 5400,
+          "maximum": 10800,
           "minimum": 0,
           "type": "integer"
         },
@@ -1394,6 +1473,7 @@
             "substitution",
             "tactical_shift",
             "kickoff",
+            "added_time",
             "period_end"
           ],
           "type": "string"
@@ -1423,6 +1503,7 @@
         "event_id",
         "t",
         "period",
+        "period_t",
         "type",
         "team",
         "player_id",
@@ -1434,6 +1515,8 @@
         "shot_outcome",
         "xg",
         "shot_end_height_m",
+        "shootout_round",
+        "added_minutes",
         "pass_type",
         "pass_height",
         "body_part",
@@ -1448,6 +1531,7 @@
         "substitution",
         "meta",
         "minute",
+        "clock_label",
         "from_zone",
         "to_zone",
         "third",
@@ -1509,7 +1593,7 @@
           "type": "string"
         },
         "minute": {
-          "maximum": 90,
+          "maximum": 180,
           "minimum": 0,
           "type": "integer"
         },
@@ -1708,6 +1792,7 @@
     },
     "OutcomeDist": {
       "additionalProperties": false,
+      "description": "Result after 90 minutes, plus who goes through when extra time and penalties apply.",
       "properties": {
         "away_win": {
           "maximum": 1,
@@ -1737,7 +1822,8 @@
             "enum": [
               "home_win",
               "draw",
-              "away_win"
+              "away_win",
+              "home_advance"
             ]
           },
           "type": "object"
@@ -1746,6 +1832,19 @@
           "maximum": 1,
           "minimum": 0,
           "type": "number"
+        },
+        "home_advance": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "home_win": {
           "maximum": 1,
@@ -1757,6 +1856,7 @@
         "home_win",
         "draw",
         "away_win",
+        "home_advance",
         "ci95"
       ],
       "title": "OutcomeDist",
@@ -1805,7 +1905,7 @@
           "type": "string"
         },
         "hide_at": {
-          "maximum": 5400,
+          "maximum": 10800,
           "minimum": 0,
           "type": "integer"
         },
@@ -1852,7 +1952,7 @@
           "default": null
         },
         "show_at": {
-          "maximum": 5400,
+          "maximum": 10800,
           "minimum": 0,
           "type": "integer"
         },
@@ -1889,6 +1989,61 @@
         "severity"
       ],
       "title": "OverlayItem",
+      "type": "object"
+    },
+    "PeriodInfo": {
+      "additionalProperties": false,
+      "description": "When each period started and ended on the elapsed clock, so any `t` can be labelled.",
+      "properties": {
+        "added_minutes": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "end_t": {
+          "anyOf": [
+            {
+              "maximum": 10800,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "type": "integer"
+        },
+        "start_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "period",
+        "start_t",
+        "end_t",
+        "added_minutes"
+      ],
+      "title": "PeriodInfo",
       "type": "object"
     },
     "Personality": {
@@ -1984,7 +2139,7 @@
           "type": "string"
         },
         "minute": {
-          "maximum": 90,
+          "maximum": 180,
           "minimum": 0,
           "type": "integer"
         },
@@ -2064,7 +2219,7 @@
           "type": "string"
         },
         "minute": {
-          "maximum": 90,
+          "maximum": 180,
           "minimum": 0,
           "type": "integer"
         },
@@ -2075,12 +2230,12 @@
           "additionalItems": false,
           "items": [
             {
-              "maximum": 90,
+              "maximum": 180,
               "minimum": 0,
               "type": "integer"
             },
             {
-              "maximum": 90,
+              "maximum": 180,
               "minimum": 0,
               "type": "integer"
             }
@@ -2107,7 +2262,7 @@
       "description": "Force an event at a given minute. Used by the eval seeds and the demo preset.",
       "properties": {
         "minute": {
-          "maximum": 90,
+          "maximum": 180,
           "minimum": 0,
           "type": "integer"
         },
@@ -2713,7 +2868,7 @@
       "additionalProperties": false,
       "properties": {
         "at_minute": {
-          "maximum": 90,
+          "maximum": 180,
           "minimum": 0,
           "type": "integer"
         },
@@ -2831,15 +2986,41 @@
           "minimum": 0,
           "type": "integer"
         },
+        "away_penalties": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "home": {
           "default": 0,
           "minimum": 0,
           "type": "integer"
+        },
+        "home_penalties": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "home",
-        "away"
+        "away",
+        "home_penalties",
+        "away_penalties"
       ],
       "title": "Score",
       "type": "object"
@@ -2886,7 +3067,8 @@
             "enum": [
               "home_win",
               "draw",
-              "away_win"
+              "away_win",
+              "home_advance"
             ]
           },
           "type": "object"
@@ -2992,12 +3174,12 @@
           "additionalItems": false,
           "items": [
             {
-              "maximum": 90,
+              "maximum": 180,
               "minimum": 0,
               "type": "integer"
             },
             {
-              "maximum": 90,
+              "maximum": 180,
               "minimum": 0,
               "type": "integer"
             }
@@ -3261,7 +3443,10 @@
         "period": {
           "enum": [
             1,
-            2
+            2,
+            3,
+            4,
+            5
           ],
           "type": "integer"
         },
@@ -3287,7 +3472,7 @@
           ]
         },
         "t": {
-          "maximum": 5400,
+          "maximum": 10800,
           "minimum": 0,
           "type": "integer"
         }

@@ -8,12 +8,34 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Side = Literal["home", "away"]
 
-# Match clock in seconds from kick-off. Regulation time only: 0 to 5400.
-ClockSeconds = Annotated[int, Field(ge=0, le=5400)]
-Minute = Annotated[int, Field(ge=0, le=90)]
+# Time. `t` is elapsed match time in seconds since the first kick-off, counting stoppage
+# time and extra time, so it only ever goes up and is unique across the match (the half-time
+# break is not counted). A "minute" in the data is t // 60 on that same elapsed clock; what
+# a broadcast shows ("45+2'") is derived from the period and the time into it, see clock_label.
+#
+# Periods follow the StatsBomb numbering: 1 and 2 are the halves, 3 and 4 extra time,
+# 5 the penalty shootout.
+Period = Literal[1, 2, 3, 4, 5]
+PERIOD_BASE_MINUTE = {1: 0, 2: 45, 3: 90, 4: 105}
+PERIOD_LENGTH_MINUTES = {1: 45, 2: 45, 3: 15, 4: 15}
 
-# Left-closed, right-open minute range, e.g. (55, 63) covers minutes 55 to 62.
+ClockSeconds = Annotated[int, Field(ge=0, le=3 * 3600)]   # generous upper bound incl. a shootout
+PeriodSeconds = Annotated[int, Field(ge=0, le=3600)]
+Minute = Annotated[int, Field(ge=0, le=180)]
+
+# Left-closed, right-open range of elapsed minutes, e.g. (55, 63) covers minutes 55 to 62.
 MinuteWindow = tuple[Minute, Minute]
+
+
+def clock_label(period: int, period_t: int) -> str:
+    """Broadcast-style clock: 63' in normal time, 45+2' in stoppage time, PEN in a shootout."""
+    if period == 5:
+        return "PEN"
+    base, length = PERIOD_BASE_MINUTE[period], PERIOD_LENGTH_MINUTES[period]
+    m = period_t // 60
+    if m < length:
+        return f"{base + m + 1}'"
+    return f"{base + length}+{m - length + 1}'"
 
 # Pitch coordinates in metres on a 105 x 68 pitch (the SPADL convention).
 # Origin is the bottom-left corner seen from the main stand; the home team always

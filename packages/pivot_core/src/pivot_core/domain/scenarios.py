@@ -40,18 +40,24 @@ class PlantSpec(Model):
     params: dict[str, int | str] = {}
 
 
+OutcomeKey = Literal["home_win", "draw", "away_win", "home_advance"]
+
+
 class OutcomeDist(Model):
+    """Result after 90 minutes, plus who goes through when extra time and penalties apply."""
+
     home_win: Probability
     draw: Probability
     away_win: Probability
-    ci95: dict[Literal["home_win", "draw", "away_win"], tuple[Probability, Probability]]  # Wilson
+    home_advance: Probability | None = None   # knockout ties only: share of runs the home side went through
+    ci95: dict[OutcomeKey, tuple[Probability, Probability]]  # Wilson
 
 
 class SimResult(Model):
     scenario_id: str
     baseline: OutcomeDist
     counterfactual: OutcomeDist
-    significant: dict[Literal["home_win", "draw", "away_win"], bool]   # True only if CIs do not overlap
+    significant: dict[OutcomeKey, bool]   # True only if CIs do not overlap
     narrative: Narrative | None = None        # Comparator output, default version
     runtime_ms: Annotated[int, Field(ge=0)]
     executor: Literal["local_pool", "aca_jobs"]

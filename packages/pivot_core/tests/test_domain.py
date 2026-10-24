@@ -25,6 +25,9 @@ from pivot_core.domain import (
     Pivot,
     Player,
     PlayerAttributes,
+    OutcomeDist,
+    PeriodInfo,
+    Score,
     Relationship,
     StatMetric,
     StatRef,
@@ -34,6 +37,7 @@ from pivot_core.domain import (
     TrackingFrame,
     ViewerPrefs,
     area_of,
+    clock_label,
     lane_of,
     third_of,
     zone_of,
@@ -186,7 +190,7 @@ def test_team_sheet_allows_seven_to_eleven_starters():
 
 def test_tactical_shift_event_carries_the_new_sheet_and_tactics():
     t = team("away", "Rovers", "ROV")
-    e = MatchEvent(match_id="M", seq=2001, event_id="m063-s02001", t=3780, period=2,
+    e = MatchEvent(match_id="M", seq=2001, event_id="m063-s02001", t=3780, period=2, period_t=1080,
                    type="tactical_shift", team="away", team_sheet=t.sheet.model_copy(update={"formation": "5-4-1"}),
                    tactics=TeamTactics(line_height="low", press="low", counter_attack=True))
     validate("MatchEvent", e.model_dump(mode="json"))
@@ -199,7 +203,7 @@ def test_full_match_with_context_matches_the_schema():
               home=team("home", "Harbour City", "HBC"), away=team("away", "Rovers", "ROV"),
               context=context(), status="scheduled")
     data = m.model_dump(mode="json")
-    assert data["score"] == {"home": 0, "away": 0}
+    assert data["score"] == {"home": 0, "away": 0, "home_penalties": None, "away_penalties": None}
     validate("Match", data)
 
 
@@ -212,13 +216,13 @@ def test_context_effects_stay_small():
 # --- events and pitch geometry ---------------------------------------------------------
 
 def test_event_minute_zones_and_tactical_areas_are_derived():
-    e = MatchEvent(match_id="M", seq=1042, event_id="m062-s01042", t=3750, period=2,
+    e = MatchEvent(match_id="M", seq=1042, event_id="m062-s01042", t=3750, period=2, period_t=1050,
                    type="pass", team="home", player_id="h07", receiver_id="h09",
                    location=(64.2, 30.1), end_location=(88.0, 34.5), outcome="success",
                    ball_speed_kmh=52.0, under_pressure=True, possession_id=118,
                    play_pattern="counter")
     data = e.model_dump(mode="json")
-    assert (data["minute"], data["from_zone"], data["to_zone"]) == (62, [9, 5], [13, 6])
+    assert (data["minute"], data["clock_label"], data["from_zone"], data["to_zone"]) == (62, "63'", [9, 5], [13, 6])
     assert (data["third"], data["lane"], data["area"]) == ("middle", "centre", "open")
     validate("MatchEvent", data)
 
@@ -241,16 +245,16 @@ def test_areas_are_seen_from_the_attacking_side():
 
 
 def test_a_goal_is_a_shot_with_outcome_goal():
-    e = MatchEvent(match_id="M", seq=7, event_id="m038-s00007", t=2290, period=1, type="shot",
+    e = MatchEvent(match_id="M", seq=7, event_id="m038-s00007", t=2290, period=1, period_t=2290, type="shot",
                    team="away", player_id="a09", location=(14.0, 33.0), end_location=(0.0, 34.2),
                    shot_outcome="goal", xg=0.31, ball_speed_kmh=96.5, shot_end_height_m=1.9)
     validate("MatchEvent", e.model_dump(mode="json"))
     with pytest.raises(ValidationError):
-        MatchEvent(match_id="M", seq=8, event_id="x", t=1, period=1, type="goal", team="home")
+        MatchEvent(match_id="M", seq=8, event_id="x", t=1, period=1, period_t=1, type="goal", team="home")
 
 
 def test_pass_carries_difficulty_type_height_and_links():
-    e = MatchEvent(match_id="M", seq=1041, event_id="m062-s01041", t=3749, period=2, type="pass",
+    e = MatchEvent(match_id="M", seq=1041, event_id="m062-s01041", t=3749, period=2, period_t=1049, type="pass",
                    team="home", player_id="h06", receiver_id="h09", location=(48.0, 34.0),
                    end_location=(86.0, 30.0), outcome="success", success_prob=0.38,
                    pass_type="through_ball", pass_height="ground", body_part="right_foot",
@@ -258,7 +262,7 @@ def test_pass_carries_difficulty_type_height_and_links():
     validate("MatchEvent", e.model_dump(mode="json"))
     with pytest.raises(ValidationError):
         MatchEvent.model_validate({**e.model_dump(exclude={"minute", "from_zone", "to_zone", "third",
-                                                           "lane", "area"}), "success_prob": 1.2})
+                                                           "lane", "area", "clock_label"}), "success_prob": 1.2})
 
 
 def test_tracking_frame_holds_at_most_22_players_inside_the_pitch():
@@ -274,6 +278,53 @@ def test_tracking_frame_holds_at_most_22_players_inside_the_pitch():
     with pytest.raises(ValidationError):
         TrackingFrame(match_id="M", t=1, period=1, possession=None, ball={"x": 52.5, "y": 34.0},
                       players=[{"player_id": f"p{n}", "x": 1.0, "y": 1.0} for n in range(23)])
+
+
+# --- time: stoppage, extra time, shootout ----------------------------------------------
+
+@pytest.mark.parametrize("period, period_t, label", [
+    (1, 0, "1'"), (1, 2699, "45'"), (1, 2700 + 90, "45+2'"),
+    (2, 1050, "63'"), (2, 2700 + 300, "90+6'"),
+    (3, 0, "91'"), (4, 899, "120'"), (4, 920, "120+1'"), (4, 960, "120+2'"), (5, 30, "PEN"),
+])
+def test_clock_label_reads_like_a_broadcast(period, period_t, label):
+    assert clock_label(period, period_t) == label
+
+
+def test_stoppage_time_keeps_the_elapsed_clock_unique():
+    # 45+3' in the first half and 47' in the second half get different elapsed minutes.
+    first = MatchEvent(match_id="M", seq=1, event_id="a", t=2700 + 150, period=1, period_t=2700 + 150,
+                       type="pass", team="home")
+    second = MatchEvent(match_id="M", seq=2, event_id="b", t=2940 + 90, period=2, period_t=90,
+                        type="pass", team="home")
+    assert (first.clock_label, second.clock_label) == ("45+3'", "47'")
+    assert first.minute < second.minute
+
+
+def test_shootout_kick_and_final_score_on_penalties():
+    kick = MatchEvent(match_id="M", seq=3001, event_id="pen-03", t=7500, period=5, period_t=180,
+                      type="shot", team="away", player_id="a09", location=(94.0, 34.0),
+                      play_pattern="penalty", shot_outcome="saved", shootout_round=2)
+    validate("MatchEvent", kick.model_dump(mode="json"))
+    m = Match(match_id="M-ko", seed=1, home=team("home", "Harbour City", "HBC"),
+              away=team("away", "Rovers", "ROV"),
+              context=context().model_copy(update={"competition": context().competition.model_copy(
+                  update={"extra_time": True, "penalty_shootout": True})}),
+              status="finished", clock=7560, period=5,
+              periods=[PeriodInfo(period=1, start_t=0, end_t=2880, added_minutes=3),
+                       PeriodInfo(period=2, start_t=2880, end_t=5760, added_minutes=4),
+                       PeriodInfo(period=3, start_t=5760, end_t=6720, added_minutes=1),
+                       PeriodInfo(period=4, start_t=6720, end_t=7680, added_minutes=1),
+                       PeriodInfo(period=5, start_t=7680)],
+              score=Score(home=2, away=2, home_penalties=4, away_penalties=3), decided_by="penalties")
+    validate("Match", m.model_dump(mode="json"))
+
+
+def test_knockout_outcome_reports_who_goes_through():
+    d = OutcomeDist(home_win=0.41, draw=0.27, away_win=0.32, home_advance=0.55,
+                    ci95={"home_win": (0.37, 0.45), "draw": (0.23, 0.31), "away_win": (0.28, 0.36),
+                          "home_advance": (0.51, 0.59)})
+    validate("OutcomeDist", d.model_dump(mode="json"))
 
 
 # --- narratives ------------------------------------------------------------------------

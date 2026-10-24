@@ -7,11 +7,11 @@ smoother animation. Coordinates follow common.Point (metres, home attacks to x =
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import Field
 
-from .common import ClockSeconds, Model, Side, X, Y
+from .common import ClockSeconds, Model, Period, Side, X, Y
 
 FRAME_RATE_HZ = 1
 
@@ -33,8 +33,8 @@ class BallPosition(Model):
 
 class TrackingFrame(Model):
     match_id: str
-    t: ClockSeconds
-    period: Literal[1, 2]
+    t: ClockSeconds                           # elapsed time, same clock as MatchEvent.t
+    period: Period
     possession: Side | None                   # team in possession, None for a loose ball
     ball: BallPosition
     players: Annotated[list[PlayerPosition], Field(max_length=22)]   # players on the pitch only

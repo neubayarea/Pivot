@@ -13,7 +13,8 @@ from typing import Annotated, Literal
 from pydantic import Field, computed_field
 
 from .common import (
-    Area, ClockSeconds, Lane, Model, Point, Side, Third, area_of, lane_of, third_of, zone_of,
+    Area, ClockSeconds, Lane, Model, Period, PeriodSeconds, Point, Side, Third, area_of,
+    clock_label, lane_of, third_of, zone_of,
 )
 from .lineup import Substitution, TeamSheet, TeamTactics
 
@@ -21,7 +22,7 @@ EventType = Literal[
     "pass", "carry", "dribble", "shot", "save",
     "pressure", "duel", "tackle", "interception", "clearance", "block", "ball_recovery",
     "foul", "card", "offside", "injury", "substitution", "tactical_shift",
-    "kickoff", "period_end",
+    "kickoff", "added_time", "period_end",
 ]
 
 ShotOutcome = Literal["goal", "saved", "off_target", "blocked", "post"]
@@ -44,8 +45,9 @@ class MatchEvent(Model):
     match_id: str
     seq: Annotated[int, Field(ge=0)]          # strictly increasing within a match
     event_id: str                             # "m063-s01042", shown in the UI as #1042
-    t: ClockSeconds                           # also the timestamp of the matching tracking frame
-    period: Literal[1, 2]
+    t: ClockSeconds                           # elapsed time; also the key of the matching tracking frame
+    period: Period
+    period_t: PeriodSeconds                   # seconds since this period kicked off
     type: EventType
     team: Side
     player_id: str | None = None
@@ -59,6 +61,9 @@ class MatchEvent(Model):
     shot_outcome: ShotOutcome | None = None   # shots only; a goal is a shot with outcome "goal"
     xg: Annotated[float, Field(ge=0, le=1)] | None = None   # shots only
     shot_end_height_m: Annotated[float, Field(ge=0, le=10)] | None = None   # height at the goal line; the goal is 2.44 m
+    # Penalty shootout kicks are shots in period 5 with play_pattern "penalty"; this is the round (1-5, then sudden death).
+    shootout_round: Annotated[int, Field(ge=1, le=30)] | None = None
+    added_minutes: Annotated[int, Field(ge=0, le=20)] | None = None   # "added_time" events: minutes shown on the board
     pass_type: PassType | None = None         # passes only
     pass_height: PassHeight | None = None     # passes only
     body_part: BodyPart | None = None         # passes, shots, clearances
@@ -80,8 +85,14 @@ class MatchEvent(Model):
     @computed_field
     @property
     def minute(self) -> int:
-        """Match minute the event belongs to (0-based, so 62:30 is minute 62)."""
-        return min(self.t // 60, 89)
+        """Elapsed match minute (0-based, stoppage and extra time included): t // 60."""
+        return self.t // 60
+
+    @computed_field
+    @property
+    def clock_label(self) -> str:
+        """What a broadcast would show: 63', 45+2', 105+1', or PEN in the shootout."""
+        return clock_label(self.period, self.period_t)
 
     @computed_field
     @property

@@ -196,10 +196,12 @@ export interface Personality {
  */
 export interface Competition {
   competition_id: string;
+  extra_time: boolean;
   importance: number;
   level: "league" | "domestic_cup" | "continental_club" | "international_tournament" | "friendly";
   name: string;
   neutral_venue: boolean;
+  penalty_shootout: boolean;
   stage: "league" | "group" | "round_of_32" | "round_of_16" | "quarter_final" | "semi_final" | "final" | "friendly";
   tier: number;
 }
@@ -314,9 +316,11 @@ export interface Match {
   away: Team;
   clock: number;
   context: MatchContext;
+  decided_by: ("normal_time" | "extra_time" | "penalties") | null;
   home: Team;
   match_id: string;
-  period: 1 | 2;
+  period: 1 | 2 | 3 | 4 | 5;
+  periods: PeriodInfo[];
   preset: string | null;
   score: Score;
   seed: number;
@@ -599,21 +603,40 @@ export interface Relationship {
   sentiment: number;
   shared_seasons: number;
 }
+/**
+ * When each period started and ended on the elapsed clock, so any `t` can be labelled.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PeriodInfo".
+ */
+export interface PeriodInfo {
+  added_minutes: number | null;
+  end_t: number | null;
+  period: 1 | 2 | 3 | 4 | 5;
+  start_t: number;
+}
 export interface Score {
   away: number;
+  away_penalties: number | null;
   home: number;
+  home_penalties: number | null;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "MatchEvent".
  */
 export interface MatchEvent {
+  added_minutes: number | null;
   /**
    * Penalty or six-yard box `location` falls in, if any, from the acting team's view.
    */
   area: ("own_six_yard_box" | "own_box" | "opp_box" | "opp_six_yard_box" | "open") | null;
   ball_speed_kmh: number | null;
   body_part: ("left_foot" | "right_foot" | "head" | "other") | null;
+  /**
+   * What a broadcast would show: 63', 45+2', 105+1', or PEN in the shootout.
+   */
+  clock_label: string;
   end_location: [number, number] | null;
   event_id: string;
   /**
@@ -630,7 +653,7 @@ export interface MatchEvent {
     [k: string]: string;
   };
   /**
-   * Match minute the event belongs to (0-based, so 62:30 is minute 62).
+   * Elapsed match minute (0-based, stoppage and extra time included): t // 60.
    */
   minute: number;
   outcome: ("success" | "fail") | null;
@@ -651,7 +674,8 @@ export interface MatchEvent {
         | "kick_off"
       )
     | null;
-  period: 1 | 2;
+  period: 1 | 2 | 3 | 4 | 5;
+  period_t: number;
   play_pattern:
     ("open_play" | "counter" | "corner" | "free_kick" | "throw_in" | "goal_kick" | "kick_off" | "penalty") | null;
   player_id: string | null;
@@ -660,6 +684,7 @@ export interface MatchEvent {
   related_event_ids: string[];
   schema_version: 1;
   seq: number;
+  shootout_round: number | null;
   shot_end_height_m: number | null;
   shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post") | null;
   substitution: Substitution | null;
@@ -697,6 +722,7 @@ export interface MatchEvent {
     | "substitution"
     | "tactical_shift"
     | "kickoff"
+    | "added_time"
     | "period_end";
   under_pressure: boolean;
   xg: number | null;
@@ -751,6 +777,8 @@ export interface ViewerPrefs {
   language: "en" | "zh" | "es";
 }
 /**
+ * Result after 90 minutes, plus who goes through when extra time and penalties apply.
+ *
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "OutcomeDist".
  */
@@ -764,6 +792,7 @@ export interface OutcomeDist {
     [k: string]: [number, number];
   };
   draw: number;
+  home_advance: number | null;
   home_win: number;
 }
 /**
@@ -869,7 +898,9 @@ export interface Recap {
  */
 export interface Score1 {
   away: number;
+  away_penalties: number | null;
   home: number;
+  home_penalties: number | null;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -931,7 +962,7 @@ export interface ScenarioSpec {
 export interface TrackingFrame {
   ball: BallPosition;
   match_id: string;
-  period: 1 | 2;
+  period: 1 | 2 | 3 | 4 | 5;
   /**
    * @maxItems 22
    */

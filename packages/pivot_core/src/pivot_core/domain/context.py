@@ -30,6 +30,10 @@ class Competition(Model):
     stage: Stage = "league"
     importance: Annotated[int, Field(ge=1, le=5)]  # 5 = final; scales the big-match effect
     neutral_venue: bool = False
+    # What happens after a draw at 90 minutes. Knockout ties usually play 2 x 15 minutes of
+    # extra time and then a penalty shootout; league games just end.
+    extra_time: bool = False
+    penalty_shootout: bool = False
 
 
 class PreMatchCondition(Model):

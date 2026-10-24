@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from .common import ClockSeconds, Model, Side
+from .common import ClockSeconds, Model, Period, Side
 from .context import MatchContext
 from .lineup import TeamSheet, TeamTactics
 from .people import Coach, Player
@@ -27,8 +27,19 @@ class Team(Model):
 
 
 class Score(Model):
-    home: Annotated[int, Field(ge=0)] = 0
+    home: Annotated[int, Field(ge=0)] = 0     # goals in normal and extra time
     away: Annotated[int, Field(ge=0)] = 0
+    home_penalties: Annotated[int, Field(ge=0)] | None = None   # shootout only
+    away_penalties: Annotated[int, Field(ge=0)] | None = None
+
+
+class PeriodInfo(Model):
+    """When each period started and ended on the elapsed clock, so any `t` can be labelled."""
+
+    period: Period
+    start_t: ClockSeconds
+    end_t: ClockSeconds | None = None         # None while the period is being played
+    added_minutes: Annotated[int, Field(ge=0, le=20)] | None = None   # announced stoppage time
 
 
 class Match(Model):
@@ -40,6 +51,8 @@ class Match(Model):
     context: MatchContext
     status: MatchStatus
     speed: Literal[1, 5, 20, 60] = 1          # replay speed multiplier
-    clock: ClockSeconds = 0
-    period: Literal[1, 2] = 1
+    clock: ClockSeconds = 0                   # elapsed time, same clock as MatchEvent.t
+    period: Period = 1
+    periods: list[PeriodInfo] = []            # periods played so far, in order
     score: Score = Score()
+    decided_by: Literal["normal_time", "extra_time", "penalties"] | None = None   # set at full time

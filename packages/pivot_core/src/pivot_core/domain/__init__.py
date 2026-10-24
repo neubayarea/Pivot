@@ -3,15 +3,15 @@ the JSON Schema and TypeScript types in packages/contracts are generated from it
 """
 
 from .common import (
-    GRID_COLS, GRID_ROWS, PITCH_LENGTH, PITCH_WIDTH, Area, Lane, Point, Side, Third,
-    area_of, attacking_view, lane_of, third_of, zone_of,
+    GRID_COLS, GRID_ROWS, PITCH_LENGTH, PITCH_WIDTH, Area, Lane, Period, Point, Side, Third,
+    area_of, attacking_view, clock_label, lane_of, third_of, zone_of,
 )
 from .context import (
     Competition, ContextEffect, MatchContext, OffFieldEvent, PreMatchCondition,
 )
 from .events import BodyPart, EventType, MatchEvent, PassHeight, PassType, PlayPattern, ShotOutcome
 from .lineup import LineupSlot, PlayerInstruction, Substitution, TeamSheet, TeamTactics
-from .match import Match, Score, Team
+from .match import Match, PeriodInfo, Score, Team
 from .narrative import Audience, ExplanationSentence, Language, Narrative, ViewerPrefs
 from .outputs import OverlayFeed, OverlayItem, Recap
 from .people import (
@@ -29,7 +29,7 @@ from .tracking import FRAME_RATE_HZ, BallPosition, PlayerPosition, TrackingFrame
 
 # Every model exported to JSON Schema and TypeScript, in a stable order.
 CONTRACT_MODELS = (
-    Match, Team, Score,
+    Match, Team, Score, PeriodInfo,
     Player, PlayerAttributes, AttributeSummary, Personality, Coach, CoachAttributes,
     CareerStint, Relationship,
     TeamSheet, LineupSlot, TeamTactics, PlayerInstruction, Substitution,
@@ -47,13 +47,14 @@ CONTRACT_MODELS = (
 __all__ = [
     "CONTRACT_MODELS", "FRAME_RATE_HZ", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
     "ROLE_POSITION", "STAT_UNITS",
-    "area_of", "attacking_view", "lane_of", "third_of", "zone_of",
+    "area_of", "attacking_view", "clock_label", "lane_of", "third_of", "zone_of",
     "AgentTrace", "Area", "AttackingAttributes", "AttributeSummary", "Audience", "BallPosition",
     "BodyPart", "CareerStint", "Claim", "Coach", "CoachAttributes", "Competition",
     "ContextEffect", "DefendingAttributes", "Envelope", "EventType", "ExplanationSentence",
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
     "MatchEvent", "MentalityAttributes", "MinuteMetric", "MovementAttributes", "Narrative",
     "OffFieldEvent", "OutcomeDist", "OverlayFeed", "OverlayItem", "PassHeight", "PassType",
+    "Period", "PeriodInfo",
     "Personality", "Pivot", "PivotCandidate", "PlantSpec", "PlayPattern", "Player",
     "PlayerAttributes", "PlayerInstruction", "PlayerPosition", "Point", "PowerAttributes",
     "PreMatchCondition", "Recap", "Relationship", "Role", "Scenario", "ScenarioSpec", "Score",
