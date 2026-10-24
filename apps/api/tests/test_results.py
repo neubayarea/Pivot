@@ -1,5 +1,6 @@
 """Ax10: a restart reads the AI's results back from PIVOT_DATA_DIR and makes no model call for them,
-except for those that fell back to the template because the model failed: those are written again."""
+except for those that fell back to the template because the model failed: those are written again.
+Every test runs on the files and on Cosmos DB (Ax11, an in-memory fake container)."""
 
 import asyncio
 import json
@@ -9,6 +10,8 @@ from pathlib import Path
 import pytest
 
 from pivot_adapters import build_adapters
+from pivot_adapters.azure import cosmos
+from pivot_adapters.azure.fakes import FakeContainer
 from pivot_api import sims
 from pivot_api.personalize import Personalizer
 from pivot_api.sims import SPECS, build_one, paths, store_one
@@ -48,8 +51,19 @@ def sim_output():
                                      SPEC.home_formation, SPEC.away_formation))
 
 
+@pytest.fixture(params=["files", "cosmos"])
+def backend(request, monkeypatch) -> FakeContainer | None:
+    monkeypatch.setenv("PIVOT_RESULTS_BACKEND", request.param)
+    if request.param == "files":
+        return None
+    container = FakeContainer()                                   # outlives every "process" of the test
+    monkeypatch.setenv("PIVOT_COSMOS_ENDPOINT", "https://fake.documents.azure.com")
+    monkeypatch.setattr(cosmos, "open_container", container.opener)
+    return container
+
+
 @pytest.fixture
-def sim_dir(monkeypatch, sim_output, tmp_path) -> Path:
+def sim_dir(monkeypatch, sim_output, tmp_path, backend) -> Path:
     monkeypatch.setattr(sims, "simulate", lambda match: sim_output)
     return tmp_path / "sims"
 
@@ -65,7 +79,7 @@ async def start(sim_dir: Path, models, version: str = sims.SIM_VERSION):
     return adapters
 
 
-def test_restart_serves_every_pivot_without_calling_the_model(sim_dir):
+def test_restart_serves_every_pivot_without_calling_the_model(sim_dir, backend):
     async def run():
         first = await start(sim_dir, AnsweringModel())
         pivots = await first.matches.list_pivots(SPEC.match_id)
@@ -79,6 +93,8 @@ def test_restart_serves_every_pivot_without_calling_the_model(sim_dir):
         models = ScriptedModelClient()                            # any call raises ModelUnavailable
         second = await start(sim_dir, models)
         assert models.calls == []
+        if backend is not None:
+            assert backend.calls["query"] == 2 and backend.calls["delete"] == 0   # one partition read per start
         assert await second.matches.list_pivots(SPEC.match_id) == pivots
         assert await second.traces.list_traces(SPEC.match_id) == traces
         assert await second.matches.get_narrative(SPEC.match_id, confirmed.pivot_id, ZH) == zh.pivot.narrative
@@ -108,14 +124,18 @@ def test_fallbacks_from_a_failing_model_are_written_again_next_start(sim_dir):
     asyncio.run(run())
 
 
-def test_changed_sim_version_does_not_reuse_old_results(sim_dir):
+def test_changed_sim_version_does_not_reuse_old_results(sim_dir, backend):
     async def run():
         await start(sim_dir, AnsweringModel(), "v1")
         models = AnsweringModel()
         second = await start(sim_dir, models, "v2")
         assert models.calls                                       # the worker wrote them again
-        results = Path(os.environ["PIVOT_DATA_DIR"]) / "results" / SPEC.match_id
-        assert [p.name for p in results.iterdir()] == ["v2"]
+        if backend is None:
+            results = Path(os.environ["PIVOT_DATA_DIR"]) / "results" / SPEC.match_id
+            assert [p.name for p in results.iterdir()] == ["v2"]
+        else:
+            assert {item["version"] for item in backend.items.values()} == {"v2"}
+            assert not (Path(os.environ["PIVOT_DATA_DIR"]) / "results").exists()     # nothing on disk
         assert await second.matches.list_pivots(SPEC.match_id)
     asyncio.run(run())
 

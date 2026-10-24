@@ -132,6 +132,10 @@ class ResultCache(Protocol):
         """
         ...
 
+    async def close(self) -> None:
+        """Release the connection to the store, if it has one, at shutdown."""
+        ...
+
 
 class LivePublisher(Protocol):
     """Push envelopes to every browser watching a match (Web PubSub group per match in the cloud)."""
