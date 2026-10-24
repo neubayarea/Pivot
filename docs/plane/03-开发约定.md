@@ -27,6 +27,7 @@
 ## 契约
 
 - `packages/pivot_core/src/pivot_core/domain` 里的模型是唯一的事实来源，由 B 负责。
+- 每个字段的值怎么来（事件什么时候产生、阈值、指标怎么算），以《数据定义说明》`docs/data-definitions.md` 为准；测试函数名带上定义编号，例如 `test_attr_001_under_pressure_radius`。
 - 10/23 20:00 冻结后，只允许新增可选字段。改动契约的 PR 标题要加 `[contract]`，并在群里通知全员。
 - 改完运行 `uv run scripts/export_contracts.py` 和 `pnpm --filter @pivot/contracts gen:types`，把生成的文件一起提交。
 

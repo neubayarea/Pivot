@@ -27,6 +27,16 @@ type Props = {
   onPrefsChange: (prefs: ViewerPrefs) => void;
 };
 
+// Both names render; CSS swaps to the three-letter code when the bar is short of room.
+function TeamName({ name, short }: { name: string; short: string }) {
+  return (
+    <span className="tm">
+      <span className="tm-full">{name}</span>
+      <span className="tm-short">{short}</span>
+    </span>
+  );
+}
+
 export default function TopBar({ prefs, onPrefsChange }: Props) {
   const { match, teams, pivots } = useMatch();
 
@@ -36,10 +46,10 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
         Pivot
       </Link>
       <span className="score" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
-        <span className="tm">{teams.home.name}</span>
+        <TeamName name={teams.home.name} short={teams.home.short_name} />
         <span className="sc num">{match.score.home}</span>
         <span className="sc num">{match.score.away}</span>
-        <span className="tm">{teams.away.name}</span>
+        <TeamName name={teams.away.name} short={teams.away.short_name} />
       </span>
       <span className="clock">{match.clockLabel}</span>
       {STATUS[match.status]}
@@ -50,12 +60,12 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
         value={prefs.audience}
         onChange={(audience) => onPrefsChange({ ...prefs, audience })}
       />
-      {/* Team and player focus pickers: placeholders until C08. */}
-      <span className="pick" title="Team">
-        ♥ <em>{teams.home.short_name} ▾</em>
+      {/* Team and player focus pickers: placeholders until C08. Labels hide on mid-width screens. */}
+      <span className="pick" title={`Team: ${teams.home.short_name}`}>
+        ♥ <em><span className="pick-label">{teams.home.short_name} </span>▾</em>
       </span>
-      <span className="pick" title="Player">
-        ★ <em>Moreau ▾</em>
+      <span className="pick" title="Player: Moreau">
+        ★ <em><span className="pick-label">Moreau </span>▾</em>
       </span>
       <Segmented
         label="Language"

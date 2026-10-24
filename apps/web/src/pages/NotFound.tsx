@@ -1,12 +1,13 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import Card from "../components/Card";
+import StateCard from "../components/StateCard";
 
-export default function NotFound() {
+type Props = { title?: string; children?: ReactNode };
+
+export default function NotFound({ title = "Page not found", children }: Props) {
   return (
-    <div className="grid3">
-      <Card title="Page not found">
-        <Link to="/">← Back to the live board</Link>
-      </Card>
-    </div>
+    <StateCard title={title} actions={<Link className="btn pri" to="/">← Back to the live board</Link>}>
+      {children ?? <p>There is nothing at this address. The link may be mistyped or from an older version.</p>}
+    </StateCard>
   );
 }

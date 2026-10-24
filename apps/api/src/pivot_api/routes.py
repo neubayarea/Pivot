@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from pivot_adapters import Adapters
-from pivot_core.domain import Match, MatchEvent, MinuteMetric, Pivot
+from pivot_core.domain import Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot
+
+from . import overlay
 
 router = APIRouter(prefix="/api")
 
@@ -67,6 +69,31 @@ async def get_pivot(request: Request, pivot_id: str) -> Pivot:
     if pivot is None:
         raise HTTPException(404, f"pivot {pivot_id!r} not found")
     return pivot
+
+
+async def _overlay_timeline(request: Request, match_id: str) -> tuple[Match, OverlayTimeline, list[MatchEvent]]:
+    match = await _match_or_404(request, match_id)
+    repo = _adapters(request).matches
+    events = await repo.list_events(match_id)
+    return match, overlay.build_timeline(match, await repo.list_pivots(match_id), events), events
+
+
+@router.get("/matches/{match_id}/overlay")
+async def get_overlay(request: Request, match_id: str, clock: str | None = None) -> OverlayFrame:
+    """Score bug and the pivot card (if any) to show at `clock` ("63:20" or seconds); default is the live clock."""
+    try:
+        t = None if clock is None else overlay.parse_clock(clock)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from None
+    match, timeline, events = await _overlay_timeline(request, match_id)
+    return overlay.frame_at(match, timeline, events, match.clock if t is None else t)
+
+
+@router.get("/matches/{match_id}/overlay/timeline")
+async def get_overlay_timeline(request: Request, match_id: str) -> OverlayTimeline:
+    """Every overlay card of the match with its show and hide clock, for recordings and the preview page."""
+    _, timeline, _ = await _overlay_timeline(request, match_id)
+    return timeline
 
 
 @router.post("/negotiate")
