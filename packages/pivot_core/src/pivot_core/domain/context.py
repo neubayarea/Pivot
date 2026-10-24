@@ -107,7 +107,7 @@ EffectSource = Literal[
 ]
 EffectTarget = Literal[
     "composure", "motivation", "concentration", "fitness", "aggression", "chemistry",
-    "card_risk", "error_rate",
+    "card_risk", "error_rate", "stamina_decay", "injury_risk",
 ]
 
 

@@ -237,7 +237,16 @@ export interface ContextEffect {
   source_ref: string | null;
   subject_id: string;
   target:
-    "composure" | "motivation" | "concentration" | "fitness" | "aggression" | "chemistry" | "card_risk" | "error_rate";
+    | "composure"
+    | "motivation"
+    | "concentration"
+    | "fitness"
+    | "aggression"
+    | "chemistry"
+    | "card_risk"
+    | "error_rate"
+    | "stamina_decay"
+    | "injury_risk";
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

@@ -132,7 +132,9 @@ def context() -> MatchContext:
         relationships=[Relationship(relationship_id="r1", person_id="a09", other_id="h-coach",
                                     kind="former_coach", shared_seasons=3, sentiment=-0.6)],
         effects=[ContextEffect(effect_id="e1", subject_id="a09", source="off_field", source_ref="n1",
-                               target="fitness", delta=-0.05, note="late night before the match")],
+                               target="stamina_decay", delta=0.04, note="late night before the match"),
+                 ContextEffect(effect_id="e2", subject_id="a09", source="fatigue", target="injury_risk",
+                               delta=0.15, note="third match in eight days")],
     )
 
 

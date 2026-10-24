@@ -561,7 +561,9 @@
             "aggression",
             "chemistry",
             "card_risk",
-            "error_rate"
+            "error_rate",
+            "stamina_decay",
+            "injury_risk"
           ],
           "type": "string"
         }
