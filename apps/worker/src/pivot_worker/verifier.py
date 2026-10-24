@@ -7,7 +7,8 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 2. evidence: every evidence id exists and falls from 8 minutes before the pivot to 5 after
 3. numbers: every claim recomputes within tolerance in its stat's unit, and every number in the
    text is one of them, on a team and a stat the sentence is talking about
-4. direction: rose/fell words match the sign of the change between two claimed windows
+4. direction: rose/fell words match the sign of the change between two claimed windows, "from A to B"
+   follows the order of the windows, and doubled/halved-style words match the ratio
 5. significance: "significant"-style words only when the what-if intervals do not overlap
 6. wording: no banned terms, and no jargon in fan versions
 7. context: every `context_ids` entry is a real item of the match context (D13)
@@ -33,9 +34,10 @@ EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
 # Allowed gap between a claimed value and the recomputed one, per unit.
 TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km": 0.05, "ratio": 0.05}
 
-# Numbers in running text, with their sign. Match minutes ("61'", "45+2'", "第61分钟") are not claims
-# and are skipped. A digit right after a Chinese character still counts ("从3上升到9"), and a dash
-# between two numbers ("3-1") is not a minus sign.
+# Numbers in running text, with their sign. Match minutes ("61'", "45+2'", "第61分钟") and lengths of
+# time ("five minutes") are not claims and are skipped. A digit right after a Chinese character still
+# counts ("从3上升到9"), numbers written as words count too ("从三上升到十二", "de tres a doce"), and a
+# dash between two numbers ("3-1") is not a minus sign.
 _NUMBER = re.compile(r"(?<![A-Za-z\d.])-?\d+(?:\.\d+)?")
 
 
@@ -54,15 +56,25 @@ def _compute(stats: StatSource, ref: StatRef) -> float | None:
         return None
 
 
+# How far the real ratio may be from a magnitude word: "doubled" accepts 1.5x to 2.5x, "tripled"
+# 2.5x to 3.5x, "halved" 0.375x to 0.625x.
+def _magnitude_fits(factor: float, before: float, after: float) -> bool:
+    return before != 0 and abs(after / before - factor) <= 0.25 * min(factor, 2.0)
+
+
 def _plain(text: str, lang: str) -> str:
-    return lang_rules.normalise(text, lang).replace("\u2212", "-")    # the typographic minus sign
+    """The text with digits for every number that is a claim, and nothing else numeric."""
+    text = lang_rules.normalise(text, lang).replace("\u2212", "-")    # the typographic minus sign
+    text = lang_rules.mask_minutes(text)
+    for w in _has_word(text, tuple(lang_rules.magnitude_words(lang))):   # "翻了两番" is not the number 2
+        text = re.sub(re.escape(w), " ", text, flags=re.IGNORECASE)
+    return lang_rules.DURATION.sub(" ", lang_rules.spell_out(text, lang))
 
 
 def _numbers(plain: str, team_names: Iterable[str] = ()) -> list[tuple[int, str]]:
-    """Numbers and where they start. Digits in team names ("FC 1899") and match minutes are not numbers."""
+    """Numbers in `_plain` text and where they start. Digits in team names ("FC 1899") are not numbers."""
     for name in team_names:
         plain = plain.replace(name, " " * len(name))
-    plain = lang_rules.MINUTES.sub(lambda m: " " * len(m.group()), plain)
     return [(m.start(), m.group()) for m in _NUMBER.finditer(plain)]
 
 
@@ -131,20 +143,35 @@ def _has_word(text: str, words: tuple[str, ...]) -> list[str]:
     return found
 
 
-def _deltas(claims: list[Claim], stats: StatSource) -> list[float]:
-    """Changes between claims on the same stat in two different windows, earlier to later."""
+def _key(c: Claim) -> tuple:
+    return c.stat_ref.metric, c.stat_ref.team, c.stat_ref.player_id
+
+
+def _pairs(claims: list[Claim], stats: StatSource) -> list[tuple[float, float]]:
+    """Recomputed (earlier, later) values of claims on the same stat in two different windows."""
     by_stat: dict[tuple, list[Claim]] = {}
     for c in claims:
-        key = (c.stat_ref.metric, c.stat_ref.team, c.stat_ref.player_id)
-        by_stat.setdefault(key, []).append(c)
-    deltas = []
+        by_stat.setdefault(_key(c), []).append(c)
+    pairs = []
     for group in by_stat.values():
         group = sorted(group, key=lambda c: c.stat_ref.window)
         for a, b in zip(group, group[1:]):
             va, vb = _compute(stats, a.stat_ref), _compute(stats, b.stat_ref)
             if a.stat_ref.window != b.stat_ref.window and va is not None and vb is not None:
-                deltas.append(vb - va)
-    return deltas
+                pairs.append((va, vb))
+    return pairs
+
+
+def _backwards(text: str, lang: str, claims: list[Claim]) -> list[tuple[str, str]]:
+    """"from A to B" phrases where A is the later window's value and B the earlier one's."""
+    wrong = []
+    for a, b in lang_rules.FROM_TO[lang].findall(_plain(text, lang)):
+        orders = {ca.stat_ref.window < cb.stat_ref.window
+                  for ca in claims if _matches(a, ca, None) for cb in claims
+                  if _matches(b, cb, None) and _key(ca) == _key(cb) and ca.stat_ref.window != cb.stat_ref.window}
+        if orders == {False}:
+            wrong.append((a, b))
+    return wrong
 
 
 def verify(
@@ -173,6 +200,7 @@ def verify(
 
     lang = narrative.prefs.language
     up_words, down_words = lang_rules.up_words(lang), lang_rules.down_words(lang)
+    magnitude_words = lang_rules.magnitude_words(lang)
     max_words, max_headline = lang_rules.MAX_SENTENCE[lang], lang_rules.MAX_HEADLINE[lang]
     unit_name = "characters" if lang == "zh" else "words"
     names = dict(team_names or {})
@@ -240,10 +268,19 @@ def verify(
                 issue("number_mismatch", f"The number {n} in sentence {i + 1} only matches {claimed}, but the "
                       f"sentence has it {' and '.join(said)}; cite the claim for what the sentence says.", i)
 
-        # 4. Direction words.
+        # 4. Direction words, the order of "from A to B", and magnitude words.
+        pairs = _pairs(list(s.claims), stats)
+        for a, b in _backwards(s.text, lang, list(s.claims)):
+            issue("direction_mismatch", f"'{a} to {b}' is backwards: {b} is the earlier value and {a} the later one.", i)
+        for w, factor in magnitude_words.items():
+            if not _has_word(s.text, (w,)) or not pairs:
+                continue
+            if not any(_magnitude_fits(factor, va, vb) for va, vb in pairs):
+                ratios = ", ".join(f"{vb / va:.2g}x" if va else "from zero" for va, vb in pairs)
+                issue("number_mismatch", f"'{w}' means about {factor:g}x, but the change was {ratios}.", i)
         up, down = _has_word(s.text, up_words), _has_word(s.text, down_words)
         if up or down:
-            deltas = _deltas(list(s.claims), stats) or (outcome_deltas(s.text) if outcome_deltas else [])
+            deltas = [vb - va for va, vb in pairs] or (outcome_deltas(s.text) if outcome_deltas else [])
             if not deltas:
                 issue("direction_mismatch",
                       f"'{(up or down)[0]}' needs two claims on the same stat in different windows"
