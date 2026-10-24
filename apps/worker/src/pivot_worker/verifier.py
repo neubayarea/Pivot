@@ -29,7 +29,7 @@ from .vocabulary import JARGON
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
 
 # Allowed gap between a claimed value and the recomputed one, per unit.
-TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km": 0.05}
+TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km": 0.05, "ratio": 0.05}
 
 # Numbers in running text. Match minutes ("61'", "45+2'", "第61分钟") are not claims and are
 # skipped. A digit right after a Chinese character still counts ("从3上升到9").
