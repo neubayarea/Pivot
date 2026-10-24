@@ -153,7 +153,7 @@ a.pv:hover { background: var(--pv-gold-soft); }
 .s2-head .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .s2-head .acts { grid-row: span 2; display: flex; gap: 10px; align-items: center; }
 .pitch { display: block; width: 100%; height: auto; border: 2px solid var(--pv-ink); }
-.pitch .pl { transition: transform .25s linear; }
+.pitch .pl { transition: transform var(--pv-step, .25s) linear; }
 .pitch-cap { font-family: var(--pv-label); font-size: 13px; min-height: 1.6em; }
 .scrub { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; user-select: none; align-items: center; font-family: var(--pv-label); font-weight: 700; font-size: 12px; }
 .scrub .play { width: 30px; height: 26px; border: 2px solid var(--pv-ink); background: var(--pv-sheet); cursor: pointer; font-size: 11px; }

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
 import { involves } from "../data/view";
 import { PITCH } from "../fixtures/pivot-detail";
@@ -16,9 +17,14 @@ type Props = {
   label: string;
   /** The followed player (C08): gold outline on his dot, a gold ring on actions he took part in. */
   focus?: string | null;
+  /** Side and shirt number of each player; without it, ids like the fixture's "hcy-11" are read. */
+  who?: (id: string) => { home: boolean; shirt: string };
+  /** How long the dots glide to the next frame; the time between frames, so motion looks continuous. */
+  stepMs?: number;
 };
 
-const shirt = (id: string) => id.slice(id.lastIndexOf("-") + 1);
+// The fixture's ids are "<club>-<shirt>", Harbour City's club code "hcy".
+const fromId = (id: string) => ({ home: id.startsWith("hcy"), shirt: id.slice(id.lastIndexOf("-") + 1) });
 const px = ([x, y]: [number, number]) => [x * S, y * S] as const;
 
 function Markings() {
@@ -75,21 +81,22 @@ function Action({ e, on, mine }: { e: MatchEvent; on: boolean; mine: boolean }) 
   );
 }
 
-export default function Pitch({ frame, actions, selected, label, focus = null }: Props) {
+export default function Pitch({ frame, actions, selected, label, focus = null, who = fromId, stepMs }: Props) {
   const ball = px([frame.ball.x, frame.ball.y]);
+  const style = stepMs ? ({ "--pv-step": `${Math.round(stepMs)}ms` } as CSSProperties) : undefined;
   return (
-    <svg className="pitch" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+    <svg className="pitch" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} style={style}>
       <Markings />
       {actions.filter((e) => e.event_id !== selected).map((e) => <Action key={e.event_id} e={e} on={false} mine={involves(e, focus)} />)}
       {frame.players.map((p) => {
-        const home = p.player_id.startsWith("hcy");
+        const { home, shirt } = who(p.player_id);
         const followed = p.player_id === focus;
         return (
           <g key={p.player_id} className={`pl${followed ? " followed" : ""}`} style={{ transform: `translate(${p.x * S}px, ${p.y * S}px)` }}>
             {followed && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />}
             <circle r={9} fill={home ? "var(--pv-home)" : "var(--pv-away)"} stroke={followed ? "var(--pv-gold)" : "var(--pv-ink)"} strokeWidth={followed ? 3 : 2} />
             <text y={4} fontSize={10} fontWeight={700} textAnchor="middle" fill="var(--pv-sheet)">
-              {shirt(p.player_id)}
+              {shirt}
             </text>
           </g>
         );

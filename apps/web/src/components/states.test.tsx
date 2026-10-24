@@ -137,6 +137,13 @@ describe("live board states", () => {
     expect(html).not.toContain("70′");
   });
 
+  it("has a pitch board once the match has started", () => {
+    const html = render(<LiveBoard />, matchView());
+    expect(html).toContain("On the pitch");
+    expect(html).toContain("No player positions for this match.");
+    expect(render(<LiveBoard />, matchView({}, "scheduled"))).not.toContain("On the pitch");
+  });
+
   it("puts one timeline over the whole replay, and none on the live feed", () => {
     const playback = { playing: true, setPlaying: () => {}, setSpeed: () => {}, restart: () => {}, seek: () => {}, end: 5700 };
     const html = render(<Playback />, matchView({ playback, pivots: [pivot(63, "confirmed")] }));

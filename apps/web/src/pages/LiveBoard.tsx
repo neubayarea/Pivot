@@ -4,6 +4,7 @@ import EventFeed from "../components/EventFeed";
 import Kicker from "../components/Kicker";
 import MatchStats from "../components/MatchStats";
 import MomentumChart from "../components/MomentumChart";
+import PitchBoard from "../components/PitchBoard";
 import PivotList, { pivotHeadline } from "../components/PivotList";
 import StartDemoButton from "../components/StartDemoButton";
 import WhyItTurned from "../components/WhyItTurned";
@@ -81,6 +82,7 @@ export default function LiveBoard() {
               <div className="empty-box muted">{t("board.momentumEmpty")}</div>
             )}
           </Card>
+          {!scheduled && <PitchBoard key={match.match_id} />}
           <div className="lower">
             <WhyItTurned pivot={latest} selected={evidence} onToggle={toggle} />
             <Card title={t("board.events")} note={t("board.autoScroll")}>
