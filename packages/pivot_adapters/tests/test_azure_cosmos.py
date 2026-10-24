@@ -163,3 +163,31 @@ def test_real_account_round_trip(make_pivot):
 
 def test_container_uses_the_shared_throughput():
     assert "offer_throughput" not in inspect.getsource(cosmos)    # a throughput of its own costs money
+
+
+def test_what_if_scenarios_and_their_traces_are_kept(make_trace):
+    from pivot_core.domain import OutcomeDist, Scenario, ScenarioSpec, SimResult
+
+    even = OutcomeDist(home_win=.4, draw=.3, away_win=.3,
+                       ci95={"home_win": (.3, .5), "draw": (.2, .4), "away_win": (.2, .4)})
+    scenario = Scenario(
+        scenario_id="m1:sabc", match_id="m1", status="completed", done=400,
+        spec=ScenarioSpec(type="remove_goal", pivot_id="m1:p55", target_event_id="e1", at_minute=55, seed_base=7),
+        result=SimResult(scenario_id="m1:sabc", baseline=even, counterfactual=even, significant={},
+                         narrative=narrative(ViewerPrefs(), source="template"), runtime_ms=1, executor="local_pool"))
+
+    async def run():
+        container = FakeContainer()
+        first = store(container)
+        await first.store_scenario("m1", "k1", scenario)            # not opened yet: not written
+        assert container.items == {} and first.scenarios("m1") == {}
+        await first.open_match("m1", "v1")
+        await first.store_scenario("m1", "k1", scenario)
+        await first.traces.append_trace(make_trace("whatif:m1:sabc:x", 0).model_copy(update={"input_ref": "m1:sabc"}))
+        await first.traces.append_trace(make_trace("whatif:m1:sgone:x", 0).model_copy(update={"input_ref": "m1:sgone"}))
+
+        second = store(container)
+        await second.open_match("m1", "v1")
+        assert second.scenarios("m1") == {"k1": scenario}           # a template comparison is kept too
+        assert [t.input_ref for t in await second.traces.list_traces("m1")] == ["m1:sabc"]
+    asyncio.run(run())
