@@ -242,3 +242,6 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `PIVOT_DATA_DIR` | 生成的比赛和 AI 写的结果存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
 | `PIVOT_RESULTS` | `1`（默认）把 AI 写的结果存到 `PIVOT_DATA_DIR/results/`，重启后读回来不再调模型；`0` 只放在内存里 |
 | `PIVOT_RESULTS_TAG` | 默认空。改成一个新值再部署，就丢掉存下的结果、让 AI 全部重写，见 [比赛数据放在哪](match-data.md) |
+| `PIVOT_RESULTS_BACKEND` | AI 写的结果存哪：`files`（默认）存硬盘；`cosmos` 存 Azure Cosmos DB，启动时连不上就自动退回硬盘，见 [存到 Cosmos DB](match-data.md#存到-azure-cosmos-db) |
+| `PIVOT_COSMOS_ENDPOINT` | `cosmos` 时必填，Cosmos 账号地址，例如 `https://pivot-cosmos.documents.azure.com:443/`。用上面的 `AZURE_*` 服务主体登录，不用填密钥 |
+| `PIVOT_COSMOS_DATABASE` | 默认 `pivot` |
