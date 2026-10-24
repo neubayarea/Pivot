@@ -4,7 +4,7 @@
 name = "pivot"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = ["pivot-core", "pivot-api", "pivot-worker", "pivot-simulator"]
+dependencies = ["pivot-core", "pivot-adapters", "pivot-api", "pivot-worker", "pivot-simulator"]
 
 [dependency-groups]
 dev = ["pytest>=8.3", "jsonschema>=4.23", "ruff>=0.7", "httpx>=0.27"]
@@ -13,10 +13,11 @@ dev = ["pytest>=8.3", "jsonschema>=4.23", "ruff>=0.7", "httpx>=0.27"]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/pivot_core", "apps/api", "apps/worker", "apps/simulator"]
+members = ["packages/pivot_core", "packages/pivot_adapters", "apps/api", "apps/worker", "apps/simulator"]
 
 [tool.uv.sources]
 pivot-core = { workspace = true }
+pivot-adapters = { workspace = true }
 pivot-api = { workspace = true }
 pivot-worker = { workspace = true }
 pivot-simulator = { workspace = true }
@@ -31,12 +32,12 @@ extend-exclude = ["packages/contracts"]
 select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["pivot_core", "pivot_api", "pivot_worker", "pivot_simulator"]
+known-first-party = ["pivot_core", "pivot_adapters", "pivot_api", "pivot_worker", "pivot_simulator"]
 
 [tool.ruff.lint.per-file-ignores]
 # The B01 domain models group their imports by hand; leave them alone until B tidies them.
 "packages/pivot_core/src/pivot_core/domain/*" = ["I001"]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/pivot_core/tests", "apps/api/tests", "apps/worker/tests", "apps/simulator/tests"]
+testpaths = ["packages/pivot_core/tests", "packages/pivot_adapters/tests", "apps/api/tests", "apps/worker/tests", "apps/simulator/tests"]
 addopts = "--import-mode=importlib"
