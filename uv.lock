@@ -1085,6 +1085,8 @@ dependencies = [
     { name = "fastapi" },
     { name = "pivot-adapters" },
     { name = "pivot-core" },
+    { name = "pivot-simulator" },
+    { name = "pivot-worker" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -1094,6 +1096,8 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "pivot-adapters", editable = "packages/pivot_adapters" },
     { name = "pivot-core", editable = "packages/pivot_core" },
+    { name = "pivot-simulator", editable = "apps/simulator" },
+    { name = "pivot-worker", editable = "apps/worker" },
     { name = "uvicorn", specifier = ">=0.32" },
     { name = "websockets", specifier = ">=13" },
 ]

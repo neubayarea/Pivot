@@ -5,3 +5,7 @@
 **/node_modules
 docs
 *.html
+**/dist
+.pytest_cache
+.ruff_cache
+**/.env
