@@ -1,4 +1,5 @@
 import { useMatch, type Speed } from "../data/match";
+import { useT } from "../i18n";
 import Button from "./Button";
 import Segmented from "./Segmented";
 
@@ -12,22 +13,23 @@ const SPEEDS = [
 /** Replay controls for the local fixture, so demo recordings can pause and rewind. Hidden on the live feed. */
 export default function Playback() {
   const { match, playback } = useMatch();
+  const t = useT();
   if (!playback) return null;
   const done = match.status === "finished";
   return (
     <span className="playback">
-      <span className="lbl">Replay</span>
+      <span className="lbl">{t("playback.replay")}</span>
       <Button onClick={() => playback.setPlaying(!playback.playing)} disabled={done}>
-        {playback.playing ? "❚❚ Pause" : "▶ Play"}
+        {t(playback.playing ? "playback.pause" : "playback.play")}
       </Button>
       <Segmented
-        label="Replay speed"
+        label={t("playback.speed")}
         options={SPEEDS}
         value={String(match.speed) as (typeof SPEEDS)[number]["value"]}
         onChange={(v) => playback.setSpeed(Number(v) as Speed)}
       />
       <Button variant="ghost" onClick={playback.restart}>
-        Restart
+        {t("playback.restart")}
       </Button>
     </span>
   );

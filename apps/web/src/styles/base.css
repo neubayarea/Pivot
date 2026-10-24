@@ -208,3 +208,19 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 400; font-size: 1
   .stat .bar i, .pitch .pl { transition: none; }
   .btn.pri:active { transform: none; }
 }
+
+/* Chinese (Cx2). Alfa Slab One and Archivo have no CJK glyphs: Chinese falls back to Noto Sans SC
+   (system CJK sans if the web font is blocked), and display text takes its 900 weight so headlines
+   keep the programme's heft. font-synthesis stops the browser faking a bold Alfa for Latin letters
+   and digits. Wide uppercase tracking reads as gaps between Chinese characters, so it is narrowed. */
+:root:lang(zh) {
+  --pv-display: "Alfa Slab One", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --pv-body: "Archivo", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --pv-label: "Archivo Narrow", "Archivo", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+:lang(zh) :is(.brand, .score, .headline .x, .pv .m, .s2-head .min, .s2-head h2, table.ba td.big, .ov .mn, .ov .bd .x),
+:lang(zh) .why.drop p:first-of-type::first-letter { font-weight: 900; font-synthesis: none; }
+:lang(zh) :is(.kicker, .stamp, .btn, .seg button, .card h3, .back, .placeholder, .playback .lbl) { letter-spacing: .04em; }
+
+/* "Showing English": the API could not write the explanation in the viewer's language. */
+.lang-note { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .04em; color: var(--pv-warn-fg); background: var(--pv-warn-bg); padding: 3px 8px; margin: 8px 0 4px; display: inline-block; }

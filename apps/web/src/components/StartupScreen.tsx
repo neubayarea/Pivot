@@ -1,15 +1,11 @@
 import { REPLAY_URL } from "../data/demo";
 import { useConnection, type Connection } from "../data/match";
+import { useT } from "../i18n";
 import Button from "./Button";
 import Skeleton from "./Skeleton";
 import StartDemoButton from "./StartDemoButton";
 import StateCard from "./StateCard";
 
-const replay = (
-  <a className="btn" href={REPLAY_URL}>
-    Watch the demo replay
-  </a>
-);
 
 /** S1 before the live feed has a match: card outlines while loading, else what went wrong and what to do. */
 export default function StartupScreen() {
@@ -19,44 +15,50 @@ export default function StartupScreen() {
 
 export function Startup({ conn }: { conn: Connection }) {
   const { problem } = conn;
+  const t = useT();
+  const replay = (
+    <a className="btn" href={REPLAY_URL}>
+      {t("startup.replay")}
+    </a>
+  );
   if (problem?.kind === "no-matches") {
     return (
-      <StateCard title="No matches yet" actions={<StartDemoButton />}>
-        <p>Start the demo match to see Pivot find the turning points as they happen.</p>
+      <StateCard title={t("startup.noMatches.title")} actions={<StartDemoButton />}>
+        <p>{t("startup.noMatches.body")}</p>
       </StateCard>
     );
   }
   if (problem?.kind === "not-found") {
     return (
-      <StateCard title="Match not found" tone="error" actions={<>
-        <a className="btn pri" href="/">Open the latest match</a>
+      <StateCard title={t("startup.notFound.title")} tone="error" actions={<>
+        <a className="btn pri" href="/">{t("startup.notFound.latest")}</a>
         {replay}
       </>}>
-        <p>There is no match called “{problem.matchId}”. The link may be from an older demo.</p>
+        <p>{t("startup.notFound.body", { id: problem.matchId })}</p>
       </StateCard>
     );
   }
   if (conn.state === "failed") {
     return (
-      <StateCard title="Live feed unavailable" tone="error" actions={<>
-        <Button variant="primary" onClick={() => window.location.reload()}>Reload</Button>
+      <StateCard title={t("startup.failed.title")} tone="error" actions={<>
+        <Button variant="primary" onClick={() => window.location.reload()}>{t("common.reload")}</Button>
         {replay}
       </>}>
-        <p>{conn.reason ?? "The server closed the live connection"}.</p>
+        <p>{conn.reason ?? t("startup.failed.reason")}.</p>
       </StateCard>
     );
   }
   if (problem) {
-    const retry = <Button variant="primary" onClick={conn.retryNow}>Retry now</Button>;
-    const trying = conn.attempt > 0 && <p className="muted">Trying again automatically (attempt {conn.attempt}).</p>;
+    const retry = <Button variant="primary" onClick={conn.retryNow}>{t("common.retryNow")}</Button>;
+    const trying = conn.attempt > 0 && <p className="muted">{t("startup.trying", { n: conn.attempt })}</p>;
     return problem.kind === "server" ? (
-      <StateCard title="The Pivot server hit a problem" tone="error" actions={<>{retry}{replay}</>}>
-        <p>It answered with an error (HTTP {problem.status}). The match data could not be loaded.</p>
+      <StateCard title={t("startup.server.title")} tone="error" actions={<>{retry}{replay}</>}>
+        <p>{t("startup.server.body", { status: problem.status })}</p>
         {trying}
       </StateCard>
     ) : (
-      <StateCard title="Can’t reach the Pivot server" tone="error" actions={<>{retry}{replay}</>}>
-        <p>The live match service is not answering. Check the network, or watch the recorded demo meanwhile.</p>
+      <StateCard title={t("startup.unreachable.title")} tone="error" actions={<>{retry}{replay}</>}>
+        <p>{t("startup.unreachable.body")}</p>
         {trying}
       </StateCard>
     );
