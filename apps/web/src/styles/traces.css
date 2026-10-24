@@ -1,0 +1,22 @@
+/* S4 · Agent trace list. Uses the Matchday Programme tokens from tokens.css. */
+.trace-list { padding: 14px 20px 20px; }
+.trace-chain { gap: 4px; }
+.trace-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.trace-head .sp { flex: 1; }
+.trace-step { border-top: 1px solid var(--pv-hair); }
+.trace-step summary { display: grid; grid-template-columns: 64px 190px 1fr 64px; gap: 10px; align-items: baseline;
+  padding: 6px 4px; cursor: pointer; list-style: none; font-size: var(--pv-fs-sm); }
+.trace-step summary::-webkit-details-marker { display: none; }
+.trace-step.bad summary { background: var(--pv-warn-bg); color: var(--pv-warn-fg); }
+.trace-step .at, .trace-step .tier { color: var(--pv-ink-2); }
+.trace-step.bad .at, .trace-step.bad .tier { color: inherit; }
+.trace-step .ms { text-align: right; }
+.trace-step dl { display: grid; grid-template-columns: 80px 1fr; gap: 2px 10px; padding: 6px 4px 10px 78px;
+  font-size: var(--pv-fs-xs); }
+.trace-step dt { font-family: var(--pv-label); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.trace-step pre { margin: 0; white-space: pre-wrap; font-size: var(--pv-fs-xs); }
+@media (max-width: 640px) {
+  .trace-step summary { grid-template-columns: 56px 1fr 56px; }
+  .trace-step .what { grid-column: 1 / -1; }
+  .trace-step dl { padding-left: 4px; }
+}

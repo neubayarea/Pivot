@@ -16,6 +16,9 @@ export default function PivotDetail() {
         <Kicker>Pivot · {id}</Kicker>
         <span className="x">Substitution flipped the left flank</span>
         <span className="sp" />
+        <Link to={`/trace/${id}`} className="btn">
+          Agent trace
+        </Link>
         <Link to={`/whatif/${id}`} className="btn pri">
           What if…
         </Link>

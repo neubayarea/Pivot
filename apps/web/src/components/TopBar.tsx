@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import { useMatch } from "../data/match";
-import Button from "./Button";
 import Segmented from "./Segmented";
 import Stamp from "./Stamp";
 
@@ -64,7 +63,9 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
         value={prefs.language}
         onChange={(language) => onPrefsChange({ ...prefs, language })}
       />
-      <Button>Trace {pivots.length}</Button>
+      <Link to="/trace" className="btn">
+        Trace {pivots.length}
+      </Link>
     </header>
   );
 }
