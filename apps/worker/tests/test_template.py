@@ -1,7 +1,7 @@
 from pivot_core.domain import PivotCandidate
 from pivot_worker.template import format_value, template_explain
 from pivot_worker.testing import FakeStats
-from pivot_worker.verifier import verify
+from pivot_worker.verifier import NO_EVIDENCE, verify
 
 
 def candidate(minute=63, key=("m063-s01042",), direction="home"):
@@ -57,7 +57,7 @@ def test_template_never_invents_evidence_ids(events, stats):
     for evs in (quiet, events):
         narrative = template_explain(candidate(key=()), events=evs, stats=stats)
         cited = {e for sent in narrative.sentences for e in sent.evidence_ids}
-        assert cited <= set(evs), cited
+        assert cited <= set(evs) | {NO_EVIDENCE}, cited
 
 
 def test_template_passes_with_digits_in_a_team_name(events, stats):

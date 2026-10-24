@@ -4,7 +4,8 @@ It builds up to three sentences from the key events and one recomputed stat chan
 what it writes passes the same Verifier. With a focus team it tells the story from their side,
 even when the match turned against them; fan versions write only the newer value of the change.
 It must never raise: if anything goes wrong it returns a minimal card that still fits the
-Narrative contract.
+Narrative contract. It only cites events in the Verifier's evidence window; when there are none,
+it writes only the momentum sentence, which needs no evidence, and cites `NO_EVIDENCE`.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from .context import ContextItem, involved_in
 from .languages import FAN_LABELS, LABELS, MAX_HEADLINE, PHRASES, length
-from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
+from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, NO_EVIDENCE, StatSource
 from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 
 # Stats the template tries, in order of preference when changes are equal.
@@ -72,9 +73,12 @@ def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, e
         return None
     _, metric, refs, a, b = best
     unit = STAT_UNITS[metric]
-    phrases = PHRASES[lang]
+    phrases, label = PHRASES[lang], _label(metric, lang, fan)
+    verb = "rose" if b > a else "fell"
+    if f"{verb}_pl" in phrases and label.startswith(("los ", "las ")):     # plural subject, plural verb
+        verb += "_pl"
     text = phrases["stat_fan" if fan else "stat"].format(
-        team=team, owner=possessive(team), label=_label(metric, lang, fan), verb=phrases["rose" if b > a else "fell"],
+        team=team, owner=possessive(team), label=label, verb=phrases[verb],
         a=format_value(a, unit), b=format_value(b, unit))
     if lang == "es":
         text = text[0].upper() + text[1:]
@@ -89,18 +93,6 @@ def _evidence(c: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[Match
         return keyed
     nearby = sorted((e for e in events.values() if lo <= e.minute <= hi), key=lambda e: abs(e.minute - c.minute))
     return nearby[:1]
-
-
-def _closest_ids(c: PivotCandidate, events: Mapping[str, MatchEvent] | None) -> list[str]:
-    """Real event ids to cite when nothing falls in the evidence window: never made-up ones.
-
-    Such a card cannot pass the Verifier's window check, but it points at real data.
-    """
-    known = [e for e in c.key_event_ids if events is None or e in events]
-    if known:
-        return known[:1]
-    closest = sorted((events or {}).values(), key=lambda e: abs(e.minute - c.minute))
-    return [e.event_id for e in closest[:1]] or list(c.key_event_ids[:1])
 
 
 def _context_sentence(trigger: MatchEvent, context: Sequence[ContextItem],
@@ -149,7 +141,7 @@ def template_explain(
     try:
         phrases = PHRASES[lang]
         found = _evidence(candidate, events)
-        ids = [e.event_id for e in found][:4] or _closest_ids(candidate, events)
+        ids = [e.event_id for e in found][:4] or [NO_EVIDENCE]
         headline, first = _trigger(found[0], names[found[0].team], lang) if found else ("", "")
         sentences = []
         if first:
@@ -157,7 +149,8 @@ def template_explain(
         note = _context_sentence(found[0], context, ids[:1]) if found and lang == "en" else None
         if note:
             sentences.append(note)
-        stat = _stat_sentence(candidate, side, team, stats, ids[:4], fan=prefs.audience == "fan", lang=lang)
+        stat = _stat_sentence(candidate, side, team, stats, ids[:4], fan=prefs.audience == "fan",
+                              lang=lang) if found else None
         if stat:
             sentences.append(stat)
         momentum = "momentum" if gaining else "momentum_lost"
@@ -169,12 +162,11 @@ def template_explain(
     except Exception:
         phrases = PHRASES.get(lang, PHRASES["en"])
         try:
-            ids = _closest_ids(candidate, events)
+            ids = [e.event_id for e in _evidence(candidate, events)][:1]
         except Exception:
-            ids = list(candidate.key_event_ids[:1])
+            ids = []
         return Narrative(
             prefs=prefs, headline=phrases["fallback_h"],
-            sentences=[ExplanationSentence(text=phrases["fallback"],
-                                           evidence_ids=ids or [candidate.match_id])],
+            sentences=[ExplanationSentence(text=phrases["fallback"], evidence_ids=ids or [NO_EVIDENCE])],
             source="template", verifier_attempts=verifier_attempts, chain_id=chain_id,
         )

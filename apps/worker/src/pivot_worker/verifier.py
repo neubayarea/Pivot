@@ -5,11 +5,12 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 
 1. shape: sentence count, words per sentence, evidence count, headline length and numbers
 2. evidence: every evidence id exists and falls from 8 minutes before the pivot to 5 after
-   (comparisons instead cite only the ids they were offered)
+   (comparisons instead cite only the ids they were offered; with no event in that window, a
+   template sentence without numbers cites `NO_EVIDENCE`)
 3. numbers: every claim recomputes within tolerance in its stat's unit, and every number in the
    text is one of them, on a team and a stat the sentence is talking about
 4. direction: rose/fell words match the sign of the change between two claimed windows, "from A to B"
-   follows the order of the windows, and doubled/halved-style words match the ratio; in
+   follows the order of the windows, and doubled/halved and "three times as many" style words match the ratio; in
    comparisons, "more likely" style words match the outcome they describe
 5. significance: "significant"-style words only about outcomes whose what-if intervals do not overlap
 6. wording: no banned terms; fan versions use no jargon and at most one number per sentence
@@ -34,6 +35,9 @@ from .context import ContextItem, involved_in, mentions
 from .vocabulary import STAT_TERMS
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
+# What a template sentence cites when no event falls in the evidence window: it is accepted only
+# then, only from the template, and only for a sentence with no numbers, claims or context.
+NO_EVIDENCE = "none"
 
 # Allowed gap between a claimed value and the recomputed one, per unit.
 TOLERANCE = {"count": 0.0, "pct": 0.5, "xg": 0.01, "index": 0.02, "m": 0.5, "km": 0.05, "ratio": 0.05}
@@ -84,11 +88,17 @@ def _magnitude_fits(factor: float, before: float, after: float) -> bool:
 
 def _plain(text: str, lang: str) -> str:
     """The text with digits for every number that is a claim, and nothing else numeric."""
-    text = lang_rules.normalise(text, lang).replace("\u2212", "-")    # the typographic minus sign
+    return lang_rules.mask_multiples(lang_rules.DURATION.sub(" ", _spelled(text, lang)), lang)
+
+
+def _spelled(text: str, lang: str) -> str:
+    """`_plain` before lengths of time and multiples are taken out."""
+    text = lang_rules.normalise(text, lang)
+    text = text.replace("\u2212", "-").replace("\u2013", "-")       # typographic minus signs ("−0.32", "–0.32")
     text = lang_rules.mask_minutes(text)
     for w in _has_word(text, tuple(lang_rules.magnitude_words(lang))):   # "翻了两番" is not the number 2
         text = re.sub(re.escape(w), " ", text, flags=re.IGNORECASE)
-    return lang_rules.DURATION.sub(" ", lang_rules.spell_out(text, lang))
+    return lang_rules.spell_out(text, lang)
 
 
 def _numbers(plain: str, team_names: Iterable[str] = ()) -> list[tuple[int, str]]:
@@ -283,12 +293,17 @@ def verify(
         issue("banned_term", f"Remove '{term}' from the headline.")
     shown = {item.context_id: item for item in context}
     off_pitch = lang_rules.off_pitch_words(lang)
-    if (story := _has_word(narrative.headline, off_pitch)) and not any(s.context_ids for s in narrative.sentences):
+
+    def off_pitch_story(text: str) -> list[str]:
+        return _has_word(text, off_pitch) or lang_rules.off_pitch_names(text)
+
+    if (story := off_pitch_story(narrative.headline)) and not any(s.context_ids for s in narrative.sentences):
         issue("context_invalid", f"The headline tells an off-pitch story ('{story[0]}'); cite its context item "
               "in a sentence, or drop it.")
 
     lo, hi = pivot_minute - EVIDENCE_BEFORE, pivot_minute + EVIDENCE_AFTER
     any_significant = bool(significant) and any(significant.values())
+    nothing_to_cite = not any(lo <= e.minute <= hi for e in events.values()) if allowed_evidence is None else False
 
     for i, s in enumerate(narrative.sentences):
         words = lang_rules.length(s.text, lang)
@@ -300,6 +315,10 @@ def verify(
         # 2. Evidence.
         for eid in s.evidence_ids:
             event = events.get(eid)
+            if eid == NO_EVIDENCE and event is None and s.evidence_ids == [NO_EVIDENCE] and nothing_to_cite \
+                    and narrative.source == "template" and not s.claims and not s.context_ids \
+                    and not numbers_in(s.text, lang, names.values()) and not lang_rules.number_words(s.text, lang):
+                continue
             if event is None:
                 issue("evidence_invalid", f"Evidence {eid} does not exist.", i)
             elif allowed_evidence is not None:
@@ -348,8 +367,13 @@ def verify(
         pairs = _pairs(list(s.claims), stats)
         for a, b in _backwards(s.text, lang, list(s.claims)):
             issue("direction_mismatch", f"'{a} to {b}' is backwards: {b} is the earlier value and {a} the later one.", i)
-        for w, factor in magnitude_words.items():
-            if not _has_word(s.text, (w,)) or not pairs:
+        magnitudes = [(w, f) for w, f in magnitude_words.items() if _has_word(s.text, (w,))]
+        multiples = lang_rules.multiples(_spelled(s.text, lang), lang)
+        if multiples and not pairs:
+            issue("number_mismatch", f"'{multiples[0][0].strip()}' needs two claims on the same stat in different "
+                  "windows.", i)
+        for w, factor in magnitudes + multiples:
+            if not pairs:
                 continue
             if not any(_magnitude_fits(factor, va, vb) for va, vb in pairs):
                 ratios = ", ".join(f"{vb / va:.2g}x" if va else "from zero" for va, vb in pairs)
@@ -396,7 +420,7 @@ def verify(
                 who = " and ".join(item.subject_names or item.subject_ids)
                 issue("context_invalid", f"Context {cid} is about {who}, who is neither named in sentence {i + 1} "
                       "nor in its evidence.", i)
-        if not s.context_ids and (story := _has_word(s.text, off_pitch)):
+        if not s.context_ids and (story := off_pitch_story(s.text)):
             issue("context_invalid", f"'{story[0]}' tells an off-pitch story; cite the match-context item it "
                   "comes from, or drop it.", i)
 
