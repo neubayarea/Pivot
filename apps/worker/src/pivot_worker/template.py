@@ -23,7 +23,7 @@ CANDIDATE_METRICS = ("threat_total", "passes_final_third", "box_entries", "shots
 # Fan wording that reads as a noun after "Rovers'"; xG is left out because its unit is jargon.
 FAN_METRICS = ("threat_total", "passes_final_third", "shots")
 COMPARE_MINUTES = 5
-_DECIMALS = {"count": 0, "pct": 0, "xg": 2, "index": 2, "m": 0, "km": 1}
+_DECIMALS = {"count": 0, "pct": 0, "xg": 2, "index": 2, "m": 0, "km": 1, "ratio": 1}
 
 
 def format_value(value: float, unit: str) -> str:
