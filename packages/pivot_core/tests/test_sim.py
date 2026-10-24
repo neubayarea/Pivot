@@ -1,9 +1,12 @@
 """Simulator checks. Test names carry the data-definition or QA rule they cover."""
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from pivot_core.domain import MatchEvent, TrackingFrame
+from pivot_core.domain import STAT_UNITS, MatchEvent, TrackingFrame
 from pivot_core.domain.common import PITCH_LENGTH, PITCH_WIDTH
 from pivot_core.sim import DEMO_1021, build_demo_match, simulate
 from pivot_core.sim.engine import xg_model
@@ -152,3 +155,12 @@ def test_b02_demo_preset_is_labelled_and_repeatable():
     a = simulate(m, plants=list(DEMO_1021.plants))
     b = simulate(DEMO_1021.build(), plants=list(DEMO_1021.plants))
     assert a.match.score == b.match.score and len(a.events) == len(b.events)
+
+def test_b02_demo_fixture_has_the_23_team_stats_for_match_and_halves():
+    path = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert [r["scope"] for r in data["team_stats"]] == ["match", "first_half", "second_half"]
+    for row in data["team_stats"]:
+        for team in ("home", "away"):
+            assert set(row[team]) == set(STAT_UNITS)
+            assert all(v is not None for v in row[team].values())
