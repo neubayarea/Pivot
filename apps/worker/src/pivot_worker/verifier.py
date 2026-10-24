@@ -9,6 +9,7 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 4. direction: rose/fell words match the sign of the change between two claimed windows
 5. significance: "significant"-style words only when the what-if intervals do not overlap
 6. wording: no banned terms, and no jargon in fan versions
+7. context: every `context_ids` entry is a real item of the match context (D13)
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -16,7 +17,7 @@ Issue messages are written for the Explainer, which gets them back on a retry.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from typing import Protocol
 
 from pivot_core.domain import MatchEvent, Narrative, StatRef, Verdict, VerifierIssue
@@ -87,12 +88,14 @@ def verify(
     stats: StatSource,
     significant: Mapping[str, bool] | None = None,
     outcome_deltas: Callable[[str], list[float]] | None = None,
+    context_ids: Collection[str] = frozenset(),
     max_sentences: int = 3,
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
 
     `outcome_deltas` is for comparisons: given a sentence, it returns the change in each
     outcome the sentence mentions, so "more likely" style words can be checked without claims.
+    `context_ids` are the ids of the match-context items the writer was shown (context.py).
     """
     issues: list[VerifierIssue] = []
 
@@ -167,5 +170,10 @@ def verify(
         for term in _has_word(s.text, banned):
             hint = " Fan versions use everyday words." if term in JARGON else ""
             issue("banned_term", f"Remove '{term}' from sentence {i + 1}.{hint}", i)
+
+        # 7. Context.
+        for cid in s.context_ids:
+            if cid not in context_ids:
+                issue("context_invalid", f"Context {cid} is not in the match context; cite only listed items.", i)
 
     return Verdict(passed=not issues, issues=issues)

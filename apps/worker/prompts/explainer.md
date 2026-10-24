@@ -26,7 +26,11 @@ Return one JSON object that matches this schema, and nothing else:
   exactly from the stat sheet in the request; never compute or estimate a number yourself.
   If the stat sheet does not have the number, do not write it. Match minutes written as
   `61'` are not numbers and need no claim.
-- `context_ids`: leave empty unless the request lists match context you are allowed to cite.
+- `context_ids`: the request may list `match_context`: off-pitch facts such as a player back at
+  a former club, a feud, or news before the match. When a sentence relies on one, and only
+  when the evidence involves that person, put its `id` in `context_ids` (at most 3). Never
+  mention off-pitch facts that are not listed, and never invent an id. Use context to add the
+  human story, not to replace the on-pitch evidence.
 
 ## Rules the Verifier enforces
 

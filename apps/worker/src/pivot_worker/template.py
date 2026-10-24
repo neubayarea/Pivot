@@ -8,11 +8,12 @@ returns a minimal card that still fits the Narrative contract.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotCandidate, StatRef, ViewerPrefs
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
+from .context import ContextItem, involved_in
 from .languages import LABELS, MAX_HEADLINE, PHRASES
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
 from .vocabulary import STAT_TERMS, UNIT_SUFFIX
@@ -85,6 +86,17 @@ def _evidence(c: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[Match
     return nearby[:1]
 
 
+def _context_sentence(trigger: MatchEvent, context: Sequence[ContextItem],
+                      evidence: list[str]) -> ExplanationSentence | None:
+    """Cite the first context item about someone in the trigger event, if it reads cleanly."""
+    people = involved_in(trigger)
+    for item in context:
+        text = f"Off the pitch: {item.text}."
+        if people & set(item.subject_ids) and not re.search(r"\d", item.text) and len(text.split()) <= 30:
+            return ExplanationSentence(text=text, evidence_ids=evidence, context_ids=[item.context_id])
+    return None
+
+
 def possessive(name: str) -> str:
     return f"{name}'" if name.endswith("s") else f"{name}'s"
 
@@ -107,6 +119,7 @@ def template_explain(
     prefs: ViewerPrefs | None = None,
     chain_id: str | None = None,
     verifier_attempts: int = 0,
+    context: Sequence[ContextItem] = (),
 ) -> Narrative:
     prefs = prefs or ViewerPrefs()
     lang = prefs.language
@@ -120,6 +133,9 @@ def template_explain(
         sentences = []
         if first:
             sentences.append(ExplanationSentence(text=first, evidence_ids=ids[:1]))
+        note = _context_sentence(found[0], context, ids[:1]) if found and lang == "en" else None
+        if note:
+            sentences.append(note)
         stat = _stat_sentence(candidate, team, stats, ids[:4], fan=prefs.audience == "fan", lang=lang)
         if stat:
             sentences.append(stat)
