@@ -56,6 +56,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+        if app.state.adapters.results is not None:
+            await app.state.adapters.results.close()
 
 
 app = FastAPI(title="Pivot API", lifespan=lifespan)

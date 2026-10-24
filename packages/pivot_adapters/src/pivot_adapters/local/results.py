@@ -1,8 +1,9 @@
-"""The AI's results on disk for the local profile: pivots, personalised narratives and agent traces (Ax10).
+"""The AI's results kept across restarts: pivots, personalised narratives and agent traces (Ax10).
 
 Reads still come from the in-memory repositories. On top of them, every pivot, narrative version
-and trace of an *opened* match is also written to its own JSON file, and opening the match again
-after a restart reads them back, so the worker skips those candidates and makes no model call:
+and trace of an *opened* match is also written to a backend, and opening the match again after a
+restart reads them back, so the worker skips those candidates and makes no model call. The backend
+is a folder on disk here (`ResultFiles`), or Cosmos DB (`pivot_adapters.azure.cosmos`, Ax11):
 
   <root>/<match_id>/<version>/pivots/<pivot_id>.json
   <root>/<match_id>/<version>/narratives/<pivot_id>.<prefs hash>.json
@@ -16,7 +17,7 @@ that cannot be read is logged and skipped, and a failed write is logged and the 
 
 Only what the model actually produced is served again: a pivot that fell back to the template
 because a call failed (`fell_back`), with its traces and narrative versions, and every template
-narrative version, are dropped on read-back, so that start asks the model again.
+narrative version, are dropped on read-back and deleted from the backend, so that start asks the model again.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ import shutil
 from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from urllib.parse import quote
 
 from pydantic import BaseModel
@@ -41,80 +42,114 @@ from .store import InMemoryMatchRepository, InMemoryTraceRepository
 
 log = logging.getLogger("pivot_adapters.results")
 
+KINDS = ("pivots", "narratives", "traces")
+Stored = dict[str, list[tuple[str, Any]]]     # kind -> (backend's handle on the item, its JSON), in name order
+
 
 def _name(id_: str) -> str:
     return quote(id_, safe="-_")              # "M-seed-101:p63" -> "M-seed-101%3Ap63", reversible and path-safe
 
 
-class ResultFiles:
-    """Owns the result folder, and the two repositories that write into it."""
+class ResultBackend(Protocol):
+    """Where a `ResultStore` keeps the JSON of each result. `key` is the match's version plus the tag."""
 
-    def __init__(self, root: Path, tag: str = "") -> None:
-        self.root = root
+    async def connect(self) -> None:
+        """Check the backend can be used; raising makes the store use its fallback instead."""
+
+    async def load(self, match_id: str, key: str) -> Stored:
+        """Everything stored for this version of the match; the other versions of it are deleted."""
+
+    async def delete(self, match_id: str, key: str, handles: list[str]) -> None: ...
+
+    async def write(self, match_id: str, key: str, kind: str, name: str, data: dict) -> None:
+        """Store one result, replacing the one of the same name. Logs and returns on failure."""
+
+    async def close(self) -> None: ...
+
+
+class ResultStore:
+    """The two repositories that write into a backend, and the read-back of an opened match."""
+
+    def __init__(self, backend: ResultBackend, tag: str = "", fallback: ResultBackend | None = None) -> None:
+        self.backend = backend
         self.tag = tag
-        self._dirs: dict[str, Path] = {}      # match_id -> folder of its opened version
-        self.matches = FileBackedMatchRepository(self)
-        self.traces = FileBackedTraceRepository(self)
+        self._fallback = fallback             # used instead when `backend` cannot connect
+        self._connected = False
+        self._lock = asyncio.Lock()
+        self._keys: dict[str, str] = {}       # match_id -> its opened version
+        self.matches = StoredMatchRepository(self)
+        self.traces = StoredTraceRepository(self)
 
     async def open_match(self, match_id: str, version: str) -> int:
         """Read back what was stored for this version of the match and keep storing there. Returns the pivot count."""
+        await self._connect()
         key = f"{version}-{self.tag}" if self.tag else version
-        folder = self.root / _name(match_id) / _name(key)
-        pivots, narratives, traces = await asyncio.to_thread(self._read, folder)
+        try:
+            stored = await self.backend.load(match_id, key)
+        except Exception:                     # a store that cannot be read must not stop the match
+            log.warning("could not read back the results of %s; the model writes them again", match_id,
+                        exc_info=True)
+            stored = {}
+        pivots, narratives, traces, drop = keep(match_id, stored)
+        if drop:
+            log.info("%s: %d stored results fell back without the model; written again this run", match_id, len(drop))
+            try:
+                await self.backend.delete(match_id, key, drop)
+            except Exception:
+                log.warning("could not remove dropped results of %s", match_id, exc_info=True)
         for pivot in pivots:
             await InMemoryMatchRepository.upsert_pivot(self.matches, pivot)
         for pivot_id, narrative in narratives:
             await InMemoryMatchRepository.upsert_narrative(self.matches, match_id, pivot_id, narrative)
         for trace in traces:
             await InMemoryTraceRepository.append_trace(self.traces, trace)
-        self._dirs[match_id] = folder
-        try:                                  # results of other versions of this match are never read again
-            for old in folder.parent.iterdir() if folder.parent.is_dir() else ():
-                if old != folder and old.is_dir():
-                    shutil.rmtree(old, ignore_errors=True)
-        except OSError:
-            log.warning("could not clear old results of %s", match_id, exc_info=True)
-        log.debug("%s: read back %d pivots, %d narratives, %d traces from %s", match_id, len(pivots),
-                  len(narratives), len(traces), folder)
+        self._keys[match_id] = key
+        log.debug("%s: read back %d pivots, %d narratives, %d traces", match_id, len(pivots), len(narratives),
+                  len(traces))
         return len(pivots)
 
-    def write(self, match_id: str, kind: str, name: str, data: dict) -> None:
-        folder = self._dirs.get(match_id)
-        if folder is None:
-            return
-        path = folder / kind / f"{name}.json"
-        tmp = path.with_name(path.name + ".tmp")
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-            os.replace(tmp, path)             # a half-written file never replaces a good one
-        except OSError:
-            log.warning("could not write %s; kept in memory only", path, exc_info=True)
+    async def write(self, match_id: str, kind: str, name: str, data: dict) -> None:
+        key = self._keys.get(match_id)
+        if key is not None:
+            await self.backend.write(match_id, key, kind, name, data)
 
-    def _read(self, folder: Path) -> tuple[list[Pivot], list[tuple[str, Narrative]], list[AgentTrace]]:
-        """What is worth serving again; the files of everything else are deleted, so the worker writes it anew."""
-        pivots = _parse(folder / "pivots", Pivot.model_validate)
-        narratives = _parse(folder / "narratives",
-                            lambda d: (d["pivot_id"], Narrative.model_validate(d["narrative"])))
-        traces = _parse(folder / "traces", AgentTrace.model_validate)
-        chains: defaultdict[str | None, list[AgentTrace]] = defaultdict(list)
-        for _, t in sorted(traces, key=lambda pt: pt[1].step):
-            chains[t.chain_id].append(t)
-        kept = {p.pivot_id for _, p in pivots if not fell_back(p, chains[p.chain_id])}
-        drop = [path for path, p in pivots if p.pivot_id not in kept]
-        drop += [path for path, (pivot_id, n) in narratives if pivot_id not in kept or n.source != "llm"]
-        drop += [path for path, t in traces if t.input_ref not in kept]
-        for path in drop:
+    async def close(self) -> None:
+        await self.backend.close()
+
+    async def _connect(self) -> None:
+        async with self._lock:
+            if self._connected:
+                return
+            self._connected = True
             try:
-                path.unlink(missing_ok=True)
-            except OSError:
-                log.warning("could not remove %s", path, exc_info=True)
-        if drop:
-            log.info("%s: %d result files fell back without the model; written again this run", folder, len(drop))
-        dropped = set(drop)
-        return ([p for path, p in pivots if path not in dropped],
-                [n for path, n in narratives if path not in dropped],
-                [t for path, t in traces if path not in dropped])
+                await self.backend.connect()
+            except Exception as exc:          # the site starts whatever the store does
+                if self._fallback is None:
+                    raise
+                log.warning("results backend %s unavailable (%s); keeping the AI's results on disk instead",
+                            type(self.backend).__name__, exc)
+                self.backend = self._fallback
+                await self.backend.connect()
+
+
+def keep(match_id: str, stored: Stored) -> tuple[list[Pivot], list[tuple[str, Narrative]], list[AgentTrace], list[str]]:
+    """What is worth serving again, and the handles of everything else, which the backend deletes."""
+    pivots = _parse(match_id, stored.get("pivots", ()), Pivot.model_validate)
+    narratives = _parse(match_id, stored.get("narratives", ()),
+                        lambda d: (d["pivot_id"], Narrative.model_validate(d["narrative"])))
+    traces = _parse(match_id, stored.get("traces", ()), AgentTrace.model_validate)
+    chains: defaultdict[str | None, list[AgentTrace]] = defaultdict(list)
+    for _, t in sorted(traces, key=lambda ht: ht[1].step):
+        chains[t.chain_id].append(t)
+    kept = {p.pivot_id for _, p in pivots if not fell_back(p, chains[p.chain_id])}
+    drop = [h for h, p in pivots if p.pivot_id not in kept]
+    drop += [h for h, (pivot_id, n) in narratives if pivot_id not in kept or n.source != "llm"]
+    drop += [h for h, t in traces if t.input_ref not in kept]
+    dropped = set(drop)
+    return ([p for h, p in pivots if h not in dropped],
+            [n for h, n in narratives if h not in dropped],
+            [t for h, t in traces if h not in dropped],
+            drop)
 
 
 def fell_back(pivot: Pivot, chain: list[AgentTrace]) -> bool:
@@ -131,13 +166,13 @@ def fell_back(pivot: Pivot, chain: list[AgentTrace]) -> bool:
     return not (before and before[-1].agent == "verifier" and before[-1].status == "rejected")
 
 
-def _parse[T](folder: Path, parse: Callable[[Any], T]) -> list[tuple[Path, T]]:
+def _parse[T](match_id: str, items, parse: Callable[[Any], T]) -> list[tuple[str, T]]:
     out = []
-    for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
+    for handle, data in items:
         try:
-            out.append((path, parse(json.loads(path.read_text(encoding="utf-8")))))
-        except (OSError, ValueError, KeyError, TypeError) as exc:   # ValidationError is a ValueError
-            log.warning("skipping unreadable result file %s: %s", path, exc)
+            out.append((handle, parse(data)))
+        except (ValueError, KeyError, TypeError) as exc:   # ValidationError is a ValueError
+            log.warning("%s: skipping unreadable result %s: %s", match_id, handle, exc)
     return out
 
 
@@ -145,33 +180,94 @@ def _dump(model: BaseModel) -> dict:
     return model.model_dump(mode="json", round_trip=True)
 
 
-class FileBackedMatchRepository(InMemoryMatchRepository):
-    """In-memory match data; pivots and narrative versions of opened matches are also written to disk."""
+class ResultFiles(ResultStore):
+    """The results of opened matches as JSON files under `root`."""
 
-    def __init__(self, files: ResultFiles) -> None:
+    def __init__(self, root: Path, tag: str = "") -> None:
+        super().__init__(FileResults(root), tag)
+        self.root = root
+
+
+class FileResults:
+    """`ResultBackend` on a folder: one JSON file per result, one folder per match and version."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+
+    async def connect(self) -> None:
+        pass
+
+    async def close(self) -> None:
+        pass
+
+    def _folder(self, match_id: str, key: str) -> Path:
+        return self.root / _name(match_id) / _name(key)
+
+    async def load(self, match_id: str, key: str) -> Stored:
+        return await asyncio.to_thread(self._load, self._folder(match_id, key))
+
+    def _load(self, folder: Path) -> Stored:
+        stored: Stored = {kind: [] for kind in KINDS}
+        for kind in KINDS:
+            for path in sorted((folder / kind).glob("*.json")) if (folder / kind).is_dir() else ():
+                try:
+                    stored[kind].append((str(path), json.loads(path.read_text(encoding="utf-8"))))
+                except (OSError, ValueError) as exc:
+                    log.warning("skipping unreadable result file %s: %s", path, exc)
+        try:                                  # results of other versions of this match are never read again
+            for old in folder.parent.iterdir() if folder.parent.is_dir() else ():
+                if old != folder and old.is_dir():
+                    shutil.rmtree(old, ignore_errors=True)
+        except OSError:
+            log.warning("could not clear old results in %s", folder.parent, exc_info=True)
+        return stored
+
+    async def delete(self, match_id: str, key: str, handles: list[str]) -> None:
+        for path in handles:
+            try:
+                Path(path).unlink(missing_ok=True)
+            except OSError:
+                log.warning("could not remove %s", path, exc_info=True)
+
+    async def write(self, match_id: str, key: str, kind: str, name: str, data: dict) -> None:
+        path = self._folder(match_id, key) / kind / f"{name}.json"
+        tmp = path.with_name(path.name + ".tmp")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            os.replace(tmp, path)             # a half-written file never replaces a good one
+        except OSError:
+            log.warning("could not write %s; kept in memory only", path, exc_info=True)
+
+
+class StoredMatchRepository(InMemoryMatchRepository):
+    """In-memory match data; pivots and narrative versions of opened matches are also stored."""
+
+    def __init__(self, store: ResultStore) -> None:
         super().__init__()
-        self._files = files
+        self._store = store
 
     async def upsert_pivot(self, pivot: Pivot) -> None:
         await super().upsert_pivot(pivot)
-        self._files.write(pivot.match_id, "pivots", _name(pivot.pivot_id), _dump(pivot))
+        await self._store.write(pivot.match_id, "pivots", _name(pivot.pivot_id), _dump(pivot))
 
     async def upsert_narrative(self, match_id: str, pivot_id: str, narrative: Narrative) -> None:
         await super().upsert_narrative(match_id, pivot_id, narrative)
         if narrative.source != "llm":         # a template version is free to write again, and the model may do better
             return
         prefs = hashlib.sha256(narrative.prefs.model_dump_json().encode()).hexdigest()[:12]
-        self._files.write(match_id, "narratives", f"{_name(pivot_id)}.{prefs}",
-                          {"pivot_id": pivot_id, "narrative": _dump(narrative)})
+        await self._store.write(match_id, "narratives", f"{_name(pivot_id)}.{prefs}",
+                                {"pivot_id": pivot_id, "narrative": _dump(narrative)})
 
 
-class FileBackedTraceRepository(InMemoryTraceRepository):
-    """In-memory traces; those of opened matches are also written to disk."""
+class StoredTraceRepository(InMemoryTraceRepository):
+    """In-memory traces; those of opened matches are also stored."""
 
-    def __init__(self, files: ResultFiles) -> None:
+    def __init__(self, store: ResultStore) -> None:
         super().__init__()
-        self._files = files
+        self._store = store
 
     async def append_trace(self, trace: AgentTrace) -> None:
         await super().append_trace(trace)
-        self._files.write(trace.match_id, "traces", _name(trace.trace_id), _dump(trace))
+        await self._store.write(trace.match_id, "traces", _name(trace.trace_id), _dump(trace))
+
