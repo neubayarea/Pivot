@@ -10,7 +10,10 @@ from .context import (
     Competition, ContextEffect, HeadToHead, MatchContext, OffFieldEvent, PastMeeting,
     PreMatchCondition, TeamForm,
 )
-from .events import BodyPart, EventType, MatchEvent, PassHeight, PassType, PlayPattern, ShotOutcome
+from .events import (
+    BodyPart, EventType, MatchEvent, PassHeight, PassTechnique, PassType, PlayPattern,
+    ShotOutcome, ShotTechnique,
+)
 from .lineup import (
     LineupSlot, PlayerInstruction, SetPieceTactics, Substitution, TeamSheet, TeamTactics,
 )
@@ -60,7 +63,7 @@ __all__ = [
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
     "MatchEvent", "MentalityAttributes", "MinuteMetric", "MovementAttributes", "Narrative",
     "OffFieldEvent", "OutcomeDist", "PastMeeting", "PlayerMatchStats", "Referee", "SetPieceTactics",
-    "TeamForm", "VarReview", "OverlayFeed", "OverlayItem", "PassHeight", "PassType",
+    "TeamForm", "VarReview", "OverlayFeed", "OverlayItem", "PassHeight", "PassTechnique", "PassType", "ShotTechnique",
     "Period", "PeriodInfo",
     "Personality", "Pivot", "PivotCandidate", "PlantSpec", "PlayPattern", "Player",
     "PlayerAttributes", "PlayerInstruction", "PlayerPosition", "Point", "PowerAttributes",

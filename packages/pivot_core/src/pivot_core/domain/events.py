@@ -41,6 +41,11 @@ PassHeight = Literal["ground", "low", "high"]   # low = off the grass but below 
 Delivery = Literal["inswing", "outswing", "straight"]   # crosses, corners and free kicks into the box
 BodyPart = Literal["left_foot", "right_foot", "head", "other"]
 DuelType = Literal["aerial", "ground"]
+# StatsBomb shot techniques.
+ShotTechnique = Literal[
+    "normal", "volley", "half_volley", "lob", "backheel", "diving_header", "overhead_kick",
+]
+PassTechnique = Literal["normal", "chip", "flick_on", "lay_off", "backheel", "outside_foot"]
 
 # What the keeper did in a "goalkeeper" event (modelled on StatsBomb's goalkeeper event types).
 KeeperAction = Literal[
@@ -71,6 +76,10 @@ class MatchEvent(Model):
     shot_outcome: ShotOutcome | None = None   # shots only; a goal is a shot with outcome "goal"
     xg: Annotated[float, Field(ge=0, le=1)] | None = None   # shots only
     shot_end_height_m: Annotated[float, Field(ge=0, le=10)] | None = None   # height at the goal line; the goal is 2.44 m
+    shot_technique: ShotTechnique | None = None   # shots only
+    pass_technique: PassTechnique | None = None   # passes only
+    first_time: bool = False                  # shot or pass struck without a controlling touch
+    deflected: bool = False                   # pass or shot touched by another player on its way
     # Penalty shootout kicks are shots in period 5 with play_pattern "penalty"; this is the round (1-5, then sudden death).
     shootout_round: Annotated[int, Field(ge=1, le=30)] | None = None
     added_minutes: Annotated[int, Field(ge=0, le=20)] | None = None   # "added_time" events: minutes shown on the board

@@ -1283,6 +1283,10 @@
           "default": false,
           "type": "boolean"
         },
+        "deflected": {
+          "default": false,
+          "type": "boolean"
+        },
         "delivery": {
           "anyOf": [
             {
@@ -1342,6 +1346,10 @@
         },
         "event_id": {
           "type": "string"
+        },
+        "first_time": {
+          "default": false,
+          "type": "boolean"
         },
         "foul": {
           "anyOf": [
@@ -1543,6 +1551,25 @@
           ],
           "default": null
         },
+        "pass_technique": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal",
+                "chip",
+                "flick_on",
+                "lay_off",
+                "backheel",
+                "outside_foot"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "pass_type": {
           "anyOf": [
             {
@@ -1691,6 +1718,26 @@
                 "off_target",
                 "blocked",
                 "post"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shot_technique": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal",
+                "volley",
+                "half_volley",
+                "lob",
+                "backheel",
+                "diving_header",
+                "overhead_kick"
               ],
               "type": "string"
             },
@@ -1877,6 +1924,10 @@
         "shot_outcome",
         "xg",
         "shot_end_height_m",
+        "shot_technique",
+        "pass_technique",
+        "first_time",
+        "deflected",
         "shootout_round",
         "added_minutes",
         "keeper_location",

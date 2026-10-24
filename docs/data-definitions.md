@@ -363,6 +363,42 @@
 - 出球瞬间的初速度，单位公里每小时。
 - 射门速度是射门的初速度；德甲 Match Facts 公布的“射门速度”就是这个值。
 
+### ATTR-014 射门技术 `shot_technique`
+
+| 值 | 判断规则 |
+|---|---|
+| `normal` | 球在地面或弹起后落地再踢 |
+| `volley` | 球在空中、没有落地就用脚射门 |
+| `half_volley` | 球落地反弹的瞬间射门 |
+| `lob` | 吊射，球越过门将头顶 |
+| `backheel` | 脚后跟射门 |
+| `diving_header` | 鱼跃冲顶 |
+| `overhead_kick` | 倒钩或剪刀脚 |
+
+与 StatsBomb 的射门技术分类一致。普通头球是 `body_part = head`、`shot_technique = normal`。
+
+### ATTR-015 一脚出球 `first_time`
+
+- 射门或传球之前**没有停球**，直接处理来球，标为 `true`。与 StatsBomb 射门的 first_time 一致，我们把它也用在传球上。
+
+### ATTR-016 折射 `deflected`
+
+- 传球或射门在途中碰到其他球员，但**没有被控制**，球继续向原方向或改变了方向，标为 `true`。与 StatsBomb 的 deflected 一致。
+- 折射后进门的射门仍然算射门者的进球；改变了方向的射门，`end_location` 记录最终位置。
+
+### ATTR-017 传球技术 `pass_technique`
+
+| 值 | 判断规则 | 出处 |
+|---|---|---|
+| `normal` | 普通传球 | — |
+| `chip` | 挑传，球从防守人头顶越过 | Opta 限定词 Chipped |
+| `flick_on` | 头球或脚下轻蹭，让球继续向前 | Opta 限定词 Flick-on |
+| `lay_off` | 背对球门、一脚把球回做给前插的队友 | Opta 限定词 Lay-off |
+| `backheel` | 脚后跟传球 | StatsBomb |
+| `outside_foot` | 外脚背传球 | 通用 |
+
+传中、角球的弧线另记在 `delivery`（ATTR-006）。
+
 ---
 
 ## 4. 统计指标
@@ -541,6 +577,8 @@
 | `play_pattern` | play_pattern | 限定词 | 无 | 反击由规则判定，不是人工判断 |
 | `success_prob` | 无（OBV 等模型） | xPass | 无 | 我们是真实值 |
 | `xg` | statsbomb_xg | xG | 无 | 我们是真实值 |
+| `shot_technique`、`first_time`、`deflected` | shot.technique、first_time、deflected | 限定词 | 无 | 一致 |
+| `pass_technique` | pass.technique（部分） | 限定词 Chipped、Flick-on、Lay-off | 无 | |
 | `threat` | 无 | 无 | xT（socceraction） | Karun Singh xT |
 | `TrackingFrame` | 360（只有画面内的人） | 无 | 无 | 我们每秒一帧，全员都有 |
 

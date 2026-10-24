@@ -270,7 +270,8 @@ def test_areas_are_seen_from_the_attacking_side():
 def test_a_goal_is_a_shot_with_outcome_goal():
     e = MatchEvent(match_id="M", seq=7, event_id="m038-s00007", t=2290, period=1, period_t=2290, type="shot",
                    team="away", player_id="a09", location=(14.0, 33.0), end_location=(0.0, 34.2),
-                   shot_outcome="goal", xg=0.31, ball_speed_kmh=96.5, shot_end_height_m=1.9)
+                   shot_outcome="goal", xg=0.31, ball_speed_kmh=96.5, shot_end_height_m=1.9,
+                   shot_technique="half_volley", first_time=True, deflected=True)
     validate("MatchEvent", e.model_dump(mode="json"))
     with pytest.raises(ValidationError):
         MatchEvent(match_id="M", seq=8, event_id="x", t=1, period=1, period_t=1, type="goal", team="home")
@@ -281,6 +282,7 @@ def test_pass_carries_difficulty_type_height_and_links():
                    team="home", player_id="h06", receiver_id="h09", location=(48.0, 34.0),
                    end_location=(86.0, 30.0), outcome="success", success_prob=0.38,
                    pass_type="through_ball", pass_height="ground", body_part="right_foot",
+                   pass_technique="outside_foot", first_time=True,
                    ball_speed_kmh=61.0, related_event_ids=["m062-s01042"])
     validate("MatchEvent", e.model_dump(mode="json"))
     with pytest.raises(ValidationError):

@@ -774,10 +774,12 @@ export interface MatchEvent {
    */
   clock_label: string;
   counterpress: boolean;
+  deflected: boolean;
   delivery: ("inswing" | "outswing" | "straight") | null;
   duel_type: ("aerial" | "ground") | null;
   end_location: [number, number] | null;
   event_id: string;
+  first_time: boolean;
   foul: FoulDetail | null;
   /**
    * Threat-grid zone of `location`.
@@ -814,6 +816,7 @@ export interface MatchEvent {
   minute: number;
   outcome: ("success" | "fail") | null;
   pass_height: ("ground" | "low" | "high") | null;
+  pass_technique: ("normal" | "chip" | "flick_on" | "lay_off" | "backheel" | "outside_foot") | null;
   pass_type:
     | (
         | "regular"
@@ -845,6 +848,7 @@ export interface MatchEvent {
   shootout_round: number | null;
   shot_end_height_m: number | null;
   shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post") | null;
+  shot_technique: ("normal" | "volley" | "half_volley" | "lob" | "backheel" | "diving_header" | "overhead_kick") | null;
   substitution: Substitution | null;
   success_prob: number | null;
   t: number;
