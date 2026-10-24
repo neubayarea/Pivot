@@ -3,7 +3,7 @@ name = "pivot-worker"
 version = "0.1.0"
 description = "Pivot worker: workflows, agents and prompts."
 requires-python = ">=3.12"
-dependencies = ["pivot-core"]
+dependencies = ["pivot-core", "pivot-adapters"]
 
 [build-system]
 requires = ["hatchling"]
