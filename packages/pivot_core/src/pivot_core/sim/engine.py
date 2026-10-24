@@ -41,6 +41,12 @@ CLOSE_RADIUS, CLOSING_SPEED = 2.0, 1.0            # ATTR-001
 SIDES = ("home", "away")
 FORWARD = ("ST", "LW", "RW", "AM")
 
+# Scoring chance by shot technique relative to a normal strike from the same spot (ATTR-014):
+# volleys and acrobatic finishes are harder to keep down and on target, a lob over a keeper
+# who has come off his line is easier. Weighted over the mix of shots the average stays near 1.
+TECHNIQUE_XG = {"normal": 1.02, "half_volley": 0.9, "volley": 0.8, "lob": 1.3, "backheel": 0.6,
+                "diving_header": 1.0, "overhead_kick": 0.55}
+
 
 @dataclass
 class Params:
@@ -143,6 +149,10 @@ class Engine:
         # Planted events (B04): forced at a given minute, e.g. the demo's 38' red card.
         self.plants = [{"spec": p, "done": False} for p in sorted(plants or [], key=lambda p: p.minute)]
         self.rng = np.random.default_rng(match.seed if seed is None else seed)
+        # Technique labels draw from their own stream, so adding or changing a label rule never
+        # changes the run of play of a seed.
+        self.style_rng = np.random.default_rng([(match.seed if seed is None else seed) or 0, 2])
+        self.touch: dict | None = None            # last reception: who, when, what kind of ball
         self.p = params or Params()
         self.teams = [match.home, match.away]
         self.sheets = [match.home.sheet, match.away.sheet]
@@ -406,6 +416,8 @@ class Engine:
         k, i = self.owner
         v = self._view(self.ball, k)
         under, d_opp, j = self._pressure(k, i)
+        # First decision after the ball arrived: whatever he does now is first time (ATTR-015).
+        first = self.touch if self.touch and self.touch["who"] == (k, i) and self.touch["t"] == self.t - 1 else None
         forced, self.forced = self.forced, None
         if forced:
             kind = forced["kind"]
@@ -414,7 +426,7 @@ class Engine:
             if kind == "free_kick" and np.hypot(*(v - GOAL)) < 30 and abs(v[1] - 34) < 14 and self.rng.random() < 0.35:
                 return self._shoot(k, i, v, under=False, free_kick=True)
             if kind == "header":
-                return self._shoot(k, i, v, under=True, header=True, first_time=True)
+                return self._shoot(k, i, v, under=True, header=True, first_time=True, incoming=self.touch)
             return self._pass(k, i, v, under=False, restart=kind)
 
         role = self.shapes[k].roles[i]
@@ -424,16 +436,16 @@ class Engine:
             xg = xg_model(v, blockers=self._blockers(k, v), pressed=under, finishing=self._a(k, i, "finishing"))
             tendency = 1.2 if role in FORWARD else (0.5 if role in DEFENDER_ROLES else 0.9)
             if xg >= self.p.shot_min_xg and self.rng.random() < min(0.6, (self.p.shot_base + self.p.shot_xg_weight * xg) * tendency):
-                return self._shoot(k, i, v, under)
+                return self._shoot(k, i, v, under, first_time=first is not None, incoming=first)
         dist = float(np.hypot(*(v - GOAL)))
         if 18 <= dist <= 32 and abs(v[1] - PITCH_WIDTH / 2) < 16 and not _in_box(v) and role != "GK":
             if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0):
-                return self._shoot(k, i, v, under)
+                return self._shoot(k, i, v, under, first_time=first is not None, incoming=first)
         rate = self.p.pass_rate[self.tactics[k].tempo] + (self.p.pass_rate_pressed if under else 0.0)
         if role == "GK":
             rate = 0.6
         if self.rng.random() < rate:
-            return self._pass(k, i, v, under)
+            return self._pass(k, i, v, under, incoming=first)
         if d_opp < 3.0 and self.rng.random() < 0.08 * self._a(k, i, "dribbling") + 0.01:
             return self._dribble(k, i, j, v)
         self._carry(k, i, v)
@@ -546,7 +558,8 @@ class Engine:
 
     # --- passing ---------------------------------------------------------------------
 
-    def _pass(self, k: int, i: int, v: np.ndarray, under: bool, restart: str | None = None) -> None:
+    def _pass(self, k: int, i: int, v: np.ndarray, under: bool, restart: str | None = None,
+              incoming: dict | None = None) -> None:
         self._end_carry()
         shape = self.shapes[k]
         mates = self._view(self.pos[k], k)
@@ -614,8 +627,12 @@ class Engine:
             from_left = v[1] > PITCH_WIDTH / 2
             delivery = "inswing" if (from_left and foot == "right") or (not from_left and foot == "left") else "outswing"
         speed_ms = 11 + 0.35 * dist + self.rng.normal(0, 1.5)
-        base = dict(location=self.ball.copy(), pass_type=ptype, pass_height=height, body_part=body,
-                    pass_technique="chip" if (height == "high" and dist > 20 and self.rng.random() < 0.08) else "normal",
+        if height == "high" and dist > 20:
+            self.rng.random()          # the draw the old chip label used: keeps every seed's run of play as before
+        technique, label_height, label_body = self._pass_technique(k, i, v, end_v, dist, height, body, bool(lane),
+                                                                   incoming, restart)
+        base = dict(location=self.ball.copy(), pass_type=ptype, pass_height=label_height, body_part=label_body,
+                    pass_technique=technique, first_time=incoming is not None and restart is None,
                     delivery=delivery, ball_speed_kmh=round(float(np.clip(speed_ms * 3.6, 20, 140)), 1),
                     under_pressure=under, success_prob=round(acc, 3))
         self.poss_passes += 1
@@ -637,7 +654,7 @@ class Engine:
             pe["_break"] = any(v[0] < line <= end_v[0] for line in (mid, back))
             self.last_pass = {"event": pe, "receiver": (k, r)}
             self.flight = {"team": k, "slot": r, "end": end_abs, "arrive": self.t + max(1, math.ceil(dist / speed_ms)),
-                           "cross": ptype in ("cross", "corner") and height == "high"}
+                           "cross": ptype in ("cross", "corner") and height == "high", "height": height}
             self.owner = None
             self.ball_z = 2.0 if height == "high" else 0.0
             return
@@ -657,10 +674,10 @@ class Engine:
             return
         if cause == len(lane):
             pe = self._emit("pass", k, i, end_location=end_abs, outcome="fail", receiver_id=None, **base)
-            aerial = height == "high"
-            de = self._emit("duel", 1 - k, mark_j, location=end_abs, duel_type="aerial" if aerial else "ground",
-                            outcome="success")
-            da = self._emit("duel", k, r, location=end_abs, duel_type="aerial" if aerial else "ground", outcome="fail")
+            aerial = height == "high"                                   # what happens next follows the real ball
+            duel_type = "aerial" if aerial or base["pass_height"] == "high" else "ground"   # a chip is met in the air
+            de = self._emit("duel", 1 - k, mark_j, location=end_abs, duel_type=duel_type, outcome="success")
+            da = self._emit("duel", k, r, location=end_abs, duel_type=duel_type, outcome="fail")
             self._link(de, da)
             self._link(pe, de)
             self.owner = None
@@ -688,6 +705,33 @@ class Engine:
         self.owner = None
         self.flight = {"team": None, "slot": None, "end": miss_abs, "arrive": self.t + max(1, math.ceil(dist / speed_ms)),
                        "cross": False}
+
+    def _pass_technique(self, k: int, i: int, v: np.ndarray, end_v: np.ndarray, dist: float, height: str,
+                        body: str, lane_blocked: bool, incoming: dict | None,
+                        restart: str | None) -> tuple[str, str, str]:
+        """ATTR-017, first match wins: (technique, pass height, body part) as recorded.
+
+        Target mix over open play, close to what Opta-style data shows: about 90 % normal,
+        4 % chipped, 2 % lay-offs, 1 % flick-ons, 1 % outside of the foot, 0.5 % backheels.
+        Labels only: the pass itself (target, success) is already decided."""
+        if restart is not None or body == "other":
+            return "normal", height, body
+        r = self.style_rng.random()
+        role = self.shapes[k].roles[i]
+        forward = end_v[0] - v[0]
+        foot = self.attr[self._pid(k, i)]["foot"]
+        if incoming and incoming["height"] == "high" and r < 0.55:      # met in the air and headed on
+            return ("flick_on" if forward > 0 else "normal"), height, "head"
+        if incoming and role in FORWARD and forward < -2 and dist < 15 and r < 0.6:
+            return "lay_off", height, body                                # back to goal, set back first time
+        if role in FORWARD + tuple(MIDFIELD_ROLES) and forward < 0 and dist < 10 and r < 0.1:
+            return "backheel", "ground", body
+        if lane_blocked and 10 <= dist <= 35 and r < 0.08:
+            return "chip", "high", body                                   # lifted over the man in the lane
+        sideways = end_v[1] - v[1]                                        # team view: + is to his left
+        if 10 <= dist <= 30 and ((foot == "right" and sideways < -5) or (foot == "left" and sideways > 5)) and r < 0.08:
+            return "outside_foot", height, f"{foot}_foot"
+        return "normal", height, body
 
     def _pass_type(self, k: int, v: np.ndarray, end_v: np.ndarray, r: int, restart: str | None, back: float) -> str:
         """ATTR-004, first match wins."""
@@ -724,6 +768,7 @@ class Engine:
         else:
             self.pos[k, r] = self.ball
         self._gain(k, r)
+        self.touch = {"who": (k, r), "t": self.t, "height": f.get("height", "ground")}
         if f["cross"]:
             v = self._view(self.ball, k)
             j = self._nearest(1 - k, self.ball, outfield=True)
@@ -760,19 +805,50 @@ class Engine:
 
     # --- shooting --------------------------------------------------------------------
 
+    def _shot_technique(self, v: np.ndarray, header: bool, first_time: bool, incoming: dict | None,
+                        keeper_off_line: float, blockers: int) -> str:
+        """ATTR-014 from how the ball came to the shooter and where the keeper stands.
+
+        Target mix, close to StatsBomb open data for men's football: about 77 % normal,
+        9 % half volleys, 6 % volleys, 1 % lobs, 1 % diving headers, under 1 % backheels and
+        overhead kicks (an ordinary header is body part head, technique normal)."""
+        r = self.style_rng.random()
+        if header:
+            return "diving_header" if r < 0.07 else "normal"
+        d = float(np.hypot(*(v - GOAL)))
+        if blockers == 0 and 12 <= d <= 30 and keeper_off_line >= 4 and self.style_rng.random() < 0.025:
+            return "lob"                               # clean through, keeper off his line
+        height = incoming["height"] if first_time and incoming else None
+        if height == "high":                          # dropping ball struck before it is controlled
+            if _in_box(v) and r < 0.04:
+                return "overhead_kick"
+            return "volley" if r < 0.44 else ("half_volley" if r < 0.74 else "normal")
+        if height == "low":
+            return "half_volley" if r < 0.2 else ("volley" if r < 0.27 else "normal")
+        if first_time:                                # a ground ball that bounces up, a knock-down
+            if d < 14 and r < 0.04:
+                return "backheel"
+            return "half_volley" if r < 0.2 else ("volley" if r < 0.42 else "normal")
+        return "half_volley" if r < 0.08 else "normal"   # the ball sits up after a touch
+
     def _shoot(self, k: int, i: int, v: np.ndarray, under: bool, header: bool = False, penalty: bool = False,
-               free_kick: bool = False, first_time: bool = False) -> None:
+               free_kick: bool = False, first_time: bool = False, incoming: dict | None = None) -> None:
         self._end_carry()
         opp = 1 - k
         blockers = 0 if penalty else self._blockers(k, v)
+        gk_slot = self.shapes[opp].roles.index("GK") if "GK" in self.shapes[opp].roles else 0
+        gk = self.pos[opp, gk_slot].copy()
+        technique = "normal"
         if penalty:
             xg = float(np.clip(0.76 + 0.12 * (self._a(k, i, "penalties") - 0.7), 0.6, 0.9))
         else:
             xg = xg_model(v, header=header, blockers=blockers, pressed=under, finishing=self._a(k, i, "finishing"))
             if free_kick:
                 xg = min(xg, 0.07) * (0.7 + 0.6 * self._a(k, i, "free_kick_accuracy"))
-        gk_slot = self.shapes[opp].roles.index("GK") if "GK" in self.shapes[opp].roles else 0
-        gk = self.pos[opp, gk_slot].copy()
+            else:
+                keeper_off_line = PITCH_LENGTH - self._view(gk, k)[0]
+                technique = self._shot_technique(v, header, first_time, incoming, keeper_off_line, blockers)
+                xg = float(np.clip(xg * TECHNIQUE_XG[technique], 0.005, 0.95))
         foot = self.attr[self._pid(k, i)]["foot"]
         aim_y = PITCH_WIDTH / 2 + self.rng.uniform(-3.4, 3.4)
         r = self.rng.random()
@@ -791,11 +867,8 @@ class Engine:
                 outcome = "off_target"
                 aim_y += self.rng.choice([-1, 1]) * self.rng.uniform(4, 9)
         end_v = np.array([PITCH_LENGTH, aim_y])
-        technique = "normal"
         if header:
-            technique = "diving_header" if self.rng.random() < 0.05 else "normal"
-        elif first_time and self.rng.random() < 0.3:
-            technique = "volley"
+            self.rng.random()          # the draw the old diving-header label used: keeps every seed as before
         power = self._a(k, i, "shot_power")
         shot = self._emit(
             "shot", k, i, location=self.ball.copy(), end_location=from_view(end_v, k), shot_outcome=outcome,

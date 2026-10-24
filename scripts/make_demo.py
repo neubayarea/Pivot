@@ -2,7 +2,7 @@
 """Build the demo-1021 fixture (B02) from the simulator.
 
   uv run scripts/make_demo.py --search 300        # try seeds, print the ones that tell the demo story
-  uv run scripts/make_demo.py --seed 123          # export that seed to eval/fixtures/
+  uv run scripts/make_demo.py --seed 41           # export that seed to eval/fixtures/
 
 A seed tells the story when, with the two planted events (38' red card for Rovers, 63' Harbour
 City substitution and deeper line):

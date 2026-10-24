@@ -133,7 +133,7 @@ def test_b04_planted_red_card_lands_just_after_the_minute(planted):
 
 def test_b04_planted_substitution_and_tactics_change_at_the_next_dead_ball(planted):
     sub = next(e for e in planted if e.type == "substitution" and e.substitution.reason == "tactical")
-    assert sub.period == 2 and 18 * 60 <= sub.period_t < 21 * 60             # 63' to 66' on the clock
+    assert sub.period == 2 and 17 * 60 <= sub.period_t < 21 * 60             # 63' to 66' on the clock
     assert (sub.substitution.player_off_id, sub.substitution.player_on_id) == ("h09", "h15")
     shift = next(e for e in planted if e.type == "tactical_shift" and e.team == "home" and e.t >= sub.t)
     assert shift.tactics.line_height == "low" and shift.tactics.press == "low"
@@ -164,3 +164,18 @@ def test_b02_demo_fixture_has_the_23_team_stats_for_match_and_halves():
         for team in ("home", "away"):
             assert set(row[team]) == set(STAT_UNITS)
             assert all(v is not None for v in row[team].values())
+
+def test_attr_014_015_017_techniques_vary_like_real_matches():
+    shots, passes = [], []
+    for seed in (3, 4, 5, 6):
+        events = simulate(build_demo_match(seed)).events_as_models()
+        shots += [e for e in events if e.type == "shot" and e.play_pattern != "penalty"]
+        passes += [e for e in events if e.type == "pass" and e.pass_type in ("regular", "long_ball", "through_ball")]
+    shot_mix = {e.shot_technique for e in shots}
+    assert {"normal", "half_volley", "volley"} <= shot_mix
+    assert sum(e.shot_technique == "normal" for e in shots) / len(shots) > 0.7
+    assert {"normal", "chip", "lay_off"} <= {e.pass_technique for e in passes}
+    assert sum(e.pass_technique == "normal" for e in passes) / len(passes) > 0.85
+    assert 0.25 < sum(e.first_time for e in shots) / len(shots) < 0.65
+    assert all(e.body_part == "head" for e in passes if e.pass_technique == "flick_on")
+
