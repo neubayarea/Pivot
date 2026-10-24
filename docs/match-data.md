@@ -21,7 +21,12 @@
 | 在哪跑 | 文件夹 | 说明 |
 | --- | --- | --- |
 | 自己电脑上 | `./.pivot-data/sims/` | 默认位置，已经写进 `.gitignore`，不会被提交 |
-| 服务器（pivot.in-stacks.com） | `PIVOT_DATA_DIR` 指向的文件夹 | 要挂一个 Docker 卷（volume）到这个文件夹，否则容器重建后数据会丢，又要重新算一遍 |
+| 服务器（pivot.in-stacks.com） | `/data`（`PIVOT_DATA_DIR=/data`） | 在 Dokploy 里挂了一个名叫 `pivot-data` 的卷到 `/data`，重新部署也不会丢 |
+
+服务器用 Dokploy 部署。新建或重建这个应用时，记得在 Dokploy 里设好：
+
+1. Pivot 应用 → Advanced → Volumes → Add Volume，类型选 Volume Mount，名字 `pivot-data`，挂载路径 `/data`。
+2. Environment 里加一行 `PIVOT_DATA_DIR=/data`，保存后点 Deploy。
 
 ## 哪些能提交，哪些不能
 

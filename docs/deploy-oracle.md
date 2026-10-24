@@ -238,3 +238,5 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `PIVOT_FOUNDRY_ENDPOINT`、`PIVOT_FOUNDRY_API_VERSION`、`PIVOT_MODEL_STANDARD`、`PIVOT_MODEL_MINI` | Foundry 模型的地址和部署名，D 线提供 |
 | `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供。三个要一起填；填了密钥就只用这个服务主体登录 |
 | `PIVOT_WEB_DIST` | 网页文件的位置，镜像里已经设好，不用填 |
+| `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 6，`0` 不生成 |
+| `PIVOT_DATA_DIR` | 生成的比赛存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
