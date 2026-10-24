@@ -48,8 +48,9 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint = "Hig
   }
   const claims = narrative.sentences.reduce((n, s) => n + s.claims.length, 0);
   const evidence = new Set(narrative.sentences.flatMap((s) => s.evidence_ids)).size;
+  const auto = pivot.status === "degraded";
   return (
-    <Card title="Why it turned" note={`${pivot.minute}′ · verified`} className="why drop">
+    <Card title="Why it turned" note={`${pivot.minute}′ · ${auto ? "auto summary" : "verified"}`} className="why drop">
       {narrative.sentences.map((s, i) => (
         <p key={i}>
           <Highlighted text={s.text} claims={s.claims} />
@@ -65,7 +66,8 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint = "Hig
         </p>
       ))}
       <span className="pipe">
-        Judge ✓ · Explainer ✓ · Verifier ✓ {claims} claims · {evidence} evidence
+        {auto ? "Judge ✓ · AI explanation delayed · automatic summary" : "Judge ✓ · Explainer ✓ · Verifier ✓"}{" "}
+        {claims} claims · {evidence} evidence
       </span>
     </Card>
   );

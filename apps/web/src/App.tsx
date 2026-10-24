@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import ConnectionBanner from "./components/ConnectionBanner";
+import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import { MatchProvider } from "./data/match";
 import LiveBoard from "./pages/LiveBoard";
@@ -9,7 +10,7 @@ import NotFound from "./pages/NotFound";
 import PivotDetail from "./pages/PivotDetail";
 import WhatIfLab from "./pages/WhatIfLab";
 
-/** Until the live feed has its first state there is no match to put in the top bar. */
+/** Until the live feed has its first state there is no match to put in the top bar: card outlines, or what went wrong. */
 const WAITING = (
   <>
     <header className="top">
@@ -17,7 +18,7 @@ const WAITING = (
     </header>
     <ConnectionBanner />
     <main className="page">
-      <p className="muted waiting">Connecting to the live match…</p>
+      <StartupScreen />
     </main>
   </>
 );

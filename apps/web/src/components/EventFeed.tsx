@@ -35,6 +35,7 @@ const KEY_TYPES = new Set<MatchEvent["type"]>(["card", "substitution", "tactical
 
 export default function EventFeed({ highlight }: { highlight: ReadonlySet<string> }) {
   const { events, teams, playerName } = useMatch();
+  if (!events.length) return <p className="muted">No events yet. The feed starts at kick-off.</p>;
   return (
     <div className="feed" aria-live="polite">
       {/* The newest rows, plus any older event picked as evidence in "Why it turned". */}
