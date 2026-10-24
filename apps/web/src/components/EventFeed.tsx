@@ -4,7 +4,7 @@ import { useMatch } from "../data/match";
 const ROWS = 8;
 const TICK = { success: " ✓", fail: " ✗" } as const;
 
-function describe(e: MatchEvent, name: (id: string | null) => string): string {
+export function describe(e: MatchEvent, name: (id: string | null) => string): string {
   const who = name(e.player_id);
   const tick = e.outcome ? TICK[e.outcome] : "";
   switch (e.type) {
