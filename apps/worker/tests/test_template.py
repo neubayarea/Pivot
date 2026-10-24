@@ -49,3 +49,4 @@ def test_format_value():
     assert format_value(0.844, "xg") == "0.84 xG"
     assert format_value(11.23, "km") == "11.2 km"
     assert format_value(9, "count") == "9"
+    assert format_value(8.26, "ratio") == "8.3"
