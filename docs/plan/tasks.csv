@@ -61,3 +61,4 @@ S4,Animated pitch replay,球场动画回放,让转折点前后的动作在球场
 S5,Separate S0 lobby page,单独的大厅页,做一个单独的首页，用来新建比赛和查看历史比赛。,C,Could,M4,2,C06,,
 S6,Container Apps Jobs sharding for large N,超大规模重踢,需要重踢上万次时，把任务分给多台云服务器一起做。,A+B,Could,,8,S2,,F16
 S7,Match Recap at full time,终场自动写赛后报道,比赛结束后，把核对过的转折点串成一篇赛后报道，同样分观看模式和语言。,D+A,Should,M4,3,D11 D12 A11,报道里的数字都通过核对；两种模式、三种语言都能生成,FR-27
+S8,Optional: stadium details and away travel,可添加项：球场信息和客队旅途,给比赛加上球场信息（容量、真实尺寸、草皮、海拔、看台距离、死忠看台）和客队旅途（距离、时差、休息时间），让主场气氛和客场疲劳按具体情况计算。暂不做，有余力再加。,B,Could,,3,B14,,数据定义说明 第 9 节
