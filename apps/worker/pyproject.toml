@@ -3,7 +3,14 @@ name = "pivot-worker"
 version = "0.1.0"
 description = "Pivot worker: workflows, agents and prompts."
 requires-python = ">=3.12"
-dependencies = ["pivot-core", "pivot-adapters"]
+dependencies = [
+    "pivot-core",
+    "pivot-adapters",
+    # Pinned exactly: the SDK moves fast, and DetectWorkflow is the only code that touches it (ADR-0004).
+    "agent-framework-core==1.23.0",
+    "openai>=1.50",
+    "azure-identity>=1.17",
+]
 
 [build-system]
 requires = ["hatchling"]
