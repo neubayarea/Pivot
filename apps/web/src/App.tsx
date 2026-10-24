@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
-import type { ViewerPrefs } from "@pivot/contracts";
 import ConnectionBanner from "./components/ConnectionBanner";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import { MatchProvider } from "./data/match";
+import { usePrefs } from "./i18n";
 import LiveBoard from "./pages/LiveBoard";
 import NotFound from "./pages/NotFound";
 import PivotDetail from "./pages/PivotDetail";
@@ -23,15 +22,8 @@ const WAITING = (
   </>
 );
 
-const DEFAULT_PREFS: ViewerPrefs = {
-  audience: "analyst",
-  language: "en",
-  focus_team: null,
-  focus_player_id: null,
-};
-
 export default function App() {
-  const [prefs, setPrefs] = useState<ViewerPrefs>(DEFAULT_PREFS);
+  const { prefs, setPrefs } = usePrefs();
 
   return (
     <MatchProvider fallback={WAITING}>

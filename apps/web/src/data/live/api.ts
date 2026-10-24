@@ -1,6 +1,8 @@
 // REST client for the endpoints in apps/api/src/pivot_api/routes.py. Paths are relative, so the
 // Vite dev server proxies them to the local API and a same-origin deploy needs nothing else.
-import type { Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot } from "@pivot/contracts";
+import type {
+  Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, ViewerPrefs,
+} from "@pivot/contracts";
 
 export class ApiError extends Error {
   constructor(
@@ -24,13 +26,41 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 const m = (id: string) => `/matches/${encodeURIComponent(id)}`;
 
+/** `?lang=&audience=&team=&player=` for the pivot endpoints (A11); team and player only when set. */
+export function prefsQuery(p: ViewerPrefs): string {
+  const q = new URLSearchParams({ lang: p.language, audience: p.audience });
+  if (p.focus_team) q.set("team", p.focus_team);
+  if (p.focus_player_id) q.set("player", p.focus_player_id);
+  return `?${q}`;
+}
+
+/** A pivot as the API serves it with prefs: the Pivot plus the ViewerPrefs it actually used. */
+type Served = Pivot & { prefs?: ViewerPrefs };
+
+/**
+ * Moves the served `prefs` (which says, say, "en" when a Chinese version could not be written)
+ * onto the narrative, so the pages read the actual language from one place: narrative.prefs.
+ */
+export function withServedPrefs({ prefs, ...pivot }: Served, outer?: ViewerPrefs): Pivot {
+  const used = prefs ?? outer;
+  return used && pivot.narrative ? { ...pivot, narrative: { ...pivot.narrative, prefs: used } } : pivot;
+}
+
+/** The list answer is an array of pivots; also accept `{ pivots, prefs }` in case the API wraps it. */
+function servedList(body: Served[] | { pivots: Served[]; prefs?: ViewerPrefs }): Pivot[] {
+  return Array.isArray(body) ? body.map((p) => withServedPrefs(p)) : body.pivots.map((p) => withServedPrefs(p, body.prefs));
+}
+
 export const api = {
   listMatches: () => request<Match[]>("/matches"),
   getMatch: (id: string) => request<Match>(m(id)),
   /** Events with seq > `since` (MatchEvent.seq, not the envelope seq), in seq order. */
   listEvents: (id: string, since = -1) => request<MatchEvent[]>(`${m(id)}/events?since=${since}`),
   getTimeline: (id: string) => request<MinuteMetric[]>(`${m(id)}/timeline`),
-  listPivots: (id: string) => request<Pivot[]>(`${m(id)}/pivots`),
+  listPivots: async (id: string, prefs?: ViewerPrefs) =>
+    servedList(await request<Parameters<typeof servedList>[0]>(`${m(id)}/pivots${prefs ? prefsQuery(prefs) : ""}`)),
+  getPivot: async (pivotId: string, prefs?: ViewerPrefs) =>
+    withServedPrefs(await request<Served>(`/pivots/${encodeURIComponent(pivotId)}${prefs ? prefsQuery(prefs) : ""}`)),
   /** Score bug and card at elapsed second `clock`; the match's current clock when left out. */
   getOverlay: (id: string, clock?: number) =>
     request<OverlayFrame>(`${m(id)}/overlay${clock === undefined ? "" : `?clock=${clock}`}`),

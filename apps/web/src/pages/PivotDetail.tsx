@@ -10,6 +10,7 @@ import Sourced, { formatValue } from "../components/Sourced";
 import Stamp from "../components/Stamp";
 import WhyItTurned from "../components/WhyItTurned";
 import { useMatch } from "../data/match";
+import { useT } from "../i18n";
 import NotFound from "./NotFound";
 
 // Evidence actions stay drawn for a few seconds either side of the event.
@@ -20,6 +21,7 @@ const PLAY_MS = 250;
 export default function PivotDetail() {
   const { id = "" } = useParams();
   const { pivotDetail, eventById, teams, playerName } = useMatch();
+  const tr = useT();
   const detail = pivotDetail(id);
   const pivot = detail?.pivot;
   const sentences = pivot?.narrative?.sentences ?? [];
@@ -48,11 +50,8 @@ export default function PivotDetail() {
 
   if (!detail || !pivot) {
     return (
-      <NotFound title="Pivot not found">
-        <p>
-          There is no pivot “{id}” in this match. The checker may have ruled it out as not a pivot, or the link
-          is from another match.
-        </p>
+      <NotFound title={tr("detail.notFound.title")}>
+        <p>{tr("detail.notFound.body", { id })}</p>
       </NotFound>
     );
   }
@@ -74,63 +73,63 @@ export default function PivotDetail() {
     <>
       {pivot.status === "degraded" && (
         <div className="banner warn" role="status">
-          AI explanation unavailable. Showing a rule-based summary.
+          {tr("detail.degraded")}
         </div>
       )}
       <div className="back">
-        <Link to="/">← Live board</Link>
+        <Link to="/">{tr("detail.back")}</Link>
       </div>
       <div className="s2-head">
         <span className="min">{pivot.minute}′</span>
-        <h2>{pivotHeadline(pivot, teams)}</h2>
+        <h2>{pivotHeadline(pivot, teams, tr)}</h2>
         <span className="acts">
           <Link to={`/whatif/${pivot.pivot_id}`} className="btn pri">
-            What if…
+            {tr("detail.whatIf")}
           </Link>
           <Button variant="ghost" aria-pressed={disputed} onClick={() => setDisputed(!disputed)}>
-            {disputed ? "Flagged · undo" : "Not a turning point"}
+            {tr(disputed ? "detail.flagged" : "detail.dispute")}
           </Button>
         </span>
         <span className="meta">
           <Severity level={pivot.severity} />
           {pivot.status === "confirmed" ? (
-            <Stamp tone="ok">
-              Verified ✓ · {claims} claims · {evidence.length} evidence
-            </Stamp>
+            <Stamp tone="ok">{tr("detail.verified", { claims, evidence: evidence.length })}</Stamp>
           ) : (
             <PivotStamp status={pivot.status} />
           )}
-          {disputed && <Stamp tone="warn">Flagged for review</Stamp>}
-          <span className="pipe">Momentum → {teams[pivot.direction].name}</span>
+          {disputed && <Stamp tone="warn">{tr("detail.flaggedStamp")}</Stamp>}
+          <span className="pipe">{tr("pivot.momentumTo", { team: teams[pivot.direction].name })}</span>
         </span>
       </div>
       <div className="grid2">
-        <Card title="Pitch" note={`${from / 60}′–${to / 60}′ · ${teams.home.short_name} attack →`}>
+        <Card title={tr("detail.pitch")} note={tr("detail.pitchNote", { from: from / 60, to: to / 60, team: teams.home.short_name })}>
           <Pitch frame={frame} actions={actions} selected={selected}
-            label={`Pitch at ${frame.t}s: ${frame.players.length} players${picked ? `, event #${picked.seq} highlighted` : ""}`} />
+            label={picked
+              ? tr("detail.pitchLabelPicked", { t: frame.t, n: frame.players.length, seq: picked.seq })
+              : tr("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
           <Scrubber window={detail.window} t={t} onChange={(s) => { setT(s); setPlaying(false); }}
             playing={playing} onPlayingChange={setPlaying} pivotMinute={pivot.minute}
             marks={evidence.map((e) => ({ t: e.t, on: e.event_id === selected }))} />
           <p className="pitch-cap">
             {picked ? (
               <>
-                <b>#{picked.seq} · {picked.clock_label}</b> {describe(picked, playerName)}
-                {!picked.location && <span className="muted"> · team instruction, no on-ball action to draw</span>}
+                <b>#{picked.seq} · {picked.clock_label}</b> {describe(picked, playerName, tr)}
+                {!picked.location && <span className="muted">{tr("detail.noDraw")}</span>}
               </>
             ) : (
-              <span className="muted">Pick an evidence tag to see the action on the pitch.</span>
+              <span className="muted">{tr("detail.pickHint")}</span>
             )}
           </p>
         </Card>
         <div className="stack">
           <WhyItTurned pivot={pivot} selected={new Set(selected ? [selected] : [])} onToggle={jump}
-            chipHint="Show this action on the pitch" />
+            chipHint={tr("detail.chipHint")} />
           {detail.beforeAfter.length > 0 && beforeWin && afterWin && (
-            <Card title="Before / after" note="hover a figure for its source">
+            <Card title={tr("detail.ba")} note={tr("detail.baNote")}>
               <table className="ba">
                 <thead>
                   <tr>
-                    <th>Metric</th>
+                    <th>{tr("detail.baMetric")}</th>
                     <th>{beforeWin[0]}–{beforeWin[1]}′</th>
                     <th>{afterWin[0]}–{afterWin[1]}′</th>
                   </tr>

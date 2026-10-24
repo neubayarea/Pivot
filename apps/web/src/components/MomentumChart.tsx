@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
+import { useT } from "../i18n";
 
 type Props = {
   metrics: MinuteMetric[];
@@ -19,6 +20,7 @@ const TICKS = [0, 15, 30, 45, 60, 75, 90];
 /** Momentum per half: home above the midline, away below; the second half restarts from zero. */
 export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }: Props) {
   const clip = useId().replace(/[^\w-]/g, "");
+  const t = useT();
   const halves = [
     metrics.filter((m) => m.minute <= 45).map((m) => [m.minute, m.momentum] as const),
     metrics.filter((m) => m.minute > 45).map((m) => [m.minute, m.momentum] as const),
@@ -35,11 +37,11 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }:
     .join(" ");
   const summary = pivots
     .filter((p) => p.status === "confirmed")
-    .map((p) => `${p.minute}′ towards ${p.direction === "home" ? homeLabel : awayLabel}`)
+    .map((p) => t("chart.towards", { minute: p.minute, team: p.direction === "home" ? homeLabel : awayLabel }))
     .join(", ");
 
   return (
-    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Momentum chart. Pivots: ${summary || "none yet"}.`}>
+    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
       <defs>
         <clipPath id={`${clip}up`}>
           <rect x={0} y={0} width={W} height={MID} />
@@ -50,7 +52,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }:
       </defs>
       <rect x={x(45)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
       <text x={x(45) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
-        HT
+        {t("chart.ht")}
       </text>
       <line x1={L} x2={W - R} y1={MID} y2={MID} stroke="var(--pv-ink)" strokeWidth={2} />
       {TICKS.map((t) => (

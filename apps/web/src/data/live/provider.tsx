@@ -1,14 +1,15 @@
 // Fills useMatch() from the API: LiveSocket keeps the feed and decides when to reload over REST,
 // LiveState folds both together, and this turns it into the MatchView the pages read.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Match, Pivot1 as Pivot, TrackingFrame } from "@pivot/contracts";
+import type { Match, Pivot1 as Pivot, TrackingFrame, ViewerPrefs } from "@pivot/contracts";
+import { needsLocalised, usePrefs } from "../../i18n";
 import { clockLabel } from "../../fixtures/demo-1021";
 import {
   ConnectionContext, MatchContext, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
 import { ApiError, api } from "./api";
 import { LiveSocket, type ConnectionStatus } from "./socket";
-import { applyEnvelope, applySnapshot, lastEventSeq, type LiveState } from "./state";
+import { applyEnvelope, applyPivot, applyPivots, applySnapshot, lastEventSeq, type LiveState } from "./state";
 
 class NoMatches extends Error {}
 
@@ -34,6 +35,8 @@ export function classifyLoadError(err: unknown, asked: string | null): LoadProbl
   return { kind: "unreachable" };
 }
 
+const prefsKey = (p: ViewerPrefs) => `${p.language}|${p.audience}|${p.focus_team}|${p.focus_player_id}`;
+
 export default function LiveProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
   const [state, setState] = useState<LiveState | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>({ state: "connecting", attempt: 0 });
@@ -41,42 +44,87 @@ export default function LiveProvider({ children, fallback }: { children: ReactNo
   const stateRef = useRef<LiveState | null>(null);
   stateRef.current = state;
   const socketRef = useRef<LiveSocket | null>(null);
+  const matchIdRef = useRef<string | null>(null);
+  const aliveRef = useRef(true);
+  // Pivots are fetched in the viewer's language and mode; the feed pushes English analyst versions.
+  const { prefs } = usePrefs();
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+  const current = (asked: ViewerPrefs) => aliveRef.current && prefsKey(prefsRef.current) === prefsKey(asked);
+
+  /** Refetch the pivot list for the current prefs; on failure the old list stays until the next resync. */
+  const refreshPivots = useRef(() => {
+    const id = matchIdRef.current;
+    if (!id || !stateRef.current) return;
+    const asked = prefsRef.current;
+    api.listPivots(id, asked).then(
+      (pivots) => current(asked) && setState((prev) => (prev ? applyPivots(prev, pivots) : prev)),
+      (err) => console.warn("Could not refetch pivots for", prefsKey(asked), err),
+    );
+  }).current;
 
   useEffect(() => {
-    let matchId: string | null = null;
-    let alive = true;
+    aliveRef.current = true;
+    const alive = () => aliveRef.current;
     const socket = new LiveSocket({
       negotiate: async () => {
         try {
-          const url = await api.negotiate((matchId ??= await pickMatch()));
-          if (alive) setProblem(null);
+          const url = await api.negotiate((matchIdRef.current ??= await pickMatch()));
+          if (alive()) setProblem(null);
           return url;
         } catch (err) {
           const p = classifyLoadError(err, new URLSearchParams(window.location.search).get("match"));
-          if (alive) setProblem(p);
+          if (alive()) setProblem(p);
           // Retrying will not make an unknown match appear; the socket keeps polling for everything else.
           if (p.kind === "not-found") socket.stop();
           throw err;
         }
       },
       resync: async (full) => {
-        const id = matchId!;
+        const id = matchIdRef.current!;
         const since = full ? -1 : lastEventSeq(stateRef.current);
+        const asked = prefsRef.current;
         const [match, events, metrics, pivots] = await Promise.all([
-          api.getMatch(id), api.listEvents(id, since), api.getTimeline(id), api.listPivots(id),
+          api.getMatch(id), api.listEvents(id, since), api.getTimeline(id), api.listPivots(id, asked),
         ]);
-        if (alive) setState((prev) => applySnapshot(prev, { match, events, metrics, pivots, full }));
+        if (!alive()) return;
+        setState((prev) => applySnapshot(prev, { match, events, metrics, pivots, full }));
+        // The viewer switched language while this was loading: these pivots are in the old one.
+        if (!current(asked)) refreshPivots();
       },
-      onEnvelope: (env) => alive && setState((prev) => (prev ? applyEnvelope(prev, env) : prev)),
-      onStatus: (s) => alive && setStatus(s),
+      onEnvelope: (env) => {
+        if (!alive()) return;
+        const asked = prefsRef.current;
+        const id = (env.payload as { pivot_id?: unknown } | null)?.pivot_id;
+        const settled = env.type === "pivot.confirmed" || env.type === "pivot.degraded";
+        if (settled && typeof id === "string" && needsLocalised(asked)) {
+          // Hold the English version back while the viewer's own one loads; show it if that fails.
+          api.getPivot(id, asked).then(
+            (pivot) => current(asked) && setState((prev) => (prev ? applyPivot(prev, pivot) : prev)),
+            () => alive() && setState((prev) => (prev ? applyEnvelope(prev, env) : prev)),
+          );
+          return;
+        }
+        setState((prev) => (prev ? applyEnvelope(prev, env) : prev));
+      },
+      onStatus: (s) => alive() && setStatus(s),
     });
     socketRef.current = socket;
     socket.start();
     return () => {
-      alive = false;
+      aliveRef.current = false;
       socket.stop();
     };
   }, []);
+
+  // A new language or viewing mode: fetch the pivots again (the first load already used it).
+  const key = prefsKey(prefs);
+  const loadedKey = useRef(key);
+  useEffect(() => {
+    if (loadedKey.current === key) return;
+    loadedKey.current = key;
+    refreshPivots();
+  }, [key, refreshPivots]);
 
   const view = useMemo(() => (state ? toView(state) : null), [state]);
   const connection = useMemo<Connection>(

@@ -1,18 +1,20 @@
 import { useConnection, useMaybeMatch } from "../data/match";
+import { useT } from "../i18n";
 import Button from "./Button";
 
 /** The cream strip under the top bar while the live feed is down ("05 S1" states). The board keeps the last data. */
 export default function ConnectionBanner() {
   const conn = useConnection();
   const view = useMaybeMatch();
+  const t = useT();
   // Before the first load StartupScreen says what is wrong in full.
   if (!conn || !view || (conn.state !== "reconnecting" && conn.state !== "failed")) return null;
-  const paused = <span className="at">Data paused at {view.match.clockLabel}</span>;
+  const paused = <span className="at">{t("banner.paused", { clock: view.match.clockLabel })}</span>;
 
   if (conn.state === "failed") {
     return (
       <div className="banner warn" role="alert">
-        Live feed unavailable: {conn.reason}.
+        {t("banner.failed", { reason: conn.reason ?? t("startup.failed.reason") })}
         <span className="sp" />
         {paused}
       </div>
@@ -20,8 +22,8 @@ export default function ConnectionBanner() {
   }
   return (
     <div className="banner warn" role="status" aria-live="polite">
-      Live connection lost. Reconnecting… (attempt {conn.attempt})
-      <Button onClick={conn.retryNow}>Retry now</Button>
+      {t("banner.reconnecting", { n: conn.attempt })}
+      <Button onClick={conn.retryNow}>{t("common.retryNow")}</Button>
       <span className="sp" />
       {paused}
     </div>

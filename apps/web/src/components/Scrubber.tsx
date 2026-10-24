@@ -1,4 +1,5 @@
 import { clockLabel } from "../fixtures/demo-1021";
+import { useT } from "../i18n";
 
 type Props = {
   window: [number, number];
@@ -14,10 +15,11 @@ type Props = {
 
 /** Pitch timeline: drag or play through the window around a pivot, one frame per second. */
 export default function Scrubber({ window: [from, to], t, onChange, playing, onPlayingChange, pivotMinute, marks }: Props) {
+  const tr = useT();
   const pct = (s: number) => `${((s - from) / (to - from)) * 100}%`;
   return (
     <div className="scrub">
-      <button type="button" className="play" aria-label={playing ? "Pause" : "Play"} onClick={() => onPlayingChange(!playing)}>
+      <button type="button" className="play" aria-label={tr(playing ? "scrub.pause" : "scrub.play")} onClick={() => onPlayingChange(!playing)}>
         {playing ? "❚❚" : "▶"}
       </button>
       <div className="track">
@@ -25,7 +27,7 @@ export default function Scrubber({ window: [from, to], t, onChange, playing, onP
           <i key={m.t} className={`mk${m.on ? " on" : ""}`} style={{ left: pct(m.t) }} />
         ))}
         <i className="pv-mk" style={{ left: pct(pivotMinute * 60) }} />
-        <input type="range" min={from} max={to} step={1} value={t} aria-label="Match time"
+        <input type="range" min={from} max={to} step={1} value={t} aria-label={tr("scrub.time")}
           aria-valuetext={clockLabel(t)} onChange={(e) => onChange(Number(e.target.value))} />
         <span style={{ left: 0 }}>{from / 60}′</span>
         <span className="pv-lbl" style={{ left: pct(pivotMinute * 60) }}>{pivotMinute}′</span>
