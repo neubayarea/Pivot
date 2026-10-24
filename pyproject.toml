@@ -1,0 +1,22 @@
+# uv workspace root. Minimal version added with B01 so the shared models can be
+# installed and tested; A01 extends it with the apps, tooling and CI settings.
+[project]
+name = "pivot"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["pivot-core"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "jsonschema>=4.23"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/pivot_core"]
+
+[tool.uv.sources]
+pivot-core = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["packages/pivot_core/tests"]

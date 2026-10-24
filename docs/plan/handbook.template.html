@@ -109,10 +109,10 @@ a{color:var(--pitch)}
 <header>
   <p class="eyebrow">Pivot · 分工与开发流程 · 2026-10-23</p>
   <h1>Pivot 开发手册</h1>
-  <p class="prose" style="font-size:16px">把架构拆成 55 个任务点，每个 1 到 6 小时，都有负责人、依赖和验收标准；同时约定好怎么管任务、怎么写代码、每天怎么对齐。时间一律按你们的当地时间。</p>
+  <p class="prose" style="font-size:16px">把架构拆成 61 个任务点，每个 1 到 6 小时，都有负责人、依赖和验收标准；同时约定好怎么管任务、怎么写代码、每天怎么对齐。时间一律按你们的当地时间。</p>
   <div class="sum">
     <div><span class="small muted">管理</span><b>GitHub 管开发，Asana 管日程</b><span class="small">开发任务只放 GitHub，两边不重复记</span></div>
-    <div><span class="small muted">分工</span><b>4 条线，每人约 35 到 38 小时</b><span class="small">D 线交给英文写作好、懂足球战术的同学</span></div>
+    <div><span class="small muted">分工</span><b>4 条线，每人约 35 到 56 小时</b><span class="small">D 线交给英文写作好、懂足球战术的同学</span></div>
     <div><span class="small muted">容量</span><b>Must 已超出专注时间</b><span class="small">Should 放进公共池，谁先做完谁按顺序拉</span></div>
     <div><span class="small muted">节奏</span><b>每天两次 15 分钟站会</b><span class="small">6 个里程碑；卡住 45 分钟就喊人</span></div>
   </div>
@@ -125,7 +125,7 @@ a{color:var(--pitch)}
     <li><div><b>把现有文档作为第一次提交推到 <code>main</code></b><br><span class="small">远端仓库还是空的，第一个推上去的分支会成为默认分支，所以要先推 <code>main</code>。</span><br><span class="who">Claude 可以做，需要你点头</span></div></li>
     <li><div><b>把第 4 位队友加进仓库</b><br><span class="small">现在只有 Carry3、momomojun、Avril131 三个账号。</span><br><span class="who">仓库管理员</span></div></li>
     <li><div><b>认领四条线，填 <code>docs/plan/owners.json</code></b><br><span class="small">填好之后，建 issue 时会自动指派负责人。</span><br><span class="who">开工会（T01）</span></div></li>
-    <li><div><b>建标签、里程碑和 47 个 issue</b><br><span class="small">运行 <code>python3 scripts/github_setup.py --apply</code>。已经试跑过预览，重复运行也不会产生重复的 issue。10/23 新增的 8 个个性化任务（A11、A12、B10、C08、C09、D11、D12、S7）还没有建 issue，开工会定下来后再运行一次。</span><br><span class="who">Claude 可以做，需要你点头（仓库成员会收到通知）</span></div></li>
+    <li><div><b>建标签、里程碑和 47 个 issue</b><br><span class="small">运行 <code>python3 scripts/github_setup.py --apply</code>。已经试跑过预览，重复运行也不会产生重复的 issue。10/23 新增的 14 个任务（个性化 A11、A12、B10、C08、C09、D11、D12、S7，全员位置 B11，真实度规则 B12，虚构世界与场外因素 B13、B14、C10、D13）还没有建 issue，开工会定下来后再运行一次。</span><br><span class="who">Claude 可以做，需要你点头（仓库成员会收到通知）</span></div></li>
     <li><div><b>建 Project 看板</b><br><span class="small">需要 project 权限：先运行 <code>gh auth refresh -s project</code>（会打开浏览器授权），然后由 Claude 来建；也可以直接在网页上新建。</span><br><span class="who">你授权，Claude 执行</span></div></li>
     <li><div><b>选定 UI 风格</b><br><span class="small">C01 前端脚手架要用选定的风格生成主题。</span><br><span class="who">全员</span></div></li>
     <li><div><b>B01 契约立刻开工，20:00 冻结</b><br><span class="small">它是关键路径的起点：A03、C02、D03 都在等它。</span><br><span class="who">B</span></div></li>
@@ -201,9 +201,9 @@ a{color:var(--pitch)}
 <!--LOADS-->
     </div>
     <ul class="tight small prose">
-      <li>加上 10/23 新增的个性化任务后，四个人都超出 33 小时，多出 2 到 4.5 小时。真实截止是 10/27 23:59 PT，可以用掉那一天缓冲，或者在开工会上把部分 Must 降级。Should 只能在 Must 提前完成时去拉，不能提前排。</li>
+      <li>加上 10/23 新增的个性化、全员位置、真实度和场外因素任务后，四个人都超出 33 小时：A、C、D 多出 2 到 6 小时，B 多出 22 小时，一个人做不完。真实截止是 10/27 23:59 PT，可以用掉那一天缓冲，或者在开工会上把部分 Must 降级。Should 只能在 Must 提前完成时去拉，不能提前排。</li>
       <li>如果 UI 选 Fluent Night，C 能用组件库省下约 3 小时，可以接手 D10 轨迹列表，给 D 减负。</li>
-      <li>C 的工时最多（37.5 h），B 在关键路径上：模拟器（B03）晚半天，后面的 B04、B08、A09、C05 都会被推迟。站会上要优先盯住 B。</li>
+      <li>B 的工时最多（55 h），而且在关键路径上。至少要把势头和变点（B06、B09）、批量推演（B08）分给 A，把虚构世界生成（B13）分给 D 或 C：模拟器（B03）晚半天，后面的 B04、B08、A09、C05 都会被推迟。站会上要优先盯住 B。</li>
     </ul>
   </div>
 </section>

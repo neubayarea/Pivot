@@ -1,0 +1,13 @@
+{
+  "name": "@pivot/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JSON Schema and TypeScript types generated from pivot_core.domain. Do not edit by hand.",
+  "types": "ts/pivot.ts",
+  "scripts": {
+    "gen:types": "json2ts -i schema/pivot.schema.json -o ts/pivot.ts --unreachableDefinitions --additionalProperties false --maxItems -1 --bannerComment \"/* Generated from packages/contracts/schema/pivot.schema.json by pnpm gen:types. Do not edit by hand. */\""
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "15.0.4"
+  }
+}

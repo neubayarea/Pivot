@@ -251,7 +251,7 @@ flowchart LR
     scn["sim.ScenarioApplier<br/>反事实改写"]
     plant["sim.Planter<br/>植入事件"]
     run["sim.LiveRunner · BatchRunner"]
-    grid["analytics.ThreatGrid<br/>12×8"]
+    grid["analytics.ThreatGrid<br/>16×12"]
     mom["analytics.Momentum<br/>EWMA"]
     cus["analytics.Cusum"]
     stat["analytics.StatCalculator"]
@@ -428,10 +428,10 @@ verify(draft, match, pivot):
 
 ### 6.4 Prompt 与结构化输出约定
 
-- 系统提示包含：角色、受众（分析师，英文界面）、统计词表、禁用词表、输出 JSON Schema、2 个 few-shot 示例（取自评测种子）。
+- 系统提示包含：角色、受众（见下文“受众和语言”）、统计词表、禁用词表、输出 JSON Schema、2 个 few-shot 示例（取自评测种子）。
 - 模型输出一律使用结构化输出（JSON Schema 严格模式）；Pydantic 校验失败视同核查不通过。
 - 所有 prompt 放在 `apps/worker/prompts/*.md` 里做版本管理，trace 中记录 prompt 的哈希。
-- 语言：界面和解释都用英文，面向国际评委；文案集中管理，方便以后做多语言。
+- 受众和语言：系统提示按 `ViewerPrefs` 注入观看模式（analyst / fan）、主队、关注球员和语言（en / zh / es）。界面默认英文，面向国际评委。
 
 ## 7. 数据与契约
 
@@ -456,7 +456,7 @@ verify(draft, match, pivot):
 | `pivot-candidates` | `PivotCandidate{match_id, minute, direction, cusum_stat, swing, key_event_ids[], window}` | `{matchId}:{minute}` |
 | `scenario-runs` | `ScenarioRun{scenario_id, match_id, spec}` | `scenarioId` |
 
-**Web PubSub 信封** `{type, matchId, seq, ts, payload}`
+**Web PubSub 信封** `{type, match_id, seq, ts, payload}`
 
 | type | 发布方 | payload |
 |---|---|---|
@@ -492,77 +492,46 @@ verify(draft, match, pivot):
 
 FastAPI 会自动生成 OpenAPI 文档，地址是 `/api/docs`（对应 F17，几乎不额外花时间）。
 
-### 7.4 领域模型（契约源，节选）
+### 7.4 领域模型（数据格式的唯一来源）
 
-```python
-class MatchEvent(BaseModel):
-    schema_version: Literal[1] = 1
-    match_id: str
-    seq: int                                  # 同一场比赛内单调递增
-    event_id: str                             # "m063-s01042"，界面显示为 #1042
-    t: int                                    # 比赛时钟，单位秒，0–5400
-    period: Literal[1, 2]
-    type: EventType                           # pass carry shot goal tackle interception pressure foul card substitution kickoff period_end
-    team: Side                                # home | away
-    player_id: str | None
-    from_zone: tuple[int, int] | None         # 12×8 网格
-    to_zone: tuple[int, int] | None
-    outcome: Literal["success", "fail"] | None
-    xg: float | None                          # 只有射门才有
-    threat: float                             # 这个事件带来的威胁增量
-    meta: dict[str, str] = {}                 # 牌色、换人的上下场球员等
+源文件在 [`packages/pivot_core/src/pivot_core/domain/`](../packages/pivot_core/src/pivot_core/domain/)，以代码为准。导出的 JSON Schema 在 `packages/contracts/schema/pivot.schema.json`，前端类型在 `packages/contracts/ts/pivot.ts`，两者都由脚本生成，不要手改。
 
-class StatRef(BaseModel):
-    metric: StatMetric                        # 统计词表，初版 15 项
-    team: Side
-    window: tuple[int, int]                   # 左闭右开的分钟区间
+| 文件 | 模型 |
+|---|---|
+| `match.py` | `Match`、`Team`、`Score` |
+| `people.py` | `Player`、`PlayerAttributes`（七组 34 项）、`Personality`、`Coach`、`CareerStint`、`Relationship` |
+| `lineup.py` | `TeamSheet`、`LineupSlot`、`TeamTactics`、`PlayerInstruction`、`Substitution` |
+| `context.py` | `MatchContext`、`Competition`、`PreMatchCondition`、`OffFieldEvent`、`ContextEffect` |
+| `events.py` | `MatchEvent`（`minute`、`from_zone`、`to_zone` 由 `t` 和坐标推出，会随 JSON 一起输出） |
+| `tracking.py` | `TrackingFrame`、`PlayerPosition`、`BallPosition`（每秒一帧） |
+| `stats.py` | 统计词表 `StatMetric`（19 项）、`STAT_UNITS`、`StatRef`、`Claim` |
+| `narrative.py` | `ViewerPrefs`、`ExplanationSentence`、`Narrative` |
+| `pivots.py` | `MinuteMetric`、`PivotCandidate`、`Pivot` |
+| `scenarios.py` | `ScenarioSpec`、`PlantSpec`、`OutcomeDist`、`SimResult`、`Scenario` |
+| `outputs.py` | `OverlayItem`、`OverlayFeed`、`Recap` |
+| `traces.py` | `VerifierIssue`、`Verdict`、`AgentTrace` |
+| `realtime.py` | 推送信封 `Envelope` |
 
-class Claim(BaseModel):
-    value: float
-    unit: Literal["count", "pct", "xg", "index"]
-    stat_ref: StatRef
+**相对 v1.0 草稿的变化（10/23 B01）**
 
-class ExplanationSentence(BaseModel):
-    text: str                                 # 不超过 30 个英文单词
-    evidence_ids: list[str]                   # 1 到 4 个
-    claims: list[Claim]
+- **个性化**：新增 `ViewerPrefs{audience, language, focus_team, focus_player_id}`。AI 写的文字统一放进 `Narrative{prefs, headline, sentences, source, verifier_attempts, chain_id}`；`Pivot.narrative`、`SimResult.narrative`、`Recap.narrative` 存默认版本（analyst、en），其他版本按 `ViewerPrefs` 另外生成。原来 `Pivot` 上的 `headline`、`explanation`、`verifier_attempts` 挪进了 `Narrative`。
+- **球员级统计**：`StatRef` 加了可选的 `player_id`，供关注球员模式使用。
+- **传球接球人**：`MatchEvent` 加了可选的 `receiver_id`。
+- **对齐真实事件数据**（参考 StatsBomb、Opta、SPADL）：事件改用连续坐标 `location` / `end_location`（105 × 68 米，主队始终向 x = 105 进攻），`from_zone` / `to_zone` 改为由坐标推出；新增 `shot_outcome`、`ball_speed_kmh`、`under_pressure`、`possession_id`、`play_pattern`；事件类型补上 dribble、save、duel、clearance、block、ball_recovery、offside、tactical_shift；进球不再是单独的事件类型，而是 `shot_outcome = "goal"` 的射门；`Team` 加了 `formation`。事件还记录 `success_prob`（模拟器给出的成功概率，即传球难度）、`pass_type`、`pass_height`、`body_part` 和 `related_event_ids`；`Player` 改用细分位置 `role`（`position` 由它推出），并加了 `preferred_foot` 和能力值 `PlayerAttributes`；`PlayerPosition` 加了 `fitness`。真实度规则和标定目标见 PRD 6.3。
+- **能力值、阵容与场外因素**（[ADR-0015](adr/0015-match-context-and-off-field-factors.md)）：能力值扩到 34 项（七组），加汇总分、隐藏性格值、身体资料和特长标签；新增 `Coach`、`CareerStint`、`Relationship`、`TeamSheet`、`LineupSlot`、`TeamTactics`、`PlayerInstruction`、`Substitution`、`MatchContext`、`Competition`、`PreMatchCondition`、`OffFieldEvent`、`ContextEffect`。`Team` 去掉了 `formation` 和 `players`，改为 `squad`、`sheet`、`tactics`、`coach`、`club_id`；`Match` 加了 `context`；开场、阵型调整、换人事件带上阵容单和战术。解释句子加了 `context_ids`。
+- **补时、加时和点球大战**：`t` 改为从开球起累计的秒数（含补时和加时，所以全场唯一、只增不减），事件加了 `period_t`（阶段内的秒数）和自动推出的 `clock_label`（63′、45+2′、PEN）；阶段编号沿用 StatsBomb，1、2 是上下半场，3、4 是加时，5 是点球大战。新增 `added_time` 事件和 `added_minutes`、`shootout_round` 字段；`Match` 加了 `periods`（各阶段起止和补时）和 `decided_by`，`Score` 加了点球大战比分；`Competition` 加了 `extra_time` 和 `penalty_shootout`；推演结果加了淘汰赛的晋级概率 `home_advance`。所有“分钟”都按累计时间计算（`t // 60`），界面显示用 `clock_label`。
+- **网格加细**：威胁网格从 12 × 8 改为 16 × 12；事件自动推出所在三分之一、纵向通道、禁区，都从进攻方视角计算。
+- **全员位置**（[ADR-0014](adr/0014-per-second-positional-simulator.md)）：新增 `TrackingFrame` / `PlayerPosition` / `BallPosition`，每秒一帧；推送消息新增 `tracking.frame`；统计词表新增 4 项阵型数据（防线高度、阵型宽度、压迫距离、跑动距离），共 19 项。
+- **新输出**：`OverlayItem` / `OverlayFeed`（转播叠加层）和 `Recap`（终场报道）。
+- **新增模型**：`Match`、`Team`、`Player`、`Scenario`、`PlantSpec`、`Verdict`、`AgentTrace`、`Envelope`，原来只在表格里提到，现在都有了正式定义。
+- **字段命名统一用 snake_case**：推送信封里的 `matchId` 改成了 `match_id`。
 
-class Pivot(BaseModel):
-    pivot_id: str
-    match_id: str
-    minute: int
-    direction: Side                           # 势头转向的一方
-    severity: Literal[1, 2, 3]
-    status: Literal["pending", "confirmed", "rejected", "degraded"]
-    trigger_event_ids: list[str]
-    headline: str                             # 卡片标题，≤ 8 个英文单词，不得含数字
-    explanation: list[ExplanationSentence]
-    verifier_attempts: int
-    chain_id: str                             # 与 OpenTelemetry trace id 相同
+改完模型后运行：
 
-class ScenarioSpec(BaseModel):
-    type: Literal["cancel_substitution", "move_substitution", "remove_red_card", "remove_goal", "change_press"]
-    pivot_id: str
-    target_event_id: str | None
-    at_minute: int                            # 从这一分钟的快照开始续跑
-    params: dict[str, int | str] = {}
-    n_runs: Literal[200, 500, 1000] = 500
-    seed_base: int
-
-class OutcomeDist(BaseModel):
-    home_win: float
-    draw: float
-    away_win: float
-    ci95: dict[str, tuple[float, float]]      # Wilson 区间
-
-class SimResult(BaseModel):
-    scenario_id: str
-    baseline: OutcomeDist
-    counterfactual: OutcomeDist
-    significant: dict[str, bool]              # 置信区间不重叠才为 True
-    explanation: list[ExplanationSentence]
-    runtime_ms: int
-    executor: Literal["local_pool", "aca_jobs"]
+```bash
+uv run scripts/export_contracts.py            # 重新生成 JSON Schema
+pnpm --filter @pivot/contracts gen:types      # 重新生成前端类型
+uv run pytest                                 # 包括检查 Schema 有没有过期
 ```
 
 ## 8. 可靠性与故障模式
@@ -663,6 +632,8 @@ flowchart TB
 | [0011](adr/0011-functions-stream-metrics.md) | Functions 计算流式指标 | Stream Analytics；Fabric 实时智能 |
 | [0012](adr/0012-frontend-react-vite-d3.md) | React + Vite + D3，部署在 Static Web Apps | Next.js；Streamlit；Power BI |
 | [0013](adr/0013-platform-baseline-azd-bicep-identity.md) | azd + Bicep、OIDC、托管身份 | Terraform；门户手工创建 |
+| [0014](adr/0014-per-second-positional-simulator.md) | 模拟器每秒一步，生成全员位置，位置影响动作成功率（部分取代 0008） | 只有区域；事后补位置；25 帧物理模拟 |
+| [0015](adr/0015-match-context-and-off-field-factors.md) | 阵容战术、生涯与场外因素进入模拟，影响小且必须可追溯 | 只看场上统计；场外因素只写进文案不进模拟 |
 
 ## 13. 实施指南
 

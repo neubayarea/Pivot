@@ -395,7 +395,7 @@ aside a.subl{padding-left:22px;font-size:12.5px}
       <div class="panel">
         <h3>In scope</h3>
         <ul class="tight">
-          <li>单场比赛的实时模拟与回放（可调速 1×–20×）</li>
+          <li>单场比赛的实时模拟与回放（可调速 1×–20×），每秒一帧的全员位置</li>
           <li>势头、压迫两个核心指标</li>
           <li>转折点检测、解释与核查</li>
           <li>三类“假如”场景：取消或增加红牌、提前或推迟换人、取消进球</li>
@@ -457,6 +457,7 @@ aside a.subl{padding-left:22px;font-size:12.5px}
       <div class="story"><span class="sid">US-10 · Personalize</span><p class="as">作为<b>某支球队的球迷</b>，我想跟着我的主队和喜欢的球员看比赛，以便看到和我有关的那部分故事。</p><ul><li>选主队后，解释从该队视角叙述</li><li>选关注球员后，球场图高亮他参与的事件，卡片显示他的个人数据</li><li>刷新页面后偏好仍然保留</li></ul></div>
       <div class="story"><span class="sid">US-11 · Personalize</span><p class="as">作为<b>非英语观众</b>，我想用自己的语言看解释，以便和身边的人讨论。</p><ul><li>英文、中文、西班牙文三选一</li><li>切换后 3 秒内显示新语言的版本</li><li>数字与英文版一致，核查状态照常显示</li></ul></div>
       <div class="story"><span class="sid">US-12 · Render</span><p class="as">作为<b>转播图形编辑</b>，我想拿到带时间戳、格式固定的转折点数据，以便叠加到直播画面上。</p><ul><li><code>GET /matches/{id}/overlay</code> 按比赛时钟返回 JSON</li><li>标题不超过 8 个词，适合上屏</li><li>有一个透明背景的叠加层预览页</li></ul></div>
+      <div class="story"><span class="sid">US-13 · Context</span><p class="as">作为<b>铁杆球迷</b>，我想知道场外的故事有没有影响比赛，例如前锋第一次回到旧主场，以便理解他为什么表现失常。</p><ul><li>转折点解释可以引用生涯、人际关系、赛事等级和场外新闻</li><li>点开能看到这条背景和它的影响大小</li><li>没有依据的背景说法会被核查员拦下</li></ul></div>
     </div>
   </div>
 
@@ -466,7 +467,7 @@ aside a.subl{padding-left:22px;font-size:12.5px}
     <div class="scroll"><table>
       <thead><tr><th>ID</th><th>需求</th><th>优先级</th><th>负责</th><th>备注</th></tr></thead>
       <tbody>
-        <tr><td class="id">FR-01</td><td>模拟器能用随机种子完整生成一场 90 分钟比赛的事件流</td><td><span class="tag p0">P0</span></td><td>B</td><td>同一种子结果完全一致</td></tr>
+        <tr><td class="id">FR-01</td><td>模拟器能用随机种子完整生成一场 90 分钟比赛的事件流，以及每秒一帧的全员位置</td><td><span class="tag p0">P0</span></td><td>B</td><td>同一种子结果完全一致</td></tr>
         <tr><td class="id">FR-02</td><td>模拟器能从任意比赛状态快照继续模拟</td><td><span class="tag p0">P0</span></td><td>B</td><td>组合方案成立的前提</td></tr>
         <tr><td class="id">FR-03</td><td>模拟器支持植入指定转折点（红牌、换人、进球）</td><td><span class="tag p0">P0</span></td><td>B</td><td>评测用</td></tr>
         <tr><td class="id">FR-04</td><td>事件按比赛时钟发送到 Event Hubs，可调速</td><td><span class="tag p0">P0</span></td><td>A</td><td></td></tr>
@@ -493,6 +494,13 @@ aside a.subl{padding-left:22px;font-size:12.5px}
         <tr><td class="id">FR-25</td><td>多语言输出：解释和推演结果支持英文、中文、西班牙文</td><td><span class="tag p0">P0</span></td><td>D + A</td><td>核查只看结构化数字，不受语言影响</td></tr>
         <tr><td class="id">FR-26</td><td>叠加层输出：<code>/overlay</code> 接口返回带比赛时钟的固定 JSON，配透明背景预览页</td><td><span class="tag p0">P0</span></td><td>A + C</td><td>对应规则 Render 段</td></tr>
         <tr><td class="id">FR-27</td><td>终场自动生成 Match Recap，支持观看模式和语言，经核查</td><td><span class="tag p1">P1</span></td><td>D + A</td><td>复用已核查的转折点</td></tr>
+        <tr><td class="id">FR-28</td><td>全员位置：每秒一帧记录 22 名球员和球；位置影响动作成功率；从位置算出防线高度、阵型宽度、压迫距离、跑动距离</td><td><span class="tag p0">P0</span></td><td>B</td><td>ADR-0014</td></tr>
+        <tr><td class="id">FR-29</td><td>真实度规则：球员能力值、体能曲线、比分影响踢法、定位球、纪律、主场优势</td><td><span class="tag p0">P0</span></td><td>B</td><td>见 6.3</td></tr>
+        <tr><td class="id">FR-30</td><td>标定报告：200 场模拟的各项统计全部落在 6.3 的目标范围内，写进 README</td><td><span class="tag p1">P1</span></td><td>B</td><td>用公开数据的平均值复核</td></tr>
+        <tr><td class="id">FR-31</td><td>能力值与排兵布阵：34 项能力值和隐藏性格；阵容单、球队战术、个人指令；临场调整作为事件记录；推演可以改阵容和战术</td><td><span class="tag p0">P0</span></td><td>B</td><td>ADR-0015</td></tr>
+        <tr><td class="id">FR-32</td><td>场外因素：生涯、人际关系、赛事等级、赛前状态、场外新闻、环境，换算成可追溯的小幅影响；解释引用时经核查</td><td><span class="tag p0">P0</span></td><td>B + D</td><td>全部虚构</td></tr>
+        <tr><td class="id">FR-33</td><td>阵容与战术看板：阵型图、首发、战术设置、场外背景卡片</td><td><span class="tag p1">P1</span></td><td>C</td><td></td></tr>
+        <tr><td class="id">FR-34</td><td>补时、加时和点球大战：时钟含补时；淘汰赛打平进入加时和点球大战；推演结果给出“谁晋级”的概率</td><td><span class="tag p0">P0</span></td><td>B</td><td>阶段编号沿用 StatsBomb：1、2 上下半场，3、4 加时，5 点球大战</td></tr>
       </tbody>
     </table></div>
   </div>
@@ -678,31 +686,83 @@ flowchart LR
   <div class="sub">
     <h3>6.3 模拟器设计</h3>
     <div class="prose">
-      <p>模拟器是整个系统的地基，同时服务三件事：生成“现实”比赛、从任意状态续跑推演、植入已知转折点做评测。采用<b>控球链马尔可夫模型</b>，复杂度够低，6 天内可以写完并调好。</p>
+      <p>模拟器是整个系统的地基，同时服务三件事：生成“现实”比赛、从任意状态续跑推演、植入已知转折点做评测。它<b>每秒走一步</b>，每一步更新场上 22 名球员和球的位置，传球、射门、抢断都在这一步里发生；<b>位置会反过来决定动作的成功率</b>，所以阵型、压迫、换人和红牌会真正改变比赛。设计取舍见 ADR-0014（部分取代 ADR-0008）。</p>
     </div>
     <div class="grid2">
       <div class="panel">
         <h3>状态（MatchState）</h3>
         <ul class="tight">
-          <li>比赛时钟（秒）、比分</li>
-          <li>控球方、球所在区域（12 × 8 网格）</li>
-          <li>双方在场人数、每名球员体能值</li>
-          <li>双方战术参数：进攻倾向、压迫强度、阵型宽度</li>
-          <li>随机数生成器状态（保证可复现）</li>
+          <li>比赛时钟（从开球起累计的秒数，含补时和加时）、所在阶段（上下半场、加时上下半场、点球大战）、比分（含点球大战比分）、控球方、控球段编号与来源（运动战、反击、角球……）</li>
+          <li>球的位置与高度；22 名球员的位置、速度、体能</li>
+          <li>每名球员的 34 项能力值（进攻、技巧、移动、力量、心理、防守、门将七组）、11 项隐藏性格值、身体资料、惯用脚和逆足</li>
+          <li>双方的阵容单（阵型、每个首发的基准位置、队长、定位球主罚人）和战术（防线高度、压迫、宽度、节奏、传球方式、进攻侧重、个人指令）</li>
+          <li>比赛背景带来的影响列表（面对旧主、赛事重要程度、场外新闻……），开球时算好</li>
+          <li>红黄牌、剩余换人次数、随机数生成器状态（保证可复现）</li>
         </ul>
       </div>
       <div class="panel">
-        <h3>转移规则</h3>
+        <h3>每一秒发生什么</h3>
         <ul class="tight">
-          <li>每一步按区域和战术参数抽样动作：传球、带球、射门、丢失球权</li>
-          <li>成功率 = 基础率 × 球队实力 × 体能 × 人数修正</li>
-          <li>射门转化率取决于射门区域的威胁值（类 xT 网格）</li>
-          <li>红牌：人数修正降为约 0.85，压迫强度下降</li>
-          <li>换人：新球员体能重置，可改变战术参数</li>
+          <li><b>跑位</b>：每人先站在阵型基准位置，再跟着球整体平移和收缩；进攻时拉宽前压，防守时收紧后撤；离球最近的 1 到 2 人按压迫强度扑向持球人。移动速度受能力值和体能限制，冲刺上限约 8.5 米每秒</li>
+          <li><b>选动作</b>：持球人按位置、角色和战术参数抽样：短传、长传、传中、直塞、带球、过人、射门</li>
+          <li><b>成功率</b>：基础率 × 能力值 × 体能，再按位置修正：5 米内对手越多越容易失误（记为“被压迫”），传球线路附近有防守人时容易被拦截。模拟器把这个概率记进事件，就是“传球难度”</li>
+          <li><b>射门</b>：xG 由距离、角度、挡在前面的人数和射手能力决定；结果分为进球、被扑、射偏、被封堵、中柱，被扑的概率看门将能力</li>
+          <li><b>球的飞行</b>：飞行时间 = 距离 ÷ 球速，球速按动作类型和能力值抽样</li>
         </ul>
       </div>
     </div>
-    <div class="callout warn"><b>标定：</b>用 200 场模拟比赛检查统计量是否“像足球”：场均进球约 2.5 到 3、射门约 20 到 28、控球率分布合理。不像就调基础率，D1 结束前完成。</div>
+    <div class="panel" style="margin-top:14px">
+      <h3>让它像真实比赛：要自己调好的规则</h3>
+      <ul class="tight">
+        <li><b>球员有个性</b>：每名球员有一组能力值，快的跑得快，准的传得准；关注球员模式才看得出差别</li>
+        <li><b>体能曲线</b>：体能随跑动和冲刺下降，耐力高的掉得慢；70 分钟后速度变慢、失误变多；换上来的球员体能重置</li>
+        <li><b>比分影响踢法</b>：领先方在下半场逐渐降低防线、减弱压迫、放慢节奏；落后方压上、长传和传中变多</li>
+        <li><b>定位球</b>：角球、任意球、界外球、球门球、点球按真实频率出现，角球有传中和头球争顶</li>
+        <li><b>纪律</b>：犯规率随压迫强度和体能变化；黄牌累积成红牌，直接红牌很少见</li>
+        <li><b>主场优势</b>：主队的成功率有小幅加成</li>
+        <li><b>红牌和换人</b>：红牌后少一人，阵型自动收缩、压迫减弱；换人按体能和比分决定时机，可以改阵型</li>
+        <li><b>补时</b>：按这个半场的换人、进球、伤停、出牌次数算出补时长度，在半场最后一分钟由第四官员公布；补时阶段落后方压得更狠</li>
+        <li><b>加时和点球大战</b>：淘汰赛 90 分钟打平就踢 2 × 15 分钟加时，加时里体能下降更快、可以多换一人；仍打平就点球大战，前 5 轮后进入突然死亡。点球的进球率看主罚人的点球和沉着、门将的扑救和反应，以及当时的压力（落后、最后一轮）</li>
+      </ul>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="panel">
+        <h3>教练的排兵布阵</h3>
+        <ul class="tight">
+          <li><b>阵容单</b>：阵型、11 名首发和各自在阵型里的基准位置、替补、队长、点球 / 任意球 / 左右角球主罚人</li>
+          <li><b>球队战术</b>：防线高度、压迫强度、阵型宽度、节奏、传球方式（短传 / 混合 / 长传）、进攻侧重、是否打反击、造越位、领先后拖延时间</li>
+          <li><b>个人指令</b>：边后卫插上或留守、边锋内切或拉边、自由人、重点盯防某人等</li>
+          <li><b>临场调整</b>：主教练按执教风格和临场应变能力，决定什么时候换人、换阵型、改战术；每次调整都作为事件记录新的阵容单和战术</li>
+          <li><b>推演</b>：“假如”可以直接换阵容、换阵型、改战术</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>场外因素</h3>
+        <ul class="tight">
+          <li><b>生涯轨迹</b>：效力过哪些俱乐部、出场和进球、怎么离开、离开时关系好不好。面对旧主时积极性上升、沉着可能下降，不欢而散的影响更大</li>
+          <li><b>人际关系</b>：老队友之间传球默契更好；面对熟悉的老教练或老队友，对方更了解他的习惯；有过节的人相遇，侵略性和吃牌风险上升</li>
+          <li><b>赛事等级</b>：联赛、国内杯、洲际俱乐部赛事、国家队大赛、友谊赛，以及小组赛到决赛。大赛表现好的球员在重要比赛里发挥更好，抗压差的会紧张</li>
+          <li><b>赛前状态</b>：体能、比赛节奏、士气、最近五场评分、休息天数、带伤、黄牌停赛边缘</li>
+          <li><b>场外新闻</b>：赛前夜店、迟归、家事、合同纠纷、转会传闻、被公开批评、训练冲突等。职业素养低的球员受影响更大</li>
+          <li><b>环境</b>：主场观众、德比、争冠或保级、天气</li>
+        </ul>
+        <p class="small">每条影响都很小（单条不超过 ±0.15），开球时算好并列出来，写明对谁、因为什么、影响哪一项。AI 引用场外因素时必须指向这些条目，核查员会检查。所有人物、俱乐部、赛事和新闻都是虚构的。详见 ADR-0015。</p>
+      </div>
+    </div>
+    <div class="callout warn"><b>标定：</b>跑 200 场模拟比赛，下表每一项都要落在目标范围内，不达标就调参数；结果写进 README。目标是顶级联赛的常见量级（双方合计，另有说明的除外），标定时用 StatsBomb 公开数据的汇总平均值复核：只用平均值，注明来源，不展示、不提交原始数据。</div>
+    <div class="scroll"><table>
+      <thead><tr><th>指标</th><th>目标范围</th><th>指标</th><th>目标范围</th></tr></thead>
+      <tbody>
+        <tr><td>进球</td><td>每场 2.5 到 3.0</td><td>犯规</td><td>每场 18 到 26</td></tr>
+        <tr><td>射门 / 射正</td><td>每场 20 到 28 / 7 到 10</td><td>黄牌 / 红牌</td><td>每场 3 到 5 / 不超过 0.15</td></tr>
+        <tr><td>每次射门平均 xG</td><td>0.09 到 0.12，全场 xG 与进球数接近</td><td>角球 / 越位</td><td>每场 8 到 12 / 3 到 5</td></tr>
+        <tr><td>传球次数</td><td>每场 850 到 1,100</td><td>控球率</td><td>多数比赛在 35% 到 65% 之间</td></tr>
+        <tr><td>传球成功率</td><td>75% 到 85%</td><td>外场球员跑动</td><td>每人每场 9 到 12 公里</td></tr>
+        <tr><td>平均传球距离</td><td>15 到 22 米</td><td>体能影响</td><td>最后 15 分钟的传球成功率比前 15 分钟低 2 到 5 个百分点</td></tr>
+        <tr><td>压迫次数</td><td>每场 300 到 400</td><td>主客场</td><td>200 场里主胜约 45%、平约 25%、客胜约 30%</td></tr>
+        <tr><td>补时</td><td>上半场 1 到 4 分钟，下半场 3 到 8 分钟</td><td>点球</td><td>常规点球和点球大战的进球率约 75% 到 80%</td></tr>
+      </tbody>
+    </table></div>
   </div>
 
   <div class="sub">
@@ -736,32 +796,47 @@ flowchart LR
 
   <div class="sub">
     <h3>6.6 数据模型</h3>
+    <p class="small">字段的唯一来源是代码 <code>packages/pivot_core/src/pivot_core/domain/</code>，前端类型由它自动生成。下表只列要点，字段命名参考了 StatsBomb、Opta 和 SPADL。</p>
     <div class="scroll"><table>
       <thead><tr><th>实体</th><th>关键字段</th><th>分区键</th></tr></thead>
       <tbody>
-        <tr><td>Match</td><td>id, seed, home, away, status, speed</td><td>id</td></tr>
-        <tr><td>Event</td><td>id, match_id, t, type, team, player, from_zone, to_zone, outcome, threat</td><td>match_id</td></tr>
-        <tr><td>MinuteMetric</td><td>match_id, minute, momentum, pressure_home, pressure_away</td><td>match_id</td></tr>
-        <tr><td>TurningPoint</td><td>id, match_id, minute, severity, trigger_event_ids, explanation[], verified</td><td>match_id</td></tr>
-        <tr><td>Scenario</td><td>id, turning_point_id, type, params, n_runs, status</td><td>match_id</td></tr>
-        <tr><td>SimResult</td><td>scenario_id, baseline{w,d,l}, counterfactual{w,d,l}, ci95, explanation[]</td><td>match_id</td></tr>
-        <tr><td>AgentTrace</td><td>id, chain_id, agent, input_ref, output, latency_ms, tokens, status</td><td>match_id</td></tr>
+        <tr><td>Match / Team</td><td>比赛：seed、比分（含点球大战比分）、时钟、各阶段的起止时间和补时、怎么分出胜负（常规时间 / 加时 / 点球）、状态、比赛背景；球队：俱乐部、名称、颜色、主教练、大名单、阵容单、战术</td><td>match_id</td></tr>
+        <tr><td>Player / Coach</td><td>球员：细分位置和可打位置、年龄、身高体重、惯用脚和逆足、花式、攻防积极性、34 项能力值和 6 项汇总分、11 项隐藏性格值、特长标签、生涯经历；教练：执教风格、偏好阵型、4 项执教能力、性格、生涯</td><td>match_id</td></tr>
+        <tr><td>TeamSheet / TeamTactics</td><td>阵型、首发与基准位置、替补、队长、定位球主罚人；防线高度、压迫、宽度、节奏、传球方式、进攻侧重、反击、造越位、拖延时间、个人指令</td><td>match_id</td></tr>
+        <tr><td>MatchContext</td><td>赛事（等级、阶段、重要程度）、场馆、观众、德比、比赛意义、天气、球员赛前状态、场外新闻、人际关系、模拟器算出的影响列表</td><td>match_id</td></tr>
+        <tr><td>MatchEvent</td><td>累计时间、所在阶段、阶段内时间、自动推出的转播时钟（63′、45+2′、PEN）、类型（21 种，含补时公布）、球员、接球人、起止坐标（105 × 68 米）、自动推出的网格（16 × 12）、三分之一、纵向通道和禁区、结果、成功概率（传球难度）、射门结果、xG、传球类型和高度、部位、球速、是否被压迫、控球段与来源、关联事件、威胁值</td><td>match_id</td></tr>
+        <tr><td>TrackingFrame</td><td>每秒一帧：球的位置和高度、持球人、22 名球员的位置、速度、体能</td><td>match_id</td></tr>
+        <tr><td>MinuteMetric</td><td>每分钟的势头、双方威胁值、双方压迫次数</td><td>match_id</td></tr>
+        <tr><td>Pivot + Narrative</td><td>转折点：分钟、方向、严重程度、触发事件；解释：观众设置、标题、带证据和统计引用的句子</td><td>match_id</td></tr>
+        <tr><td>Scenario / SimResult</td><td>推演设置、进度；原始与反事实的胜平负分布、置信区间、差异解释</td><td>match_id</td></tr>
+        <tr><td>OverlayFeed / Recap</td><td>带比赛时钟的叠加层条目；终场报道</td><td>match_id</td></tr>
+        <tr><td>AgentTrace</td><td>链 ID、Agent、输入、输出摘要、耗时、token、状态、核查结果</td><td>match_id</td></tr>
       </tbody>
     </table></div>
     <p class="small"><b>事件示例：</b></p>
 <pre class="code">{
-  "id": "E-1042",
+  "event_id": "m062-s01041",
   "match_id": "M-seed-20261021",
-  "t": 3768,
+  "t": 3749,
   "type": "pass",
-  "team": "Harbour City",
-  "player": "R. Okafor",
-  "from_zone": [7, 3],
-  "to_zone": [10, 4],
+  "team": "home",
+  "player_id": "h06",
+  "receiver_id": "h09",
+  "location": [48.0, 34.0],
+  "end_location": [86.0, 30.0],
   "outcome": "success",
+  "success_prob": 0.38,
+  "pass_type": "through_ball",
+  "pass_height": "ground",
+  "body_part": "right_foot",
+  "ball_speed_kmh": 61.0,
+  "under_pressure": true,
+  "possession_id": 118,
+  "play_pattern": "counter",
+  "related_event_ids": ["m062-s01042"],
   "threat": 0.031
 }</pre>
-    <p class="muted small">球队和球员均为虚构名字。</p>
+    <p class="muted small">球队和球员均为虚构名字。这一秒所有球员的位置在 <code>t = 3749</code> 的 TrackingFrame 里。</p>
   </div>
 
   <div class="sub">
@@ -820,7 +895,7 @@ flowchart LR
     <thead><tr><th>风险</th><th>概率</th><th>影响</th><th>对策</th><th>触发后的动作</th></tr></thead>
     <tbody>
       <tr><td>范围过大，做不完</td><td><span class="tag p0">高</span></td><td><span class="tag p0">高</span></td><td>严格 P0 / P1 / P2；每晚 15 分钟站会对照清单</td><td>10/24 晚推演闭环未通 → 砍掉推演，交付 ④+⑧</td></tr>
-      <tr><td>模拟器不“像足球”</td><td><span class="tag p1">中</span></td><td><span class="tag p0">高</span></td><td>D1 用 200 场统计量标定</td><td>先用固定参数交付，标定放到 D5</td></tr>
+      <tr><td>模拟器不“像足球”</td><td><span class="tag p1">中</span></td><td><span class="tag p0">高</span></td><td>按 6.3 的目标范围用 200 场标定，并用公开数据平均值复核；跑位规则先只做平移、收缩、压迫三条</td><td>先用固定参数交付，标定放到 D5；跑位不自然时降低随机扰动、减少同时移动的人数</td></tr>
       <tr><td>三条线接口对不上</td><td><span class="tag p1">中</span></td><td><span class="tag p0">高</span></td><td>D1 定死 schema 并写成 Pydantic / TypeScript 类型共享</td><td>改接口必须三人同意</td></tr>
       <tr><td>LLM 编造数字</td><td><span class="tag p1">中</span></td><td><span class="tag p1">中</span></td><td>计算与生成分离 + 核查 Agent</td><td>降级为模板解释</td></tr>
       <tr><td>Agent Framework 学习成本</td><td><span class="tag p1">中</span></td><td><span class="tag p1">中</span></td><td>D1 跑通官方示例；先写顺序工作流</td><td>必要时先用普通函数串联，D5 再迁移</td></tr>
