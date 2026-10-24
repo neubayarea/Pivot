@@ -16,6 +16,13 @@
 
 代码在 `apps/api/src/pivot_api/sims.py`。要增减比赛，改那里的比赛列表（种子），不要提交生成的文件。
 
+**录 Demo 用的那场（demo-1021）不一样**：它已经提交在 `eval/fixtures/demo-1021.json` 和 `demo-1021.frames.json.gz` 里。服务启动时直接读这两个文件，不重新模拟，所以每台电脑、服务器上看到的都是同一场，也就是网页默认打开的那场。
+
+- 换别的文件：设 `PIVOT_DEMO_FIXTURE`；
+- 不要这场：设 `PIVOT_DEMO_FIXTURE=0`；
+- `PIVOT_DEMO=0` 时，它和手写样例 `M-api-demo` 都不加载。
+- 重新生成它用 `uv run scripts/make_demo.py --seed 41`。
+
 ## 放在哪个文件夹
 
 | 在哪跑 | 文件夹 | 说明 |

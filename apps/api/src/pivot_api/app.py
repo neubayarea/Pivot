@@ -15,7 +15,7 @@ from .demo import seed_demo
 from .personalize import personalizer_from_env
 from .realtime import router as realtime_router
 from .routes import router
-from .sims import SimStatus, data_dir_from_env, load_sims, specs_from_env
+from .sims import SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
 
 log = logging.getLogger("uvicorn.error")   # shows up in the uvicorn startup log
 
@@ -30,8 +30,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     log.info("PIVOT_PROFILE=%s", app.state.adapters.profile)
     app.state.personalizer = personalizer_from_env(app.state.adapters.matches)
     # Local profile starts empty, so put one demo match in for frontend work. PIVOT_DEMO=0 turns it off.
+    app.state.fixture_frames = {}
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
         log.info("seeded demo match %s", await seed_demo(app.state.adapters.matches, app.state.adapters.traces))
+        # The recorded demo (B02, eval/fixtures/demo-1021): the match the web page opens by default.
+        if (fixture := fixture_from_env()) is not None:
+            try:
+                match_id, frames = await load_fixture(app.state.adapters, fixture)
+                if frames is not None:
+                    app.state.fixture_frames[match_id] = frames
+                log.info("loaded recorded demo %s from %s", match_id, fixture)
+            except (OSError, ValueError, KeyError):
+                log.exception("could not load the recorded demo from %s", fixture)
     # Simulated finished matches (Ax6), loaded in the background so /healthz answers straight away.
     app.state.sims = SimStatus()
     app.state.sims_dir = data_dir_from_env()

@@ -29,6 +29,7 @@ export const en = {
   "picker.label": "Match",
   "picker.seed": "seed {seed}",
   "picker.demo": "demo",
+  "picker.sample": "sample",
   "picker.generating": "Generating matches… {ready}/{total}",
 
   "common.retryNow": "Retry now",

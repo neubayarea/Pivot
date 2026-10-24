@@ -105,10 +105,11 @@ async def list_frames(request: Request, match_id: str, start: int | None = Query
                       end: int | None = Query(None, alias="to", ge=0)) -> JSONResponse:
     """Player and ball positions, one frame per second, with `from` <= t <= `to` (seconds; both optional).
 
-    Only simulated matches have frames (Ax6); any other match is a 404, like an unknown one.
+    Only simulated matches and the recorded demo have frames (Ax6); any other match is a 404, like an
+    unknown one.
     """
     await _match_or_404(request, match_id)
-    path = sims.frames_path(getattr(request.app.state, "sims_dir", sims.data_dir_from_env()), match_id)
+    path = getattr(request.app.state, "fixture_frames", {}).get(match_id) or         sims.frames_path(getattr(request.app.state, "sims_dir", sims.data_dir_from_env()), match_id)
     if path is None:
         raise HTTPException(404, f"match {match_id!r} has no tracking frames")
     # Straight from the cache file, which build_one wrote from TrackingFrame models: no need to validate 6000 again.

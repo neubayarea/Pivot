@@ -30,6 +30,7 @@ export const zh: Messages = {
   "picker.label": "比赛",
   "picker.seed": "种子 {seed}",
   "picker.demo": "演示",
+  "picker.sample": "手写样例",
   "picker.generating": "正在生成比赛… {ready}/{total}",
 
   "common.retryNow": "立即重试",

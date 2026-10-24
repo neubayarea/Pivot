@@ -145,3 +145,37 @@ def test_frames_404_for_unknown_or_frameless_matches(tmp_path, monkeypatch, call
 def test_frames_path_rejects_odd_ids(tmp_path):
     assert sims.frames_path(tmp_path, "../etc") is None
     assert sims.frames_path(tmp_path, SPEC.match_id) is None
+
+
+# --- the recorded demo (B02, eval/fixtures/demo-1021) -----------------------------------------
+
+def test_recorded_demo_is_stored_with_its_candidates_and_frames():
+    adapters = build_adapters("local")
+
+    async def check():
+        match_id, frames = await sims.load_fixture(adapters, sims.FIXTURE)
+        match = await adapters.matches.get_match(match_id)
+        assert match.preset == "demo-1021" and frames is not None and frames.is_file()
+        assert len(await adapters.matches.list_events(match_id)) > 1000      # computed fields dropped on load
+        assert len(await adapters.matches.list_metrics(match_id)) > 90
+        message = await adapters.queue.receive(PIVOT_CANDIDATES, timeout=0.1)
+        assert message is not None and message.message_id.startswith(f"{match_id}:")
+
+    asyncio.run(check())
+
+
+def test_api_serves_the_recorded_demo_and_its_frames(monkeypatch):
+    monkeypatch.setenv("PIVOT_DEMO_FIXTURE", str(sims.FIXTURE))
+    with TestClient(app) as client:
+        demo = [m for m in client.get("/api/matches").json() if m["preset"] == "demo-1021"]
+        assert len(demo) == 1
+        frames = client.get(f"/api/matches/{demo[0]['match_id']}/frames", params={"from": 0, "to": 9})
+        assert frames.status_code == 200 and [f["t"] for f in frames.json()] == list(range(10))
+
+
+def test_recorded_demo_off_or_missing_leaves_the_api_running(tmp_path, monkeypatch):
+    monkeypatch.setenv("PIVOT_DEMO_FIXTURE", str(tmp_path / "missing.json"))
+    with TestClient(app) as client:
+        assert client.get("/healthz").status_code == 200
+        assert not [m for m in client.get("/api/matches").json() if m["preset"] == "demo-1021"]
+
