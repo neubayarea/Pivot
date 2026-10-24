@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pivot_adapters import build_adapters
 
 from .demo import seed_demo
+from .realtime import router as realtime_router
 from .routes import router
 
 log = logging.getLogger("uvicorn.error")   # shows up in the uvicorn startup log
@@ -36,6 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(router)
+app.include_router(realtime_router)
 
 
 @app.get("/healthz")
