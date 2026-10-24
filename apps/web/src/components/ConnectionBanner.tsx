@@ -5,8 +5,9 @@ import Button from "./Button";
 export default function ConnectionBanner() {
   const conn = useConnection();
   const view = useMaybeMatch();
-  if (!conn || (conn.state !== "reconnecting" && conn.state !== "failed")) return null;
-  const paused = view && <span className="at">Data paused at {view.match.clockLabel}</span>;
+  // Before the first load StartupScreen says what is wrong in full.
+  if (!conn || !view || (conn.state !== "reconnecting" && conn.state !== "failed")) return null;
+  const paused = <span className="at">Data paused at {view.match.clockLabel}</span>;
 
   if (conn.state === "failed") {
     return (

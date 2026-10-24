@@ -4,7 +4,7 @@ import Button from "../components/Button";
 import Card from "../components/Card";
 import { describe } from "../components/EventFeed";
 import Pitch from "../components/Pitch";
-import { Severity } from "../components/PivotList";
+import { PivotStamp, Severity, pivotHeadline } from "../components/PivotList";
 import Scrubber from "../components/Scrubber";
 import Sourced, { formatValue } from "../components/Sourced";
 import Stamp from "../components/Stamp";
@@ -46,7 +46,16 @@ export default function PivotDetail() {
     return () => clearInterval(h);
   }, [playing, from, to]);
 
-  if (!detail || !pivot) return <NotFound />;
+  if (!detail || !pivot) {
+    return (
+      <NotFound title="Pivot not found">
+        <p>
+          There is no pivot “{id}” in this match. The checker may have ruled it out as not a pivot, or the link
+          is from another match.
+        </p>
+      </NotFound>
+    );
+  }
 
   const frame = detail.frames[Math.min(detail.frames.length - 1, Math.max(0, t - from))];
   const actions = evidence.filter((e) => e.location && Math.abs(e.t - t) <= SHOW_FOR);
@@ -63,12 +72,17 @@ export default function PivotDetail() {
 
   return (
     <>
+      {pivot.status === "degraded" && (
+        <div className="banner warn" role="status">
+          AI explanation unavailable. Showing a rule-based summary.
+        </div>
+      )}
       <div className="back">
         <Link to="/">← Live board</Link>
       </div>
       <div className="s2-head">
         <span className="min">{pivot.minute}′</span>
-        <h2>{pivot.narrative?.headline}</h2>
+        <h2>{pivotHeadline(pivot, teams)}</h2>
         <span className="acts">
           <Link to={`/whatif/${pivot.pivot_id}`} className="btn pri">
             What if…
@@ -79,9 +93,13 @@ export default function PivotDetail() {
         </span>
         <span className="meta">
           <Severity level={pivot.severity} />
-          <Stamp tone="ok">
-            Verified ✓ · {claims} claims · {evidence.length} evidence
-          </Stamp>
+          {pivot.status === "confirmed" ? (
+            <Stamp tone="ok">
+              Verified ✓ · {claims} claims · {evidence.length} evidence
+            </Stamp>
+          ) : (
+            <PivotStamp status={pivot.status} />
+          )}
           {disputed && <Stamp tone="warn">Flagged for review</Stamp>}
           <span className="pipe">Momentum → {teams[pivot.direction].name}</span>
         </span>

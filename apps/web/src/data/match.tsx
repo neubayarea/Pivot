@@ -1,6 +1,7 @@
 // The one place S1 and S2 get match data from. By default it follows the live API and WebSocket
 // feed (data/live); with `?fixture=1`, or VITE_PIVOT_FIXTURE=1 at build time, it replays the
-// local demo-1021 fixture on a timer so the board can be shown without a backend. Pages call
+// local demo-1021 fixture on a timer so the board can be shown without a backend; add
+// `&degraded=1` to show every pivot as an automatic summary (the AI-down state). Pages call
 // useMatch() either way.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Match, Pivot1 as Pivot, Score } from "@pivot/contracts";
@@ -19,7 +20,14 @@ export function fixtureMode(search = window.location.search): boolean {
 
 const TICK_MS = 250;
 
-function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed): Omit<MatchView, "playback"> {
+/** What a pivot looks like when the Explainer timed out and the template wrote the summary. */
+function degrade(p: Pivot): Pivot {
+  if (p.status !== "confirmed") return p;
+  return { ...p, status: "degraded", narrative: p.narrative && { ...p.narrative, source: "template" } };
+}
+
+function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed, degraded: boolean): Omit<MatchView, "playback"> {
+  const settled = (p: Pivot) => (degraded ? degrade(p) : p);
   const shown = fx.events.filter((e) => e.t <= clock);
   const score: Score = { home: 0, away: 0, home_penalties: null, away_penalties: null };
   for (const e of shown) if (e.shot_outcome === "goal") score[e.team]++;
@@ -28,7 +36,7 @@ function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed): 
   const pivots = fx.pivots
     .filter((p) => clock >= p.pendingAt)
     .map((p): Pivot =>
-      clock >= p.confirmedAt ? p.pivot : { ...p.pivot, status: "pending", narrative: null })
+      clock >= p.confirmedAt ? settled(p.pivot) : { ...p.pivot, status: "pending", narrative: null })
     .reverse();
   return {
     match: {
@@ -45,7 +53,7 @@ function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed): 
     pivotDetail: (id) => {
       const timeline = fx.pivots.find((p) => p.pivot.pivot_id === id);
       const detail = fx.details[id];
-      return timeline && detail ? { ...detail, pivot: timeline.pivot } : undefined;
+      return timeline && detail ? { ...detail, pivot: settled(timeline.pivot) } : undefined;
     },
   };
 }
@@ -77,6 +85,7 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
   const [clock, setClock] = useState(() => startClock(fixture));
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<Speed>(5);
+  const [degraded] = useState(() => new URLSearchParams(window.location.search).get("degraded") === "1");
 
   useEffect(() => {
     if (!playing) return;
@@ -92,7 +101,10 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
 
   // Events and pivots only change on whole seconds, so recompute once per second of match time.
   const second = Math.floor(clock);
-  const data = useMemo(() => view(fixture, second, playing, speed), [fixture, second, playing, speed]);
+  const data = useMemo(
+    () => view(fixture, second, playing, speed, degraded),
+    [fixture, second, playing, speed, degraded],
+  );
   const value = useMemo<MatchView>(
     () => ({
       ...data,

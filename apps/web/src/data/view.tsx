@@ -32,8 +32,15 @@ export type MatchView = {
   } | null;
 };
 
+/** Why the live feed has no match to show yet; StartupScreen turns it into a message and a next step. */
+export type LoadProblem =
+  | { kind: "no-matches" }
+  | { kind: "not-found"; matchId: string }
+  | { kind: "unreachable" }
+  | { kind: "server"; status: number };
+
 /** The live feed's state; null when the page runs on the fixture. */
-export type Connection = ConnectionStatus & { retryNow: () => void };
+export type Connection = ConnectionStatus & { retryNow: () => void; problem: LoadProblem | null };
 
 export const MatchContext = createContext<MatchView | null>(null);
 export const ConnectionContext = createContext<Connection | null>(null);

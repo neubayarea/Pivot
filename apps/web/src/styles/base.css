@@ -173,18 +173,38 @@ table.ba th:first-child, table.ba td:first-child { text-align: left; }
 table.ba td { padding: 5px 6px; border-bottom: 1px solid var(--pv-hair); text-align: right; font-family: var(--pv-label); font-weight: 600; }
 table.ba td.big { font-family: var(--pv-display); font-weight: 400; font-size: 17px; }
 
+/* C06 states: loading outlines, empty boxes, and the one-card error / empty pages. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sk { display: block; background: var(--pv-hair); animation: sk-pulse 1.6s ease-in-out infinite; }
+.sk-card { border-color: var(--pv-hair); }
+.sk-card h3 { border-bottom-color: var(--pv-hair); }
+.sk-title { width: 34%; height: 12px; }
+.sk-head { width: min(420px, 70%); height: 28px; }
+.sk-line { height: 11px; }
+.sk-line:nth-child(odd) { width: 82%; }
+.sk-block { height: 220px; background: transparent; border: 2px dashed var(--pv-hair); animation: none; }
+@keyframes sk-pulse { 50% { opacity: .45; } }
+.empty-box { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; min-height: 220px; border: 2px dashed var(--pv-hair); font-family: var(--pv-label); font-weight: 700; text-align: center; padding: 12px; }
+.state-page { display: grid; justify-items: center; padding: 48px 20px; }
+.state-card { width: min(560px, 100%); gap: 12px; }
+.state-card.error h3 { color: var(--pv-bad-fg); }
+.state-card.error { box-shadow: 6px 6px 0 var(--pv-bad-bg); }
+.state-card p { line-height: 1.45; }
+.state-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
+.state-detail { font-size: var(--pv-fs-xs); overflow-wrap: anywhere; }
+
 @media (max-width: 900px) {
   .top { flex-wrap: wrap; }
   .score { flex-wrap: wrap; white-space: normal; }
   .grid1, .grid2, .grid3, .lower { grid-template-columns: minmax(0, 1fr); }
-  .headline, .back, .grid1, .grid2, .grid3 { padding-inline: 16px; }
+  .headline, .back, .grid1, .grid2, .grid3, .state-page { padding-inline: 16px; }
   .s2-head { margin-inline: 16px; grid-template-columns: auto 1fr; }
   .s2-head .min { font-size: 52px; }
   .s2-head h2 { font-size: 26px; }
   .s2-head .acts { grid-row: auto; grid-column: 1 / -1; flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .stamp.live::before, .mom .mom-pending, .headline .latest, .feed div, .pv { animation: none; }
+  .stamp.live::before, .mom .mom-pending, .headline .latest, .feed div, .pv, .sk { animation: none; }
   .stat .bar i, .pitch .pl { transition: none; }
   .btn.pri:active { transform: none; }
 }
