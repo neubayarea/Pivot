@@ -14,7 +14,7 @@ members = [
 
 [[package]]
 name = "agent-framework-core"
-version = "1.23.0"
+version = "1.21.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "msgspec" },
@@ -25,9 +25,9 @@ dependencies = [
     { name = "regex" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/60/cd1bd50c52372de500a30c53038c81c85291b3d458e8596a7974c402a1ee/agent_framework_core-1.23.0.tar.gz", hash = "sha256:f2a212fb534b89ecf18d4d4e99ebc91ce717793df295cc74566ac16b5e07d8de", size = 769389, upload-time = "2026-10-22T17:01:36.931Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/4e/ccbbb762eb222881e0fb9b63d3c03ed298d26fea9725ef8beb3d40633523/agent_framework_core-1.21.0.tar.gz", hash = "sha256:3ddd6e46373875cceac857b671480c528b57d387b2d2177f52d32568d842017f", size = 750586, upload-time = "2026-10-08T10:42:40.918Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/99/8621d38956658e0dda6a3ffa4ce18e53e4dc15b97d1071e0481c828a769b/agent_framework_core-1.23.0-py3-none-any.whl", hash = "sha256:b16e8b44c0033e28d339d03d3b6367f0bec2dd8da9d533b8ba6c278d6a72bd01", size = 829938, upload-time = "2026-10-22T17:01:34.997Z" },
+    { url = "https://files.pythonhosted.org/packages/be/97/e99f86ebd1910d200b5c889d87b8a205e339ac87e372b8ba8cf374f9519a/agent_framework_core-1.21.0-py3-none-any.whl", hash = "sha256:ef333ff8348375b7d0757e690b1bd2ac3a1da67afc5cfacf6ce8db7da93bc423", size = 812842, upload-time = "2026-10-08T10:40:38.176Z" },
 ]
 
 [[package]]
@@ -1380,9 +1380,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework-core", specifier = "==1.23.0" },
+    { name = "agent-framework-core", specifier = "==1.21.0" },
     { name = "azure-identity", specifier = ">=1.17" },
-    { name = "openai", specifier = ">=1.50" },
+    { name = "openai", specifier = ">=1.50,<4" },
     { name = "pivot-adapters", editable = "packages/pivot_adapters" },
     { name = "pivot-core", editable = "packages/pivot_core" },
 ]
