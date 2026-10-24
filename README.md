@@ -30,3 +30,19 @@ uv run python -m pivot_api   # 启动 API，打开 http://127.0.0.1:8000/healthz
 docker build -t pivot-api .
 docker run --rm -p 8000:8000 pivot-api
 ```
+
+## AI 模型（D01）
+
+Agent 用两个 Foundry 模型部署：`standard`（Explainer、Comparator、Translator）和 `mini`（Judge）。代码里只认环境变量，不写死模型名：
+
+| 变量 | 含义 |
+| --- | --- |
+| `PIVOT_FOUNDRY_ENDPOINT` | Foundry（Azure OpenAI）资源的终结点，例如 `https://<resource>.openai.azure.com/` |
+| `PIVOT_MODEL_STANDARD` | standard 部署的名字 |
+| `PIVOT_MODEL_MINI` | mini 部署的名字 |
+
+本地用 `az login` 的身份访问，不用 API 密钥；账号需要在该资源上有 “Cognitive Services OpenAI User” 角色。验证两个部署都能用、同时 10 个请求不被限流：
+
+```bash
+uv run scripts/foundry_quota_test.py
+```
