@@ -27,10 +27,11 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ..domain import (
-    FoulDetail, LineupSlot, Match, MatchEvent, PeriodInfo, Score, Substitution, TrackingFrame,
+    FoulDetail, LineupSlot, Match, MatchEvent, PeriodInfo, PlantSpec, Score, Substitution, TeamSheet,
+    TrackingFrame,
 )
-from ..domain.common import PITCH_LENGTH, PITCH_WIDTH, zone_of
-from .formations import DEFENDER_ROLES, MIDFIELD_ROLES
+from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_LENGTH, PITCH_WIDTH, zone_of
+from .formations import DEFENDER_ROLES, FORMATIONS, MIDFIELD_ROLES
 from .movement import MovementModel, TeamShape, from_view, to_view
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
@@ -52,13 +53,14 @@ class Params:
     yellow_rate: float = 0.17
     red_rate: float = 0.004
     shot_base: float = 0.0
-    shot_xg_weight: float = 0.5
+    shot_xg_weight: float = 0.88
     shot_min_xg: float = 0.03
     block_base: float = 0.22
     block_per_defender: float = 0.12
     saved_share: float = 0.33
     post_share: float = 0.05
     home_boost: float = 1.02                     # CTX-003, scaled by attendance in _success
+    long_shot_rate: float = 0.006                # per second on the ball 18-32 m out, scaled by long_shots
 
 
 @dataclass
@@ -109,7 +111,7 @@ def xg_model(v: np.ndarray, header: bool = False, blockers: int = 0, pressed: bo
     angle = math.atan2(7.32 * max(dx, 0.1), dx * dx + dy * dy - half * half)
     if angle < 0:
         angle += math.pi
-    p = 1 / (1 + math.exp(-(-1.45 + 1.95 * angle - 0.08 * d)))
+    p = 1 / (1 + math.exp(-(-1.9 + 1.95 * angle - 0.085 * d)))
     if header:
         p *= 0.55
     p *= 0.8 ** blockers
@@ -135,8 +137,11 @@ def _in_own_box(v: np.ndarray) -> bool:
 
 
 class Engine:
-    def __init__(self, match: Match, seed: int | None = None, params: Params | None = None):
+    def __init__(self, match: Match, seed: int | None = None, params: Params | None = None,
+                 plants: list[PlantSpec] | None = None):
         self.match = match
+        # Planted events (B04): forced at a given minute, e.g. the demo's 38' red card.
+        self.plants = [{"spec": p, "done": False} for p in sorted(plants or [], key=lambda p: p.minute)]
         self.rng = np.random.default_rng(match.seed if seed is None else seed)
         self.p = params or Params()
         self.teams = [match.home, match.away]
@@ -267,8 +272,9 @@ class Engine:
              "t": self.t, "period": self.period, "period_t": period_t, "type": type_, "team": SIDES[k],
              "player_id": self._pid(k, i) if i is not None else None, "possession_id": self.pid or None}
         for key, value in fields.items():
-            if isinstance(value, np.ndarray):
-                value = (round(float(value[0]), 1), round(float(value[1]), 1))
+            if isinstance(value, np.ndarray):          # a ball over the line is recorded on the line
+                value = (round(float(np.clip(value[0], 0, PITCH_LENGTH)), 1),
+                         round(float(np.clip(value[1], 0, PITCH_WIDTH)), 1))
             e[key] = value
         self.events.append(e)
         return e
@@ -341,16 +347,28 @@ class Engine:
             spot = from_view(np.array([5.5, PITCH_WIDTH / 2 + self.rng.uniform(-9, 9)]), defending)
             self._set_restart("goal_kick", defending, spot, wait=self.rng.integers(18, 33))
 
-    def _set_restart(self, kind: str, team: int, spot: np.ndarray, wait: int) -> None:
+    def _set_restart(self, kind: str, team: int, spot: np.ndarray, wait: int, period_start: bool = False) -> None:
         self.owner, self.flight, self.loose = None, None, False
         self.ball = self._clip_pitch(spot)
         self.ball_z = 0.0
-        self.restart = {"kind": kind, "team": team, "spot": self.ball.copy()}
+        self.restart = {"kind": kind, "team": team, "spot": self.ball.copy(), "period_start": period_start,
+                        "waited": 0}
+        self.restart["taker"] = self._choose_taker(team, kind, self.ball)
         self.dead = int(wait)
 
-    def _take_restart(self) -> None:
-        r, self.restart = self.restart, None
-        k, kind, spot = r["team"], r["kind"], r["spot"]
+    def _restart_targets(self, targets: np.ndarray) -> None:
+        """During a stoppage the taker walks to the ball; after a goal everyone walks back to their half."""
+        r = self.restart
+        if r is None:
+            return
+        if r["kind"] == "kick_off" and not r["period_start"]:
+            for k in (0, 1):
+                anchors = self.shapes[k].anchors.copy()
+                anchors[:, 0] = np.minimum(anchors[:, 0] * 0.55, 49.0)
+                targets[k] = from_view(anchors, k)
+        targets[r["team"], r["taker"]] = r["spot"]
+
+    def _choose_taker(self, k: int, kind: str, spot: np.ndarray) -> int:
         sheet = self.sheets[k]
         taker_id = None
         if kind == "corner":
@@ -361,17 +379,26 @@ class Engine:
         elif kind == "free_kick" and np.hypot(*(self._view(spot, k) - GOAL)) < 32:
             taker_id = sheet.free_kick_taker_id
         ids = self.shapes[k].player_ids
-        if kind == "goal_kick":
-            i = self.shapes[k].roles.index("GK")
-        elif taker_id is not None and taker_id in ids:
-            i = ids.index(taker_id)
-        else:
-            i = self._nearest(k, spot, outfield=True)
-        if kind == "kick_off":
-            self._kickoff_positions(k)
+        if kind == "goal_kick" and "GK" in self.shapes[k].roles:
+            return self.shapes[k].roles.index("GK")
+        if taker_id is not None and taker_id in ids:
+            return ids.index(taker_id)
+        return self._nearest(k, spot, outfield=True)
+
+    def _take_restart(self) -> bool:
+        """Take the restart once the taker has reached the ball. Returns False while still waiting."""
+        r = self.restart
+        k, kind, spot, i = r["team"], r["kind"], r["spot"], r["taker"]
+        if not self._active(k)[i]:
+            i = r["taker"] = self._choose_taker(k, kind, spot)
+        if np.hypot(*(self.pos[k, i] - spot)) > 1.5 and r["waited"] < 20:
+            r["waited"] += 1
+            return False
+        self.restart = None
         self.pos[k, i] = spot
         self._gain(k, i)
         self.forced = {"kind": kind}
+        return True
 
     # --- on-ball actions -------------------------------------------------------------
 
@@ -397,6 +424,10 @@ class Engine:
             xg = xg_model(v, blockers=self._blockers(k, v), pressed=under, finishing=self._a(k, i, "finishing"))
             tendency = 1.2 if role in FORWARD else (0.5 if role in DEFENDER_ROLES else 0.9)
             if xg >= self.p.shot_min_xg and self.rng.random() < min(0.6, (self.p.shot_base + self.p.shot_xg_weight * xg) * tendency):
+                return self._shoot(k, i, v, under)
+        dist = float(np.hypot(*(v - GOAL)))
+        if 18 <= dist <= 32 and abs(v[1] - PITCH_WIDTH / 2) < 16 and not _in_box(v) and role != "GK":
+            if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0):
                 return self._shoot(k, i, v, under)
         rate = self.p.pass_rate[self.tactics[k].tempo] + (self.p.pass_rate_pressed if under else 0.0)
         if role == "GK":
@@ -444,7 +475,7 @@ class Engine:
         opp = 1 - k
         self._end_carry()
         aggression = self._a(opp, j, "aggression")
-        careful = 0.5 if self.yellows.get(self._pid(opp, j), 0) else 1.0
+        careful = 0.25 if self.yellows.get(self._pid(opp, j), 0) else 1.0
         if self.rng.random() < self.p.foul_rate * (0.6 + 0.8 * aggression) * self.strict * careful:
             return self._foul(opp, j, k, i, v)
         tackle = self._a(opp, j, "standing_tackle") * 0.6 + self._a(opp, j, "defensive_awareness") * 0.4
@@ -462,13 +493,15 @@ class Engine:
                 self.ball = self._clip_pitch(self.ball + self.rng.normal(0, 3, 2))
         _ = e
 
-    def _foul(self, k_def: int, j: int, k_att: int, i: int, v: np.ndarray) -> None:
+    def _foul(self, k_def: int, j: int, k_att: int, i: int, v: np.ndarray, force_red: str | None = None) -> None:
         spot = self.ball.copy()
         penalty = _in_box(v)
         card = None
         reason = None
         r = self.rng.random()
-        if r < self.p.red_rate * self.card_rate:
+        if force_red:
+            card, reason = "red", force_red
+        elif r < self.p.red_rate * self.card_rate:
             card, reason = "red", "serious_foul_play"
         elif r < (self.p.yellow_rate + (0.25 if penalty else 0.0)) * self.card_rate:
             pid = self._pid(k_def, j)
@@ -483,6 +516,7 @@ class Engine:
             self.half_counts["cards"] += 1
             if card in ("red", "second_yellow"):
                 self.shapes[k_def].player_ids[j] = None
+                self._react_to_red(k_def)
         self.owner = None
         if penalty:
             spot = from_view(np.array([PITCH_LENGTH - 11, PITCH_WIDTH / 2]), k_att)
@@ -685,7 +719,10 @@ class Engine:
         if not self._active(k)[r]:
             self.loose = True
             return
-        self.pos[k, r] = self.ball
+        if np.hypot(*(self.pos[k, r] - self.ball)) <= 6:
+            self.ball = self.pos[k, r].copy()                 # he collects it where he is
+        else:
+            self.pos[k, r] = self.ball
         self._gain(k, r)
         if f["cross"]:
             v = self._view(self.ball, k)
@@ -716,7 +753,7 @@ class Engine:
             out = target.copy()
             out[1] = -1.0 if target[1] < PITCH_WIDTH / 2 else PITCH_WIDTH + 1
             return self._out_of_play(out, k)
-        if r < 0.38 and _in_own_box(self._view(self.ball, k)):
+        if r < 0.45 and _in_own_box(self._view(self.ball, k)):
             behind = from_view(np.array([-1.0, self._view(self.ball, k)[1]]), k)
             return self._out_of_play(behind, k)
         self.flight = {"team": None, "slot": None, "end": target, "arrive": self.t + 2, "cross": False}
@@ -797,7 +834,7 @@ class Engine:
             j = self._nearest(opp, self.ball, outfield=True)
             be = self._emit("block", opp, j, location=self.pos[opp, j].copy())
             self._link(shot, be)
-            if self.rng.random() < 0.3:
+            if self.rng.random() < 0.45:
                 return self._out_of_play(from_view(np.array([PITCH_LENGTH + 1, v[1]]), k), opp)
             self.loose = True
             self.ball = self._clip_pitch(self.pos[opp, j] + self.rng.normal(0, 4, 2))
@@ -866,20 +903,28 @@ class Engine:
             self.pending_subs.remove(k)
             self._substitute(k)
 
-    def _substitute(self, k: int) -> None:
+    def _substitute(self, k: int, off_id: str | None = None, on_id: str | None = None,
+                    reason: str = "fatigue") -> bool:
         shape, sheet = self.shapes[k], self.sheets[k]
-        outfield = [i for i, pid in enumerate(shape.player_ids) if pid and shape.roles[i] != "GK"]
+        # players named in a planted substitution still to come are kept for it
+        reserved = set() if off_id is not None else {
+            str(pl["spec"].params[key]) for pl in self.plants if not pl["done"]
+            for key in ("player_off", "player_on") if key in pl["spec"].params}
+        outfield = [i for i, pid in enumerate(shape.player_ids) if pid and shape.roles[i] != "GK" and pid not in reserved]
         if not outfield or not sheet.bench:
-            return
-        i = min(outfield, key=lambda s: self.fitness[k, s])
-        if self.fitness[k, i] > 0.85:
-            return
+            return False
+        if off_id is not None and off_id in shape.player_ids:
+            i = shape.player_ids.index(off_id)
+        else:
+            i = min(outfield, key=lambda s: self.fitness[k, s])
+            if self.fitness[k, i] > 0.85:
+                return False
         off = shape.player_ids[i]
-        bench = [b for b in sheet.bench if self.players[b].role != "GK"]
+        bench = [b for b in sheet.bench if self.players[b].role != "GK" and b not in reserved]
         if not bench:
-            return
+            return False
         same = [b for b in bench if self.players[b].position == self.players[off].position]
-        on = (same or bench)[0]
+        on = on_id if on_id in sheet.bench else (same or bench)[0]
         starters = [LineupSlot(player_id=on if s.player_id == off else s.player_id, slot=s.slot, role=s.role,
                                anchor=s.anchor) for s in sheet.starters]
         new_sheet = sheet.model_copy(update={"starters": starters, "bench": [b for b in sheet.bench if b != on]})
@@ -893,8 +938,113 @@ class Engine:
         self.subs_used[k] += 1
         self.half_counts["subs"] += 1
         self._emit("substitution", k, i, substitution=Substitution(player_off_id=off, player_on_id=on,
-                                                                    slot=i + 1, reason="fatigue").model_dump(),
+                                                                    slot=i + 1, reason=reason).model_dump(),
                    team_sheet=new_sheet.model_dump(mode="json"))
+        return True
+
+    def _change_tactics(self, k: int, changes: dict) -> None:
+        """Coach decision: new tactics and, optionally, a new formation (emits tactical_shift)."""
+        tactic_keys = {"line_height", "press", "width", "tempo", "passing", "attack_focus"}
+        update = {key: changes[key] for key in tactic_keys if key in changes}
+        self.tactics[k] = self.tactics[k].model_copy(update=update)
+        sheet = self.sheets[k]
+        formation = changes.get("formation")
+        if formation and formation in FORMATIONS:
+            sheet = self._reshape(k, formation)
+        self.sheets[k] = sheet
+        old_ids = list(self.shapes[k].player_ids)
+        removed = {s.player_id for s in sheet.starters if s.player_id not in old_ids}
+        pace = {pid: a["pace"] for pid, a in self.attr.items()}
+        self.shapes[k] = TeamShape.from_sheet(k, sheet, self.tactics[k], pace)
+        self.shapes[k].player_ids = [None if pid in removed else pid for pid in self.shapes[k].player_ids]
+        self._follow_slots(k, old_ids)
+        self._emit("tactical_shift", k, None, team_sheet=sheet.model_dump(mode="json"),
+                   tactics=self.tactics[k].model_dump(mode="json"))
+
+    def _follow_slots(self, k: int, old_ids: list[str | None]) -> None:
+        """After a reshape a player may sit in a new slot: carry his position, fitness and the
+        rest of his per-slot state with him."""
+        new_ids = self.shapes[k].player_ids
+        src = [old_ids.index(pid) if pid is not None and pid in old_ids else n for n, pid in enumerate(new_ids)]
+        if src == list(range(11)):
+            return
+        for arr in (self.pos, self.prev, self.speed, self.fitness, self.last_press,
+                    self.move.offsets, self.move.offset_until, self.move.run_until):
+            arr[k] = arr[k][src]
+        if self.owner is not None and self.owner[0] == k:
+            self.owner = (k, new_ids.index(old_ids[self.owner[1]]))
+
+    def _react_to_red(self, k: int) -> None:
+        """Coach reaction to a sending-off: pull a forward back so the back line stays whole
+        (4-4-1 with ten), and press less unless chasing the game."""
+        shape = self.shapes[k]
+        if not any(p is not None and r == "GK" for p, r in zip(shape.player_ids, shape.roles)):
+            return
+        outfield = sum(1 for p, r in zip(shape.player_ids, shape.roles) if p is not None and r != "GK")
+        if outfield < 7:
+            return
+        # With ten the 11-man side takes about two thirds of the shots (scripts/red_card_report.py).
+        changes: dict = {"formation": "4-4-2" if outfield == 9 else "4-3-3"}
+        if self.score[k] >= self.score[1 - k]:                 # not behind: stop chasing the ball high up
+            changes["press"] = {"high": "mid", "mid": "low", "low": "low"}[self.tactics[k].press]
+        self._change_tactics(k, changes)
+
+    def _reshape(self, k: int, formation: str) -> TeamSheet:
+        """Map the players on the pitch onto a new formation, back to front and left to right."""
+        old = sorted(self.sheets[k].starters, key=lambda s: s.slot)
+        on_pitch = [s for s in old if s.player_id in self.shapes[k].player_ids]
+        gk = [s for s in on_pitch if s.role == "GK"]
+        field = sorted((s for s in on_pitch if s.role != "GK"), key=lambda s: (s.anchor[0], -s.anchor[1]))
+        template = FORMATIONS[formation]
+        slots = sorted(range(1, len(template)), key=lambda n: (template[n][1], -template[n][2]))[:len(field)]
+        starters = [LineupSlot(player_id=s.player_id, slot=1, role="GK", anchor=template[0][1:]) for s in gk]
+        for s, n in zip(field, slots):
+            role, ax, ay = template[n]
+            starters.append(LineupSlot(player_id=s.player_id, slot=n + 1, role=role, anchor=(ax, ay)))
+        return self.sheets[k].model_copy(update={"formation": formation, "starters": starters})
+
+    def _plant_due(self, minute: int) -> bool:
+        """A plant's minute is the scoreboard minute: 63 fires once the clock shows 63',
+        never in the previous half's added time (a 46 waits for the second half)."""
+        if self.period == 5:
+            return False
+        base, length = PERIOD_BASE_MINUTE[self.period], PERIOD_LENGTH_MINUTES[self.period]
+        if minute <= base:
+            return True
+        return minute <= base + length and base * 60 + self.t - self.period_start >= (minute - 1) * 60
+
+    def _apply_plants(self) -> None:
+        """Force planted events once their minute has come (B04, PlantSpec)."""
+        for plant in self.plants:
+            spec = plant["spec"]
+            if plant["done"] or not self._plant_due(spec.minute):
+                continue
+            k = 0 if spec.team == "home" else 1
+            params = dict(spec.params)
+            if spec.type == "red_card":
+                # A real foul: the planted player (or the nearest team-mate) brings down the carrier.
+                if self.owner is None or self.owner[0] != 1 - k or self.dead > 0:
+                    continue
+                ids = self.shapes[k].player_ids
+                pid = params.get("player_id")
+                if pid is not None and pid in ids:
+                    j = ids.index(pid)
+                else:
+                    j = self._nearest(k, self.ball, outfield=True)
+                ka, ia = self.owner
+                self._end_carry()
+                self._foul(k, j, ka, ia, self._view(self.ball, ka),
+                           force_red=str(params.get("reason", "professional_foul")))
+                plant["done"] = True
+            elif spec.type in ("substitution", "press_change", "formation_change"):
+                if self.dead <= 0:
+                    continue                                  # changes happen at the next stoppage
+                if spec.type == "substitution":
+                    self._substitute(k, params.get("player_off"), params.get("player_on"),
+                                     reason=str(params.get("reason", "tactical")))
+                if any(key in params for key in ("line_height", "press", "width", "tempo", "passing", "formation")):
+                    self._change_tactics(k, params)
+                plant["done"] = True
 
     def _clock(self) -> None:
         period_t = self.t - self.period_start
@@ -924,13 +1074,13 @@ class Engine:
         else:
             self._emit("kickoff", kicking, None, location=self.ball.copy())
         self.possession = None
-        self._set_restart("kick_off", kicking, self.ball.copy(), wait=1)
+        self._set_restart("kick_off", kicking, self.ball.copy(), wait=1, period_start=True)
 
     def _tick(self) -> None:
         if self.dead > 0:
             self.dead -= 1
-            if self.dead == 0 and self.restart:
-                self._take_restart()
+            if self.dead == 0 and self.restart and not self._take_restart():
+                self.dead = 1
         elif self.flight is not None:
             if self.t >= self.flight["arrive"]:
                 self._arrive()
@@ -938,6 +1088,7 @@ class Engine:
             self._on_ball()
         elif self.loose:
             self._loose_ball()
+        self._apply_plants()
         self._pressures()
         self._maybe_subs()
 
@@ -950,6 +1101,7 @@ class Engine:
                                     self.loose, tuple(self.last_loss_t), flight_target)
         if carrier is not None:
             targets[carrier] = self.ball
+        self._restart_targets(targets)
         self.prev = self.pos.copy()
         active = np.stack([self._active(0), self._active(1)])
         pace = np.stack([self.shapes[0].pace, self.shapes[1].pace])
@@ -984,9 +1136,9 @@ class Engine:
                 self.t += 1
                 if self._period_over():
                     break
+            self.t -= 1                                   # the whistle goes on the last second played
             self._end_carry()
             self.owner, self.flight, self.loose, self.restart, self.dead = None, None, False, None, 0
-            self.t -= 1
             self._emit("period_end", 0, None)
             self.periods.append(PeriodInfo(period=period, start_t=self.period_start, end_t=self.t,
                                            added_minutes=self.added))
@@ -1052,8 +1204,9 @@ class Engine:
             e.pop("play_pattern_hint", None)
 
 
-def simulate(match: Match, seed: int | None = None, params: Params | None = None) -> SimOutput:
-    return Engine(match, seed, params).run()
+def simulate(match: Match, seed: int | None = None, params: Params | None = None,
+             plants: list[PlantSpec] | None = None) -> SimOutput:
+    return Engine(match, seed, params, plants).run()
 
 
 __all__ = ["Engine", "Params", "SimOutput", "simulate", "xg_model", "threat_value", "zone_of"]
