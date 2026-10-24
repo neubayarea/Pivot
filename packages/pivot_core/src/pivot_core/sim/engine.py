@@ -39,6 +39,7 @@ BOX_DEPTH, BOX_Y = 16.5, (13.84, 54.16)
 PRESS_RADIUS, PRESS_RADIUS_GK = 4.6, 9.1          # EVT-006
 CLOSE_RADIUS, CLOSING_SPEED = 2.0, 1.0            # ATTR-001
 SIDES = ("home", "away")
+HALVES = ((1, 0), (2, 1))                         # period, side kicking off
 FORWARD = ("ST", "LW", "RW", "AM")
 
 # Scoring chance by shot technique relative to a normal strike from the same spot (ATTR-014):
@@ -213,10 +214,14 @@ class Engine:
         self.yellows: dict[str, int] = {}
         self.subs_used = [0, 0]
         self.pending_subs: list[int] = []
+        self.kept: set[str] = set()               # players automatic substitutions leave alone (What-if)
         self.score = [0, 0]
         self.half_counts = {"goals": 0, "subs": 0, "cards": 0}
 
         self.t = 0
+        self.half = 0                             # index into HALVES; len(HALVES) once the match is over
+        self.in_period = False
+        self.record_frames = True                 # What-if reruns only need the score
         self.period = 1
         self.period_start = 0
         self.added: int | None = None
@@ -226,6 +231,12 @@ class Engine:
         self.frames: dict[str, list] = {k: [] for k in ("t", "period", "poss", "ball", "owner", "ids", "pos", "speed", "fit")}
 
     # --- setup -----------------------------------------------------------------------
+
+    def reseed(self, seed: int) -> None:
+        """Draw everything from here on from a new seed, the same way __init__ seeds a match (B08)."""
+        self.rng = np.random.default_rng(seed)
+        self.style_rng = np.random.default_rng([seed, 2])
+        self.move.rng = self.rng
 
     @staticmethod
     def _flatten(pl) -> dict[str, float]:
@@ -999,7 +1010,7 @@ class Engine:
         # players named in a planted substitution still to come are kept for it
         reserved = set() if off_id is not None else {
             str(pl["spec"].params[key]) for pl in self.plants if not pl["done"]
-            for key in ("player_off", "player_on") if key in pl["spec"].params}
+            for key in ("player_off", "player_on") if key in pl["spec"].params} | self.kept
         outfield = [i for i, pid in enumerate(shape.player_ids) if pid and shape.roles[i] != "GK" and pid not in reserved]
         if not outfield or not sheet.bench:
             return False
@@ -1105,10 +1116,11 @@ class Engine:
 
     def _apply_plants(self) -> None:
         """Force planted events once their minute has come (B04, PlantSpec)."""
-        for plant in self.plants:
+        for n, plant in enumerate(self.plants):
             spec = plant["spec"]
             if plant["done"] or not self._plant_due(spec.minute):
                 continue
+            first = len(self.events)
             k = 0 if spec.team == "home" else 1
             params = dict(spec.params)
             if spec.type == "red_card":
@@ -1135,6 +1147,8 @@ class Engine:
                 if any(key in params for key in ("line_height", "press", "width", "tempo", "passing", "formation")):
                     self._change_tactics(k, params)
                 plant["done"] = True
+            for e in self.events[first:]:
+                e["_plant"] = n                       # which plant made it, so What-if can find it
 
     def _clock(self) -> None:
         period_t = self.t - self.period_start
@@ -1212,6 +1226,8 @@ class Engine:
         return self._stamina_cache
 
     def _record_frame(self) -> None:
+        if not self.record_frames:
+            return
         f = self.frames
         f["t"].append(self.t)
         f["period"].append(self.period)
@@ -1224,15 +1240,23 @@ class Engine:
         f["speed"].append(self.speed.copy())
         f["fit"].append(self.fitness.copy())
 
-    def run(self) -> SimOutput:
-        for period, kicking in ((1, 0), (2, 1)):
-            self.period = period
-            self._start_period(kicking)
-            while True:
+    def play(self, until_t: int | None = None) -> bool:
+        """Play on to elapsed second `until_t` (not yet played) or to full time; True once it is over.
+
+        Stopping and playing on gives exactly the match an uninterrupted run gives, so a deepcopy
+        of a stopped engine is a save that can be played on many times (B04).
+        """
+        while self.half < len(HALVES):
+            period, kicking = HALVES[self.half]
+            if not self.in_period:
+                self.period = period
+                self._start_period(kicking)
+                self.in_period = True
+            while not self._period_over():
+                if until_t is not None and self.t >= until_t:
+                    return False
                 self._tick()
                 self.t += 1
-                if self._period_over():
-                    break
             self.t -= 1                                   # the whistle goes on the last second played
             self._end_carry()
             self.owner, self.flight, self.loose, self.restart, self.dead = None, None, False, None, 0
@@ -1240,6 +1264,12 @@ class Engine:
             self.periods.append(PeriodInfo(period=period, start_t=self.period_start, end_t=self.t,
                                            added_minutes=self.added))
             self.t += 1
+            self.half += 1
+            self.in_period = False
+        return True
+
+    def run(self) -> SimOutput:
+        self.play()
         self._finalise()
         f = self.frames
         final = self.match.model_copy(update={
