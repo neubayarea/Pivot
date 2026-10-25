@@ -6,12 +6,13 @@ import type { MatchEvent, Narrative, OutcomeDist, Scenario, ScenarioSpec, SimRes
 import { translator, type Lang } from "../i18n";
 import { ApiError } from "./live/api";
 import { DEFAULT_RUNS, MOVE_RANGE, OUTCOMES, RUN_COUNTS, clockMinute, optionLabel, type Outcome, type ScenarioApi, type ScenarioOption } from "./scenarios";
-import type { MatchView, Side } from "./view";
+import { isRedCard, type MatchView, type Side } from "./view";
 
 /** How long a mock run takes, by its size: long enough to watch the bar, short enough for a demo. */
 const DURATION_MS: Record<number, number> = { 200: 2400, 500: 3600, 1000: 5200 };
 const QUEUED_MS = 300;
 const DEFAULT_MOVE_TO = 74;                   // elapsed minute, shown as 75′
+const LEAD_UP = 15;                           // minutes before a pivot in which an event can have caused it
 const Z95 = 1.959964;
 
 type Run = { scenario: Scenario; startedAt: number; key: string };
@@ -24,7 +25,6 @@ export const resetMockScenarios = () => {
   counter = 0;
 };
 
-const isRed = (e: MatchEvent) => e.type === "card" && ["red", "second_yellow"].includes(String(e.meta.card ?? e.meta.colour ?? e.meta.color));
 const isGoal = (e: MatchEvent) => e.type === "shot" && e.shot_outcome === "goal" && e.period !== 5;
 const other = (s: Side): Side => (s === "home" ? "away" : "home");
 
@@ -33,9 +33,18 @@ export function mockOptions(view: MatchView, pivotId: string): ScenarioOption[] 
   const pivot = view.pivotDetail(pivotId)?.pivot;
   if (!pivot) throw new ApiError(404, `GET /api/pivots/${pivotId}/scenarios: 404`);
   const played = view.events;
+  // _closest in the worker: a trigger, then the lead-up to the pivot, then a tactical substitution, then the nearest.
+  const rank = (e: MatchEvent) => [
+    Number(!pivot.trigger_event_ids.includes(e.event_id)),
+    Number(!(pivot.minute - e.minute >= 0 && pivot.minute - e.minute <= LEAD_UP)),
+    Number(e.substitution?.reason !== "tactical"),
+    Math.abs(e.minute - pivot.minute),
+    e.minute,
+  ];
   const closest = (pool: MatchEvent[]) => {
-    const triggers = pool.filter((e) => pivot.trigger_event_ids.includes(e.event_id));
-    return (triggers.length ? triggers : [...pool].sort((a, b) => Math.abs(a.minute - pivot.minute) - Math.abs(b.minute - pivot.minute)))[0];
+    const ranked = pool.map((e) => ({ e, r: rank(e) }));
+    ranked.sort((a, b) => a.r.reduce((d, x, i) => d || x - b.r[i], 0));
+    return ranked[0]?.e;
   };
   const target = (type: ScenarioOption["type"], pool: MatchEvent[], label: (m: number) => string, none: string): ScenarioOption => {
     const e = closest(pool);
@@ -52,7 +61,7 @@ export function mockOptions(view: MatchView, pivotId: string): ScenarioOption[] 
   const losing = other(pivot.direction);
   const options = [
     target("cancel_substitution", subs, (m) => any(m, "substitution", "Cancel"), "No substitution in this match yet"),
-    target("remove_red_card", played.filter(isRed), (m) => any(m, "red card", "Remove"), "No red card in this match"),
+    target("remove_red_card", played.filter(isRedCard), (m) => any(m, "red card", "Remove"), "No red card in this match"),
     target("move_substitution", subs, () => "Move substitution", "No substitution in this match yet"),
     target("remove_goal", played.filter(isGoal), (m) => any(m, "goal", "Disallow"), "No goal in this match yet"),
     { type: "change_press", label: `Press higher from ${clockMinute(pivot.minute)}′`, enabled: true, disabled_reason: null,

@@ -1,5 +1,5 @@
 import type { MatchEvent } from "@pivot/contracts";
-import { involves, useMatch } from "../data/match";
+import { involves, isRedCard, useMatch } from "../data/match";
 import { isMessageKey, usePrefs, type T } from "../i18n";
 
 const ROWS = 8;
@@ -22,7 +22,7 @@ export function describe(e: MatchEvent, name: (id: string | null) => string, t: 
       if (e.shot_outcome === "goal") return t("event.goal", { who });
       return t("event.shot", { who, xg: e.xg?.toFixed(2) ?? "" });
     case "card":
-      return t(e.meta.card === "red" ? "event.red" : "event.yellow", { who });
+      return t(isRedCard(e) ? "event.red" : "event.yellow", { who });
     case "substitution":
       return e.substitution
         ? t("event.sub", { on: name(e.substitution.player_on_id), off: name(e.substitution.player_off_id) })

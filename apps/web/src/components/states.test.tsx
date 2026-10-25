@@ -8,7 +8,7 @@ import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { classifyLoadError } from "../data/live/provider";
 import { ApiError } from "../data/live/api";
 import { startDemo, replayUrl, REPLAY_URL } from "../data/demo";
-import { MatchContext, computeStats, type Connection, type MatchView } from "../data/match";
+import { MatchContext, computeStats, isRedCard, type Connection, type MatchView } from "../data/match";
 import LiveBoard from "../pages/LiveBoard";
 import PivotDetail from "../pages/PivotDetail";
 import { ErrorScreen } from "./ErrorBoundary";
@@ -156,6 +156,13 @@ describe("live board states", () => {
 
   it("says when the event feed is empty", () => {
     expect(render(<EventFeed highlight={new Set()} />, matchView())).toContain("No events yet");
+  });
+
+  it("reads a red card from foul.card, as the simulator sends it, or the fixture's meta.card", () => {
+    const card = (card: "yellow" | "second_yellow" | "red") => ({ type: "card" as const, meta: {},
+      foul: { foul_type: "tackle" as const, advantage_played: false, penalty_awarded: false, card, card_reason: null } });
+    expect([card("red"), card("second_yellow"), card("yellow")].map(isRedCard)).toEqual([true, true, false]);
+    expect(isRedCard({ type: "card", foul: null, meta: { card: "red" } })).toBe(true);
   });
 });
 
