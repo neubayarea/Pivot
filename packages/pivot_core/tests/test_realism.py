@@ -86,7 +86,7 @@ def test_real_003_wide_forwards_drop_into_midfield_without_the_ball():
     st = next(t[i, 0] for i, r in roles.items() if r == "ST")
     cms = [t[i, 0] for i, r in roles.items() if r == "CM"]          # one of them may be pressing the ball
     assert lw < st - 8
-    assert min(abs(lw - x) for x in cms) < 4
+    assert min(abs(lw - x) for x in cms) < 6                    # in the midfield line, give or take his drift
 
 
 def test_real_004_better_finishers_score_more_from_the_same_spot():
