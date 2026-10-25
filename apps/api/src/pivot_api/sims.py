@@ -8,7 +8,9 @@ then written to `PIVOT_DATA_DIR/sims/` (default `./.pivot-data/sims/`):
   M-seed-101.<SIM_VERSION>.frames.json.gz  one tracking frame per second
 
 SIM_VERSION hashes the simulator and analytics source, so editing either re-runs the matches on the
-next start; an unchanged one is read straight back. The frames stay on disk; `GET
+next start; an unchanged one is read straight back. With `PIVOT_SIMS_BACKEND=blob` (Ax15) the disk is a
+cache of Azure Blob Storage: a match missing from the disk is downloaded from Blob if Blob has it at this
+version, else simulated and written through to Blob (`SimStore`; Blob trouble only means the disk alone). The frames stay on disk; `GET
 /api/matches/{id}/frames` reads them from there (`read_frames`). Candidates go on `pivot-candidates`, so the
 worker writes the pivots; its message ids are "{match_id}:{minute}", so a second load adds nothing.
 Before that, `adapters.results` reads back the pivots the worker wrote for this SIM_VERSION in an
@@ -42,6 +44,7 @@ from pathlib import Path
 import pivot_core.analytics as analytics_pkg
 import pivot_core.sim as sim_pkg
 from pivot_adapters import Adapters
+from pivot_adapters.local import FilesSimStore, SimStore
 from pivot_core.analytics import StatCalculator, detect_candidates, momentum_series, player_match_stats
 from pivot_core.domain import Match, MatchEvent, MinuteMetric, PivotCandidate, PlantSpec
 from pivot_core.ports import PIVOT_CANDIDATES
@@ -103,7 +106,11 @@ SIM_VERSION = _source_hash()
 
 def specs_from_env() -> list[SimSpec]:
     """The first `PIVOT_SIM_MATCHES` specs; past the six listed ones, even strengths and seeds 707, 808, ..."""
-    n = max(0, int(os.getenv("PIVOT_SIM_MATCHES", str(DEFAULT_MATCHES))))
+    return specs_first(int(os.getenv("PIVOT_SIM_MATCHES", str(DEFAULT_MATCHES))))
+
+
+def specs_first(n: int) -> list[SimSpec]:
+    n = max(0, n)
     extra = [SimSpec(101 * k, 70, 70, "4-3-3", "4-4-2") for k in range(len(SPECS) + 1, n + 1)]
     return (SPECS + extra)[:n]
 
@@ -147,10 +154,69 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
         "candidates": [c.model_dump(mode="json", round_trip=True) for c in candidates],
         "player_stats": [p.model_dump(mode="json") for p in player_match_stats(StatCalculator(out.match, events, frames))],
     })
-    for old in data_dir.glob(f"{spec.match_id}.*.gz"):  # older versions of this match
-        if old not in (data_path, frames_path):
-            old.unlink(missing_ok=True)
+    drop_old_versions(data_dir, spec, version)
     return True
+
+
+def drop_old_versions(data_dir: Path, spec: SimSpec, version: str) -> None:
+    keep = paths(data_dir, spec, version)
+    for old in data_dir.glob(f"{spec.match_id}.*.gz"):
+        if old not in keep:
+            old.unlink(missing_ok=True)
+
+
+def _file_ok(path: Path, version: str, match_id: str | None) -> bool:
+    """A whole gzip of JSON: the match file also says it is this match at this version."""
+    try:
+        data = _read_json_gz(path)
+    except (OSError, EOFError, ValueError):       # not gzip, cut short, bad CRC, not JSON
+        return False
+    if match_id is None:
+        return isinstance(data, list)
+    return (isinstance(data, dict) and data.get("sim_version") == version
+            and isinstance(data.get("match"), dict) and data["match"].get("match_id") == match_id
+            and all(k in data for k in ("events", "metrics", "candidates")))
+
+
+async def fetch_from_store(store: SimStore, spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool:
+    """Download this match's two files into the cache, if the store has both whole. True if they are now on disk.
+
+    Each file is written to a temporary name and checked before it is renamed, the frames first, so a
+    half-downloaded or corrupt blob never looks cached; it is ignored and the match is simulated.
+    """
+    data_path, frames_path = paths(data_dir, spec, version)
+    tmps = [p.with_name(p.name + ".dl.tmp") for p in (data_path, frames_path)]
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+        for src, tmp, match_id in ((data_path, tmps[0], spec.match_id), (frames_path, tmps[1], None)):
+            if not await store.download(src.name, tmp):
+                return False
+            if not await asyncio.to_thread(_file_ok, tmp, version, match_id):
+                log.warning("blob %s is corrupt or incomplete; ignoring it and simulating the match", src.name)
+                return False
+        tmps[1].replace(frames_path)
+        tmps[0].replace(data_path)
+        await asyncio.to_thread(drop_old_versions, data_dir, spec, version)
+        return True
+    except Exception:
+        log.warning("could not download %s from the store; simulating it instead", spec.match_id, exc_info=True)
+        return False
+    finally:
+        for tmp in tmps:
+            tmp.unlink(missing_ok=True)
+
+
+async def push_to_store(store: SimStore, spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool:
+    """Write the cached files of this match through to the store (frames first, so the match file means both
+    are there). False, with a warning, if that did not work: the match is still served from the disk."""
+    data_path, frames_path = paths(data_dir, spec, version)
+    try:
+        for path in (frames_path, data_path):
+            await store.upload(path.name, path, version)
+        return True
+    except Exception:
+        log.warning("could not upload %s to the store; it stays on the disk only", spec.match_id, exc_info=True)
+        return False
 
 
 @dataclass
@@ -261,13 +327,32 @@ def default_executor(n: int) -> Executor:
     return ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("spawn"))
 
 
+async def _connect_store(store: SimStore | None) -> SimStore | None:
+    """The store if it can be used, else None (with a warning): the site never waits on or fails for it."""
+    if store is None or isinstance(store, FilesSimStore):
+        return None
+    try:
+        await store.connect()
+        return store
+    except Exception as exc:
+        log.warning("simulated-match store %s unavailable (%r); keeping the matches on the disk only",
+                    type(store).__name__, exc)
+        try:
+            await store.close()
+        except Exception:
+            pass
+        return None
+
+
 async def load_sims(adapters: Adapters, specs: list[SimSpec], data_dir: Path, status: SimStatus,
-                    executor: Executor | None = None) -> None:
-    """Build (or reuse) every spec's files off the event loop and store each match as soon as it is ready."""
+                    executor: Executor | None = None, store: SimStore | None = None) -> None:
+    """Get every spec's files (disk cache, else the store, else simulated and written through to the store)
+    off the event loop and store each match as soon as it is ready."""
     status.total, status.done = len(specs), False
     if not specs:
         status.done = True
         return
+    store = await _connect_store(store)
     own = executor is None
     executor = executor or default_executor(len(specs))
     loop = asyncio.get_running_loop()
@@ -275,10 +360,18 @@ async def load_sims(adapters: Adapters, specs: list[SimSpec], data_dir: Path, st
 
     async def one(spec: SimSpec) -> None:
         try:
+            how = "loaded cached"
+            if store is not None and not all(p.is_file() for p in paths(data_dir, spec)):
+                if await fetch_from_store(store, spec, data_dir):
+                    how = "downloaded from the store"
             simulated = await loop.run_in_executor(executor, build_one, spec, data_dir, SIM_VERSION)
+            if simulated:
+                how = "simulated"
+                if store is not None:
+                    await push_to_store(store, spec, data_dir)
             await store_one(adapters, paths(data_dir, spec)[0])
             status.ready.append(spec.match_id)
-            log.info("%s %s", "simulated" if simulated else "loaded cached", spec.match_id)
+            log.info("%s %s", how, spec.match_id)
         except Exception:
             status.failed.append(spec.match_id)
             log.exception("could not build simulated match %s", spec.match_id)
@@ -289,5 +382,7 @@ async def load_sims(adapters: Adapters, specs: list[SimSpec], data_dir: Path, st
         status.done = True
         if own:
             executor.shutdown(wait=False, cancel_futures=True)
+        if store is not None:
+            await store.close()
     log.info("simulated matches ready: %d of %d in %.1fs (%s)", len(status.ready), len(specs),
              time.monotonic() - started, data_dir)

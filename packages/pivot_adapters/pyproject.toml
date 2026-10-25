@@ -3,7 +3,7 @@ name = "pivot-adapters"
 version = "0.1.0"
 description = "Pivot adapters: local (in-memory) and, later, Azure implementations of the pivot_core ports."
 requires-python = ">=3.12"
-dependencies = ["pivot-core", "azure-messaging-webpubsubservice>=1.2", "azure-identity>=1.19", "azure-cosmos>=4.9", "aiohttp>=3.10"]
+dependencies = ["pivot-core", "azure-messaging-webpubsubservice>=1.2", "azure-identity>=1.19", "azure-cosmos>=4.9", "azure-storage-blob>=12.23", "aiohttp>=3.10"]
 
 [build-system]
 requires = ["hatchling"]

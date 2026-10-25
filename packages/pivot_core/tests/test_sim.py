@@ -86,6 +86,13 @@ def test_positions_stay_on_the_pitch(out):
     assert x.min() >= 0 and x.max() <= PITCH_LENGTH and y.min() >= 0 and y.max() <= PITCH_WIDTH
 
 
+def test_bx2_seed_202_ball_over_the_line_is_recorded_on_the_line():
+    # Seed 202 once put a pass end at y = -0.1 and the whole match failed the data format check (#130).
+    events = simulate(build_demo_match(202, 76, 66, "4-3-3", "4-4-2")).events_as_models()
+    points = [p for e in events for p in (e.location, e.end_location) if p is not None]
+    assert points and all(0 <= x <= PITCH_LENGTH and 0 <= y <= PITCH_WIDTH for x, y in points)
+
+
 def test_attr_008_xg_falls_with_distance_and_headers():
     assert xg_model(np.array([99.0, 34.0])) > xg_model(np.array([88.0, 34.0])) > xg_model(np.array([80.0, 34.0]))
     assert xg_model(np.array([95.0, 34.0]), header=True) < xg_model(np.array([95.0, 34.0]))
