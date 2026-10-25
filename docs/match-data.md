@@ -77,6 +77,57 @@ PIVOT_COSMOS_ENDPOINT=https://pivot-cosmos.documents.azure.com:443/
 - 只重写一场：在 Azure 门户的 Data Explorer 里删掉这场比赛的记录，或者整体改 `PIVOT_RESULTS_TAG`。
 - 代码在 `packages/pivot_adapters/src/pivot_adapters/azure/cosmos.py`。连真实账号的测试默认跳过，`PIVOT_COSMOS_IT=1 uv run pytest packages/pivot_adapters/tests/test_azure_cosmos.py` 才会跑，它只写一个叫 `it-ax11` 的比赛，跑完自己删掉。
 
+## 模拟比赛放到 Azure Blob
+
+默认模拟比赛只存服务器硬盘，服务器自己 6 场大约 25 秒就能算完，所以**这一步不是必须的**，是为了比赛多（几十场）时不用每次都在 2 核的服务器上重新算（Ax15）。
+
+规矩：**Blob 是正本，硬盘是缓存。** 服务启动时每场比赛按顺序试：
+
+1. 硬盘上已经有当前版本的文件，直接用；
+2. 没有，就看 Blob 里有没有这个版本，有就下载到硬盘（先下到临时文件，检查完整了才改名，所以下载一半或者坏掉的文件会被忽略）；
+3. 都没有，才自己模拟，算完写到硬盘，并传一份到 Blob。
+
+网站读跑位数据（`/frames`）还是读硬盘，所以和以前一样快。Blob 连不上、没权限、容器不存在，日志里会有一行 `simulated-match store ... unavailable`，然后完全照老办法只用硬盘，网站照常打开。
+
+在 Dokploy 的 Environment 里加：
+
+```
+PIVOT_SIMS_BACKEND=blob
+```
+
+`PIVOT_BLOB_ENDPOINT` 已经填过了；容器名默认 `sims`，要换才加 `PIVOT_BLOB_CONTAINER`。登录用已有的 `AZURE_*` 服务主体，不用密钥。容器不存在时服务会试着建；服务主体没权限建的话，日志里会给出要自己运行的这条命令：
+
+```bash
+az storage container create --account-name pivotstore1024 --name sims --auth-mode login
+```
+
+文件名和硬盘上一样：`M-seed-101.<版本号>.json.gz` 和 `M-seed-101.<版本号>.frames.json.gz`，版本号就是 `SIM_VERSION`。服务器不会自己删旧版本，用下面的脚本清。
+
+### 在自己电脑上生成并上传
+
+用 `scripts/sims_blob.py`，先 `az login`。文件用服务器同一份代码生成，字节完全一样，先放在 `./.pivot-data/sims/`（不进 git），再传到 Blob。
+
+```bash
+export PIVOT_BLOB_ENDPOINT=https://pivotstore1024.blob.core.windows.net/
+uv run scripts/sims_blob.py generate-upload --count 50   # 前 50 场，规则同 PIVOT_SIM_MATCHES；也可以 --seeds 101,212
+uv run scripts/sims_blob.py list                         # Blob 里每个版本有几场、多大
+uv run scripts/sims_blob.py clean                        # 演练：列出不是当前版本的文件，不删
+uv run scripts/sims_blob.py clean --yes-delete           # 确认后真的删
+```
+
+云端已经有当前版本的比赛会自动跳过；传到一半断了，重新运行同一条命令只补没传的。每次运行开头都会打印当前的 `SIM_VERSION`。用时参考（10 核的 Mac，上传另算在内）：6 场约 6 MB、约 5 秒；50 场约 52 MB、约 25 秒。一场约 1 MB。
+
+### 改了模拟规则之后怎么办
+
+**先说清楚：** `SIM_VERSION` 是模拟器和统计代码算出来的指纹。队友一改规则，版本号就变，**改之前传上去的文件全部作废，服务器不会再用它们。** 所以要等规则改完、合并之后再传，传早了白传。
+
+1. 把改规则的 PR 合并到 `main`，本地 `git pull`。
+2. 运行 `uv run scripts/sims_blob.py generate-upload --count N`（N 是要几场）。
+3. 重新部署或重启服务器，它会从 Blob 下载新版本，不用自己算。
+4. 可选：运行 `uv run scripts/sims_blob.py clean --yes-delete`，删掉旧版本的文件。
+
+忘了第 2 步也不会出事：服务器找不到当前版本，就退回自己模拟（6 场约 25 秒），算完还会传上去。区别只是启动后要多等一会儿。
+
 ## 放在哪个文件夹
 
 | 在哪跑 | 文件夹 | 说明 |

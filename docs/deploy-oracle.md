@@ -247,6 +247,9 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `PIVOT_RESULTS_BACKEND` | AI 写的结果存哪：`files`（默认）存硬盘；`cosmos` 存 Azure Cosmos DB，启动时连不上就自动退回硬盘，见 [存到 Cosmos DB](match-data.md#存到-azure-cosmos-db) |
 | `PIVOT_COSMOS_ENDPOINT` | `cosmos` 时必填，Cosmos 账号地址，例如 `https://pivot-cosmos.documents.azure.com:443/`。用上面的 `AZURE_*` 服务主体登录，不用填密钥 |
 | `PIVOT_COSMOS_DATABASE` | 默认 `pivot` |
+| `PIVOT_SIMS_BACKEND` | 模拟比赛文件存哪：`files`（默认）只存硬盘；`blob` 以 Azure Blob 为准、硬盘当缓存，连不上 Blob 就只用硬盘，见 [模拟比赛放到 Blob](match-data.md#模拟比赛放到-azure-blob) |
+| `PIVOT_BLOB_ENDPOINT` | `blob` 时必填，存储账号地址，例如 `https://pivotstore1024.blob.core.windows.net/`。用 `AZURE_*` 服务主体登录，不用填密钥 |
+| `PIVOT_BLOB_CONTAINER` | 默认 `sims` |
 | `PIVOT_WHATIF_WORKERS` | 「假如」重踢比赛用几个进程，默认比 CPU 核数少 1（至少 1），留一个核给网站和直播回放 |
 | `PIVOT_WHATIF_WARM` | 启动后先在后台把录好的演示比赛每个转折点的前几个「假如」按钮算好，默认 `2`，`0` 不算。算好的结果和 AI 的结果存在一起，重启不用再算 |
 | `PIVOT_WHATIF_MAX_QUEUED` | 最多排队几个「假如」，再多就请用户稍后再试，默认 `20` |

@@ -8,6 +8,7 @@ reads them back instead of calling the model again (Ax10). `PIVOT_RESULTS=0` kee
 `PIVOT_RESULTS_TAG` is added to every match's version, so changing it writes everything again.
 `PIVOT_RESULTS_BACKEND=cosmos` keeps them in Cosmos DB instead (`PIVOT_COSMOS_ENDPOINT`,
 `PIVOT_COSMOS_DATABASE`, Ax11), and on disk after all if Cosmos cannot be reached at startup.
+`build_sim_store` picks where finished simulated matches are kept besides the disk (`PIVOT_SIMS_BACKEND`, Ax15).
 """
 
 from __future__ import annotations
@@ -73,3 +74,17 @@ def build_adapters(profile: str | None = None) -> Adapters:
     if profile in PROFILES:
         raise NotImplementedError(f"PIVOT_PROFILE={profile!r}: Azure adapters are not implemented yet (A08)")
     raise ValueError(f"unknown PIVOT_PROFILE {profile!r}; expected one of {', '.join(PROFILES)}")
+
+
+def build_sim_store():
+    """Where simulated matches are kept besides the disk, from `PIVOT_SIMS_BACKEND` (files by default, or blob; Ax15)."""
+    from .local import FilesSimStore
+
+    backend = (os.getenv("PIVOT_SIMS_BACKEND") or "files").strip().lower()
+    if backend == "blob":
+        from .azure.blob import BlobSimStore
+
+        return BlobSimStore.from_env()
+    if backend == "files":
+        return FilesSimStore()
+    raise ValueError(f"unknown PIVOT_SIMS_BACKEND {backend!r}; expected files or blob")
