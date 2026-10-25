@@ -17,6 +17,7 @@ from pivot_core.domain import MatchEvent, Pivot, ScenarioSpec, TeamTactics
 PRIME = "′"
 MOVE_MIN, MOVE_MAX = 46, 85                   # a moved substitution must land in this range
 DEFAULT_MOVE_TO = 74                          # elapsed minute, shown as 75′
+LEAD_UP = 15                                  # minutes before a pivot in which an event can have caused it
 PRESS_LEVELS = ("low", "mid", "high")
 
 
@@ -80,7 +81,8 @@ class ScenarioOption:
 
 
 def is_red_card(e: MatchEvent) -> bool:
-    colour = e.meta.get("card") or e.meta.get("colour") or e.meta.get("color")
+    """The simulator and feeds put the colour in `foul.card`; hand-made events may still use `meta`."""
+    colour = (e.foul.card if e.foul else None) or e.meta.get("card") or e.meta.get("colour") or e.meta.get("color")
     return e.type == "card" and colour in ("red", "second_yellow")
 
 
@@ -93,11 +95,20 @@ def _minute(m: int) -> str:
 
 
 def _closest(events: list[MatchEvent], pivot: Pivot) -> MatchEvent | None:
-    """Prefer the pivot's own trigger, then the event nearest the pivot minute."""
-    if not events:
-        return None
-    triggers = [e for e in events if e.event_id in pivot.trigger_event_ids]
-    return (triggers or sorted(events, key=lambda e: abs(e.minute - pivot.minute)))[0]
+    """The event a chip is about, best first by:
+
+    1. one of the pivot's own triggers;
+    2. in the `LEAD_UP` minutes up to the pivot, so a later event is picked only when none of these
+       could have caused it (the prototype offers "Disallow 71′ goal" from the 63′ pivot);
+    3. a tactical substitution over one for fatigue or injury: that is the one that changes a match;
+    4. the nearest to the pivot minute, the earlier one on a tie.
+    """
+    def rank(e: MatchEvent) -> tuple[bool, bool, bool, int, int]:
+        lead_up = 0 <= pivot.minute - e.minute <= LEAD_UP
+        tactical = e.substitution is not None and e.substitution.reason == "tactical"
+        return (e.event_id not in pivot.trigger_event_ids, not lead_up, not tactical,
+                abs(e.minute - pivot.minute), e.minute)
+    return min(events, key=rank, default=None)
 
 
 def options_for(pivot: Pivot, events: Iterable[MatchEvent],

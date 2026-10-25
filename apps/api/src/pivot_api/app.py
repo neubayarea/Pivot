@@ -10,12 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from pivot_adapters import build_adapters
+from pivot_worker.models import model_client_from_env
 
 from .demo import seed_demo
 from .personalize import personalizer_from_env
 from .realtime import router as realtime_router
 from .routes import router
-from .sims import SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
+from .whatif import DEFAULT_WARM, WhatIf
+from .whatif import router as whatif_router
+from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
 
 log = logging.getLogger("uvicorn.error")   # shows up in the uvicorn startup log
 
@@ -31,12 +34,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.personalizer = personalizer_from_env(app.state.adapters.matches)
     # Local profile starts empty, so put one demo match in for frontend work. PIVOT_DEMO=0 turns it off.
     app.state.fixture_frames = {}
+    replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
+    demo_id = None
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
         log.info("seeded demo match %s", await seed_demo(app.state.adapters.matches, app.state.adapters.traces))
         # The recorded demo (B02, eval/fixtures/demo-1021): the match the web page opens by default.
         if (fixture := fixture_from_env()) is not None:
             try:
-                match_id, frames = await load_fixture(app.state.adapters, fixture)
+                match_id, frames = await load_fixture(app.state.adapters, fixture, replays)
+                demo_id = match_id
                 if frames is not None:
                     app.state.fixture_frames[match_id] = frames
                 log.info("loaded recorded demo %s from %s", match_id, fixture)
@@ -45,17 +51,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Simulated finished matches (Ax6), loaded in the background so /healthz answers straight away.
     app.state.sims = SimStatus()
     app.state.sims_dir = data_dir_from_env()
-    task = None
+    tasks = []
     if app.state.adapters.profile == "local" and (specs := specs_from_env()):
-        task = asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims),
-                                   name="sims")
+        replays.update((spec.match_id, spec.replay()) for spec in specs)
+        tasks.append(asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims),
+                                         name="sims"))
+    # What-if replays (A09): one at a time in the background; the recorded demo's chips run first.
+    app.state.whatif = WhatIf.from_env(app.state.adapters, replays, model_client_from_env())
+    app.state.whatif.start()
+    if demo_id is not None and (warm := int(os.getenv("PIVOT_WHATIF_WARM") or DEFAULT_WARM)) > 0:
+        tasks.append(asyncio.create_task(app.state.whatif.warm(demo_id, warm), name="whatif-warm"))
     try:
         yield
     finally:
-        if task is not None:
+        for task in tasks:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+        await app.state.whatif.stop()
+        if app.state.adapters.results is not None:
+            await app.state.adapters.results.close()
 
 
 app = FastAPI(title="Pivot API", lifespan=lifespan)
@@ -69,6 +84,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(realtime_router)
+app.include_router(whatif_router)
 
 
 @app.get("/healthz")

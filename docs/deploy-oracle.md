@@ -168,6 +168,8 @@ AI 相关的几项（`PIVOT_PIPELINE`、`PIVOT_FOUNDRY_*`、`PIVOT_MODEL_*`、`A
 
 `.env` 里有密钥，**不要提交到 git，不要发到群里**（`.gitignore` 已经忽略了它）。
 
+用 Dokploy 部署时没有 `.env` 文件：把 `.env.example` 里的各行复制到应用的 Environment 页再改值。注意 `PIVOT_WS_URL` 要自己填成 `wss://<域名>/api/ws`，`PIVOT_DATA_DIR` 填挂了持久卷的文件夹（例如 `/data`）。
+
 ## 8. 启动
 
 ```bash
@@ -239,4 +241,12 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供。三个要一起填；填了密钥就只用这个服务主体登录 |
 | `PIVOT_WEB_DIST` | 网页文件的位置，镜像里已经设好，不用填 |
 | `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 6，`0` 不生成 |
-| `PIVOT_DATA_DIR` | 生成的比赛存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
+| `PIVOT_DATA_DIR` | 生成的比赛和 AI 写的结果存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
+| `PIVOT_RESULTS` | `1`（默认）把 AI 写的结果存到 `PIVOT_DATA_DIR/results/`，重启后读回来不再调模型；`0` 只放在内存里 |
+| `PIVOT_RESULTS_TAG` | 默认空。改成一个新值再部署，就丢掉存下的结果、让 AI 全部重写，见 [比赛数据放在哪](match-data.md) |
+| `PIVOT_RESULTS_BACKEND` | AI 写的结果存哪：`files`（默认）存硬盘；`cosmos` 存 Azure Cosmos DB，启动时连不上就自动退回硬盘，见 [存到 Cosmos DB](match-data.md#存到-azure-cosmos-db) |
+| `PIVOT_COSMOS_ENDPOINT` | `cosmos` 时必填，Cosmos 账号地址，例如 `https://pivot-cosmos.documents.azure.com:443/`。用上面的 `AZURE_*` 服务主体登录，不用填密钥 |
+| `PIVOT_COSMOS_DATABASE` | 默认 `pivot` |
+| `PIVOT_WHATIF_WORKERS` | 「假如」重踢比赛用几个进程，默认比 CPU 核数少 1（至少 1），留一个核给网站和直播回放 |
+| `PIVOT_WHATIF_WARM` | 启动后先在后台把录好的演示比赛每个转折点的前几个「假如」按钮算好，默认 `2`，`0` 不算。算好的结果和 AI 的结果存在一起，重启不用再算 |
+| `PIVOT_WHATIF_MAX_QUEUED` | 最多排队几个「假如」，再多就请用户稍后再试，默认 `20` |

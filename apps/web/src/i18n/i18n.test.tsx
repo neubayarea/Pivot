@@ -3,7 +3,7 @@
 // Rendered to static HTML like states.test.tsx, so no DOM is needed.
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import WhyItTurned from "../components/WhyItTurned";
@@ -86,9 +86,9 @@ describe("switching language", () => {
 
   it("translates the S3 notice", () => {
     withWindow("?lang=zh");
-    expect(render(<WhatIfLab />, "/whatif/pv-74")).toContain("这是模拟，不是预测");
+    expect(render(<FixtureProvider><Routes><Route path="/whatif/:id" element={<WhatIfLab />} /></Routes></FixtureProvider>, "/whatif/pv-74")).toContain("这是模拟，不是预测");
     withWindow("?lang=es");
-    expect(render(<WhatIfLab />, "/whatif/pv-74")).toContain("Simulación, no una predicción");
+    expect(render(<FixtureProvider><Routes><Route path="/whatif/:id" element={<WhatIfLab />} /></Routes></FixtureProvider>, "/whatif/pv-74")).toContain("Simulación, no una predicción");
   });
 
   it("says when the explanation came back in English", () => {

@@ -11,9 +11,14 @@ SIM_VERSION hashes the simulator and analytics source, so editing either re-runs
 next start; an unchanged one is read straight back. The frames stay on disk; `GET
 /api/matches/{id}/frames` reads them from there (`read_frames`). Candidates go on `pivot-candidates`, so the
 worker writes the pivots; its message ids are "{match_id}:{minute}", so a second load adds nothing.
+Before that, `adapters.results` reads back the pivots the worker wrote for this SIM_VERSION in an
+earlier run (Ax10), so the worker skips them instead of calling the model again.
 
 The recorded demo (B02) is stored the same way, from the files committed in `eval/fixtures/`
-(`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`.
+(`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`. Its results are keyed by the fixture file's content hash.
+
+Each stored match also gets a `Replay`: how it was simulated (match, seed, plants) and the version its
+results belong to, so a what-if (A09, `whatif.py`) replays the very same match.
 """
 
 from __future__ import annotations
@@ -29,21 +34,32 @@ import re
 import time
 from bisect import bisect_left, bisect_right
 from concurrent.futures import Executor, ProcessPoolExecutor
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 
 import pivot_core.analytics as analytics_pkg
 import pivot_core.sim as sim_pkg
 from pivot_adapters import Adapters
 from pivot_core.analytics import StatCalculator, detect_candidates, momentum_series, player_match_stats
-from pivot_core.domain import Match, MatchEvent, MinuteMetric, PivotCandidate
+from pivot_core.domain import Match, MatchEvent, MinuteMetric, PivotCandidate, PlantSpec
 from pivot_core.ports import PIVOT_CANDIDATES
-from pivot_core.sim import build_demo_match, simulate
+from pivot_core.sim import PRESETS, build_demo_match, simulate
 
 log = logging.getLogger("uvicorn.error")
 
 DEFAULT_MATCHES = 6
+
+
+@dataclass(frozen=True)
+class Replay:
+    """How a stored match was simulated, so what-if replays start from the very same match (A09)."""
+
+    version: str                              # the version its results are stored under
+    build: Callable[[], Match]                # the match before kick-off
+    seed: int | None = None                   # None: the match's own seed
+    plants: tuple[PlantSpec, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -57,6 +73,10 @@ class SimSpec:
     @property
     def match_id(self) -> str:
         return f"M-seed-{self.seed}"
+
+    def replay(self) -> Replay:
+        return Replay(SIM_VERSION, partial(build_demo_match, self.seed, self.home_strength, self.away_strength,
+                                       self.home_formation, self.away_formation))
 
 
 SPECS = [
@@ -149,15 +169,19 @@ class SimStatus:
 
 async def store_one(adapters: Adapters, data_path: Path) -> str:
     """Put one cached match into the store and its candidates on the worker queue."""
-    return await store_data(adapters, await asyncio.to_thread(_read_json_gz, data_path))
+    data = await asyncio.to_thread(_read_json_gz, data_path)
+    return await store_data(adapters, data, data.get("sim_version") or SIM_VERSION)
 
 
-async def store_data(adapters: Adapters, data: dict) -> str:
-    """Store a match file's match, events and metrics, and put its candidates on the worker queue."""
+async def store_data(adapters: Adapters, data: dict, version: str) -> str:
+    """Store a match file's match, events and metrics, read back the AI's results for this version of
+    it, and put its candidates on the worker queue."""
     match = Match.model_validate(data["match"])
     await adapters.matches.upsert_match(match)
     await adapters.matches.append_events([MatchEvent.model_validate(e) for e in data["events"]])
     await adapters.matches.upsert_metrics([MinuteMetric.model_validate(m) for m in data["metrics"]])
+    if adapters.results is not None and (known := await adapters.results.open_match(match.match_id, version)):
+        log.info("%s: %d pivots read back from earlier runs (results version %s)", match.match_id, known, version)
     for raw in data["candidates"]:
         c = PivotCandidate.model_validate(raw)
         await adapters.queue.send(PIVOT_CANDIDATES, f"{c.match_id}:{c.minute}", c.model_dump(mode="json", round_trip=True))
@@ -176,12 +200,28 @@ def fixture_from_env() -> Path | None:
     return Path(raw) if raw else FIXTURE
 
 
-async def load_fixture(adapters: Adapters, path: Path) -> tuple[str, Path | None]:
-    """Store the recorded demo; returns its match id and its frames file (None if it is missing)."""
-    data = await asyncio.to_thread(lambda: json.loads(path.read_text(encoding="utf-8")))
-    match_id = await store_data(adapters, data)
+async def load_fixture(adapters: Adapters, path: Path,
+                       replays: dict[str, Replay] | None = None) -> tuple[str, Path | None]:
+    """Store the recorded demo; returns its match id and its frames file (None if it is missing).
+
+    With `replays`, also says there how to replay it, from the preset named in the file.
+    """
+    raw = await asyncio.to_thread(path.read_bytes)
+    data, version = json.loads(raw), "fx-" + hashlib.sha256(raw).hexdigest()[:12]
+    match_id = await store_data(adapters, data, version)
+    if replays is not None and (replay := fixture_replay(data.get("preset"), version)) is not None:
+        replays[match_id] = replay
     frames = path.with_name(path.name.removesuffix(".json") + ".frames.json.gz")
     return match_id, frames if frames.is_file() else None
+
+
+def fixture_replay(preset: dict | None, version: str) -> Replay | None:
+    """The fixture's `preset` block ({name, seed, plants}, written by scripts/make_demo.py) as a Replay."""
+    if not preset or preset.get("name") not in PRESETS:
+        return None
+    seed = int(preset["seed"])
+    return Replay(version, partial(PRESETS[preset["name"]].build, seed), seed,
+                  tuple(PlantSpec.model_validate(p) for p in preset.get("plants", ())))
 
 
 def _read_json_gz(path: Path) -> dict:

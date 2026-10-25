@@ -51,6 +51,8 @@ export type LoadProblem =
 export type Connection = ConnectionStatus & { retryNow: () => void; problem: LoadProblem | null };
 
 export const MatchContext = createContext<MatchView | null>(null);
+/** True when the page runs on the fixture replay (`?fixture=1`), so other data (What-if runs) is mocked too. */
+export const FixtureContext = createContext(false);
 export const ConnectionContext = createContext<Connection | null>(null);
 
 export function useMatch(): MatchView {
@@ -64,12 +66,18 @@ export const useMaybeMatch = () => useContext(MatchContext);
 
 export const useConnection = () => useContext(ConnectionContext);
 
+export const useFixture = () => useContext(FixtureContext);
+
 /** Shirt order, players without a number last. */
 export const byShirt = (a: SquadPlayer, b: SquadPlayer) => (a.shirt ?? 999) - (b.shirt ?? 999) || a.name.localeCompare(b.name);
 
 /** True when the player made or received the action, or came on or went off in it. */
 export const involves = (e: Pick<MatchEvent, "player_id" | "receiver_id" | "substitution">, playerId: string | null) =>
   playerId !== null && [e.player_id, e.receiver_id, e.substitution?.player_on_id, e.substitution?.player_off_id].includes(playerId);
+
+/** A red card, straight or a second yellow: the colour is in `foul.card`; the fixture's hand-made events use `meta.card`. */
+export const isRedCard = (e: Pick<MatchEvent, "type" | "foul" | "meta">) =>
+  e.type === "card" && ["red", "second_yellow"].includes(String(e.foul?.card ?? e.meta.card ?? e.meta.colour ?? e.meta.color));
 
 export function computeStats(events: MatchEvent[]): Record<Side, TeamStats> {
   const s = {

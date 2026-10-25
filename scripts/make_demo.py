@@ -16,6 +16,10 @@ are left out, so the API can load the files back as they are):
   eval/fixtures/demo-1021.json           match, events, minute metrics, pivot candidates, player stats,
                                          and the 23 team stats for the match and each half
   eval/fixtures/demo-1021.frames.json.gz one tracking frame per second
+
+The match's careers, form, table, head-to-head and news come from the fictional season in
+eval/fixtures/season-2026.json (scripts/make_season.py, B13). They are added after the match is
+simulated, so they cannot change how it is played.
 """
 from __future__ import annotations
 
@@ -30,6 +34,7 @@ from pivot_core.analytics import StatCalculator, detect_candidates, momentum_ser
 from pivot_core.domain import STAT_UNITS, StatRef
 from pivot_core.sim import simulate
 from pivot_core.sim.presets import DEMO_1021
+from pivot_core.sim.season import load_season, with_season
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "eval" / "fixtures"
@@ -91,9 +96,11 @@ def team_stats(calc: StatCalculator) -> list[dict]:
 def export(seed: int) -> None:
     out, events, metrics, cands = run(seed)
     calc = StatCalculator(out.match, events, out.frames_as_models())
+    # The season's squads are those of seed 41; another seed gives other players, so no stories.
+    match = with_season(out.match, load_season(OUT)) if seed == DEMO_1021.seed else out.match
     data = {
         "preset": {"name": DEMO_1021.name, "seed": seed, "plants": [p.model_dump(mode="json") for p in DEMO_1021.plants]},
-        "match": out.match.model_dump(mode="json", round_trip=True),
+        "match": match.model_dump(mode="json", round_trip=True),
         "events": [e.model_dump(mode="json", round_trip=True) for e in events],
         "metrics": [m.model_dump(mode="json", round_trip=True) for m in metrics],
         "candidates": [c.model_dump(mode="json", round_trip=True) for c in cands],
