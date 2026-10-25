@@ -1,59 +1,19 @@
+# TEMPORARY (Bx7 #190, do not merge): does #192 play every seed the same on the macOS runner as on Windows?
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  lint:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
-      # Ruff 0.17 widened its default rules, so pin the version and select the
-      # classic defaults explicitly. E741 is ignored until existing code is tidied.
-      - run: uvx ruff@0.17.2 check --select E4,E7,E9,F --ignore E741 .
-
-  test:
+  verify-192:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.2
       - run: uv sync --locked
-      - run: uv run pytest
-
-  contracts:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
-      - run: uv sync --locked
-      - run: uv run scripts/export_contracts.py
-      - name: Fail if the committed contracts are out of date
-        run: git diff --exit-code packages/contracts
-
-  secrets:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      # Scans only the commits in this push or pull request. The trufflehog action is a Docker
-      # action, which a macOS runner cannot run, so the command line version is used (brew install trufflehog).
-      - name: Scan new commits for secrets
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            trufflehog git file://. --results=verified,unknown --fail --no-update
-          else
-            trufflehog git file://. --since-commit "$BASE" --branch HEAD --results=verified,unknown --fail --no-update
-          fi
+      - run: uv run scripts/sim_fingerprint.py --seeds $(seq 1 60)
+      - run: uv run scripts/make_season.py && uv run scripts/make_demo.py --seed 29
+      - run: git status --porcelain; shasum -a 256 eval/fixtures/*
