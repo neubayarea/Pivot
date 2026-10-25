@@ -17,6 +17,7 @@ from functools import cache
 import numpy as np
 
 from ..domain import CareerStint, Coach, Competition, Match, MatchContext, Player, Referee, Team
+from .movement import uniform
 from .presets import DEMO_1021
 from .squads import _name, build_team
 
@@ -156,7 +157,7 @@ def fixture_match(fx: Fixture) -> Match:
     rng = np.random.default_rng([fx.seed, 7])
     venue = BY_ID[fx.home]
     context = MatchContext(competition=COMPETITION, venue=venue.venue,
-                           attendance=int(venue.capacity * rng.uniform(0.7, 1.0)),
+                           attendance=int(venue.capacity * uniform(rng, 0.7, 1.0)),
                            referee=referees()[int(rng.integers(0, 12))])
     return Match(match_id=f"S{fx.season}-{fx.matchday:02d}-{BY_ID[fx.home].short}-{BY_ID[fx.away].short}",
                  seed=fx.seed, home=club_team(fx.home, "home"), away=club_team(fx.away, "away"),

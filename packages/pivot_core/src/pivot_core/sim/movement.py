@@ -110,6 +110,17 @@ def norm(d: np.ndarray) -> np.ndarray:
     return np.sqrt(x * x + y * y)
 
 
+def uniform(rng: np.random.Generator, low: float, high: float, size=None):
+    """= rng.uniform(low, high, size): the same draw, but low + (high - low) * u is worked out in
+    Python, so no machine fuses it into one rounding (arm64 does inside numpy) (Bx7)."""
+    return low + (high - low) * rng.random(size)
+
+
+def normal(rng: np.random.Generator, loc: float, scale, size=None):
+    """= rng.normal(loc, scale, size), the same draw, worked out in Python for the same reason (Bx7)."""
+    return loc + scale * rng.standard_normal(size)
+
+
 def settle(a: np.ndarray, digits: int = 6) -> np.ndarray:
     """Round simulation state to a micrometre (Bx7), so a last-bit difference from a maths
     routine (exp, sin, a random-number tail) cannot pile up second after second."""
