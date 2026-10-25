@@ -266,7 +266,7 @@ class MovementModel:
         # Pressing and chasing loose balls.
         if loose:
             d = self._distances_to_ball(k, shape, active, pos, b)
-            for i in np.argsort(d)[:2]:
+            for i in np.argsort(d, kind="stable")[:2]:   # stable: a tie goes to the lower slot on every machine (Bx7)
                 target[i] = b
                 self.urgent[k, i] = True
         elif not in_poss and carrier is not None:
@@ -280,7 +280,7 @@ class MovementModel:
             if counter or bx <= PRESS_ZONE[press]:
                 d = self._distances_to_ball(k, shape, active, pos, b)
                 towards_goal = np.array([-2.5, 0.0])   # close down, do not run into him
-                for i in np.argsort(d)[:n]:
+                for i in np.argsort(d, kind="stable")[:n]:
                     target[i] = b + towards_goal
                     self.pressers.add((k, int(i)))
                     self.urgent[k, i] = True
