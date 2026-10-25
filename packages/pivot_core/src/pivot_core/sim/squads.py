@@ -14,6 +14,7 @@ from ..domain import (
     Referee, Team, TeamSheet, TeamTactics,
 )
 from .formations import FORMATIONS
+from .movement import normal
 
 _SYLLABLES = ["ka", "ro", "vel", "sen", "dar", "mi", "to", "la", "ber", "quin", "ras", "no",
               "fel", "gor", "li", "an", "tes", "mor", "hal", "vik", "do", "ren", "sa", "bel"]
@@ -70,13 +71,13 @@ def _attributes(rng: np.random.Generator, role: str, strength: float) -> PlayerA
             base = strength + bias.get(n, 0)
             if group == "goalkeeping" and role != "GK":
                 base = 12
-            out[n] = int(np.clip(round(base + rng.normal(0, 5)), 5, 97))
+            out[n] = int(np.clip(round(base + normal(rng, 0, 5)), 5, 97))
         groups[group] = out
     return PlayerAttributes(**groups)
 
 
 def _personality(rng: np.random.Generator) -> Personality:
-    return Personality(**{f: int(np.clip(round(rng.normal(60, 14)), 5, 95)) for f in Personality.model_fields})
+    return Personality(**{f: int(np.clip(round(normal(rng, 60, 14)), 5, 95)) for f in Personality.model_fields})
 
 
 _BENCH_ROLES = ["GK", "CB", "LB", "DM", "CM", "RW", "ST"]
@@ -94,10 +95,10 @@ def build_team(rng: np.random.Generator, side: str, club_id: str, name: str, sho
         pid = f"{prefix}{shirt:02d}"
         squad.append(Player(player_id=pid, name=_name(rng), team=side, shirt_number=shirt, role=role,
                             age=int(rng.integers(19, 34)), nationality="Freeland",
-                            height_cm=int(rng.normal(181, 6)), weight_kg=int(rng.normal(76, 6)),
+                            height_cm=int(normal(rng, 181, 6)), weight_kg=int(normal(rng, 76, 6)),
                             preferred_foot="left" if role in {"LB", "LWB", "LW", "LM"} and rng.random() < 0.6
                             else ("left" if rng.random() < 0.2 else "right"),
-                            attributes=_attributes(rng, role, strength + rng.normal(0, 3)),
+                            attributes=_attributes(rng, role, strength + normal(rng, 0, 3)),
                             personality=_personality(rng)))
         starters.append(LineupSlot(player_id=pid, slot=slot, role=role, anchor=(ax, ay)))
         shirt += 1
@@ -106,8 +107,8 @@ def build_team(rng: np.random.Generator, side: str, club_id: str, name: str, sho
         pid = f"{prefix}{shirt:02d}"
         squad.append(Player(player_id=pid, name=_name(rng), team=side, shirt_number=shirt, role=role,
                             age=int(rng.integers(18, 34)), nationality="Freeland",
-                            height_cm=int(rng.normal(181, 6)), weight_kg=int(rng.normal(76, 6)),
-                            attributes=_attributes(rng, role, strength - 3 + rng.normal(0, 3)),
+                            height_cm=int(normal(rng, 181, 6)), weight_kg=int(normal(rng, 76, 6)),
+                            attributes=_attributes(rng, role, strength - 3 + normal(rng, 0, 3)),
                             personality=_personality(rng)))
         bench.append(pid)
         shirt += 1

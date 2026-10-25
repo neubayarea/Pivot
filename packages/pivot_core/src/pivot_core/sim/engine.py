@@ -34,7 +34,7 @@ from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_LEN
 from .formations import DEFENDER_ROLES, FORMATIONS, MIDFIELD_ROLES
 from .movement import (
     ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, norm,
-    settle, to_view, top_speed,
+    normal, settle, to_view, top_speed, uniform,
 )
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
@@ -462,7 +462,7 @@ class Engine:
             self._set_restart("corner", goal_end_team, np.array([PITCH_LENGTH if goal_end_team == 0 else 0.0, corner_y]),
                               wait=self.rng.integers(20, 36))
         else:
-            spot = from_view(np.array([5.5, PITCH_WIDTH / 2 + self.rng.uniform(-9, 9)]), defending)
+            spot = from_view(np.array([5.5, PITCH_WIDTH / 2 + uniform(self.rng, -9, 9)]), defending)
             self._set_restart("goal_kick", defending, spot, wait=self.rng.integers(18, 33))
 
     def _set_restart(self, kind: str, team: int, spot: np.ndarray, wait: int, period_start: bool = False) -> None:
@@ -577,7 +577,7 @@ class Engine:
         if len(near):
             away = v - near[np.argmin(norm(near - v))]
             direction = direction / (norm(direction) + 1e-9) + 0.6 * away / (norm(away) + 1e-9)
-        step = self.rng.uniform(1.5, 4.5) * (0.6 + 0.5 * self._a(k, i, "dribbling"))
+        step = uniform(self.rng, 1.5, 4.5) * (0.6 + 0.5 * self._a(k, i, "dribbling"))
         new_v = v + direction / (norm(direction) + 1e-9) * step
         new_v = np.clip(new_v, [0.5, 0.5], [PITCH_LENGTH - 0.5, PITCH_WIDTH - 0.5])
         self.ball = from_view(new_v, k)
@@ -627,7 +627,7 @@ class Engine:
             else:
                 self._lose_ball()
                 self.loose = True
-                self.ball = self._clip_pitch(self.ball + self.rng.normal(0, 3, 2))
+                self.ball = self._clip_pitch(self.ball + normal(self.rng, 0, 3, 2))
 
     def _foul(self, k_def: int, j: int, k_att: int, i: int, v: np.ndarray, force_red: str | None = None,
               reviewed: dict | None = None) -> None:
@@ -759,14 +759,14 @@ class Engine:
         probs = np.exp((score - score.max()) / 0.55)
         probs /= probs.sum()
         r = cand[int(self.rng.choice(len(cand), p=probs))]
-        end_v = mates[r] + self.rng.normal(0, 0.8, 2)
+        end_v = mates[r] + normal(self.rng, 0, 0.8, 2)
         through = False
         if (restart is None and shape.roles[r] in RUNNERS and v[0] < back - 5 and back - 6 <= mates[r, 0] <= back + 0.5
                 and self.rng.random() < self.p.through_lead):
             # a ball into the space behind the line for a runner who starts onside (REAL-016)
             through = True
-            end_v = np.array([min(back + self.rng.uniform(6, 14), PITCH_LENGTH - 3),
-                              clip1(mates[r, 1] + self.rng.normal(0, 2), 3.0, PITCH_WIDTH - 3)])
+            end_v = np.array([min(back + uniform(self.rng, 6, 14), PITCH_LENGTH - 3),
+                              clip1(mates[r, 1] + normal(self.rng, 0, 2), 3.0, PITCH_WIDTH - 3)])
         if restart == "throw_in":
             end_v = v + (mates[r] - v) * min(1.0, 18 / max(norm(mates[r] - v), 1e-6))
         dist = float(norm(end_v - v))
@@ -814,7 +814,7 @@ class Engine:
         if ptype in ("cross", "corner"):
             from_left = v[1] > PITCH_WIDTH / 2
             delivery = "inswing" if (from_left and foot == "right") or (not from_left and foot == "left") else "outswing"
-        speed_ms = 11 + 0.35 * dist + self.rng.normal(0, 1.5)
+        speed_ms = 11 + 0.35 * dist + normal(self.rng, 0, 1.5)
         first_time = quick and restart is None and self.style_rng.random() < FIRST_TIME_PASS_SHARE
         technique, label_height, label_body = self._pass_technique(k, i, v, end_v, dist, height, body, bool(lane),
                                                                    incoming if first_time else None, restart)
@@ -879,7 +879,7 @@ class Engine:
                 return self._clearance(1 - k, mark_j)
             self._gain(1 - k, mark_j)
             return
-        miss_v = end_v + self.rng.normal(0, 3 + 0.15 * dist, 2)
+        miss_v = end_v + normal(self.rng, 0, 3 + 0.15 * dist, 2)
         if ptype in ("cross", "corner") and self.rng.random() < 0.5:
             miss_v = np.array([PITCH_LENGTH + 1, miss_v[1]])          # deflected behind: corner
             pe = self._emit("pass", k, i, end_location=self._clip_pitch(from_view(miss_v, k)), outcome="fail",
@@ -974,7 +974,7 @@ class Engine:
         self.last_pass = None
         if punch:
             self.owner, self.loose = None, True
-            self.ball = self._clip_pitch(from_view(np.array([self.rng.uniform(18, 32), self.rng.uniform(14, 54)]), opp))
+            self.ball = self._clip_pitch(from_view(np.array([uniform(self.rng, 18, 32), uniform(self.rng, 14, 54)]), opp))
         else:
             self._gain(opp, g)
         return True
@@ -1094,7 +1094,7 @@ class Engine:
     def _clearance(self, k: int, j: int) -> None:
         """Defender j heads or kicks the ball away (EVT-010)."""
         self._end_carry()
-        target_v = np.array([self.rng.uniform(35, 65), self.rng.uniform(5, 63)])
+        target_v = np.array([uniform(self.rng, 35, 65), uniform(self.rng, 5, 63)])
         target = from_view(target_v, k)
         self._emit("clearance", k, j, location=self.ball.copy(), end_location=self._clip_pitch(target),
                    body_part="head" if self.ball_z > 1.0 or self.rng.random() < 0.4 else "right_foot")
@@ -1141,7 +1141,7 @@ class Engine:
                 technique = self._shot_technique(header, first_time, incoming)
                 xg = float(np.clip(xg * TECHNIQUE_XG[technique], 0.005, 0.95))
         foot = self.attr[self._pid(k, i)]["foot"]
-        aim_y = PITCH_WIDTH / 2 + self.rng.uniform(-3.4, 3.4)
+        aim_y = PITCH_WIDTH / 2 + uniform(self.rng, -3.4, 3.4)
         # xG is the chance itself; whether it goes in also depends on the keeper (B12)
         keeper = np.mean([self._a(opp, gk_slot, a) for a in ("diving", "reflexes", "positioning")])
         p_goal = float(clip1(xg * (1 - self.p.skill_gk * (keeper - 0.88)), 0.002, 0.97))
@@ -1159,7 +1159,7 @@ class Engine:
                 outcome = "post"
             else:
                 outcome = "off_target"
-                aim_y += self.rng.choice([-1, 1]) * self.rng.uniform(4, 9)
+                aim_y += self.rng.choice([-1, 1]) * uniform(self.rng, 4, 9)
         ruled_out = None
         if outcome == "goal" and not penalty and self.rng.random() < self.p.var_disallow:
             # VAR rules it out (REAL-011, EVT-016): mostly offside in the build-up
@@ -1171,9 +1171,9 @@ class Engine:
             "shot", k, i, location=self.ball.copy(), end_location=from_view(end_v, k), shot_outcome=outcome,
             xg=round(xg, 4), body_part="head" if header else f"{foot}_foot", under_pressure=under,
             shot_technique=technique, first_time=first_time, keeper_location=gk,
-            shot_end_height_m=round(float(self.rng.uniform(0.1, 2.3) if outcome in ("goal", "saved", "disallowed")
-                                          else self.rng.uniform(0, 4)), 2),
-            ball_speed_kmh=round(float(np.clip((55 if header else 75) + 40 * power + self.rng.normal(0, 8), 30, 135)), 1),
+            shot_end_height_m=round(float(uniform(self.rng, 0.1, 2.3) if outcome in ("goal", "saved", "disallowed")
+                                          else uniform(self.rng, 0, 4)), 2),
+            ball_speed_kmh=round(float(np.clip((55 if header else 75) + 40 * power + normal(self.rng, 0, 8), 30, 135)), 1),
             play_pattern_hint="penalty" if penalty else ("free_kick" if free_kick else None),
         )
         if self.last_pass and self.last_pass["receiver"] == (k, i) and self.last_pass["event"]["possession_id"] == self.pid:
@@ -1207,7 +1207,7 @@ class Engine:
             if action == "tipped_over":
                 return self._out_of_play(from_view(np.array([PITCH_LENGTH + 1, aim_y]), k), opp)
             self.loose = True
-            self.ball = from_view(np.array([PITCH_LENGTH - self.rng.uniform(4, 10), aim_y + self.rng.normal(0, 6)]), k)
+            self.ball = from_view(np.array([PITCH_LENGTH - uniform(self.rng, 4, 10), aim_y + normal(self.rng, 0, 6)]), k)
             return
         if outcome == "blocked":
             j = self._nearest(opp, self.ball, outfield=True)
@@ -1216,11 +1216,11 @@ class Engine:
             if self.rng.random() < 0.45:
                 return self._out_of_play(from_view(np.array([PITCH_LENGTH + 1, v[1]]), k), opp)
             self.loose = True
-            self.ball = self._clip_pitch(self.pos[opp, j] + self.rng.normal(0, 4, 2))
+            self.ball = self._clip_pitch(self.pos[opp, j] + normal(self.rng, 0, 4, 2))
             return
         if outcome == "post":
             self.loose = True
-            self.ball = from_view(np.array([PITCH_LENGTH - self.rng.uniform(2, 9), aim_y + self.rng.normal(0, 5)]), k)
+            self.ball = from_view(np.array([PITCH_LENGTH - uniform(self.rng, 2, 9), aim_y + normal(self.rng, 0, 5)]), k)
             return
         self._out_of_play(from_view(np.array([PITCH_LENGTH + 1, aim_y]), k), k)
 
@@ -1451,7 +1451,7 @@ class Engine:
         if self.added is None and period_t >= (length - 1) * 60:
             h = self.half_counts
             added = (ADDED_BASE[self.period] + 0.5 * h["goals"] + 0.25 * h["subs"] + 0.3 * h["cards"]
-                     + 0.4 * h["injuries"] + 0.6 * h["var"] + self.rng.normal(0, 0.6))
+                     + 0.4 * h["injuries"] + 0.6 * h["var"] + normal(self.rng, 0, 0.6))
             self.added = int(np.clip(round(added), *ADDED_RANGE[self.period]))
             self._emit("added_time", self.possession or 0, None, added_minutes=self.added)
             self.period_end_at = length * 60 + self.added * 60 + int(self.rng.integers(0, 40))
@@ -1750,13 +1750,13 @@ class Engine:
         p = float(np.clip(0.76 + 0.3 * (self._a(k, i, "penalties") - 0.7) - 0.25 * (keeper - 0.88), 0.55, 0.92))
         r, r2 = self.rng.random(), self.rng.random()
         outcome = "goal" if r < p else ("saved" if r2 < 0.65 else ("off_target" if r2 < 0.9 else "post"))
-        aim_y = PITCH_WIDTH / 2 + self.rng.uniform(-3.4, 3.4) + (self.rng.choice([-1, 1]) * 5 if outcome == "off_target" else 0)
+        aim_y = PITCH_WIDTH / 2 + uniform(self.rng, -3.4, 3.4) + (self.rng.choice([-1, 1]) * 5 if outcome == "off_target" else 0)
         gk_at = self.pos[opp, g].copy() if g is not None else np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
         shot = self._emit("shot", k, i, location=spot.copy(), end_location=np.array([PITCH_LENGTH, aim_y]),
                           shot_outcome=outcome, xg=round(p, 4), body_part=f"{self.attr[self._pid(k, i)]['foot']}_foot",
                           shot_technique="normal", keeper_location=gk_at, shootout_round=rnd,
-                          shot_end_height_m=round(float(self.style_rng.uniform(0.1, 2.3)), 2),
-                          ball_speed_kmh=round(float(np.clip(80 + 40 * self._a(k, i, "shot_power") + self.style_rng.normal(0, 6), 60, 135)), 1))
+                          shot_end_height_m=round(float(uniform(self.style_rng, 0.1, 2.3)), 2),
+                          ball_speed_kmh=round(float(np.clip(80 + 40 * self._a(k, i, "shot_power") + normal(self.style_rng, 0, 6), 60, 135)), 1))
         shot["possession_id"], shot["play_pattern"] = None, "penalty"
         if g is not None and outcome in ("goal", "saved"):
             ge = self._emit("goalkeeper", opp, g, location=gk_at, keeper_action="goal_conceded" if outcome == "goal" else "shot_saved",
