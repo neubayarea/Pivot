@@ -108,23 +108,23 @@ def demo():
     return {e.event_id: e for e in events}, at
 
 
-def test_demo_37_offers_removing_the_planted_red_card(demo):
+def test_demo_39_offers_removing_the_planted_red_card(demo):
     events, at = demo
-    for o in (at(37), at(37, triggers=False)):
+    for o in (at(39), at(39, triggers=False)):
         red = o["remove_red_card"]
         assert red.enabled and red.label == "Remove 38′ red card"
         assert events[red.target_event_id].foul.card == "red" and red.at_minute == 37 and red.team == "away"
 
 
 @pytest.mark.parametrize("triggers", [True, False])
-def test_demo_65_substitution_chips_target_the_planted_tactical_change(demo, triggers):
+def test_demo_69_substitution_chips_target_the_planted_tactical_change(demo, triggers):
     events, at = demo
-    o = at(65, triggers)
+    o = at(69, triggers)
     for type_ in ("cancel_substitution", "move_substitution"):
         sub = events[o[type_].target_event_id]
-        assert sub.minute == 65 and sub.substitution.reason == "tactical"   # 63' on the clock
+        assert sub.minute == 66 and sub.substitution.reason == "tactical"   # 63' on the clock
         assert (sub.substitution.player_off_id, sub.substitution.player_on_id) == ("h09", "h15")
-    assert o["cancel_substitution"].label == "Cancel 66′ substitution"
+    assert o["cancel_substitution"].label == "Cancel 67′ substitution"
 
 
 def test_move_minute_range():

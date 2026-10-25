@@ -3,11 +3,11 @@
 `demo-1021` is the recorded demo (PRD section 10): Northgate Rovers lose a player to a red card
 at 38', Harbour City take control and lead; at 63' Harbour City take off a winger for a holding
 midfielder and drop deeper, and Rovers come back into the game. Only the two planted events
-are forced; goals and the turning points come out of the simulation itself. Seed 223 was
-picked by scripts/make_demo.py after B12 (one of 18 in 600) because the alarm fires at 37', 65'
-and 81' on its own; Harbour City score at 40' and 62', Rovers pull one back at 69' (checked by
-VAR for offside, it stands) and Harbour City win 2-1. (Seed 41 told the story before B12 changed
-the run of play.)
+are forced; goals and the turning points come out of the simulation itself. Seed 29 was
+picked by scripts/make_demo.py after B12 and B09 (one of 21 in 800) because the alarm fires at
+39', 69' and 89' on its own and nowhere else; a04, back at the club he left on bad terms, is
+sent off at 38'; Harbour City score at 11', 40' and 52', have a penalty overturned by VAR at
+46', and Rovers pull one back at 86': 3-1. (Seed 41 told the story before B12.)
 """
 
 from __future__ import annotations
@@ -42,6 +42,6 @@ DEMO_PLANTS = (
                       "line_height": "low", "press": "low"}),
 )
 
-DEMO_1021 = Preset(name="demo-1021", seed=223, plants=DEMO_PLANTS)
+DEMO_1021 = Preset(name="demo-1021", seed=29, plants=DEMO_PLANTS)
 
 PRESETS = {DEMO_1021.name: DEMO_1021}
