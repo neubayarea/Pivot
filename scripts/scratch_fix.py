@@ -5,6 +5,8 @@ Swaps functions in at runtime (no simulator code is edited) and prints one finge
   V1  distances as sqrt(x*x + y*y): np.hypot, math.hypot, np.linalg.norm, np.vecdot
   V2  V1 + rng.uniform(a, b) -> a + (b - a) * rng.random(), rng.normal(m, s) -> m + s * rng.standard_normal()
   V3  V2 + exp, atan2, sin, cos, tanh worked out with the decimal module (same answer everywhere)
+  V4  V2 + np.argsort(..., kind="stable")  (ties broken by player index on every machine)
+  V5  V3 + stable argsort
 
   uv run scripts/scratch_fix.py
 """
@@ -157,7 +159,9 @@ def proxies(variant: int):
 
 
 def install(variant: int) -> None:
-    npx, mx = proxies(variant)
+    npx, mx = proxies({4: 2, 5: 3}.get(variant, variant))
+    if variant >= 4:
+        npx.argsort = lambda a, *x, **k: REAL_NP.argsort(a, kind="stable")
     for mod in MODULES:
         if hasattr(mod, "np"):
             mod.np = npx
@@ -203,20 +207,49 @@ def count_calls() -> None:
     print(calls, fingerprint(out))
 
 
+def clean_maths() -> None:
+    """Same inputs on every machine (rng.random and exact scaling only), so any difference is the function."""
+    g = np.random.default_rng(5)
+    n = 50_000
+    x = (g.random(n) - 0.5) * 256          # -128 .. 128
+    y = (g.random(n) - 0.5) * 128
+    e = g.random(n) * -32 + 4               # -28 .. 4
+    p = g.random(n) * 64 + 0.25
+    tests = {
+        "np.hypot": np.hypot(x, y), "math.hypot": [math.hypot(a, b) for a, b in zip(x, y)],
+        "sqrt(x*x+y*y)": np.sqrt(x * x + y * y), "np.exp": np.exp(e), "math.exp": [math.exp(v) for v in e],
+        "math.atan2": [math.atan2(a, b) for a, b in zip(x, y)], "np.sin": np.sin(x), "np.cos": np.cos(x),
+        "math.tanh": [math.tanh(v / 8) for v in x], "np.log": np.log(p), "pow": [a ** 1.7 for a in p],
+        "2-vector @": [np.array([a, b]) @ np.array([b, a]) for a, b in zip(x[:5000], y[:5000])],
+        "np.vecdot": np.vecdot(np.stack([x, y], 1), np.stack([y, x], 1)),
+        "np.linalg.norm 2": [np.linalg.norm(np.array([a, b])) for a, b in zip(x[:5000], y[:5000])],
+        "np.mean 11": [np.mean(x[i:i + 11]) for i in range(0, 5000, 11)],
+        "np.sum 1000": [np.sum(x[i:i + 1000]) for i in range(0, n, 1000)],
+        "rng.uniform(6,14)": np.random.default_rng(9).uniform(6, 14, n),
+        "rng.normal(181,6)": np.random.default_rng(9).normal(181, 6, n),
+        "rng.choice p": np.random.default_rng(9).choice(7, size=n, p=[.1, .2, .05, .15, .2, .1, .2]).astype(float),
+        "argsort ties": np.concatenate([np.argsort(np.array([3., 1, 1, np.inf, 2, 1, np.inf, 2, 5, 1, 2]) + 0 * i)
+                                        for i in range(3)]).astype(float),
+    }
+    for k, v in tests.items():
+        print(f"clean {k:20} {zlib.crc32(np.asarray(v, float).tobytes()):08x}")
+
+
 def main() -> None:
     if sys.argv[1:] == ["count"]:
         return count_calls()
     self_check()
+    clean_maths()
     seeds = list(range(1, 21))
-    for variant in (0, 1, 2, 3):
+    for variant in [int(v) for v in sys.argv[1:]] or (0, 1, 2, 3):
         install(variant)
         for seed in (seeds[:3] if variant == 0 else seeds):
             out = engine.Engine(build_demo_match(seed), seed).run()
             print(f"V{variant} seed {seed:3} {fingerprint(out)}", flush=True)
-        if variant == 3:
+        if variant >= 3:
             out = engine.Engine(DEMO_1021.build(DEMO_1021.seed), DEMO_1021.seed,
                                 plants=list(DEMO_1021.plants)).run()
-            print(f"V3 demo {DEMO_1021.seed} {fingerprint(out)}", flush=True)
+            print(f"V{variant} demo {DEMO_1021.seed} {fingerprint(out)}", flush=True)
     print("done", S.__name__, file=sys.stderr)
 
 
