@@ -68,6 +68,70 @@ OFF_PITCH = {"zh": ("旧主", "老东家", "前东家", "旧东家", "老队友"
 OFF_PITCH_PATTERN = re.compile(r"\b(?:former|ex-)\s*(?:[A-Z][\w'’-]*\s+){1,3}(?:man|woman|player|captain|striker|"
                                r"forward|winger|midfielder|defender|keeper|goalkeeper)\b")
 
+# Words about the score (Dx8), by what they claim. Goal words describe what a goal did to the score;
+# state words say where a team stood. Each is checked against the real score around the pivot.
+# Words that also mean other things are left out on their own: "level", "levelled off", "behind",
+# "fought back", "leading to", "ganando duelos", "perdiendo balones", "en ventaja numérica", "控球领先".
+SCORE_WORDS = {
+    "equaliser": {
+        "en": ("equaliser", "equalizer", "equalise", "equalize", "equalises", "equalizes", "equalised", "equalized",
+               "equalising", "equalizing", "draw level", "draws level", "drew level", "pull level", "pulls level",
+               "pulled level", "levels the score", "levelled the score", "leveled the score", "level terms"),
+        "zh": ("扳平", "追平", "扳回平局", "将比分扳平", "把比分扳平"),
+        "es": ("gol del empate", "igualó el marcador", "iguala el marcador", "empató el partido",
+               "empata el partido", "logra el empate", "logró el empate", "consigue el empate",
+               "consiguió el empate"),
+    },
+    "take_lead": {
+        "en": ("take the lead", "takes the lead", "took the lead", "taking the lead", "go ahead", "goes ahead",
+               "went ahead", "going ahead", "edge ahead", "edges ahead", "edged ahead", "in front for the first time"),
+        "zh": ("取得领先", "首开纪录", "打破僵局", "先拔头筹", "反超", "反超比分"),
+        "es": ("se adelanta", "se adelantó", "se pone por delante", "se puso por delante", "toma la delantera",
+               "tomó la delantera", "abre el marcador", "abrió el marcador"),
+    },
+    "extend_lead": {
+        "en": ("extend the lead", "extends the lead", "extended the lead", "extending the lead",
+               "extend their lead", "extends their lead", "extended their lead", "extending their lead",
+               "double the lead", "doubles the lead", "double their lead", "doubles their lead",
+               "stretch the lead", "stretches the lead", "stretched the lead", "stretch their lead",
+               "stretches their lead", "stretched their lead", "increase their lead", "increases their lead",
+               "increased their lead"),
+        "zh": ("扩大领先", "扩大比分", "扩大优势", "领先优势扩大", "拉开比分"),
+        "es": ("amplía la ventaja", "amplió la ventaja", "amplía su ventaja", "amplió su ventaja",
+               "aumenta la ventaja", "aumentó la ventaja", "aumenta su ventaja", "aumentó su ventaja",
+               "dobla la ventaja", "dobló la ventaja", "dobla su ventaja", "dobló su ventaja"),
+    },
+    "comeback": {
+        "en": ("comeback", "come-back", "fightback", "fight-back", "come from behind", "comes from behind", "came from behind", "turn it around", "turns it around",
+               "turned it around", "turn the game around", "turns the game around", "turned the game around"),
+        "zh": ("逆转", "完成逆转", "反败为胜", "绝地反击"),
+        "es": ("remontada", "remonta", "remontó", "remontar", "darle la vuelta", "le dio la vuelta"),
+    },
+    "trailing": {
+        "en": ("trailing", "trailed", "trail by", "a goal down", "a goal behind", "goals down",
+               "behind on the scoreboard", "chasing the game", "behind in the match",
+               *(f"{verb} {article} {word}" for verb in ("chasing", "chase", "chased", "looking for", "pushing for",
+                                                         "push for", "pushed for", "searching for", "hunting for")
+                 for article in ("an", "the") for word in ("equaliser", "equalizer"))),
+        "zh": ("比分落后", "处于落后", "落后一球", "落后两球", "落后的局面", "寻求扳平", "争取扳平", "追求扳平"),
+        "es": ("iba perdiendo", "va perdiendo", "por debajo en el marcador", "abajo en el marcador",
+               "a remolque", "busca el empate", "buscaba el empate", "buscando el empate", "buscar el empate"),
+    },
+    "leading": {
+        "en": ("in the lead", "a goal up", "goals up", "protect the lead", "protect their lead",
+               "protecting the lead", "protecting their lead", "protected their lead", "defend the lead",
+               "defend their lead", "defending the lead", "defending their lead", "hold the lead",
+               "hold their lead", "holding the lead", "holding their lead", "sit on the lead", "sit on their lead",
+               "sitting on the lead", "sitting on their lead", "sat on their lead", "leading side",
+               "ahead on the scoreboard", "with the lead"),
+        "zh": ("比分领先", "保住领先", "保持领先", "领先一方", "守住领先", "带着领先", "领先的一方"),
+        "es": ("por delante en el marcador", "arriba en el marcador", "con el marcador a favor", "iba ganando",
+               "va ganando", "defender la ventaja", "defiende la ventaja", "defendía la ventaja",
+               "proteger la ventaja", "protege la ventaja", "protegía la ventaja"),
+    },
+}
+
+
 # Numbers written as words, which a headline may not carry any more than digits. "one", "un"
 # and "一" are left out: they double as articles ("one more push", "un cambio", "一张牌").
 NUMBER_WORDS = ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
@@ -113,6 +177,11 @@ def number_words(text: str, lang: str) -> list[str]:
     words = NUMBER_WORDS + NUMBER.get(lang, ())
     found = [w for w in words if re.search(rf"\b{w}\b", text, re.I)]
     return found + (_ZH_COUNTED.findall(text) if lang == "zh" else [])
+
+
+def score_words(lang: str) -> dict[str, tuple[str, ...]]:
+    """Score words by kind; the English ones apply to every language."""
+    return {kind: words["en"] + (words.get(lang, ()) if lang != "en" else ()) for kind, words in SCORE_WORDS.items()}
 
 
 def jargon(lang: str) -> tuple[str, ...]:
