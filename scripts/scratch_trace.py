@@ -21,6 +21,15 @@ from pivot_core.sim import engine as E
 from pivot_core.sim import movement as M
 
 SEEDS = list(range(1, 21))
+if "--v3" in sys.argv:                      # run with scratch_fix's V3 replacements already swapped in
+    sys.argv.remove("--v3")
+    sys.path.insert(0, str(Path(__file__).parent))
+    import scratch_fix
+    scratch_fix.install(3)
+    SEEDS = [4, 6, 17]
+    REF = "scratch_ref_v3.json"
+else:
+    REF = "scratch_ref.json"
 
 
 def canon(x, depth=0) -> bytes:
@@ -158,11 +167,12 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     if mode == "ref":
         ref = {s: per_second(s) for s in SEEDS}
-        Path("scratch_ref.json").write_text(json.dumps(ref))
-        print("wrote scratch_ref.json")
+        Path(REF).write_text(json.dumps(ref))
+        print("wrote", REF)
     elif mode == "mac":
-        maths(out)
-        ref = json.loads(Path("scratch_ref.json").read_text())
+        if REF == "scratch_ref.json":
+            maths(out)
+        ref = json.loads(Path(REF).read_text())
         first = []
         for s in SEEDS:
             got = per_second(s)
