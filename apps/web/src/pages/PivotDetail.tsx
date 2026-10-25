@@ -10,6 +10,7 @@ import Sourced, { formatValue } from "../components/Sourced";
 import Stamp from "../components/Stamp";
 import WhyItTurned from "../components/WhyItTurned";
 import { involves, useMatch } from "../data/match";
+import { inWindow } from "../data/window";
 import { usePrefs } from "../i18n";
 import NotFound from "./NotFound";
 
@@ -29,20 +30,22 @@ export default function PivotDetail() {
 
   const evidence = [...new Set(sentences.flatMap((s) => s.evidence_ids))].flatMap((e) => eventById(e) ?? []);
   const first = evidence.find((e) => e.location) ?? evidence[0];
+  const [from, to] = detail?.window ?? [0, 0];
+  // The clock starts on the first evidence, or the window's edge when that falls outside it.
+  const start = Math.min(to, Math.max(from, first?.t ?? (pivot ? pivot.minute * 60 : 0)));
   const [selected, setSelected] = useState<string | null>(first?.event_id ?? null);
-  const [t, setT] = useState(first?.t ?? (pivot ? pivot.minute * 60 : 0));
+  const [t, setT] = useState(start);
   const [playing, setPlaying] = useState(false);
   const [disputed, setDisputed] = useState(false);
 
   // A new pivot id resets the selection and the clock.
   useEffect(() => {
     setSelected(first?.event_id ?? null);
-    setT(first?.t ?? (pivot ? pivot.minute * 60 : 0));
+    setT(start);
     setPlaying(false);
     setDisputed(false);
   }, [id]);
 
-  const [from, to] = detail?.window ?? [0, 0];
   useEffect(() => {
     if (!playing) return;
     const h = setInterval(() => setT((s) => (s >= to ? from : s + 1)), PLAY_MS);
@@ -60,6 +63,8 @@ export default function PivotDetail() {
   const frame = detail.frames[Math.min(detail.frames.length - 1, Math.max(0, t - from))];
   const actions = evidence.filter((e) => e.location && Math.abs(e.t - t) <= SHOW_FOR);
   const picked = selected ? eventById(selected) : undefined;
+  // Evidence the timeline cannot reach gets no tick; its chip and the caption say so instead.
+  const outside = new Set(evidence.filter((e) => !inWindow(detail.window, e.t)).map((e) => e.event_id));
   const claims = sentences.reduce((n, s) => n + s.claims.length, 0);
   const [beforeWin, afterWin] = [detail.beforeAfter[0]?.before.stat_ref.window, detail.beforeAfter[0]?.after.stat_ref.window];
 
@@ -121,6 +126,7 @@ export default function PivotDetail() {
               <>
                 <b>#{picked.seq} · {picked.clock_label}</b> {describe(picked, playerName, tr)}
                 {!picked.location && <span className="muted">{tr("detail.noDraw")}</span>}
+                {outside.has(picked.event_id) && <span className="muted">{tr("detail.outside")}</span>}
               </>
             ) : (
               <span className="muted">{tr("detail.pickHint")}</span>
@@ -129,7 +135,7 @@ export default function PivotDetail() {
         </Card>
         <div className="stack">
           <WhyItTurned pivot={pivot} selected={new Set(selected ? [selected] : [])} onToggle={jump}
-            chipHint={tr("detail.chipHint")} />
+            chipHint={tr("detail.chipHint")} outside={outside} />
           {detail.beforeAfter.length > 0 && beforeWin && afterWin && (
             <Card title={tr("detail.ba")} note={tr("detail.baNote")}>
               <table className="ba">

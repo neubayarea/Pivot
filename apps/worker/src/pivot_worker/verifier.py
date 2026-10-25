@@ -16,6 +16,8 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 6. wording: no banned terms; fan versions use no jargon and at most one number per sentence
 7. context: every cited item was shown to the writer and is about someone in the sentence, and
    any off-pitch story ("former club", "feud") cites one (D13)
+8. score: in pivot cards, words about the score ("equaliser", "extend the lead", "trailing") fit the
+   real score before and after the goal they describe, or around the pivot (Dx8)
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -32,6 +34,8 @@ from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from . import languages as lang_rules
 from .context import ContextItem, involved_in, mentions
+from .matchstate import score_line
+from .scenarios import is_goal
 from .vocabulary import STAT_TERMS
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
@@ -241,6 +245,94 @@ def _backwards(text: str, lang: str, claims: list[Claim]) -> list[tuple[str, str
     return wrong
 
 
+class Goal(NamedTuple):
+    event: MatchEvent
+    before: dict[str, int]
+    after: dict[str, int]
+    trailed: bool                             # the scorer's side had been behind earlier in the match
+
+
+def _goals(events: Mapping[str, MatchEvent]) -> list[Goal]:
+    """Every goal with the score just before and just after it."""
+    score, behind, goals = {"home": 0, "away": 0}, {"home": False, "away": False}, []
+    for e in sorted((e for e in events.values() if is_goal(e)), key=lambda e: (e.t, e.seq)):
+        after = {**score, e.team: score[e.team] + 1}
+        goals.append(Goal(e, score, after, behind[e.team]))
+        score = after
+        for side, other in (("home", "away"), ("away", "home")):
+            behind[side] |= score[side] < score[other]
+    return goals
+
+
+def _lead(score: Mapping[str, int], side: str) -> int:
+    return score[side] - score["away" if side == "home" else "home"]
+
+
+# What each goal word says about the score before (b) and after (a) the goal, from the scorer's side.
+GOAL_WORDS = {
+    "equaliser": lambda g, b, a: a == 0,
+    "take_lead": lambda g, b, a: b == 0 and a > 0,
+    "extend_lead": lambda g, b, a: b > 0 and a > b,
+    "comeback": lambda g, b, a: a >= 0 and g.trailed,
+}
+
+
+def _score_words(text: str, lang: str) -> list[tuple[int, str, str]]:
+    """(position, kind, word) of each score word, longest first so "chasing an equaliser" is not an equaliser."""
+    lowered, taken, found = text.lower(), [False] * len(text), []
+    words = sorted(((w, kind) for kind, ws in lang_rules.score_words(lang).items() for w in ws),
+                   key=lambda wk: len(wk[0]), reverse=True)
+    for w, kind in words:
+        for m in re.finditer(_word_pattern(w), lowered):
+            if not any(taken[m.start():m.end()]):
+                taken[m.start():m.end()] = [True] * (m.end() - m.start())
+                found.append((m.start(), kind, w))
+    return sorted(found)
+
+
+def _score_problems(text: str, lang: str, goals: list[Goal], cited: Collection[str], window: tuple[int, int],
+                    names: Mapping[str, str]) -> list[str]:
+    """Score words in `text` that do not fit the real score.
+
+    A goal word is about the goals the text cites, or else any goal in the window, preferring the
+    side named nearest before it; a state word ("trailing") is about the side named nearest it at
+    any point in the window.
+    """
+    lo, hi = window
+    lowered = text.lower()
+    sides = sorted((m.start(), side) for side, name in names.items()
+                   for m in re.finditer(re.escape(name.lower()), lowered))
+    in_window = [g for g in goals if lo <= g.event.minute <= hi]
+    problems = []
+    for at, kind, word in _score_words(text, lang):
+        side = next((s for start, s in reversed(sides) if start < at), None) or \
+            next((s for start, s in sides if start > at), None)
+        if kind in GOAL_WORDS:
+            pool = [g for g in goals if g.event.event_id in cited] or in_window
+            pool = [g for g in pool if g.event.team == side] or pool
+            if any(GOAL_WORDS[kind](g, _lead(g.before, g.event.team), _lead(g.after, g.event.team)) for g in pool):
+                continue
+            if not pool:
+                problems.append(f"'{word}' describes a goal, but there is no goal from {lo + 1}' to {hi + 1}'.")
+                continue
+            facts = "; ".join(f"the {g.event.clock_label} goal by {names[g.event.team]} made it "
+                              f"{score_line(g.after, names)} (it was {score_line(g.before, names)})" for g in pool[:2])
+            problems.append(f"'{word}' does not fit the score: {facts}.")
+        else:
+            start = max([g for g in goals if g.event.minute < lo], key=lambda g: g.event.t, default=None)
+            scores = [start.after if start else {"home": 0, "away": 0}] + [g.after for g in in_window]
+            who = [side] if side else ["home", "away"]
+            sign = -1 if kind == "trailing" else 1
+            if any(sign * _lead(sc, s) > 0 for sc in scores for s in who):
+                continue
+            team = names[side] if side else "neither side"
+            state = "behind" if kind == "trailing" else "ahead"
+            seq = ", then ".join(dict.fromkeys(score_line(sc, names) for sc in scores))
+            problems.append(f"'{word}' does not fit the score: {team} was not {state} from {lo + 1}' to {hi + 1}' "
+                            f"({seq}).")
+    return problems
+
+
 def verify(
     narrative: Narrative,
     *,
@@ -302,6 +394,13 @@ def verify(
               "in a sentence, or drop it.")
 
     lo, hi = pivot_minute - EVIDENCE_BEFORE, pivot_minute + EVIDENCE_AFTER
+    # 8. Score words, in pivot cards only: comparisons talk about results ("a draw"), not the live score.
+    score_check = outcomes is None and significant is None
+    if score_check:
+        goals, sides = _goals(events), names or {"home": "home", "away": "away"}
+        all_cited = {e for s in narrative.sentences for e in s.evidence_ids}
+        for problem in _score_problems(narrative.headline, lang, goals, all_cited, (lo, hi), sides):
+            issue("number_mismatch", f"Headline: {problem}")
     any_significant = bool(significant) and any(significant.values())
     nothing_to_cite = not any(lo <= e.minute <= hi for e in events.values()) if allowed_evidence is None else False
 
@@ -423,5 +522,10 @@ def verify(
         if not s.context_ids and (story := off_pitch_story(s.text)):
             issue("context_invalid", f"'{story[0]}' tells an off-pitch story; cite the match-context item it "
                   "comes from, or drop it.", i)
+
+        # 8. Score words.
+        if score_check:
+            for problem in _score_problems(s.text, lang, goals, s.evidence_ids, (lo, hi), sides):
+                issue("number_mismatch", f"Sentence {i + 1}: {problem}", i)
 
     return Verdict(passed=not issues, issues=issues)

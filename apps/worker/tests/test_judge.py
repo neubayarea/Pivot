@@ -41,6 +41,12 @@ def test_parse_keeps_real_triggers_and_drops_invented_ones():
     assert v.trigger_event_ids == ["m063-s01042"]
 
 
+def test_more_than_three_triggers_keeps_the_first_three_real_ones():
+    raw = json.dumps({"is_pivot": True, "severity": 2, "reason": "ok",
+                      "trigger_event_ids": ["made-up", "a", "b", "c", "d"]})
+    assert judge.parse_verdict(raw, candidate(), {"a", "b", "c", "d"}).trigger_event_ids == ["a", "b", "c"]
+
+
 @pytest.mark.parametrize("triggers", [["x"], []])
 def test_a_yes_with_no_real_trigger_is_not_accepted(triggers):
     raw = json.dumps({"is_pivot": True, "severity": 3, "trigger_event_ids": triggers, "reason": "ok"})

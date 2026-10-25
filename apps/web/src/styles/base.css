@@ -182,6 +182,8 @@ svg text { font-family: var(--pv-label); }
 :root[data-theme="dark"] .hl { background: var(--pv-gold); color: var(--pv-on-gold); }
 .ev { display: inline-block; font-family: var(--pv-label); font-weight: 700; font-size: 12px; padding: 0 5px; border: 1.5px solid var(--pv-ink); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; line-height: 1.5; vertical-align: 1px; }
 .ev:hover, .ev.on { background: var(--pv-gold); color: var(--pv-on-gold); border-color: var(--pv-ink); }
+.ev.out { border-style: dashed; }
+.ev .ev-out { font-weight: 400; }
 .why p { font-size: 15px; }
 .why p + p { border-top: 1px solid var(--pv-hair); padding-top: 6px; }
 .why.drop p:first-of-type::first-letter { font-family: var(--pv-display); font-size: 42px; float: left; line-height: .88; padding: 4px 8px 0 0; color: var(--pv-red); }
