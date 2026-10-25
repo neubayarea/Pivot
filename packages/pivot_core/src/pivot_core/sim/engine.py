@@ -90,42 +90,42 @@ class Params:
 
     pass_rate: dict = field(default_factory=lambda: {"slow": 0.28, "normal": 0.34, "fast": 0.42})
     pass_rate_pressed: float = 0.30
-    tackle_attempt: float = 0.10
-    foul_rate: float = 0.50
-    yellow_rate: float = 0.17
-    red_rate: float = 0.004
+    tackle_attempt: float = 0.195
+    foul_rate: float = 0.307
+    yellow_rate: float = 0.11
+    red_rate: float = 0.00243
     shot_base: float = 0.0
-    shot_xg_weight: float = 0.88
+    shot_xg_weight: float = 1.25
     shot_min_xg: float = 0.03
     block_base: float = 0.22
     block_per_defender: float = 0.12
     saved_share: float = 0.33
     post_share: float = 0.05
     home_boost: float = 1.02                     # CTX-003, scaled by attendance in _success
-    long_shot_rate: float = 0.006                # per second on the ball 18-32 m out, scaled by long_shots
+    long_shot_rate: float = 0.015                # per second on the ball 18-32 m out, scaled by long_shots
     # Game state (B12, REAL-001): urgency runs from -1 (protecting a lead late on) to +1 (chasing it).
     state_line: float = 2.0                      # back-line shift in metres at full urgency, out of possession
     state_press_at: float = 0.8                  # urgency beyond which a side presses one level higher or lower
     man_line: float = 2.0                        # back-line shift per player more (+) or fewer (-) on the pitch
-    state_shot: float = 0.15                     # shot willingness x (1 + state_shot * urgency)
+    state_shot: float = 0.208                    # shot willingness x (1 + state_shot * urgency)
     state_direct: float = 0.35                   # long-pass penalty x (1 - state_direct * urgency) when chasing
-    waste_s: float = 10.0                        # extra seconds the leading side takes over its restarts
+    waste_s: float = 13.73                       # extra seconds the leading side takes over its restarts
     # Chance creation (B12).
-    lane_cut: float = 0.22                       # cut-out chance for an opponent right on the passing lane
+    lane_cut: float = 0.11                       # cut-out chance for an opponent right on the passing lane
     intercept_share: float = 0.4                 # cut-outs recorded as interceptions; the rest are recoveries
-    high_pass_acc: float = 0.85                  # accuracy factor for a ball in the air (low passes: halfway)
+    high_pass_acc: float = 0.92                  # accuracy factor for a ball in the air (low passes: halfway)
     clear_under_pressure: float = 0.3            # a defender pressed near his own goal clears it
-    clear_behind: float = 0.25                   # a clearance in his own box goes behind for a corner
-    loose_shot: float = 0.35                     # chance to strike a loose ball in front of goal first time (+3 x xG)
-    offside_pen: float = 3.5                     # passer's reluctance to pick a receiver standing offside
-    offside_slack: float = 0.5                   # metres a forward may drift beyond the last defender
-    claim_rate: float = 0.45                     # keeper comes for a cross dropping into his area
-    sweep_rate: float = 0.5                      # keeper rushes out to a ball played in behind
+    clear_behind: float = 0.45                   # a clearance in his own box goes behind for a corner
+    loose_shot: float = 0.12                     # chance to strike a loose ball in front of goal first time, x (1 + 8 xG)
+    offside_pen: float = 2.9                     # passer's reluctance to pick a receiver standing offside
+    offside_slack: float = 1.3                   # metres a forward may drift beyond the last defender
+    claim_rate: float = 0.9                      # keeper comes for a cross dropping into his area
+    sweep_rate: float = 0.45                     # keeper rushes out to a ball played in behind
     aerial_contest: float = 3.0                  # metres: a defender this close to a long ball's drop challenges for it
-    pass_forward: float = 0.05                   # pass choice: weight per metre gained towards goal
-    pass_threat: float = 12.0                    # pass choice: weight on threat gained
+    pass_forward: float = 0.035                  # pass choice: weight per metre gained towards goal
+    pass_threat: float = 10.37                   # pass choice: weight on threat gained
     # Fatigue, injuries, VAR (B12).
-    fatigue_err: float = 0.3                     # pass accuracy x (1 - fatigue_err * (1 - fitness)); duels alike
+    fatigue_err: float = 0.35                    # pass accuracy x (1 - fatigue_err * (1 - fitness)); duels alike
     injury_foul: float = 0.12                    # the fouled player is hurt
     injury_sprint: float = 0.0003                # per second sprinting, x (1.3 - fitness): a pulled muscle
     var_check: float = 0.25                      # a goal gets a visible VAR check (and stands)
@@ -906,7 +906,7 @@ class Engine:
         elif ptype in ("free_kick", "goal_kick") and dist >= 25:
             hi, lo = 0.7, 0.15
         elif dist >= 20:
-            hi, lo = 0.2, 0.2
+            hi, lo = 0.12, 0.2
         else:
             hi, lo = 0.02, 0.03
         r = self.rng.random()
@@ -1197,7 +1197,7 @@ class Engine:
         elif v[0] > 80 and self.shapes[win].roles[j[win]] != "GK":
             # a rebound or a loose ball in front of goal is struck first time (B12)
             xg = xg_model(v, blockers=self._blockers(win, v), pressed=True, finishing=self._a(win, j[win], "finishing"))
-            if xg >= self.p.shot_min_xg and self.rng.random() < min(0.9, self.p.loose_shot + 3 * xg):
+            if xg >= self.p.shot_min_xg and self.rng.random() < min(0.9, self.p.loose_shot * (1 + 8 * xg)):
                 self.forced = {"kind": "loose_shot"}
 
     # --- pressure events -------------------------------------------------------------
