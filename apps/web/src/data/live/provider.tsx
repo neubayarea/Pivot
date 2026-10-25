@@ -1,13 +1,14 @@
 // Fills useMatch() from the API: LiveSocket keeps the feed and decides when to reload over REST,
 // LiveState folds both together, and this turns it into the MatchView the pages read.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Match, Pivot1 as Pivot, TrackingFrame, ViewerPrefs } from "@pivot/contracts";
+import type { Match, MatchEvent, Pivot1 as Pivot, TrackingFrame, ViewerPrefs } from "@pivot/contracts";
 import { needsLocalised, usePrefs } from "../../i18n";
 import { clockLabel } from "../../fixtures/demo-1021";
 import {
   ConnectionContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
 import { isRecordedDemo, type MatchChoice } from "../choice";
+import { evidenceWindow } from "../window";
 import { ApiError, api } from "./api";
 import { isScenarioEnvelope, publishScenario } from "./scenarioFeed";
 import { LiveSocket, type ConnectionStatus } from "./socket";
@@ -192,7 +193,7 @@ export function toView({ match, events, metrics, pivots }: LiveState): MatchView
     eventById: (id) => byId.get(id),
     pivotDetail: (id) => {
       const pivot = shown.find((p) => p.pivot_id === id);
-      return pivot && detailWithoutTracking(match, pivot);
+      return pivot && detailWithoutTracking(match, pivot, byId);
     },
     playback: null,
   };
@@ -205,13 +206,15 @@ const teamInfo = ({ name, short_name, side, color }: Match["home"]) => ({ name, 
 
 /**
  * The API serves no tracking frames or before/after table yet, so S2 gets an empty pitch over
- * the two minutes either side of the pivot; evidence events still draw where they happened.
+ * the two minutes either side of the pivot, widened to cover its evidence (Cx3); evidence events
+ * still draw where they happened.
  */
-function detailWithoutTracking(match: Match, pivot: Pivot): PivotDetail {
-  const from = Math.max(0, (pivot.minute - 2) * 60);
+function detailWithoutTracking(match: Match, pivot: Pivot, byId: Map<string, MatchEvent>): PivotDetail {
+  const ids = pivot.narrative?.sentences.flatMap((s) => s.evidence_ids) ?? [];
+  const window = evidenceWindow(pivot.minute, ids.flatMap((id) => byId.get(id)?.t ?? []));
   const frame: TrackingFrame = {
-    match_id: match.match_id, period: match.period, t: from, possession: null, players: [],
+    match_id: match.match_id, period: match.period, t: window[0], possession: null, players: [],
     ball: { owner_id: null, x: 52.5, y: 34, z: 0 },
   };
-  return { pivot, window: [from, (pivot.minute + 2) * 60], frames: [frame], beforeAfter: [] };
+  return { pivot, window, frames: [frame], beforeAfter: [] };
 }
