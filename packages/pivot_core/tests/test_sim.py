@@ -167,7 +167,7 @@ def test_b02_demo_fixture_has_the_23_team_stats_for_match_and_halves():
 
 def test_attr_014_015_017_techniques_vary_like_real_matches():
     shots, passes = [], []
-    for seed in (3, 4, 5, 6):
+    for seed in (3, 4, 5, 6, 7, 8):
         events = simulate(build_demo_match(seed)).events_as_models()
         shots += [e for e in events if e.type == "shot" and e.play_pattern != "penalty"]
         passes += [e for e in events if e.type == "pass" and e.pass_type in ("regular", "long_ball", "through_ball")]
