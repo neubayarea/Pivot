@@ -31,7 +31,7 @@ from pivot_core.sim.engine import Params  # noqa: E402
 # name: (low, high)
 SPACE = {
     # shots and goals
-    "shot_xg_weight": (0.4, 1.6),
+    "shot_xg_weight": (0.4, 2.5),
     "shot_min_xg": (0.01, 0.06),
     "long_shot_rate": (0.002, 0.03),
     "block_base": (0.1, 0.35),
@@ -64,6 +64,10 @@ SPACE = {
     "fatigue_err": (0.05, 0.6),
     "injury_foul": (0.04, 0.3),
     "injury_sprint": (0.0001, 0.001),
+    "line_lift": (0.0, 6.0),
+    "var_disallow": (0.02, 0.08),
+    "var_pen_award": (0.01, 0.08),
+    "through_lead": (0.1, 1.0),
 }
 
 # Weights on the scorecard's loss terms: what the demo and the AI explanations lean on most.
@@ -71,14 +75,15 @@ WEIGHTS = {"goals": 3, "shots": 2, "xg_per_shot": 3, "corners": 2, "offsides": 2
            "loose_first_time_shot_pct": 2, "pass_high_pct": 2, "pass_low_pct": 2, "tackles_won_per_team": 2,
            "late_pass_acc_drop_pts": 2, "leader_shot_share": 2, "results_pct": 2, "red_cards": 3, "yellow_cards": 2,
            "pressures": 0.5, "counters": 0, "interceptions": 1, "ball_recoveries": 0.5, "clearances": 1,
-           "final_third_passes": 1, "injuries": 0.5, "injury_subs": 0.5, "var_overturns": 0.5}
+           "final_third_passes": 1, "injuries": 0.5, "injury_subs": 0.5, "var_overturns": 0.5,
+           "def_action_height_m": 2, "ppda": 2, "first_half_goals_pct": 1, "var_goals_disallowed": 1}
 
 
 # Which knobs move which number, and which way (+1: a larger knob gives a larger number). Used to
 # aim half of each round's candidates at the worst misses instead of at random parameters.
 KNOBS = {
     "goals": [("shot_xg_weight", 1), ("skill_gk", -1)],
-    "shots": [("shot_xg_weight", 1), ("long_shot_rate", 1), ("shot_min_xg", -1)],
+    "shots": [("shot_xg_weight", 1), ("long_shot_rate", 1), ("through_lead", 1), ("shot_min_xg", -1)],
     "xg_per_shot": [("long_shot_rate", -1), ("shot_min_xg", 1), ("block_base", -1)],
     "fouls": [("foul_rate", 1)],
     "yellow_cards": [("yellow_rate", 1)],
@@ -98,6 +103,11 @@ KNOBS = {
     "leader_shot_share": [("state_line", -1), ("state_shot", -1)],
     "injuries": [("injury_foul", 1), ("injury_sprint", 1)],
     "injury_subs": [("injury_foul", 1), ("injury_sprint", 1)],
+    "def_action_height_m": [("line_lift", 1)],
+    "ppda": [("tackle_attempt", -1), ("foul_rate", -1)],
+    "crosses": [("pass_threat", 1)],
+    "var_goals_disallowed": [("var_disallow", 1)],
+    "var_overturns": [("var_pen_award", 1)],
 }
 
 
@@ -108,10 +118,10 @@ def misses(agg: dict, ref: dict) -> list[tuple[float, str, float]]:
         if key not in KNOBS or agg.get(key) is None:
             continue
         only = {k: (WEIGHTS.get(k, 1.0) if k == key else 0) for k, _, _ in sc.CARD} | {"results_pct": 0}
-        real = ref["literature"][key]["range"] if key in ref["literature"] else ref["wc2022"].get(key)
+        real, _ = sc.real_value(ref, key)
         if real is None:
             continue
-        mid = sum(real) / 2 if isinstance(real, list) else real
+        mid = sum(real) / 2 if isinstance(real, tuple) else real
         out.append((sc.loss({key: agg[key]}, ref, only), key, agg[key] - mid))
     return sorted(out, reverse=True)
 

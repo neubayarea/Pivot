@@ -5,10 +5,11 @@ import copy
 import numpy as np
 import pytest
 
+from pivot_core.domain import MatchEvent
 from pivot_core.domain.common import PITCH_LENGTH
 from pivot_core.sim import build_demo_match, simulate
 from pivot_core.sim.engine import Engine, Params, xg_model
-from pivot_core.sim.movement import MovementModel, TeamShape, to_view
+from pivot_core.sim.movement import BURST_S, RECOVER_MS, SPRINT_MS, MovementModel, TeamShape, to_view
 
 
 def engine_at(minute: int, score: tuple[int, int], seed: int = 7) -> Engine:
@@ -94,11 +95,12 @@ def test_real_004_better_finishers_score_more_from_the_same_spot():
 
 
 def test_real_004_a_much_stronger_side_passes_better_and_makes_more_chances():
-    out = Engine(build_demo_match(11, home_strength=60, away_strength=80, home_formation="4-3-3",
-                                  away_formation="4-3-3"), 11).run()
+    outs = [Engine(build_demo_match(s, home_strength=60, away_strength=80, home_formation="4-3-3",
+                                    away_formation="4-3-3"), s).run() for s in (11, 12, 13)]
 
     def side(team, key):
-        return [e[key] for e in out.events if e["team"] == team and e["type"] in ("pass", "shot") and e.get(key) is not None]
+        return [e[key] for out in outs for e in out.events
+                if e["team"] == team and e["type"] in ("pass", "shot") and e.get(key) is not None]
     assert np.mean(side("away", "success_prob")) > np.mean(side("home", "success_prob")) + 0.03
     assert sum(side("away", "xg")) > sum(side("home", "xg"))
 
@@ -274,3 +276,67 @@ def test_real_013_a_strict_referee_shows_more_cards():
             n += sum(x["type"] == "card" for x in e.events)
         cards[strict] = n
     assert cards[90] > cards[30] * 1.5
+
+
+# --- running (REAL-014) ------------------------------------------------------------------------
+
+def test_real_014_nobody_reaches_top_speed_in_one_second():
+    pos, far = np.zeros((2, 2)), np.full((2, 2), 80.0)
+    top, accel = np.array([10.0, 10.0]), np.array([3.0, 5.0])
+    _, speed = MovementModel.step(pos, far, top, np.ones(2), np.ones(2, dtype=bool), np.zeros(2), accel)
+    assert list(speed) == [3.0, 5.0]                          # the quicker starter gets going faster
+
+
+def test_real_014_after_a_run_of_sprints_a_player_has_to_jog():
+    e = engine_on_ball()
+    e.speed[:] = 9.0
+    for _ in range(int(BURST_S)):
+        e.burst = np.where(e.speed >= SPRINT_MS, e.burst + 1, e.burst)
+    e.recovering = e.burst >= BURST_S
+    targets = e.pos + np.array([60.0, 0.0])
+    e._move(np.clip(targets, 0, [104.5, 67.5]), np.ones((2, 11), dtype=bool))
+    assert e.speed.max() <= RECOVER_MS + 1e-9
+
+
+def test_real_014_wide_players_sprint_more_than_centre_backs(outs):
+    counts = {"wide": [], "cb": []}
+    for out in outs:
+        roles = {s["player_id"]: s["role"] for e in out.events for s in (e.get("team_sheet") or {}).get("starters", [])}
+        for k in (0, 1):
+            for i in range(11):
+                pid = out.frames_ids[0][k][i]
+                x = out.frames_speed[:, k, i]
+                n = int((np.diff((x >= SPRINT_MS).astype(int)) == 1).sum())
+                if roles.get(pid) in ("LW", "RW", "LM", "RM"):
+                    counts["wide"].append(n)
+                elif roles.get(pid) == "CB":
+                    counts["cb"].append(n)
+    assert np.mean(counts["wide"]) > np.mean(counts["cb"]) + 10
+    assert max(counts["wide"]) < 90                           # a few dozen a match, not a hundred and more
+
+
+def test_real_011_var_rules_a_goal_out_and_the_score_stays():
+    m = build_demo_match(1021)
+    e = Engine(m, 1021, Params(var_disallow=1.0))
+    e.record_frames = False
+    e.play()
+    shots = [x for x in e.events if x["type"] == "shot"]
+    out = [x for x in shots if x["shot_outcome"] == "disallowed"]
+    assert out, "no goal to rule out"
+    by_id = {x["event_id"]: x for x in e.events}
+    for s in out:
+        rev = [by_id[r] for r in s["related_event_ids"] if by_id[r]["type"] == "var_review"]
+        assert rev and rev[0]["var"]["review_of"] == "goal" and rev[0]["var"]["decision"] == "overturned"
+    goals = [sum(x["shot_outcome"] == "goal" and x["team"] == t for x in shots) for t in ("home", "away")]
+    assert goals == e.score                                    # only penalties can still count
+    MatchEvent.model_validate({k: v for k, v in out[0].items() if not k.startswith("_") and k != "play_pattern_hint"})
+
+
+def test_real_016_runners_get_balls_into_space_behind_the_line():
+    counts = []
+    for lead in (0.0, 1.0):
+        e = Engine(build_demo_match(1023), 1023, Params(through_lead=lead))
+        e.record_frames = False
+        e.play()
+        counts.append(sum(x["type"] == "pass" and x.get("pass_type") == "through_ball" for x in e.events))
+    assert counts[1] > counts[0] + 10

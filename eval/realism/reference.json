@@ -1,83 +1,74 @@
 {
-  "literature": {
-    "results_pct": {
-      "value": [
-        45,
-        25,
-        30
-      ],
-      "source": "top European leagues, long-run home/draw/away"
-    },
-    "back_line_m": {
-      "range": [
-        33,
-        45
-      ],
-      "source": "tracking studies: back line 35-45 m from own goal"
-    },
-    "keeper_x_m": {
-      "range": [
-        9,
-        16
-      ],
-      "source": "estimate from public tracking samples; check with Metrica"
-    },
-    "lead_line_shift": {
-      "range": [
-        -8,
-        -1
-      ],
-      "source": "B12 acceptance: leading side drops deeper late on"
-    },
-    "trail_line_shift": {
-      "range": [
-        1,
-        8
-      ],
-      "source": "score effects: trailing side pushes up"
-    },
-    "late_pass_acc_drop_pts": {
-      "range": [
-        2,
-        5
-      ],
-      "source": "B12 acceptance: last 15 minutes"
-    },
-    "var_overturns": {
-      "range": [
-        0.2,
-        0.4
-      ],
-      "source": "Premier League: about 0.3 decisions overturned per match"
-    },
-    "red_11_shot_share": {
-      "range": [
-        0.6,
-        0.7
-      ],
-      "source": "rough consensus for 11 v 10"
-    },
-    "red_11_possession": {
-      "range": [
-        0.55,
-        0.65
-      ],
-      "source": "red-card studies, top leagues"
-    },
-    "shootout_conversion": {
-      "range": [
-        0.75,
-        0.8
-      ],
-      "source": "B12 acceptance; long-run shootout average"
-    },
-    "red_cards": {
-      "range": [
-        0.05,
-        0.15
-      ],
-      "source": "PRD 6.3 target 0-0.15; top leagues about 0.1"
-    }
+  "pl_recent": {
+    "goals": 3.106578947368421,
+    "shots": 26.751315789473683,
+    "shots_on_target": 9.48421052631579,
+    "fouls": 22.07894736842105,
+    "corners": 10.567105263157895,
+    "yellow_cards": 4.1118421052631575,
+    "red_cards": 0.14342105263157895,
+    "results_pct": [
+      43.421052631578945,
+      23.026315789473685,
+      33.55263157894737
+    ],
+    "first_half_goals_pct": 43.83735705209657,
+    "matches": 760,
+    "source": "football-data.co.uk, E0_2324.csv, E0_2425.csv"
+  },
+  "pl1516": {
+    "goals": 2.7,
+    "shots": 26.073684210526316,
+    "shots_on_target": 8.413157894736843,
+    "corners": 10.807894736842105,
+    "offsides": 3.9210526315789473,
+    "fouls": 25.03157894736842,
+    "yellow_cards": 3.1657894736842107,
+    "red_cards": 0.15526315789473685,
+    "passes": 923.8421052631579,
+    "final_third_passes": 63.90263157894737,
+    "tackles_won_per_team": 12.236842105263158,
+    "interceptions": 23.473684210526315,
+    "clearances": 56.96052631578947,
+    "pressures": 303.68947368421055,
+    "keeper_sweeps": 1.0736842105263158,
+    "keeper_claims": 3.721052631578947,
+    "injuries": 2.7157894736842105,
+    "injury_subs": 0.28421052631578947,
+    "crosses": 26.492105263157896,
+    "throw_ins": 46.20789473684211,
+    "goal_kicks": 16.686842105263157,
+    "ball_recoveries": 107.74473684210527,
+    "xg_per_shot": 0.0983164219290718,
+    "pass_accuracy_pct": 76.03125440108677,
+    "pass_ground_pct": 63.6325614547436,
+    "pass_low_pct": 12.998997280046082,
+    "pass_high_pct": 23.368441265210315,
+    "loose_first_time_shot_pct": 10.588348544835755,
+    "header_shot_pct": 16.333289722374747,
+    "counters": 3.5473684210526315,
+    "late_pass_acc_drop_pts": 2.3150376449488372,
+    "def_action_height_m": 30.22544862357262,
+    "ppda": 9.341807530449096,
+    "leader_shot_share": 0.4759842519685039,
+    "leader_pass_share": 0.4684447269081366,
+    "red_11_shot_share": 0.7158081705150977,
+    "red_11_pass_share": 0.6301502943025316,
+    "red_matches": 54,
+    "penalty_conversion": 0.8131868131868132,
+    "goal_minute_share": [
+      0.11598440545808966,
+      0.14717348927875243,
+      0.18226120857699804,
+      0.15984405458089668,
+      0.17251461988304093,
+      0.2222222222222222
+    ],
+    "first_half_goals_pct": 44.54191033138402,
+    "lead_line_shift": null,
+    "trail_line_shift": null,
+    "matches": 380,
+    "source": "StatsBomb open data, Premier League 2015/16, 380 matches, regular time"
   },
   "wc2022": {
     "goals": 2.625,
@@ -130,6 +121,93 @@
     "matches": 64,
     "shootout_conversion": 0.6341463414634146,
     "shootout_kicks": 41,
-    "extra_time_share_knockout": 0.3125
+    "extra_time_share_knockout": 0.3125,
+    "source": "StatsBomb open data, 2022 World Cup, 64 matches, regular time (comparison only)"
+  },
+  "literature": {
+    "back_line_m": {
+      "range": [
+        33,
+        45
+      ],
+      "source": "tracking studies: back line 35-45 m from own goal"
+    },
+    "keeper_x_m": {
+      "range": [
+        9,
+        16
+      ],
+      "source": "estimate from public tracking samples; check with Metrica"
+    },
+    "lead_line_shift": {
+      "range": [
+        -8,
+        -1
+      ],
+      "source": "B12 acceptance: leading side drops deeper late on"
+    },
+    "trail_line_shift": {
+      "range": [
+        1,
+        8
+      ],
+      "source": "score effects: trailing side pushes up"
+    },
+    "late_pass_acc_drop_pts": {
+      "range": [
+        2,
+        5
+      ],
+      "source": "B12 acceptance: last 15 minutes"
+    },
+    "var_overturns": {
+      "range": [
+        0.22,
+        0.34
+      ],
+      "source": "Premier League 2024/25: 108 VAR overturns in 380 matches (ESPN and BBC trackers)"
+    },
+    "red_11_shot_share": {
+      "range": [
+        0.65,
+        0.78
+      ],
+      "source": "Premier League 2015/16 (StatsBomb, 54 matches with a red card): 0.72"
+    },
+    "red_11_possession": {
+      "range": [
+        0.58,
+        0.68
+      ],
+      "source": "Premier League 2015/16 (StatsBomb): the 11-man side made 63% of the passes"
+    },
+    "shootout_conversion": {
+      "range": [
+        0.75,
+        0.8
+      ],
+      "source": "B12 acceptance; long-run shootout average"
+    },
+    "red_cards": {
+      "range": [
+        0.05,
+        0.15
+      ],
+      "source": "PRD 6.3 target 0-0.15; top leagues about 0.1"
+    },
+    "var_goals_disallowed": {
+      "range": [
+        0.08,
+        0.16
+      ],
+      "source": "Premier League 2024/25: 34 goals ruled out for offside alone (ESPN tracker), more for fouls and handball"
+    },
+    "xg_per_shot": {
+      "range": [
+        0.105,
+        0.125
+      ],
+      "source": "Premier League 2023/24-2024/25: 3.1 goals from 26.8 shots a match (football-data.co.uk), about 0.115 per shot; 2015/16 was 0.098"
+    }
   }
 }

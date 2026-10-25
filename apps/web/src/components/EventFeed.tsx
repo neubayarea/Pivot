@@ -20,6 +20,7 @@ export function describe(e: MatchEvent, name: (id: string | null) => string, t: 
     }
     case "shot":
       if (e.shot_outcome === "goal") return t("event.goal", { who });
+      if (e.shot_outcome === "disallowed") return t("event.goalDisallowed", { who });
       return t("event.shot", { who, xg: e.xg?.toFixed(2) ?? "" });
     case "card":
       return t(isRedCard(e) ? "event.red" : "event.yellow", { who });
@@ -52,7 +53,7 @@ export default function EventFeed({ highlight }: { highlight: ReadonlySet<string
     <div className="feed" aria-live="polite">
       {/* The newest rows, plus any older event picked as evidence in "Why it turned". */}
       {events.filter((e, i) => i < ROWS || highlight.has(e.event_id)).map((e) => {
-        const key = KEY_TYPES.has(e.type) || e.shot_outcome === "goal";
+        const key = KEY_TYPES.has(e.type) || e.shot_outcome === "goal" || e.shot_outcome === "disallowed";
         return (
           <div key={e.event_id}
             className={`${key ? "key" : ""}${highlight.has(e.event_id) ? " on" : ""}${involves(e, prefs.focus_player_id) ? " mine" : ""}`}>

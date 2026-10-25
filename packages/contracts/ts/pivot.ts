@@ -847,7 +847,7 @@ export interface MatchEvent {
   seq: number;
   shootout_round: number | null;
   shot_end_height_m: number | null;
-  shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post") | null;
+  shot_outcome: ("goal" | "saved" | "off_target" | "blocked" | "post" | "disallowed") | null;
   shot_technique: ("normal" | "volley" | "half_volley" | "lob" | "backheel" | "diving_header" | "overhead_kick") | null;
   substitution: Substitution | null;
   success_prob: number | null;

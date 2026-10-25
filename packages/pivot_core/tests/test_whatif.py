@@ -102,7 +102,9 @@ def test_b08_remove_red_card_keeps_the_player_on(ref, saved37):
     red = next(e for e in ref.events if is_red(e) and e.get("_plant") is not None)
     base, cf = prepare(saved37, spec("remove_red_card", 37, target_event_id=red["event_id"], team="away"))
     b, c = played(base, 4), played(cf, 4)
-    assert [e["player_id"] for e in b.events if is_red(e) and e["t"] >= 37 * 60] == [red["player_id"]]
+    # the planted red goes to whoever is nearest the ball in this rerun, not always the same player
+    reds = [e for e in b.events if is_red(e) and e["t"] >= 37 * 60]
+    assert len(reds) == 1 and reds[0]["team"] == "away" and reds[0].get("_plant") == red["_plant"]
     assert not [e for e in c.events if is_red(e) and e["t"] >= 37 * 60]
     on = sum(p is not None for p in saved37.shapes[1].player_ids)      # a red card earlier on stays
     assert sum(p is not None for p in c.shapes[1].player_ids) == on
@@ -110,14 +112,17 @@ def test_b08_remove_red_card_keeps_the_player_on(ref, saved37):
 
 
 def test_b08_cancel_a_natural_substitution_keeps_both_players(ref, saved56):
-    sub = event_id(ref, lambda e: e["type"] == "substitution" and e["team"] == "home")
-    assert sub.startswith("m058")                         # h08 off for h16, a fatigue change
+    first = next(e for e in ref.events if e["type"] == "substitution" and e["team"] == "home")
+    assert first["event_id"].startswith("m058") and first["substitution"]["reason"] == "fatigue"
+    off, on = first["substitution"]["player_off_id"], first["substitution"]["player_on_id"]
     s = save_at(saved56, 58)
-    base, cf = prepare(s, spec("cancel_substitution", 58, target_event_id=sub, team="home"))
-    assert ("h08", "h16") in subs(played(base, 3), 58 * 60)          # forced back into the baseline
+    base, cf = prepare(s, spec("cancel_substitution", 58, target_event_id=first["event_id"], team="home"))
+    assert (off, on) in subs(played(base, 3), 58 * 60)               # forced back into the baseline
     after = played(cf, 25)
-    assert not [p for p in subs(after, 58 * 60) if {"h08", "h16"} & set(p)]
-    assert "h08" in after.shapes[0].player_ids
+    fatigue = [(e["substitution"]["player_off_id"], e["substitution"]["player_on_id"])
+               for e in later(after, 58 * 60, "substitution") if e["substitution"]["reason"] != "injury"]
+    assert not [p for p in fatigue if {off, on} & set(p)]          # an injury may still force a change
+    assert off in after.shapes[0].player_ids
 
 
 def test_b08_cancel_the_planted_63_change_cancels_its_tactics_too(ref, saved64):

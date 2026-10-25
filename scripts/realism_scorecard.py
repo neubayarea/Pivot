@@ -4,14 +4,19 @@ football, side by side (B12).
 
   uv run scripts/realism_scorecard.py                       # 120 matches per scenario
   uv run scripts/realism_scorecard.py --matches 240 --red 120
-  uv run scripts/realism_scorecard.py --build-reference <statsbomb dir>
+  uv run scripts/realism_scorecard.py --build-reference <statsbomb dir> --as pl1516
+  uv run scripts/realism_scorecard.py --build-recent E0_2324.csv E0_2425.csv
 
-Real numbers come from eval/realism/reference.json:
+Real numbers come from eval/realism/reference.json, Premier League first (REAL_ORDER):
 
-- "wc2022": counted with --build-reference from StatsBomb open data, 2022 World Cup (64
-  matches; the raw files are never committed). Regular time only (periods 1 and 2).
-- "literature": what event data cannot give (results, line height, VAR), with the source
-  next to each number.
+- "pl_recent": the last two Premier League seasons (2023/24, 2024/25, 760 matches) from the
+  football-data.co.uk match files: results, goals, shots, fouls, corners, cards.
+- "pl1516": StatsBomb open data, Premier League 2015/16 (380 matches), for everything the
+  match files do not have (passes, pass height, offsides, tackles, xG, conditional effects).
+- "wc2022": StatsBomb open data, 2022 World Cup (64 matches), kept for comparison only.
+- "literature": what event data cannot give (line height, VAR, red-card effects), with the
+  source next to each number.
+Event data is regular time only (periods 1 and 2); the raw files are never committed.
 
 Besides averages the card compares conditional effects: goals by minute, the leading side's
 share of shots and passes, the 11-man side after a red card, late-game pass accuracy, and the
@@ -32,11 +37,17 @@ import numpy as np
 from pivot_core.domain import PlantSpec
 from pivot_core.sim import build_demo_match
 from pivot_core.sim.engine import Engine, Params
+from pivot_core.sim.formations import DEFENDER_ROLES as DEFENDERS
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "eval" / "realism" / "reference.json"
 L, W = 105.0, 68.0
 BINS = (15, 30, 45, 60, 75, 90)                   # goals by minute: 0-15, ..., 75-90+ (stoppage in the last bin)
+REAL_ORDER = ("pl_recent", "pl1516")              # where a real number is taken from, first that has it
+DEF_ACTIONS = ("interception", "clearance", "block", "ball_recovery", "duel", "tackle", "foul")
+PRESS_ACTIONS = ("tackle", "interception", "foul", "duel")   # MET-021
+SB_DEF = {"Interception": "interception", "Clearance": "clearance", "Block": "block", "Ball Recovery": "ball_recovery",
+          "Duel": "duel", "Foul Committed": "foul"}
 
 # Who plays whom. "demo" is the demo pairing; "mirror" takes formation and strength away and
 # leaves only home advantage; "swap" turns the demo formations round.
@@ -68,6 +79,20 @@ class _Tally:
         self.score = [0, 0]
         self.red_side: int | None = None
         self.goal_bins = [0] * len(BINS)
+        self.def_x: list[float] = []               # defenders' defensive actions, metres from own goal
+        self.build_passes = [0, 0]                 # passes in the passer's own 60 % (PPDA numerator)
+        self.press_actions = [0, 0]                # defensive actions in the opponent's 60 % (MET-021)
+
+    def defending(self, k: int, kind: str, x: float, defender: bool) -> None:
+        """A defensive action by side k at x metres from its own goal."""
+        if defender and kind in DEF_ACTIONS:
+            self.def_x.append(x)
+        if kind in PRESS_ACTIONS and x > 0.4 * L:
+            self.press_actions[k] += 1
+
+    def build_pass(self, k: int, x: float) -> None:
+        if x < 0.6 * L:
+            self.build_passes[k] += 1
 
     def shot(self, k: int, goal: bool, minute: float) -> None:
         lead = self.score[k] - self.score[1 - k]
@@ -104,6 +129,9 @@ class _Tally:
                     "red_shots", "red_shots_11", "red_passes", "red_passes_11"):
             row["_" + key] = c[key]
         row["_goal_bins"] = self.goal_bins
+        row["def_action_height_m"] = float(np.mean(self.def_x)) if self.def_x else None
+        ppda = [self.build_passes[1 - k] / self.press_actions[k] for k in (0, 1) if self.press_actions[k]]
+        row["ppda"] = float(np.mean(ppda)) if ppda else None
         return row
 
 
@@ -115,10 +143,20 @@ def _gk_slots(out, k: int) -> np.ndarray:
     return np.array([[pid in gk for pid in ids[k]] for ids in out.frames_ids])
 
 
+def _roles(ev: list[dict]) -> dict[str, str]:
+    """Each player's role, from every team sheet the match published (later sheets win)."""
+    roles = {}
+    for e in ev:
+        for s in (e.get("team_sheet") or {}).get("starters", []):
+            roles[s["player_id"]] = s["role"]
+    return roles
+
+
 def sim_metrics(out) -> dict:
     ev = out.events
     by_id = {e["event_id"]: e for e in ev}
     side = {"home": 0, "away": 1}
+    roles = _roles(ev)
     tally = _Tally()
     row: Counter = Counter()
     heights: Counter = Counter()
@@ -130,6 +168,9 @@ def sim_metrics(out) -> dict:
         if e["period"] > 2:
             continue
         minute = _clock(e["period"], e["period_t"])
+        if typ in DEF_ACTIONS and e.get("location"):
+            x = e["location"][0] if k == 0 else L - e["location"][0]
+            tally.defending(k, typ, x, roles.get(e["player_id"]) in DEFENDERS)
         if typ == "shot":
             goal = e["shot_outcome"] == "goal"
             row["shots"] += 1
@@ -154,12 +195,13 @@ def sim_metrics(out) -> dict:
             row["goal_kicks"] += pt == "goal_kick"
             ok = e["outcome"] == "success"
             tally.pass_(k, ok, minute)
+            sx = e["location"][0] if k == 0 else L - e["location"][0]
+            tally.build_pass(k, sx)
             if pt == "throw_in":
                 continue
             row["passes"] += 1
             row["passes_ok"] += ok
             heights[e.get("pass_height")] += 1
-            sx = e["location"][0] if k == 0 else L - e["location"][0]
             ex = e["end_location"][0] if k == 0 else L - e["end_location"][0]
             row["final_third_passes"] += ok and sx < 70 and ex >= 70
         elif typ == "offside":
@@ -192,11 +234,12 @@ def sim_metrics(out) -> dict:
             row["injury_subs"] += e["substitution"]["reason"] == "injury"
         elif typ == "var_review":
             row["var_overturns"] += e["var"]["decision"] == "overturned"
+            row["var_goals_disallowed"] += e["var"]["review_of"] == "goal" and e["var"]["decision"] == "overturned"
     out_row = {key: float(row[key]) for key in (
         "goals", "shots", "shots_on_target", "corners", "offsides", "fouls", "yellow_cards", "red_cards",
         "passes", "final_third_passes", "tackles_won_per_team", "interceptions", "clearances", "pressures",
-        "keeper_sweeps", "keeper_claims", "injuries", "injury_subs", "var_overturns", "crosses", "throw_ins",
-        "goal_kicks", "ball_recoveries")}
+        "keeper_sweeps", "keeper_claims", "injuries", "injury_subs", "var_overturns", "var_goals_disallowed",
+        "crosses", "throw_ins", "goal_kicks", "ball_recoveries")}
     out_row["xg_per_shot"] = float(np.mean(xgs)) if xgs else None
     out_row["pass_accuracy_pct"] = 100 * row["passes_ok"] / max(row["passes"], 1)
     hsum = max(sum(heights.values()), 1)
@@ -323,6 +366,7 @@ def aggregate(rows: list[dict]) -> dict:
     agg["penalty_conversion"] = tot["_pen_goals"] / tot["_pens"] if tot["_pens"] else None
     bins = np.sum([r["_goal_bins"] for r in rows], axis=0)
     agg["goal_minute_share"] = [float(b) for b in bins / max(bins.sum(), 1)]
+    agg["first_half_goals_pct"] = 100 * float(bins[:3].sum()) / max(float(bins.sum()), 1.0)
     if "_result" in rows[0]:
         res = Counter(r["_result"] for r in rows)
         agg["results_pct"] = [100 * res[x] / len(rows) for x in "HDA"]
@@ -354,6 +398,26 @@ def build_reference(sb_dir: Path) -> dict:
     return agg
 
 
+def build_recent(files: list[Path]) -> dict:
+    """Per-match averages from football-data.co.uk match files (one row per match, full time)."""
+    import csv
+    rows = [r for f in files for r in csv.DictReader(f.open(encoding="utf-8-sig", errors="replace"))]
+    n = len(rows)
+
+    def both(h: str, a: str) -> list[float]:
+        return [float(r[h]) + float(r[a]) for r in rows]
+
+    goals = both("FTHG", "FTAG")
+    out = {key: float(np.mean(both(h, a))) for key, h, a in (
+        ("goals", "FTHG", "FTAG"), ("shots", "HS", "AS"), ("shots_on_target", "HST", "AST"), ("fouls", "HF", "AF"),
+        ("corners", "HC", "AC"), ("yellow_cards", "HY", "AY"), ("red_cards", "HR", "AR"))}
+    out["results_pct"] = [100 * sum(r["FTR"] == x for r in rows) / n for x in "HDA"]
+    out["first_half_goals_pct"] = 100 * sum(both("HTHG", "HTAG")) / sum(goals)
+    out["matches"] = n
+    out["source"] = "football-data.co.uk, " + ", ".join(f.name for f in files)
+    return out
+
+
 def _sb_match(ev: list[dict], home: str, shootout: Counter) -> dict:
     tally = _Tally()
     row: Counter = Counter()
@@ -376,6 +440,8 @@ def _sb_match(ev: list[dict], home: str, shootout: Counter) -> dict:
         minute = _clock(period, period_t)
         if e.get("play_pattern", {}).get("name") == "From Counter" and team is not None:
             counters.add(e["possession"])
+        if typ in SB_DEF and e.get("location"):
+            tally.defending(k, SB_DEF[typ], e["location"][0] * L / 120, "Back" in e.get("position", {}).get("name", ""))
         if typ == "Shot":
             s = e["shot"]
             goal = s["outcome"]["name"] == "Goal"
@@ -405,6 +471,7 @@ def _sb_match(ev: list[dict], home: str, shootout: Counter) -> dict:
                 row["offsides"] += 1
             ok = "outcome" not in p
             tally.pass_(k, ok, minute)
+            tally.build_pass(k, e["location"][0] * L / 120)
             if ptype == "Throw-in":
                 continue
             row["passes"] += 1
@@ -472,6 +539,7 @@ def _sb_card(detail: dict, row: Counter, tally: _Tally, k: int) -> None:
 # a tuple is an absolute range taken from the literature section instead of the event data.
 CARD = [
     ("goals", "goals per match", 0.12),
+    ("first_half_goals_pct", "goals in the first half, %", 0.1),
     ("shots", "shots per match", 0.12),
     ("shots_on_target", "shots on target", 0.15),
     ("xg_per_shot", "xG per shot", 0.12),
@@ -496,6 +564,8 @@ CARD = [
     ("ball_recoveries", "ball recoveries", 0.3),
     ("clearances", "clearances", 0.3),
     ("pressures", "pressures", 0.2),
+    ("ppda", "PPDA (passes allowed per defensive action)", 0.2),
+    ("def_action_height_m", "defenders' defensive actions, m from goal", 0.08),
     ("counters", "counter-attack possessions", 0.35),
     ("keeper_sweeps", "keeper sweeps (off his line)", 0.4),
     ("keeper_claims", "keeper claims and punches", 0.4),
@@ -511,6 +581,7 @@ CARD = [
     ("lead_line_shift", "leader's line after 70' vs first 20' (defending)", None),
     ("trail_line_shift", "trailer's line after 70' vs first 20' (defending)", None),
     ("var_overturns", "VAR overturns per match", None),
+    ("var_goals_disallowed", "goals ruled out by VAR per match", None),
 ]
 
 
@@ -522,58 +593,67 @@ def _fmt(v) -> str:
     return f"{v:.3f}" if abs(v) < 1 else f"{v:.1f}"
 
 
+def real_value(ref: dict, key: str) -> tuple:
+    """(value or (low, high), where it comes from) for a metric: a literature range, else the
+    first data set in REAL_ORDER that has it."""
+    lit = ref["literature"]
+    if key in lit and "range" in lit[key]:
+        return tuple(lit[key]["range"]), "lit"
+    for name in REAL_ORDER:
+        v = ref.get(name, {}).get(key)
+        if v is not None:
+            return v, name
+    return None, "-"
+
+
 def compare(sim: dict, ref: dict) -> list[tuple]:
-    real, lit = ref["wc2022"], ref["literature"]
     rows = []
     for key, label, tol in CARD:
         s = sim.get(key)
-        if key in lit:
-            lo, hi = lit[key]["range"]
-            r = (lo, hi)
-            ok = s is not None and lo <= s <= hi
+        r, src = real_value(ref, key)
+        if isinstance(r, tuple):
+            ok = s is not None and r[0] <= s <= r[1]
         else:
-            r = real.get(key)
             ok = s is not None and r is not None and tol is not None and abs(s - r) <= tol * abs(r)
-        rows.append((key, label, s, r, ok))
+        rows.append((key, label, s, r, ok, src))
     return rows
 
 
 def loss(sim: dict, ref: dict, weights: dict | None = None) -> float:
     """Squared misses in tolerance units, for the parameter search (scripts/realism_tune.py)."""
-    real, lit = ref["wc2022"], ref["literature"]
     total = 0.0
     for key, _, tol in CARD:
         w = (weights or {}).get(key, 1.0)
         s = sim.get(key)
         if s is None or not w:
             continue
-        if key in lit:
-            lo, hi = lit[key]["range"]
+        r, _ = real_value(ref, key)
+        if isinstance(r, tuple):
+            lo, hi = r
             half = (hi - lo) / 2 or 1.0
             miss = max(lo - s, s - hi, 0.0) / half
-        elif tol and real.get(key):
-            miss = (s - real[key]) / (tol * abs(real[key]))
+        elif tol and r:
+            miss = (s - r) / (tol * abs(r))
         else:
             continue
         total += w * miss * miss
-    if "results_pct" in sim and "results_pct" in lit:
-        target = lit["results_pct"]["value"]
+    target, _ = real_value(ref, "results_pct")
+    if "results_pct" in sim and target is not None:
         total += (weights or {}).get("results_pct", 1.0) * sum(((a - b) / 5) ** 2 for a, b in zip(sim["results_pct"], target))
     return total
 
 
 def print_card(name: str, sim: dict, ref: dict) -> None:
     print(f"\n== {name}: {sim['matches']} simulated matches vs real football ==")
-    print(f"{'metric':42} {'sim':>10} {'real':>14}  ok")
-    for key, label, s, r, ok in compare(sim, ref):
+    print(f"{'metric':42} {'sim':>10} {'real':>14} {'from':>9}  ok")
+    for key, label, s, r, ok, src in compare(sim, ref):
         rs = f"{r[0]:g}–{r[1]:g}" if isinstance(r, tuple) else _fmt(r)
-        print(f"{label:42} {_fmt(s):>10} {rs:>14}  {'✓' if ok else '✗'}")
-    real = ref["wc2022"]
-    print(f"{'goals by minute, % (0-15 ... 75-90+)':42} {_fmt(sim['goal_minute_share']):>16} "
-          f"{_fmt(real['goal_minute_share']):>16}")
+        print(f"{label:42} {_fmt(s):>10} {rs:>14} {src:>9}  {'✓' if ok else '✗'}")
+    shares, src = real_value(ref, "goal_minute_share")
+    print(f"{'goals by minute, % (0-15 ... 75-90+)':42} {_fmt(sim['goal_minute_share']):>16} {_fmt(shares):>16} ({src})")
     if "results_pct" in sim:
-        lit = ref["literature"]["results_pct"]
-        print(f"{'home / draw / away %':42} {_fmt(sim['results_pct']):>16}   {_fmt(lit['value']):>14} ({lit['source']})")
+        target, src = real_value(ref, "results_pct")
+        print(f"{'home / draw / away %':42} {_fmt(sim['results_pct']):>16}   {_fmt(target):>14} ({src})")
 
 
 def main() -> None:
@@ -585,15 +665,18 @@ def main() -> None:
     ap.add_argument("--red", type=int, default=0, help="also run N paired seeds with an away red card at 38'")
     ap.add_argument("--set", action="append", default=[], help="Params override, e.g. --set foul_rate=0.6")
     ap.add_argument("--build-reference", type=Path, help="StatsBomb open-data folder (matches.json, events/)")
+    ap.add_argument("--as", dest="ref_name", default="pl1516", help="name of the data set --build-reference writes")
+    ap.add_argument("--build-recent", type=Path, nargs="+", help="football-data.co.uk E0.csv files")
     ap.add_argument("--json", type=Path, help="also write the simulated numbers here")
     args = ap.parse_args()
 
-    if args.build_reference:
+    if args.build_reference or args.build_recent:
         ref = json.loads(REFERENCE.read_text(encoding="utf-8")) if REFERENCE.exists() else {"literature": {}}
-        ref["wc2022"] = build_reference(args.build_reference)
+        name = args.ref_name if args.build_reference else "pl_recent"
+        ref[name] = build_reference(args.build_reference) if args.build_reference else build_recent(args.build_recent)
         REFERENCE.parent.mkdir(parents=True, exist_ok=True)
         REFERENCE.write_text(json.dumps(ref, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\r\n")
-        print(json.dumps(ref["wc2022"], indent=2))
+        print(json.dumps(ref[name], indent=2))
         return
 
     ref = json.loads(REFERENCE.read_text(encoding="utf-8"))

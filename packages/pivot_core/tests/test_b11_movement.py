@@ -13,7 +13,7 @@ import pytest
 from pivot_core.domain import PlayerInstruction
 from pivot_core.sim import build_demo_match, simulate
 from pivot_core.sim.formations import DEFENDER_ROLES, MIDFIELD_ROLES
-from pivot_core.sim.movement import SPRINT_MS, MovementModel, TeamShape, to_view
+from pivot_core.sim.movement import CRUISE_MS, TOP_MS, MovementModel, TeamShape, to_view, top_speed
 
 SEEDS = (1, 2)
 
@@ -102,9 +102,11 @@ def test_b11_five_four_one_drops_the_back_line(ball_x):
     # the one or two players sent to close the ball down are not part of the line
     four, t4, press4 = defending_targets(build_demo_match(3, home_formation="4-4-2"), ball_x)
     five, t5, press5 = defending_targets(build_demo_match(3, home_formation="5-4-1"), ball_x)
-    assert mean_x(five, t5, DEFENDER_ROLES, press5) < mean_x(four, t4, DEFENDER_ROLES, press4) - 1.5
-    # the whole block sits deeper, not only the defenders
-    assert mean_x(five, t5, OUTFIELD, press5) < mean_x(four, t4, OUTFIELD, press4) - 4
+    # real back fives sit only about 0.8 m deeper than back fours (StatsBomb, B12 REAL-015)
+    assert mean_x(five, t5, DEFENDER_ROLES, press5) < mean_x(four, t4, DEFENDER_ROLES, press4) - 0.5
+    # the whole block sits deeper, not only the defenders (by less than before B12: in real
+    # football the depth comes mostly from the pressing style, not the formation)
+    assert mean_x(five, t5, OUTFIELD, press5) < mean_x(four, t4, OUTFIELD, press4) - 2
 
 
 def test_b11_five_four_one_drops_the_back_line_over_whole_matches():
@@ -127,7 +129,7 @@ def mean_distance_to_carrier(press: str, ball_x: float, seconds: int = 40) -> fl
     d = []
     for t in range(seconds):
         targets = model.targets(t, (home, away), pos, ball, 1, (1, 9), False, (-99, -99), None)
-        pos[0], _ = MovementModel.step(pos[0], targets[0], home.pace, np.ones(11), home.active)
+        pos[0], _ = MovementModel.step(pos[0], targets[0], top_speed(home.pace), np.ones(11), home.active)
         if t >= 10:
             outfield = [i for i, r in enumerate(home.roles) if r != "GK"]
             d.append(np.hypot(*(pos[0, outfield] - ball).T).mean())
@@ -160,35 +162,46 @@ def test_b11_overlapping_full_back_stands_further_forward_in_attack():
     assert np.allclose(after[others], before[others])   # nobody else is told to move
 
 
-# --- top speed 8.5 m/s, slower when tired ------------------------------------------------------
+# --- top speed from pace (B12 REAL-014 replaces the flat 8.5 m/s), slower when tired ------------
 
-def test_b11_top_speed_is_8_5_and_falls_with_fitness():
+def test_b11_top_speed_comes_from_pace_and_falls_with_fitness():
     pos = np.zeros((3, 2))
     far = np.full((3, 2), 60.0)
-    pace = np.ones(3)                                  # the fastest possible player
-    _, speed = MovementModel.step(pos, far, pace, np.array([1.0, 0.7, 0.4]), np.ones(3, dtype=bool))
-    assert speed[0] == pytest.approx(SPRINT_MS)
-    assert SPRINT_MS == 8.5
+    top = top_speed(np.ones(3))                        # the fastest possible player
+    _, speed = MovementModel.step(pos, far, top, np.array([1.0, 0.7, 0.4]), np.ones(3, dtype=bool))
+    assert speed[0] == pytest.approx(TOP_MS[1])
+    assert top_speed(0.0) == pytest.approx(TOP_MS[0]) and TOP_MS == (7.8, 10.5)
     assert speed[0] > speed[1] > speed[2]
 
 
-@pytest.mark.xfail(strict=True, reason="the engine moves a throw-in receiver up to 22 m in one second (and a "
-                   "player in a corner duel 9 m); handed to B12, which owns engine.py")
-def test_b11_nobody_moves_faster_than_8_5_between_two_frames():
+def own_top_speed(m) -> dict[str, float]:
+    """Each player's top speed, from his pace as the engine works it out."""
+    out = {}
+    for p in m.home.squad + m.away.squad:
+        a = p.attributes.movement
+        out[p.player_id] = float(top_speed(0.25 * a.acceleration / 99 + 0.75 * a.sprint_speed / 99))
+    return out
+
+
+def test_b11_nobody_moves_faster_than_his_own_top_speed_between_two_frames():
     for s in SEEDS:
-        out = sim(s)[1]
+        m, out = sim(s)
+        top = own_top_speed(m)
         step = np.hypot(*np.diff(out.frames_pos, axis=0).transpose(3, 0, 1, 2))
         same_period = out.frames_period[1:] == out.frames_period[:-1]
-        same_player = np.array([[[a == b and a is not None for a, b in zip(x[k], y[k])] for k in (0, 1)]
-                                for x, y in zip(out.frames_ids, out.frames_ids[1:])])
-        assert step[same_period[:, None, None] & same_player].max() <= SPRINT_MS + 0.01
+        for n in np.flatnonzero(same_period):
+            for k in (0, 1):
+                for i, (a, b) in enumerate(zip(out.frames_ids[n][k], out.frames_ids[n + 1][k])):
+                    if a is not None and a == b:
+                        assert step[n, k, i] <= top[a] + 0.01, (s, n, a)
 
 
 def test_b11_top_speed_holds_and_tired_players_are_slower_over_whole_matches():
     speed = np.concatenate([sim(s)[1].frames_speed.ravel() for s in SEEDS])
     fitness = np.concatenate([sim(s)[1].frames_fitness.ravel() for s in SEEDS])
-    assert speed.max() <= SPRINT_MS
-    fresh = speed[(fitness >= 0.9) & (speed > 0)]
-    tired = speed[(fitness < 0.8) & (speed > 0)]
-    assert len(tired) > 1000
-    assert np.percentile(tired, 99) < np.percentile(fresh, 99) - 0.2
+    assert speed.max() <= TOP_MS[1]
+    # compare the sprints: repositioning is capped at a jog (CRUISE_MS) for everybody
+    fresh = speed[(fitness >= 0.9) & (speed > CRUISE_MS)]
+    tired = speed[(fitness < 0.8) & (speed > CRUISE_MS)]
+    assert len(tired) > 200
+    assert np.percentile(tired, 90) < np.percentile(fresh, 90) - 0.1

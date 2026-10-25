@@ -108,6 +108,7 @@ export const es: Messages = {
   "event.pass": "Pase · {who} → {to}{tick}",
   "event.passSolo": "Pase · {who}{tick}",
   "event.goal": "GOL · {who}",
+  "event.goalDisallowed": "GOL anulado por el VAR · {who}",
   "event.shot": "Tiro · {who} · xG {xg}",
   "event.red": "Tarjeta roja · {who}",
   "event.yellow": "Tarjeta amarilla · {who}",
