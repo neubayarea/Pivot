@@ -15,7 +15,8 @@ gives the same list, and nothing is drawn at random. Sizes follow CTX-002:
 - crowd: the home side is lifted, away players lose a little composure, by how full the ground is
   (attendance over the venue's capacity in the fictional world);
 - off-field news in the last 72 hours: a night out or late return makes legs go sooner, criticism
-  or a contract dispute costs concentration;
+  or a contract dispute costs concentration, an away player the home fans target loses a little
+  composure and is booked more easily;
 - form: a player's last five ratings; fatigue: fewer than four days since the last game;
 - weather: rain, wind, snow or a heavy pitch make ground passes less reliable for everyone.
 
@@ -101,6 +102,15 @@ def context_effects(match: Match) -> list[ContextEffect]:
             add(n.subject_id, "off_field", "concentration", {1: -0.01, 2: -0.025, 3: -0.04}[n.severity],
                 "distracted by " + ("a contract dispute" if n.kind == "contract_dispute" else "public criticism"),
                 n.news_id)
+        elif (n.kind == "fan_conflict" and n.public and person and side_of[n.subject_id] == "away"
+              and ctx.attendance and not ctx.competition.neutral_venue):
+            # Smaller than a feud with one opponent: studies of games without fans disagree on how much
+            # crowds cost away players, and footballers often say hostility spurs them on (CTX-006).
+            add(n.subject_id, "off_field", "composure",
+                -0.02 * n.severity * (1 - person.personality.pressure / 100),
+                "targeted by the home fans: may lose composure", n.news_id)
+            add(n.subject_id, "off_field", "card_risk", 0.02 * n.severity,
+                "targeted by the home fans: more likely to be booked", n.news_id)
 
     for c in ctx.conditions:
         if c.player_id not in side_of:

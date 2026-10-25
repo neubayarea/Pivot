@@ -187,6 +187,18 @@ def test_b14_demo_form_and_chemistry_come_from_the_season(demo):
             assert r.sentiment > 0 and can_combine(role[r.person_id], role[r.other_id])
 
 
+def test_ctx_006_home_fans_targeting_an_away_player(demo):
+    fx = [e for e in context_effects(demo) if e.source_ref == "news-a04-return"]      # severity 2
+    pressure = next(p for p in demo.away.squad if p.player_id == "a04").personality.pressure
+    assert {e.target: e.delta for e in fx} == {"composure": round(-0.04 * (1 - pressure / 100), 3),
+                                                "card_risk": 0.04}
+    a04_news = next(n for n in demo.context.news if n.news_id == "news-a04-return")
+    at_home = a04_news.model_copy(update={"news_id": "n-home", "subject_id": "h07"})
+    neutral = demo.context.competition.model_copy(update={"neutral_venue": True})
+    for m in (crowded(demo, news=[at_home]), crowded(demo, competition=neutral), crowded(demo, attendance=0)):
+        assert not any(e.source == "off_field" and e.target in ("composure", "card_risk") for e in context_effects(m))
+
+
 def test_ctx_002_neutral_ground_and_empty_stands_have_no_crowd_effect(demo):
     empty = context_effects(crowded(demo, attendance=0))
     neutral = demo.context.competition.model_copy(update={"neutral_venue": True})
