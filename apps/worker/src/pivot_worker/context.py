@@ -15,6 +15,10 @@ from dataclasses import dataclass
 from pivot_core.domain import CareerStint, Match, MatchContext, MatchEvent
 
 MAX_ITEMS = 8
+# Effects that tell a story of their own (B14). The rest (crowd, stakes, form, chemistry, ...) go
+# almost every player's way, so they are listed last and do not push news, ties and reunions out
+# of the few items a writer sees.
+STORY_SOURCES = {"former_club", "rivalry", "off_field"}
 
 
 @dataclass(frozen=True)
@@ -32,7 +36,8 @@ def context_items(
     names: Mapping[str, str] | None = None,
     reunions: Iterable[tuple[str, CareerStint]] = (),
 ) -> list[ContextItem]:
-    """Everything citable: applied effects, public news, relationships and reunions with a former club."""
+    """Everything citable: applied effects, public news, relationships and reunions with a former club,
+    with the effects that are not a story of their own (crowd, stakes, form, ...) last."""
     names = names or {}
 
     def who(person_id: str) -> str:
@@ -41,8 +46,11 @@ def context_items(
     def item(context_id: str, kind: str, subjects: tuple[str, ...], text: str) -> ContextItem:
         return ContextItem(context_id, kind, subjects, text, tuple(who(s) for s in subjects))
 
-    items = [item(e.effect_id, "effect", (e.subject_id,), f"{who(e.subject_id)}: {e.note}")
-             for e in context.effects]
+    def effects(story: bool) -> list[ContextItem]:
+        return [item(e.effect_id, "effect", (e.subject_id,), f"{who(e.subject_id)}: {e.note}")
+                for e in context.effects if (e.source in STORY_SOURCES) == story]
+
+    items = effects(story=True)
     items += [item(n.news_id, "news", (n.subject_id,), f"{who(n.subject_id)}: {n.headline}")
               for n in context.news if n.public]
     items += [item(r.relationship_id, "relationship", (r.person_id, r.other_id),
@@ -52,7 +60,7 @@ def context_items(
         role = "coached" if stint.as_coach else "played for"
         items.append(item(stint.stint_id, "former_club", (person_id,),
                           f"{who(person_id)} {role} {stint.club_name} before"))
-    return items
+    return items + effects(story=False)
 
 
 def from_match(match: Match) -> list[ContextItem]:

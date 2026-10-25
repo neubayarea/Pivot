@@ -4,8 +4,8 @@
   uv run scripts/make_season.py           # matchdays 1-29 and the four earlier meetings, ~3 minutes
 
 The demo match (matchday 30, seed 41) is not played here: it is the recorded demo itself. The
-output, eval/fixtures/season-2026.json, holds scores, scorers, red cards and substitutions only
-(no events, no frames). scripts/make_demo.py reads it to give the demo match its form, table,
+output, eval/fixtures/season-2026.json, holds scores, scorers, red cards, substitutions and player
+ratings only (no events, no frames). scripts/make_demo.py reads it to give the demo match its form, table,
 head-to-head, careers and news (pivot_core.sim.season).
 """
 from __future__ import annotations
