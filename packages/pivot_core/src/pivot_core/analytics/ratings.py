@@ -7,7 +7,6 @@ calibrated in B07 so that every position group averages 6.6 to 6.8.
 
 from __future__ import annotations
 
-import math
 from collections import defaultdict
 
 from ..domain import PlayerMatchStats
@@ -142,8 +141,7 @@ def player_match_stats(calc: StatCalculator, up_to_t: int | None = None) -> list
             frames = {t: p for t, p in calc._frames.pos.get(pid, {}).items() if t <= end_t}
             if not frames:
                 continue
-            ts = sorted(frames)
-            speeds = [math.dist(frames[a], frames[b]) for a, b in zip(ts, ts[1:]) if b == a + 1]
+            speeds = calc.running_steps(pid, hi=end_t)
             sprints = sum(1 for a, b in zip([0.0] + speeds, speeds) if a < SPRINT_MS <= b)
             s = line[pid]
             rating = min(10.0, max(3.0, BASE + score[pid] + POSITION_OFFSET[player.position]))
