@@ -32,6 +32,9 @@ Return one JSON object that matches this schema, and nothing else:
   when the evidence involves that person, put its `id` in `context_ids` (at most 3). Never
   mention off-pitch facts that are not listed, and never invent an id. Use context to add the
   human story, not to replace the on-pitch evidence.
+- `match_state` gives the score and the players on the pitch before and after the event window,
+  and every goal in `events` carries `score_after`. Words about the score or numbers (an
+  equaliser, taking or extending the lead, a comeback, ten men) must agree with them.
 
 ## Rules the Verifier enforces
 

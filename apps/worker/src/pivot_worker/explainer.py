@@ -13,12 +13,22 @@ from typing import Annotated
 
 from pydantic import Field
 
-from pivot_core.domain import ExplanationSentence, MatchEvent, Narrative, PivotCandidate, StatRef, Verdict, ViewerPrefs
+from pivot_core.domain import (
+    ExplanationSentence,
+    MatchEvent,
+    Narrative,
+    PivotCandidate,
+    StatRef,
+    TeamTactics,
+    Verdict,
+    ViewerPrefs,
+)
 from pivot_core.domain.common import Model
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from .context import ContextItem, involved_in, relevant
 from .languages import INSTRUCTIONS, jargon
+from .matchstate import goal_scores, match_state, previous_tactics, tactics_line
 from .prompts import Prompt, render
 from .template import possessive
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
@@ -104,7 +114,10 @@ def window_events(candidate: PivotCandidate, events: Mapping[str, MatchEvent], *
     return sorted(chosen, key=lambda e: e.seq)
 
 
-def event_line(e: MatchEvent, team_names: Mapping[str, str], player_names: Mapping[str, str] | None = None) -> dict:
+def event_line(e: MatchEvent, team_names: Mapping[str, str], player_names: Mapping[str, str] | None = None, *,
+               previous_tactics: TeamTactics | None = None, score_after: str | None = None) -> dict:
+    """One event as the models see it. Coach decisions carry their tactics (and what they changed
+    from), goals the score they made."""
     line = {"id": e.event_id, "clock": e.clock_label, "type": e.type, "team": team_names[e.team]}
     if player_names and e.player_id in player_names:
         line["player"] = player_names[e.player_id]
@@ -113,7 +126,19 @@ def event_line(e: MatchEvent, team_names: Mapping[str, str], player_names: Mappi
             line[key] = value
     if e.substitution:
         line["substitution"] = e.substitution.model_dump(exclude_defaults=True)
+    if e.tactics:
+        line |= tactics_line(e.tactics, previous_tactics)
+    if score_after:
+        line["score_after"] = score_after
     return line
+
+
+def event_lines(shown: Sequence[MatchEvent], events: Mapping[str, MatchEvent], team_names: Mapping[str, str],
+                player_names: Mapping[str, str] | None = None) -> list[dict]:
+    """`event_line` for each shown event, with what it needs from the rest of the match."""
+    before, scores = previous_tactics(events), goal_scores(events, team_names)
+    return [event_line(e, team_names, player_names, previous_tactics=before.get(e.event_id),
+                       score_after=scores.get(e.event_id)) for e in shown]
 
 
 EXAMPLES = (
@@ -210,7 +235,8 @@ def build_request(
                   "towards": team_names[candidate.direction], "swing": round(candidate.swing, 3),
                   "key_event_ids": candidate.key_event_ids},
         "teams": dict(team_names),
-        "events": [event_line(e, team_names, player_names) for e in shown],
+        "match_state": match_state(candidate.minute, events, team_names, before=EVIDENCE_BEFORE, after=EVIDENCE_AFTER),
+        "events": event_lines(shown, events, team_names, player_names),
         "stat_sheet": [c.model_dump() for c in stat_sheet(candidate, stats, player_id=focus,
                                                           player_team=_player_team(focus, events))],
     }
