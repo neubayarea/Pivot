@@ -142,10 +142,11 @@ def test_b11_higher_press_stands_closer_to_the_ball_carrier():
 
 
 def test_b11_higher_press_stands_closer_to_the_ball_carrier_over_whole_matches():
-    # low to mid, which reuses the matches above; mid to high is a few centimetres in a whole match
+    # low to mid, which reuses the matches above; mid to high is a few centimetres in a whole match.
+    # B12 narrowed the low and mid pressing zones (Premier League PPDA), so the gap is smaller.
     low = np.mean([nearest_home_player_to_carrier(sim(s, press="low")[1]) for s in SEEDS])
     mid = np.mean([nearest_home_player_to_carrier(sim(s)[1]) for s in SEEDS])
-    assert mid < low - 0.3
+    assert mid < low - 0.1
 
 
 # --- an overlapping full back gets further forward ---------------------------------------------
