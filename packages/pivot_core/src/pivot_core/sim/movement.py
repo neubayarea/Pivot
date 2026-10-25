@@ -98,6 +98,24 @@ def to_view(p: np.ndarray, side: int) -> np.ndarray:
 from_view = to_view   # the transform is its own inverse
 
 
+def norm(d: np.ndarray) -> np.ndarray:
+    """Length of the last axis (x, y) of `d`: sqrt(x*x + y*y).
+
+    Bx7: np.hypot, np.linalg.norm and dot products go through each platform's maths library or
+    BLAS and can round the last bit differently on Windows, Linux and macOS; a per-second
+    simulation then carries that into a different match. + - * / and sqrt are rounded the same
+    way everywhere (IEEE 754), so this gives the same bits on every machine."""
+    d = np.asarray(d, dtype=float)
+    x, y = d[..., 0], d[..., 1]
+    return np.sqrt(x * x + y * y)
+
+
+def settle(a: np.ndarray, digits: int = 6) -> np.ndarray:
+    """Round simulation state to a micrometre (Bx7), so a last-bit difference from a maths
+    routine (exp, sin, a random-number tail) cannot pile up second after second."""
+    return np.round(a, digits)
+
+
 def top_speed(pace: np.ndarray | float) -> np.ndarray:
     """Top speed in m/s from the 0-1 pace rating (REAL-014)."""
     return TOP_MS[0] + (TOP_MS[1] - TOP_MS[0]) * np.clip((np.asarray(pace, dtype=float) - 0.45) / 0.5, 0.0, 1.0)
@@ -130,7 +148,7 @@ class MovementModel:
         n = int(due.sum())
         if n:
             # = rng.normal(0, [1.8, 1.5], size=(n, 2)): same draws, same numbers, without its argument checks
-            self.offsets[due] = self.rng.standard_normal((n, 2)) * _OFFSET_SD
+            self.offsets[due] = settle(self.rng.standard_normal((n, 2)) * _OFFSET_SD)
             self.offset_until[due] = t + self.rng.integers(10, 25, size=n)
 
     def targets(self, t: int, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, ball: np.ndarray,
@@ -155,7 +173,7 @@ class MovementModel:
                       loose: bool, last_loss: int) -> np.ndarray:
         # Runs twice every second of play. The per-player sums are done on plain floats: for 11
         # numbers that is far cheaper than a numpy call each, and + - * / give exactly the same
-        # doubles, so every seed plays as before. Distances stay with np.hypot.
+        # doubles, so every seed plays as before.
         tac = shape.tactics
         b = to_view(ball, k)
         bx, by = float(b[0]), float(b[1])
@@ -274,7 +292,7 @@ class MovementModel:
         """Each outfield player's distance to the ball (team view); inf for keepers and empty slots."""
         own = to_view(pos[k], k)
         outfield = np.array([r != "GK" for r in shape.roles]) & active
-        return np.where(outfield, np.hypot(*(own - b).T), np.inf)
+        return np.where(outfield, norm(own - b), np.inf)
 
     @staticmethod
     def step(pos: np.ndarray, target: np.ndarray, top: np.ndarray, fitness: np.ndarray, active: np.ndarray,
@@ -285,7 +303,7 @@ class MovementModel:
         given, cap how much faster than last second he can go; players not `urgent` reposition at
         no more than CRUISE_MS. Returns new positions and speeds."""
         delta = target - pos
-        dist = np.hypot(delta[..., 0], delta[..., 1])
+        dist = norm(delta)
         vmax = top * (0.7 + 0.3 * fitness)
         if urgent is not None:
             vmax = np.where(urgent, vmax, np.minimum(vmax, CRUISE_MS))

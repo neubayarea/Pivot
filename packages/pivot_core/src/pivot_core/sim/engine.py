@@ -33,8 +33,8 @@ from ..domain import (
 from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_LENGTH, PITCH_WIDTH, zone_of
 from .formations import DEFENDER_ROLES, FORMATIONS, MIDFIELD_ROLES
 from .movement import (
-    ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, to_view,
-    top_speed,
+    ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, norm,
+    settle, to_view, top_speed,
 )
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
@@ -196,7 +196,7 @@ def xg_model(v: np.ndarray, header: bool = False, blockers: int = 0, pressed: bo
              finishing: float = 0.7) -> float:
     """Scoring probability of a shot from team-view position v (ATTR-008)."""
     dx, dy = PITCH_LENGTH - v[0], v[1] - PITCH_WIDTH / 2
-    d = math.hypot(dx, dy)
+    d = math.sqrt(dx * dx + dy * dy)
     half = 7.32 / 2
     angle = math.atan2(7.32 * max(dx, 0.1), dx * dx + dy * dy - half * half)
     if angle < 0:
@@ -213,7 +213,8 @@ def xg_model(v: np.ndarray, header: bool = False, blockers: int = 0, pressed: bo
 
 def threat_value(v: np.ndarray) -> float:
     """Placeholder expected-threat surface until B05 learns the 16 x 12 grid (ATTR-009)."""
-    d = math.hypot(PITCH_LENGTH - v[0], (v[1] - PITCH_WIDTH / 2) * 1.4)
+    dx, dy = PITCH_LENGTH - v[0], (v[1] - PITCH_WIDTH / 2) * 1.4
+    d = math.sqrt(dx * dx + dy * dy)
     return 0.004 + 0.32 * math.exp(-d / 11.0)
 
 
@@ -348,7 +349,7 @@ class Engine:
         return self.shapes[k].active
 
     def _nearest(self, k: int, point: np.ndarray, outfield: bool = False, exclude: int | None = None) -> int:
-        d = np.hypot(*(self.pos[k] - point).T)
+        d = norm(self.pos[k] - point)
         d = np.where(self._active(k), d, np.inf)
         if outfield:
             d = np.where([r == "GK" for r in self.shapes[k].roles], np.inf, d)
@@ -374,9 +375,9 @@ class Engine:
         """(under_pressure, nearest distance, nearest opponent slot) for the carrier (ATTR-001)."""
         opp = 1 - k
         p = self.pos[k, i]
-        d = np.hypot(*(self.pos[opp] - p).T)
+        d = norm(self.pos[opp] - p)
         d = np.where(self._active(opp), d, np.inf)
-        prev_d = np.hypot(*(self.prev[opp] - p).T)
+        prev_d = norm(self.prev[opp] - p)
         closing = prev_d - d
         under = bool(np.any((d <= CLOSE_RADIUS) | ((d <= PRESS_RADIUS) & (closing >= CLOSING_SPEED))))
         j = int(np.argmin(d))
@@ -432,7 +433,7 @@ class Engine:
             return
         k, i = self.owner
         start, _ = self.carry_start
-        if np.hypot(*(self.ball - start)) >= 3.0:                     # EVT-002
+        if norm(self.ball - start) >= 3.0:                     # EVT-002
             sv, ev = self._view(start, k), self._view(self.ball, k)
             back, mid = self._opp_lines(k)
             e = self._emit("carry", k, i, location=start, end_location=self.ball.copy(), outcome=outcome,
@@ -494,7 +495,7 @@ class Engine:
             taker_id = sheet.corner_taker_left_id if left else sheet.corner_taker_right_id
         elif kind == "penalty":
             taker_id = sheet.penalty_taker_id
-        elif kind == "free_kick" and np.hypot(*(self._view(spot, k) - GOAL)) < 32:
+        elif kind == "free_kick" and norm(self._view(spot, k) - GOAL) < 32:
             taker_id = sheet.free_kick_taker_id
         ids = self.shapes[k].player_ids
         if kind == "goal_kick" and "GK" in self.shapes[k].roles:
@@ -509,7 +510,7 @@ class Engine:
         k, kind, spot, i = r["team"], r["kind"], r["spot"], r["taker"]
         if not self._active(k)[i]:
             i = r["taker"] = self._choose_taker(k, kind, spot)
-        if np.hypot(*(self.pos[k, i] - spot)) > 1.5 and r["waited"] < 60:
+        if norm(self.pos[k, i] - spot) > 1.5 and r["waited"] < 60:
             r["waited"] += 1
             return False
         self.restart = None
@@ -532,7 +533,7 @@ class Engine:
             kind = forced["kind"]
             if kind == "penalty":
                 return self._shoot(k, i, v, under=False, penalty=True)
-            if kind == "free_kick" and np.hypot(*(v - GOAL)) < 30 and abs(v[1] - 34) < 14 and self.rng.random() < 0.35:
+            if kind == "free_kick" and norm(v - GOAL) < 30 and abs(v[1] - 34) < 14 and self.rng.random() < 0.35:
                 return self._shoot(k, i, v, under=False, free_kick=True)
             if kind == "header":
                 return self._shoot(k, i, v, under=True, header=True)   # headers are never first time (StatsBomb)
@@ -553,7 +554,7 @@ class Engine:
                 tendency *= self.p.close_in          # free with the ball: take it closer first (REAL-017)
             if xg >= self.p.shot_min_xg and self.rng.random() < min(0.6, (self.p.shot_base + self.p.shot_xg_weight * xg) * tendency):
                 return self._shoot(k, i, v, under, first_time=quick, incoming=last)
-        dist = float(np.hypot(*(v - GOAL)))
+        dist = float(norm(v - GOAL))
         if 18 <= dist <= 32 and abs(v[1] - PITCH_WIDTH / 2) < 16 and not _in_box(v) and role != "GK":
             if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0) * (
                     1 + self.p.state_shot * self.urgency[k]):
@@ -574,10 +575,10 @@ class Engine:
         direction = target - v
         near = opp[act]
         if len(near):
-            away = v - near[np.argmin(np.hypot(*(near - v).T))]
-            direction = direction / (np.linalg.norm(direction) + 1e-9) + 0.6 * away / (np.linalg.norm(away) + 1e-9)
+            away = v - near[np.argmin(norm(near - v))]
+            direction = direction / (norm(direction) + 1e-9) + 0.6 * away / (norm(away) + 1e-9)
         step = self.rng.uniform(1.5, 4.5) * (0.6 + 0.5 * self._a(k, i, "dribbling"))
-        new_v = v + direction / (np.linalg.norm(direction) + 1e-9) * step
+        new_v = v + direction / (norm(direction) + 1e-9) * step
         new_v = np.clip(new_v, [0.5, 0.5], [PITCH_LENGTH - 0.5, PITCH_WIDTH - 0.5])
         self.ball = from_view(new_v, k)
         self.pos[k, i] = self.ball
@@ -739,9 +740,9 @@ class Engine:
         if restart == "kick_off":
             cand = [m for m in cand if mates[m, 0] < v[0] + 1] or cand
         gains = mates[cand, 0] - v[0]
-        dists = np.hypot(*(mates[cand] - v).T)
+        dists = norm(mates[cand] - v)
         to_opp = opp[opp_act][None, :, :] - mates[cand][:, None, :]      # (candidates, opponents, 2)
-        open_ = np.hypot(to_opp[..., 0], to_opp[..., 1]).min(axis=1)
+        open_ = norm(to_opp).min(axis=1)
         offside = (mates[cand, 0] > back) & (mates[cand, 0] > max(v[0], PITCH_LENGTH / 2))
         style = self.tactics[k].passing
         long_pen = {"short": 1.4, "mixed": 1.0, "direct": 0.55}[style]
@@ -767,8 +768,8 @@ class Engine:
             end_v = np.array([min(back + self.rng.uniform(6, 14), PITCH_LENGTH - 3),
                               clip1(mates[r, 1] + self.rng.normal(0, 2), 3.0, PITCH_WIDTH - 3)])
         if restart == "throw_in":
-            end_v = v + (mates[r] - v) * min(1.0, 18 / max(np.hypot(*(mates[r] - v)), 1e-6))
-        dist = float(np.hypot(*(end_v - v)))
+            end_v = v + (mates[r] - v) * min(1.0, 18 / max(norm(mates[r] - v), 1e-6))
+        dist = float(norm(end_v - v))
 
         # Success probability from distance, skill, lane interceptions and marking (ATTR-007).
         passing = self._a(k, i, "short_passing") if dist < 25 else self._a(k, i, "long_passing")
@@ -776,14 +777,13 @@ class Engine:
         acc *= 1 + self.p.skill_pass * (passing - 0.75)
         acc *= 1 - self.p.fatigue_err * (1 - self.fitness[k, i])          # tired legs, sloppier passes (REAL-009)
         seg = end_v - v
-        seg_len2 = float(seg @ seg) or 1e-6
+        seg_len2 = float(seg[0] * seg[0] + seg[1] * seg[1]) or 1e-6
         lane = []
         opp_idx = np.flatnonzero(opp_act)
         rel = opp[opp_idx] - v
-        # np.vecdot runs the same dot product per row as `rel[n] @ seg`, so every seed plays as before
-        us = np.clip(np.vecdot(rel, seg) / seg_len2, 0, 1)
+        us = np.clip((rel[:, 0] * seg[0] + rel[:, 1] * seg[1]) / seg_len2, 0, 1)
         points = v + us[:, None] * seg
-        dsegs = np.hypot(*(points - opp[opp_idx]).T)
+        dsegs = norm(points - opp[opp_idx])
         for n in np.flatnonzero((us > 0.05) & (dsegs < 2.5)):
             u, dseg = float(us[n]), float(dsegs[n])
             w = self.p.lane_cut * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
@@ -791,7 +791,7 @@ class Engine:
             w *= 1 - self.p.fatigue_err * (1 - self.fitness[1 - k, opp_idx[n]])
             lane.append((opp_idx[n], w, points[n].copy()))
             acc *= 1 - w
-        marks = np.hypot(*(opp[opp_idx] - end_v).T)
+        marks = norm(opp[opp_idx] - end_v)
         mark_d = float(np.min(marks))
         mark_j = int(opp_idx[np.argmin(marks)])
         if mark_d < 2.0:
@@ -962,7 +962,7 @@ class Engine:
         dv = self._view(self.ball, opp)
         if dv[0] > 13 or abs(dv[1] - PITCH_WIDTH / 2) > 12:
             return False
-        if np.hypot(*(self.pos[opp, g] - self.ball)) > CLAIM_REACH:
+        if norm(self.pos[opp, g] - self.ball) > CLAIM_REACH:
             return False                                  # he came for it but is not there (no jumps)
         skill = self._a(opp, g, "handling") * 0.5 + self._a(opp, g, "positioning") * 0.5
         if self.rng.random() >= self.p.claim_rate * (1.15 - dv[0] / 13) * (0.5 + 0.6 * skill):
@@ -989,7 +989,7 @@ class Engine:
         dv = self._view(end_abs, opp)
         if dv[0] > 30 or abs(dv[1] - PITCH_WIDTH / 2) > 22:
             return False
-        d_gk = float(np.hypot(*(self.pos[opp, g] - end_abs)))
+        d_gk = float(norm(self.pos[opp, g] - end_abs))
         if d_gk > 20 or self.rng.random() >= self.p.sweep_rate * (1 - d_gk / 22):
             return False
         pe = self._emit("pass", k, i, end_location=end_abs, outcome="fail", receiver_id=None, **base)
@@ -1004,7 +1004,7 @@ class Engine:
         """ATTR-004, first match wins."""
         if restart in ("corner", "free_kick", "throw_in", "goal_kick", "kick_off"):
             return restart
-        d = float(np.hypot(*(end_v - v)))
+        d = float(norm(end_v - v))
         if v[0] >= 70 and (v[1] < 24.84 or v[1] > 43.16) and _in_box(end_v):
             return "cross"
         if v[0] >= PITCH_LENGTH - 6 and end_v[0] < v[0] and _in_box(end_v):
@@ -1037,7 +1037,7 @@ class Engine:
             return
         if first and f.get("height") == "high" and not f["cross"] and self._aerial_contest(k, r):
             return
-        if np.hypot(*(self.pos[k, r] - self.ball)) > RECEIVE_REACH:
+        if norm(self.pos[k, r] - self.ball) > RECEIVE_REACH:
             # he is not there yet: the ball waits where it dropped and he runs onto it, rather
             # than being put there (B11: nobody moves faster than he can run)
             if f.get("late", 0) < LATE_S:
@@ -1058,7 +1058,7 @@ class Engine:
             att = self._a(k, r, "heading_accuracy") * 0.5 + self._a(k, r, "jumping") * 0.5
             dfn = self._a(1 - k, j, "heading_accuracy") * 0.4 + self._a(1 - k, j, "jumping") * 0.3 + \
                 self._a(1 - k, j, "defensive_awareness") * 0.3
-            near = np.hypot(*(self.pos[1 - k, j] - self.ball)) <= self.p.aerial_contest
+            near = norm(self.pos[1 - k, j] - self.ball) <= self.p.aerial_contest
             if near and self.rng.random() < 0.45 + 0.5 * (dfn - att):
                 da = self._emit("duel", k, r, location=self.ball.copy(), duel_type="aerial", outcome="fail")
                 dd = self._emit("duel", 1 - k, j, location=self.ball.copy(), duel_type="aerial", outcome="success")
@@ -1074,7 +1074,7 @@ class Engine:
         it he heads it clear in his own half and to a team-mate further up. k, r: the intended receiver."""
         opp = 1 - k
         j = self._nearest(opp, self.ball, outfield=True)
-        if np.hypot(*(self.pos[opp, j] - self.ball)) > self.p.aerial_contest:
+        if norm(self.pos[opp, j] - self.ball) > self.p.aerial_contest:
             return False
         att = self._a(k, r, "heading_accuracy") * 0.4 + self._a(k, r, "jumping") * 0.3 + self._a(k, r, "strength") * 0.3
         dfn = self._a(opp, j, "heading_accuracy") * 0.4 + self._a(opp, j, "jumping") * 0.3 + self._a(opp, j, "strength") * 0.3
@@ -1227,7 +1227,7 @@ class Engine:
     # --- loose balls -----------------------------------------------------------------
 
     def _loose_ball(self) -> None:
-        d = [np.where(self._active(k), np.hypot(*(self.pos[k] - self.ball).T), np.inf) for k in (0, 1)]
+        d = [np.where(self._active(k), norm(self.pos[k] - self.ball), np.inf) for k in (0, 1)]
         j = [int(np.argmin(d[k])) for k in (0, 1)]
         near = [d[k][j[k]] for k in (0, 1)]
         if min(near) > 1.5:
@@ -1264,8 +1264,8 @@ class Engine:
         opp = 1 - k
         p = self.pos[k, i]
         radius = PRESS_RADIUS_GK if self.shapes[k].roles[i] == "GK" else PRESS_RADIUS
-        d = np.hypot(*(self.pos[opp] - p).T)
-        closing = np.hypot(*(self.prev[opp] - p).T) - d
+        d = norm(self.pos[opp] - p)
+        closing = norm(self.prev[opp] - p) - d
         hits = self._active(opp) & (d <= radius) & (closing >= CLOSING_SPEED)
         hits &= np.array([(opp, j) in self.move.pressers for j in range(11)])   # only players closing him down
         for j in np.flatnonzero(hits):
@@ -1517,15 +1517,23 @@ class Engine:
             if self.rng.random() < self.p.injury_sprint * (1.3 - self.fitness[k, i]):
                 self._injure(k, i, "fatigue" if self.fitness[k, i] < 0.7 else "non_contact")
         self._limit_steps(start)
+        self._settle()
         self._record_frame()
         self._clock()
+
+    def _settle(self) -> None:
+        """Round the state that carries over to the next second (Bx7): the same seed then plays
+        the same match on every machine."""
+        self.pos, self.ball = settle(self.pos), settle(self.ball)
+        self.speed, self.burst = settle(self.speed), settle(self.burst)
+        self.fitness = settle(self.fitness, 9)                # drains by about 1e-5 a second
 
     def _limit_steps(self, start: np.ndarray) -> None:
         """A pick-up and a run in the same second must not add up to more than his top speed
         (B11, REAL-014): shorten the step, and the ball comes with the man on it."""
         top = self._physique()[0]
         step = self.pos - start
-        dist = np.hypot(step[..., 0], step[..., 1])
+        dist = norm(step)
         over = dist > top
         if not over.any():
             return
@@ -1555,8 +1563,8 @@ class Engine:
         """A ball in behind (REAL-016): the nearest defender gets there first if he is closer
         than the runner; the pass then counts as failed and he has the ball."""
         j = self._nearest(1 - k, self.ball, outfield=True)
-        d_def = float(np.hypot(*(self.pos[1 - k, j] - self.ball)))
-        if d_def > RECEIVE_REACH or d_def >= float(np.hypot(*(self.pos[k, r] - self.ball))):
+        d_def = float(norm(self.pos[1 - k, j] - self.ball))
+        if d_def > RECEIVE_REACH or d_def >= float(norm(self.pos[k, r] - self.ball)):
             return False
         pe = f.get("pass")
         if pe is not None:
@@ -1591,7 +1599,7 @@ class Engine:
         top, accel = self._physique()
         top = np.where(self.recovering, np.minimum(top, RECOVER_MS), top)
         # a defender or holding midfielder far out of position while defending sprints back
-        far = np.hypot(*(targets - self.pos).T).T > URGENT_GAP
+        far = norm(targets - self.pos) > URGENT_GAP
         backs = np.array([[r in DEFENDER_ROLES or r == "DM" for r in self.shapes[k].roles] for k in (0, 1)])
         defending = np.array([[self.possession is not None and self.possession != k] * 11 for k in (0, 1)])
         urgent = self.move.urgent | (far & backs & defending)
@@ -1694,7 +1702,8 @@ class Engine:
             order.append(sorted((i for i in ids if i not in keepers), key=lambda i: -self._a(k, i, "penalties")) + keepers)
         circle = np.array([PITCH_LENGTH / 2, PITCH_WIDTH / 2])
         for k in (0, 1):
-            self.pos[k] = circle + np.stack([np.cos(np.arange(11) * 0.57 + k * 3.14), np.sin(np.arange(11) * 0.57 + k * 3.14)], 1) * 8
+            ring = np.arange(11) * 0.57 + k * 3.14
+            self.pos[k] = settle(circle + np.stack([np.cos(ring), np.sin(ring)], 1) * 8)
         goals, taken = [0, 0], [0, 0]
         first = int(self.rng.integers(2))
         rnd = 0
@@ -1732,6 +1741,7 @@ class Engine:
         for _ in range(25):
             self.prev = self.pos.copy()
             self.pos, self.speed = MovementModel.step(self.pos, targets, top, self.fitness, active)
+            self.pos, self.speed = settle(self.pos), settle(self.speed)
             self.ball = self.pos[k, i].copy()
             self._record_frame()
             self.t += 1
@@ -1756,6 +1766,7 @@ class Engine:
         for _ in range(10):                                   # back to the centre circle
             self.prev = self.pos.copy()
             self.pos, self.speed = MovementModel.step(self.pos, circle, top, self.fitness, active)
+            self.pos, self.speed = settle(self.pos), settle(self.speed)
             self._record_frame()
             self.t += 1
         return int(outcome == "goal")
