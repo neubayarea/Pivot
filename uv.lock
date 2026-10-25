@@ -292,6 +292,21 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-storage-blob"
+version = "12.31.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "cryptography" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/ca/5299cedef5957dd838d4dc46f97bea37335bb39f6610d72b27e1a3317650/azure_storage_blob-12.31.0.tar.gz", hash = "sha256:997b393cfcbdc4b186d5911790d91f80387f7edc12c4d73eab963a2d26e5b2a9", size = 670868, upload-time = "2026-09-30T21:23:22.837Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/57/d1f45fbccc0dfbe6b6db7e5fa06199e35219c712f3743677bec1b4e7d78b/azure_storage_blob-12.31.0-py3-none-any.whl", hash = "sha256:0c0cb601d3462491d09ea96023cd791bb9dd4b173bf950daf3cff34ff47ba5b5", size = 455738, upload-time = "2026-09-30T21:23:24.944Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.10.23"
 source = { registry = "https://pypi.org/simple" }
@@ -1318,6 +1333,7 @@ dependencies = [
     { name = "azure-cosmos" },
     { name = "azure-identity" },
     { name = "azure-messaging-webpubsubservice" },
+    { name = "azure-storage-blob" },
     { name = "pivot-core" },
 ]
 
@@ -1327,6 +1343,7 @@ requires-dist = [
     { name = "azure-cosmos", specifier = ">=4.9" },
     { name = "azure-identity", specifier = ">=1.19" },
     { name = "azure-messaging-webpubsubservice", specifier = ">=1.2" },
+    { name = "azure-storage-blob", specifier = ">=12.23" },
     { name = "pivot-core", editable = "packages/pivot_core" },
 ]
 

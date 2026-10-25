@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from pivot_adapters import build_adapters
+from pivot_adapters import build_adapters, build_sim_store
 from pivot_worker.models import model_client_from_env
 
 from .demo import seed_demo
@@ -54,7 +54,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     tasks = []
     if app.state.adapters.profile == "local" and (specs := specs_from_env()):
         replays.update((spec.match_id, spec.replay()) for spec in specs)
-        tasks.append(asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims),
+        tasks.append(asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims,
+                                              store=build_sim_store()),
                                          name="sims"))
     # What-if replays (A09): one at a time in the background; the recorded demo's chips run first.
     app.state.whatif = WhatIf.from_env(app.state.adapters, replays, model_client_from_env())
