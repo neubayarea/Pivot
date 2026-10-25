@@ -57,9 +57,11 @@ type Props = {
   onToggle: (eventId: string) => void;
   /** What clicking an evidence chip does, for its tooltip. */
   chipHint?: string;
+  /** Evidence outside the pitch timeline (S2): its chip says so, since it has no tick to jump to. */
+  outside?: ReadonlySet<string>;
 };
 
-export default function WhyItTurned({ pivot, selected, onToggle, chipHint }: Props) {
+export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outside }: Props) {
   const { eventById, playerName } = useMatch();
   const { prefs, t } = usePrefs();
   const focus = prefs.focus_player_id;
@@ -93,12 +95,14 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint }: Pro
             const e = eventById(id);
             // ★ marks the evidence the followed player took part in.
             const star = !!e && involves(e, focus);
+            const out = !!outside?.has(id);
             return (
               <Fragment key={id}>
                 {" "}
-                <button type="button" className={`ev${selected.has(id) ? " on" : ""}${star ? " star" : ""}`}
+                <button type="button" className={`ev${selected.has(id) ? " on" : ""}${star ? " star" : ""}${out ? " out" : ""}`}
                   aria-pressed={selected.has(id)} title={chipHint ?? t("why.chipHint")} onClick={() => onToggle(id)}>
                   {star && "★ "}#{e?.seq ?? id}
+                  {out && <span className="ev-out"> · {t("why.outside")}</span>}
                 </button>
               </Fragment>
             );

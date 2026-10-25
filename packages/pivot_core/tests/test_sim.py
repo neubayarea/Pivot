@@ -10,7 +10,7 @@ from pivot_core.domain import STAT_UNITS, MatchEvent, TrackingFrame
 from pivot_core.domain.common import PITCH_LENGTH, PITCH_WIDTH
 from pivot_core.sim import DEMO_1021, build_demo_match, simulate
 from pivot_core.sim.engine import xg_model
-from pivot_core.sim.movement import MovementModel, TeamShape, to_view
+from pivot_core.sim.movement import MovementModel, TeamShape, clip1, to_view
 
 
 @pytest.fixture(scope="module")
@@ -179,3 +179,21 @@ def test_attr_014_015_017_techniques_vary_like_real_matches():
     assert 0.25 < sum(e.first_time for e in shots) / len(shots) < 0.65
     assert all(e.body_part == "head" for e in passes if e.pass_technique == "flick_on")
 
+
+def test_fast_paths_give_exactly_what_numpy_gives():
+    """The movement and pass code skip numpy calls on single numbers, because What-if reruns a
+    match hundreds of times. Each shortcut must give the same doubles, or every seed would change."""
+    rng = np.random.default_rng(0)
+    xs = [-0.0, 0.0, 0.02, 0.99, 15.0, 62.0, -5.0, 200.0, float("inf"), -float("inf")]
+    xs += list(rng.uniform(-10, 120, 500))
+    for lo, hi in ((0.0, PITCH_LENGTH), (0.02, 0.99), (15.0, 62.0)):
+        for x in xs:
+            assert np.float64(clip1(x, lo, hi)).tobytes() == np.float64(np.clip(x, lo, hi)).tobytes()
+    assert np.isnan(clip1(float("nan"), 0.0, 1.0))
+    p = rng.uniform(0, 105, (11, 2))
+    assert np.array_equal(to_view(p, 1), np.stack([PITCH_LENGTH - p[:, 0], PITCH_WIDTH - p[:, 1]], axis=-1))
+    a, s = rng.uniform(-110, 110, (2000, 2)), rng.uniform(-110, 110, 2)
+    assert np.array_equal(np.vecdot(a, s), [row @ s for row in a])
+    g1, g2 = np.random.default_rng(5), np.random.default_rng(5)
+    assert np.array_equal(g1.normal(0, [1.8, 1.5], size=(40, 2)), g2.standard_normal((40, 2)) * np.array([1.8, 1.5]))
+    assert g1.random() == g2.random()
