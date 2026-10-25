@@ -63,12 +63,14 @@ def test_context_items_cover_effects_public_news_relationships_and_reunions():
     assert by_id["h09-c1"].text == "R. Okafor played for Harbour before"
 
 
-def test_background_effects_come_after_the_stories():
+def test_effects_without_a_story_come_after_the_stories():
     crowd = ContextEffect(effect_id="e2", subject_id="a04", source="crowd", target="composure", delta=-0.01,
                           note="away crowd")
-    with_crowd = CONTEXT.model_copy(update={"effects": [crowd, *CONTEXT.effects]})
-    order = [i.context_id for i in ctx.context_items(with_crowd, names=NAMES, reunions=[("h09", STINT)])]
-    assert order == ["e1", "n1", "r1", "h09-c1", "e2"]
+    form = ContextEffect(effect_id="e3", subject_id="h09", source="form", target="motivation", delta=0.02,
+                         note="good form")
+    more = CONTEXT.model_copy(update={"effects": [crowd, form, *CONTEXT.effects]})
+    order = [i.context_id for i in ctx.context_items(more, names=NAMES, reunions=[("h09", STINT)])]
+    assert order == ["e1", "n1", "r1", "h09-c1", "e2", "e3"]
 
 
 def test_from_match_finds_reunions_with_the_opponent():

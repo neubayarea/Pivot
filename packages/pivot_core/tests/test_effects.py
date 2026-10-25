@@ -9,7 +9,7 @@ import pytest
 
 from pivot_core.domain import Match, OffFieldEvent, PreMatchCondition, Relationship
 from pivot_core.sim import DEMO_1021, simulate
-from pivot_core.sim.effects import MAX_EFFECT, MAX_TOTAL, context_effects, with_effects
+from pivot_core.sim.effects import MAX_EFFECT, MAX_TOTAL, can_combine, context_effects, with_effects
 from pivot_core.sim.season import load_season, with_season
 
 FIXTURES = Path(__file__).resolve().parents[3] / "eval" / "fixtures"
@@ -65,8 +65,8 @@ def test_b14_demo_turning_points_get_their_effects(demo):
     assert a04.delta == 0.06 and a04.source_ref == "a04-c1" and "Harbour City" in a04.note
     # 85' substitute h13 faces Rovers, left on good terms, at home: the base 0.03
     assert fx["fx-h13-former_club-motivation-h13-c2"].delta == 0.03
-    # 38,000 at Harbour Park is 0.76 of a full ground: home motivation 0.04 x 0.76
-    assert fx["fx-home-crowd-motivation"].delta == 0.03
+    # 38,000 in Harbour Park, which holds 42,000: home motivation 0.04 x 0.905
+    assert fx["fx-home-crowd-motivation"].delta == 0.036
     # title race (CTX-005 stakes) lifts both sides
     assert fx["fx-home-stakes-motivation"].delta == fx["fx-away-stakes-motivation"].delta == 0.03
     # the home coach's "under pressure" headline costs concentration
@@ -149,6 +149,42 @@ def test_ctx_002_rivalry_chemistry_news_form_fatigue_and_weather(demo):
     assert got["h10", "form", "motivation"] == round((7.5 - 6.7) * 0.03, 3)
     assert got["h11", "fatigue", "injury_risk"] == 0.15
     assert got["home", "weather", "chemistry"] == got["away", "weather", "chemistry"] == -0.03
+
+
+def test_ctx_006_chemistry_needs_positions_that_link_up_and_no_falling_out(demo):
+    role = {p.player_id: p.role for p in demo.home.squad}
+    gk, st = next(p for p, r in role.items() if r == "GK"), next(p for p, r in role.items() if r == "ST")
+    lb, rw = next(p for p, r in role.items() if r == "LB"), next(p for p, r in role.items() if r == "RW")
+    cb1, cb2 = [p for p, r in role.items() if r == "CB"][:2]
+    rels = [Relationship(relationship_id=f"r-{a}-{b}", person_id=a, other_id=b, kind="former_teammate",
+                         shared_seasons=3, sentiment=s)
+            for a, b, s in ((gk, st, 0.3), (lb, rw, 0.3), (cb1, cb2, 0.3), (lb, cb1, 0.0))]
+    fx = context_effects(crowded(demo, relationships=rels))
+    chem = {e.source_ref for e in fx if e.source == "former_teammate"}
+    assert chem == {f"r-{cb1}-{cb2}"}          # keeper and striker, opposite flanks, and a sour exit do not count
+
+
+def test_ctx_006_crowd_counts_against_the_grounds_capacity(demo):
+    away = context_effects(crowded(demo, venue="Northgate Lane", attendance=31000))   # Rovers' ground, full
+    assert by_id(away)["fx-home-crowd-motivation"].delta == 0.04
+    unknown = context_effects(crowded(demo, venue="Somewhere Else", attendance=25000))  # half of 50,000
+    assert by_id(unknown)["fx-home-crowd-motivation"].delta == 0.02
+
+
+def test_b14_demo_form_and_chemistry_come_from_the_season(demo):
+    fx = context_effects(demo)
+    form = [e for e in fx if e.source == "form"]
+    assert form and all(e.target == "motivation" for e in form)
+    rated = {c.player_id: c.recent_ratings for c in demo.context.conditions}
+    for e in form:
+        avg = sum(rated[e.subject_id]) / len(rated[e.subject_id])
+        assert e.delta == round((avg - 6.7) * 0.03, 3)
+    role = {p.player_id: p.role for t in (demo.home, demo.away) for p in t.squad}
+    rels = {r.relationship_id: r for r in demo.context.relationships}
+    for e in fx:
+        if e.source == "former_teammate":
+            r = rels[e.source_ref]
+            assert r.sentiment > 0 and can_combine(role[r.person_id], role[r.other_id])
 
 
 def test_ctx_002_neutral_ground_and_empty_stands_have_no_crowd_effect(demo):

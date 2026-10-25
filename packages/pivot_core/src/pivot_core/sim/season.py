@@ -1,7 +1,7 @@
 """The season so far (B13) and the off-field stories it gives the demo match.
 
 `play(fixture)` simulates one league match of the fictional world and keeps only what the stories
-need: the score, who scored, red cards and substitutions. scripts/make_season.py plays matchdays
+need: the score, who scored, red cards, substitutions and each player's rating. scripts/make_season.py plays matchdays
 1-29, plus the four meetings of the two clubs in the two seasons before, and keeps them in
 eval/fixtures/season-2026.json. `with_season(match, season)` fills the demo match's careers and
 context from that file:
@@ -19,11 +19,17 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
+
+from ..analytics import StatCalculator, player_match_stats
 from ..domain import (
-    CareerStint, HeadToHead, Match, OffFieldEvent, PastMeeting, Relationship, Team, TeamForm,
+    CareerStint, HeadToHead, Match, OffFieldEvent, PastMeeting, PreMatchCondition, Relationship, Team, TeamForm,
 )
+from ..domain.common import PITCH_LENGTH, PITCH_WIDTH
+from .effects import can_combine
 from .engine import simulate
 from .world import BY_ID, CLUB_NAMES, DEMO_MATCHDAY, HBC, ROV, SEASON, Fixture, fixture_match, with_careers
 
@@ -41,6 +47,7 @@ def play(fx: Fixture) -> dict:
         return [club[e["team"]], shirt[pid or e["player_id"]], e["t"] // 60]
 
     events = out.events
+    team_of = {p.player_id: p.team for t in (match.home, match.away) for p in t.squad}
     return {
         "season": fx.season, "matchday": fx.matchday, "home": fx.home, "away": fx.away, "seed": fx.seed,
         "score": [out.match.score.home, out.match.score.away],
@@ -48,7 +55,19 @@ def play(fx: Fixture) -> dict:
         "reds": [who(e) for e in events
                  if e["type"] == "card" and (e.get("foul") or {}).get("card") in ("red", "second_yellow")],
         "subs_on": [who(e, e["substitution"]["player_on_id"]) for e in events if e["type"] == "substitution"],
+        # (club, shirt, rating) for everyone who played: the form going into the demo (CTX-002 form)
+        "ratings": [[club[team_of[s.player_id]], shirt[s.player_id], s.rating]
+                    for s in player_match_stats(StatCalculator.from_sim(_on_pitch(out)))],
     }
+
+
+def _on_pitch(out):
+    """The output with positions clipped to the pitch. A rare frame puts an interception 0.4 m over the
+    touchline (handed to B12), which the frame format refuses; ratings do not depend on it."""
+    lo, hi = np.zeros(2), np.array([PITCH_LENGTH, PITCH_WIDTH])
+    ball = out.frames_ball.copy()
+    ball[:, :2] = np.clip(ball[:, :2], lo, hi)
+    return replace(out, frames_pos=np.clip(out.frames_pos, lo, hi), frames_ball=ball)
 
 
 def load_season(fixtures_dir: Path) -> dict:
@@ -215,6 +234,42 @@ def ties(home: Team, away: Team) -> list[Relationship]:
     return sorted(out, key=lambda r: -r.shared_seasons)
 
 
+def teammates(team: Team) -> list[Relationship]:
+    """Players of one side who were team-mates at an earlier club, in positions that link up in play
+    (CTX-006). Any overlap counts; chemistry grows with the seasons shared."""
+    out = []
+    squad = team.squad
+    for n, a in enumerate(squad):
+        for b in squad[n + 1:]:
+            if not can_combine(a.role, b.role):
+                continue
+            best = None
+            for s in a.career:
+                for t in b.career:
+                    if s.club_id != t.club_id or s.club_id == team.club_id or s.to_year is None or t.to_year is None:
+                        continue
+                    shared = min(s.to_year, t.to_year) - max(s.from_year, t.from_year)
+                    if shared >= 1 and (best is None or shared > best[0]):
+                        best = (shared, "acrimonious" in (s.departure_mood, t.departure_mood))
+            if best:
+                out.append(Relationship(relationship_id=f"rel-{a.player_id}-{b.player_id}", person_id=a.player_id,
+                                        other_id=b.player_id, kind="former_teammate", shared_seasons=best[0],
+                                        sentiment=0.0 if best[1] else 0.3))
+    return sorted(out, key=lambda r: -r.shared_seasons)
+
+
+def recent_form(team: Team, results: list[dict]) -> list[PreMatchCondition]:
+    """Each player's last five league ratings before the demo, newest last (CTX-002 form)."""
+    games = sorted((r for r in results if team.club_id in (r["home"], r["away"])), key=lambda r: r["matchday"])
+    ratings: dict[int, list[float]] = defaultdict(list)
+    for r in games:
+        for club, shirt, rating in r.get("ratings", []):
+            if club == team.club_id:
+                ratings[shirt].append(rating)
+    return [PreMatchCondition(player_id=p.player_id, recent_ratings=ratings[p.shirt_number][-5:])
+            for p in team.squad if ratings.get(p.shirt_number)]
+
+
 # --- news ----------------------------------------------------------------------------------------------
 
 def _demo_news(home: Team, away: Team) -> list[OffFieldEvent]:
@@ -281,6 +336,7 @@ def with_season(match: Match, season: dict) -> Match:
         "form": [form(results, HBC.club_id, "home", standings), form(results, ROV.club_id, "away", standings)],
         "head_to_head": head_to_head(meetings, HBC.club_id),
         "news": news,
-        "relationships": ties(home, away),
+        "relationships": ties(home, away) + teammates(home) + teammates(away),
+        "conditions": recent_form(home, results) + recent_form(away, results),
     })
     return match.model_copy(update={"home": home, "away": away, "context": context})

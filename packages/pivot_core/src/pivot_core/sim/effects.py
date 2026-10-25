@@ -6,12 +6,14 @@ gives the same list, and nothing is drawn at random. Sizes follow CTX-002:
 
 - former club: a player facing a club they left is more motivated, more so if they were released
   or hardly played there, left on bad terms, or play the game away;
-- relationships: team-mates who played together before pass better to each other (chemistry);
+- relationships: team-mates who played together before, did not fall out and play positions that
+  link up pass better to each other (chemistry);
   a rival or feud on the other side means more fouls and cards;
 - competition: big-match players keep their composure better in important games;
 - stakes: a title race, relegation fight or knockout tie lifts both sides; players who do not
   handle pressure lose a little composure;
-- crowd: the home side is lifted, away players lose a little composure, by how full the ground is;
+- crowd: the home side is lifted, away players lose a little composure, by how full the ground is
+  (attendance over the venue's capacity in the fictional world);
 - off-field news in the last 72 hours: a night out or late return makes legs go sooner, criticism
   or a contract dispute costs concentration;
 - form: a player's last five ratings; fatigue: fewer than four days since the last game;
@@ -30,10 +32,12 @@ import math
 from collections import defaultdict
 
 from ..domain import ContextEffect, Match, Player, Team
+from .world import CLUBS
 
 MAX_EFFECT = 0.15
 MAX_TOTAL = 0.25                     # one person, one target (CTX-001)
-CROWD_FULL = 50_000                  # attendance that counts as a full ground until venues have capacities
+VENUE_CAPACITY = {c.venue: c.capacity for c in CLUBS}
+CROWD_FULL = 50_000                  # counts as a full ground at a venue the fictional world does not know
 NEWS_HOURS = 72
 STAKES_LIFT = {"knockout": 0.04, "relegation": 0.04, "title_race": 0.03, "qualification": 0.02}
 STAKES_NAME = {"knockout": "a knockout tie", "relegation": "a relegation fight",
@@ -42,7 +46,7 @@ WEATHER_PASSING = {"rain": -0.03, "wind": -0.02, "snow": -0.04}
 HEAVY_PITCH = -0.05
 LOW_APPS_PER_SEASON = 10             # fewer league games a season than this counts as hardly playing
 # Story first: D13's template cites the first effect about the person in a turning point.
-ORDER = ("former_club", "rivalry", "off_field", "former_teammate", "form", "fatigue", "stakes", "crowd",
+ORDER = ("former_club", "rivalry", "off_field", "fatigue", "former_teammate", "form", "stakes", "crowd",
          "competition", "weather")
 
 
@@ -52,6 +56,7 @@ def context_effects(match: Match) -> list[ContextEffect]:
     teams = (match.home, match.away)
     side_of = {p.player_id: t.side for t in teams for p in t.squad} | {t.coach.coach_id: t.side for t in teams}
     name = {p.player_id: p.name for t in teams for p in t.squad} | {t.coach.coach_id: t.coach.name for t in teams}
+    role = {p.player_id: p.role for t in teams for p in t.squad}
     out: list[ContextEffect] = []
 
     def add(subject: str, source: str, target: str, delta: float, note: str, ref: str | None = None) -> None:
@@ -75,7 +80,8 @@ def context_effects(match: Match) -> list[ContextEffect]:
                     note = f"bad blood with {name[other]} on the other side"
                     add(who, "rivalry", "aggression", 0.05, note, r.relationship_id)
                     add(who, "rivalry", "card_risk", 0.05, note, r.relationship_id)
-        elif r.kind == "former_teammate" and mine == theirs:
+        elif (r.kind == "former_teammate" and mine == theirs and r.sentiment > 0
+              and r.person_id in role and r.other_id in role and can_combine(role[r.person_id], role[r.other_id])):
             chem = min(0.01 * r.shared_seasons, 0.05)
             for who, other in ((r.person_id, r.other_id), (r.other_id, r.person_id)):
                 add(who, "former_teammate", "chemistry", chem, f"played together before with {name[other]}",
@@ -116,11 +122,13 @@ def context_effects(match: Match) -> list[ContextEffect]:
                         f"pressure rating {p.personality.pressure} in {STAKES_NAME[ctx.stakes]}")
 
     if not ctx.competition.neutral_venue and ctx.attendance:
-        full = min(ctx.attendance / CROWD_FULL, 1.0)
-        add(match.home.side, "crowd", "motivation", 0.04 * full, f"home crowd of {ctx.attendance:,}")
+        capacity = VENUE_CAPACITY.get(ctx.venue, CROWD_FULL)
+        full = min(ctx.attendance / capacity, 1.0)
+        crowd = f"crowd of {ctx.attendance:,} in a ground for {capacity:,}"
+        add(match.home.side, "crowd", "motivation", 0.04 * full, f"home {crowd}")
         for p in match.away.squad:
             add(p.player_id, "crowd", "composure", -0.02 * full * (1 - p.personality.pressure / 100),
-                f"away crowd of {ctx.attendance:,}, pressure rating {p.personality.pressure}")
+                f"away {crowd}, pressure rating {p.personality.pressure}")
 
     importance = ctx.competition.importance
     for team in teams:
@@ -137,6 +145,29 @@ def context_effects(match: Match) -> list[ContextEffect]:
 
     out = _cap(out, side_of)
     return sorted(out, key=lambda e: (ORDER.index(e.source), e.subject_id, e.target))
+
+
+LINE = {"GK": "GK", "CB": "CB", "LB": "LB", "LWB": "LB", "RB": "RB", "RWB": "RB", "DM": "DM", "CM": "CM",
+        "AM": "AM", "LM": "LW", "LW": "LW", "RM": "RW", "RW": "RW", "ST": "ST"}
+# Positions that pass to each other on the pitch: the keeper and the centre-backs, a full-back and the
+# winger ahead on the same flank, neighbours through the middle, and the forwards with whoever feeds them.
+PARTNERS = {
+    "GK": {"CB"},
+    "CB": {"GK", "CB", "LB", "RB", "DM"},
+    "LB": {"CB", "DM", "CM", "LW"},
+    "RB": {"CB", "DM", "CM", "RW"},
+    "DM": {"CB", "LB", "RB", "DM", "CM", "AM"},
+    "CM": {"LB", "RB", "DM", "CM", "AM", "LW", "RW", "ST"},
+    "AM": {"DM", "CM", "AM", "LW", "RW", "ST"},
+    "LW": {"LB", "CM", "AM", "ST"},
+    "RW": {"RB", "CM", "AM", "ST"},
+    "ST": {"CM", "AM", "LW", "RW", "ST"},
+}
+
+
+def can_combine(role_a: str, role_b: str) -> bool:
+    """True when the two positions link up in play, so playing together before can matter (CTX-006)."""
+    return LINE[role_b] in PARTNERS[LINE[role_a]]
 
 
 def with_effects(match: Match) -> Match:
