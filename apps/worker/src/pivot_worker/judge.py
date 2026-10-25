@@ -18,10 +18,12 @@ from pivot_core.domain.common import Model
 from pivot_core.domain.pivots import PivotStatus
 from pivot_core.domain.stats import STAT_UNITS, Claim
 
-from .explainer import event_line, stat_sheet, window_events
+from .explainer import event_lines, stat_sheet, window_events
+from .matchstate import match_state
 from .prompts import Prompt, render
 from .verifier import StatSource
 
+MAX_TRIGGERS = 3
 JUDGE_WINDOW = 8                              # minutes either side of the alarm
 JUDGE_METRICS = ("possession_pct", "threat_total", "shots", "xg", "passes_final_third", "pressures", "turnovers")
 
@@ -29,7 +31,7 @@ JUDGE_METRICS = ("possession_pct", "threat_total", "shots", "xg", "passes_final_
 class JudgeVerdict(Model):
     is_pivot: bool
     severity: Literal[1, 2, 3]
-    trigger_event_ids: Annotated[list[str], Field(max_length=3)]
+    trigger_event_ids: Annotated[list[str], Field(max_length=MAX_TRIGGERS)]
     reason: Annotated[str, Field(max_length=200)]
 
 
@@ -53,13 +55,21 @@ def momentum_sign(team_names: Mapping[str, str]) -> str:
 _TEAMS = {"home": "Rovers", "away": "Harbour"}
 
 
+def _state(before: str, after: str, men_before=(11, 11), men_after=(11, 11), avg=(0.0, 0.0)) -> dict:
+    def snap(score: str, men: tuple[int, int]) -> dict:
+        return {"score": score, "men_on_pitch": dict(zip(_TEAMS.values(), men))}
+    return {"before_window": snap(before, men_before), "after_window": snap(after, men_after),
+            "momentum_avg_10_min": {"before": avg[0], "after": avg[1]}}
+
+
 # Each example is a request exactly as `build_messages` sends it (events and stats trimmed)
 # and the verdict for it. Windows match the real ones: momentum and events 8 minutes either
-# side of the alarm, stats 5 minutes before and after it.
+# side of the alarm, stats 5 minutes before and after it, match state around the window.
 EXAMPLES = (
     ({"alarm": {"minute": 62, "clock": "63'", "towards": "Rovers", "cusum": 4.6, "swing": 0.41,
                 "key_event_ids": ["m063-s01042"]},
       "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "match_state": _state("Rovers 0-1 Harbour", "Rovers 0-1 Harbour", avg=(-0.09, 0.31)),
       "momentum_by_minute": _momentum(54, [-0.12, -0.15, -0.1, -0.08, -0.11, -0.06, -0.02, 0.08, 0.21,
                                            0.3, 0.34, 0.31, 0.36, 0.29, 0.33, 0.27, 0.3]),
       "events": [{"id": "m063-s01042", "clock": "61'", "type": "substitution", "team": "Rovers",
@@ -75,6 +85,7 @@ EXAMPLES = (
     ({"alarm": {"minute": 39, "clock": "40'", "towards": "Harbour", "cusum": 5.1, "swing": -0.52,
                 "key_event_ids": ["m063-s00811"]},
       "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "match_state": _state("Rovers 0-0 Harbour", "Rovers 0-0 Harbour", men_after=(10, 11), avg=(0.16, -0.41)),
       "momentum_by_minute": _momentum(31, [0.18, 0.2, 0.15, 0.22, 0.17, 0.12, 0.1, -0.05, -0.28,
                                            -0.37, -0.41, -0.44, -0.39, -0.46, -0.42, -0.4, -0.45]),
       "events": [{"id": "m063-s00811", "clock": "38'", "type": "card", "team": "Rovers", "player_id": "R-4"},
@@ -88,6 +99,7 @@ EXAMPLES = (
     ({"alarm": {"minute": 26, "clock": "27'", "towards": "Harbour", "cusum": 3.2, "swing": -0.14,
                 "key_event_ids": []},
       "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "match_state": _state("Rovers 1-1 Harbour", "Rovers 1-1 Harbour", avg=(0.02, -0.03)),
       "momentum_by_minute": _momentum(18, [0.05, 0.02, 0.04, 0.01, 0.03, -0.02, -0.1, -0.24, -0.31,
                                            -0.12, 0.01, 0.04, 0.02, 0.05, 0.03, 0.01, 0.04]),
       "events": [{"id": "m063-s00512", "clock": "27'", "type": "shot", "team": "Harbour", "player_id": "H-9",
@@ -97,6 +109,26 @@ EXAMPLES = (
                 _stat("possession_pct", "home", (26, 31), 49.0)]},
      JudgeVerdict(is_pivot=False, severity=1, trigger_event_ids=[],
                   reason="A single spell of Harbour pressure that faded at once, with nothing on the pitch behind it.")),
+    ({"alarm": {"minute": 72, "clock": "73'", "towards": "Harbour", "cusum": 3.4, "swing": -0.27,
+                "key_event_ids": ["m063-s01502", "m063-s01503"]},
+      "teams": _TEAMS, "momentum_sign": momentum_sign(_TEAMS),
+      "match_state": _state("Rovers 2-1 Harbour", "Rovers 2-1 Harbour", avg=(0.31, 0.04)),
+      "momentum_by_minute": _momentum(64, [0.28, 0.33, 0.3, 0.36, 0.31, 0.34, 0.29, 0.22, 0.1, 0.03,
+                                           -0.04, 0.05, 0.08, -0.02, 0.06, 0.03, 0.05]),
+      "events": [{"id": "m063-s01502", "clock": "71'", "type": "substitution", "team": "Rovers", "player_id": "R-14",
+                  "substitution": {"player_off_id": "R-8", "player_on_id": "R-14", "slot": 8, "reason": "tactical"}},
+                 {"id": "m063-s01503", "clock": "71'", "type": "tactical_shift", "team": "Rovers",
+                  "tactics": {"line_height": "low", "press": "low", "width": "normal", "tempo": "slow",
+                              "counter_attack": True},
+                  "tactics_before": {"line_height": "mid", "press": "high", "tempo": "normal",
+                                     "counter_attack": False}},
+                 {"id": "m063-s01561", "clock": "75'", "type": "shot", "team": "Harbour", "player_id": "H-9",
+                  "shot_outcome": "saved", "xg": 0.14}],
+      "stats": [_stat("possession_pct", "home", (67, 72), 55.0), _stat("possession_pct", "home", (72, 77), 38.0),
+                _stat("threat_total", "away", (67, 72), 0.07), _stat("threat_total", "away", (72, 77), 0.29)]},
+     JudgeVerdict(is_pivot=True, severity=2, trigger_event_ids=["m063-s01503", "m063-s01502"],
+                  reason="Leading Rovers dropped deep and stopped pressing; Harbour took over the ball and momentum "
+                         "stayed lower.")),
 )
 
 
@@ -128,7 +160,9 @@ def build_messages(
         "momentum_sign": momentum_sign(team_names),
         "momentum_by_minute": [{"minute": m.minute, "momentum": round(m.momentum, 3)}
                                for m in metrics if lo <= m.minute <= hi],
-        "events": [event_line(e, team_names) for e in judge_events(candidate, events)],
+        "match_state": match_state(candidate.minute, events, team_names, before=JUDGE_WINDOW, after=JUDGE_WINDOW,
+                                   metrics=metrics),
+        "events": event_lines(judge_events(candidate, events), events, team_names),
         "stats": [c.model_dump() for c in stat_sheet(candidate, stats) if c.stat_ref.metric in JUDGE_METRICS],
     }
     prompt = system_prompt()
@@ -141,9 +175,14 @@ def parse_verdict(raw: str | dict, candidate: PivotCandidate, known_ids: Collect
 
     `known_ids` are the ids of the events the Judge was shown (`judge_events`), not the whole
     match. Raises pydantic.ValidationError on a bad shape, and InvalidVerdict on a "yes" with
-    no real trigger left, so a confirmed pivot always points at something the Judge saw.
+    no real trigger left, so a confirmed pivot always points at something the Judge saw. More
+    than three ids is not a bad shape: the first three real ones are kept.
     """
-    v = JudgeVerdict.model_validate_json(raw) if isinstance(raw, str) else JudgeVerdict.model_validate(raw)
+    data = json.loads(raw) if isinstance(raw, str) else dict(raw)
+    if isinstance(data, dict) and isinstance(ids := data.get("trigger_event_ids"), list):
+        real = [i for i in ids if i in known_ids]
+        data["trigger_event_ids"] = (real or ids)[:MAX_TRIGGERS]
+    v = JudgeVerdict.model_validate(data)
     if not v.is_pivot:
         return v.model_copy(update={"trigger_event_ids": []})
     triggers = [i for i in v.trigger_event_ids if i in known_ids]

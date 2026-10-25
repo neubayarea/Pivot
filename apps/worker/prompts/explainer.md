@@ -32,6 +32,9 @@ Return one JSON object that matches this schema, and nothing else:
   when the evidence involves that person, put its `id` in `context_ids` (at most 3). Never
   mention off-pitch facts that are not listed, and never invent an id. Use context to add the
   human story, not to replace the on-pitch evidence.
+- `match_state` gives the score and the players on the pitch before and after the event window,
+  and every goal in `events` carries `score_after`. Words about the score or numbers (an
+  equaliser, taking or extending the lead, a comeback, ten men) must agree with them.
 
 ## Rules the Verifier enforces
 
@@ -42,6 +45,9 @@ Return one JSON object that matches this schema, and nothing else:
 4. Describe decisions and patterns, not character. Never blame or insult a player.
 5. Everyone in the match is fictional. Use only names from the request; never mention real
    clubs, players, competitions or brands.
+6. Score words (equaliser, take or extend the lead, comeback, trailing, protecting the lead) must
+   fit the goal's `score_after` and the score before it. A goal that makes it 3-1 is not an equaliser.
+   Never write the score itself ("4-1", "two goals"): the screen shows it. Say what the goal did.
 
 ## Stats you may cite
 
