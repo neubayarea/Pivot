@@ -26,7 +26,8 @@ EventType = Literal[
     "kickoff", "added_time", "period_end",
 ]
 
-ShotOutcome = Literal["goal", "saved", "off_target", "blocked", "post"]
+# "disallowed": the ball went in but VAR ruled the goal out (EVT-016); not a goal, not on target.
+ShotOutcome = Literal["goal", "saved", "off_target", "blocked", "post", "disallowed"]
 
 # How the current possession started. "counter" = won in own half and attacked fast.
 PlayPattern = Literal[

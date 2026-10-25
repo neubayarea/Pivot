@@ -2,7 +2,7 @@
 """Build the demo-1021 fixture (B02) from the simulator.
 
   uv run scripts/make_demo.py --search 300        # try seeds, print the ones that tell the demo story
-  uv run scripts/make_demo.py --seed 41           # export that seed to eval/fixtures/
+  uv run scripts/make_demo.py --seed 29           # export that seed to eval/fixtures/
 
 A seed tells the story when, with the two planted events (38' red card for Rovers, 63' Harbour
 City substitution and deeper line):
@@ -99,7 +99,7 @@ def team_stats(calc: StatCalculator) -> list[dict]:
 def export(seed: int) -> None:
     out, events, metrics, cands = run(seed)
     calc = StatCalculator(out.match, events, out.frames_as_models())
-    # The season's squads are those of seed 41; another seed gives other players, so no stories.
+    # The season's squads are those of the demo seed; another seed gives other players, so no stories.
     match = with_effects(with_season(out.match, load_season(OUT)) if seed == DEMO_1021.seed else out.match)
     data = {
         "preset": {"name": DEMO_1021.name, "seed": seed, "plants": [p.model_dump(mode="json") for p in DEMO_1021.plants]},

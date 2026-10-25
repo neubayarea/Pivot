@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What-if on the demo match (seed 41): win/draw/loss with and without one change, and how long it takes.
+"""What-if on the demo match (the demo-1021 preset): win/draw/loss with and without one change, and how long it takes.
 
   uv run scripts/whatif_report.py                      # both scenarios, 200 runs per arm
   uv run scripts/whatif_report.py --n 200 500 1000     # runtime at each size

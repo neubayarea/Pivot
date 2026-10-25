@@ -1,7 +1,7 @@
 """A fictional league (B13): twenty clubs with squads, coaches and careers, and a season schedule.
 
 Everything comes from one seed, so the world is the same on every machine. Harbour City and
-Northgate Rovers are built exactly as the demo match builds them (seed 41), so the demo is one
+Northgate Rovers are built exactly as the demo match builds them (the demo seed), so the demo is one
 fixture of this season: matchday 30, Harbour City at home. All names are fictional.
 
 The season itself (scores, scorers, red cards, substitutions) is simulated once by

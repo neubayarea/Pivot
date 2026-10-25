@@ -15,8 +15,8 @@ Events are built as plain dicts while the match runs and converted to the shared
 the end (`SimOutput.events_as_models`). Field meanings follow docs/data-definitions.md; the
 comment next to each rule names the definition it implements.
 
-This is a first version: extra time and shootouts, injuries, VAR and the context effects
-(B12, B14) are not simulated yet.
+Realism rules (game state, keepers, injuries, VAR, extra time and shootouts) are described in
+docs/sim-realism.md (B12). The context effects (B14) are not simulated yet.
 """
 
 from __future__ import annotations
@@ -27,18 +27,38 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ..domain import (
-    FoulDetail, LineupSlot, Match, MatchEvent, PeriodInfo, PlantSpec, Score, Substitution, TeamSheet,
-    TrackingFrame,
+    FoulDetail, InjuryInfo, LineupSlot, Match, MatchEvent, PeriodInfo, PlantSpec, Score, Substitution, TeamSheet,
+    TrackingFrame, VarReview,
 )
 from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_LENGTH, PITCH_WIDTH, zone_of
 from .formations import DEFENDER_ROLES, FORMATIONS, MIDFIELD_ROLES
-from .movement import MovementModel, TeamShape, clip1, from_view, to_view
+from .movement import (
+    ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, to_view,
+    top_speed,
+)
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
 BOX_DEPTH, BOX_Y = 16.5, (13.84, 54.16)
 PRESS_RADIUS, PRESS_RADIUS_GK = 4.6, 9.1          # EVT-006
 CLOSE_RADIUS, CLOSING_SPEED = 2.0, 1.0            # ATTR-001
 SIDES = ("home", "away")
+URGENCY_LEAD = (-1.0, -0.7, -0.4)                # ahead by 1, 2, 3+ (REAL-001)
+URGENCY_TRAIL = (1.0, 0.8, 0.3)                  # behind by 1, 2, 3+: a lost cause is chased less
+# Injuries (REAL-010): how bad, where, and roughly how long out. Only a knock lets him play on.
+SEVERITY = (("knock", 0.80), ("minor", 0.10), ("moderate", 0.07), ("serious", 0.03))
+INJURY_AREAS = {"contact": ("ankle", "knee", "thigh", "foot", "head", "shoulder", "other"),
+                "non_contact": ("hamstring", "groin", "calf", "thigh", "back"),
+                "fatigue": ("hamstring", "calf", "groin")}
+DAYS_OUT = {"knock": (0, 1), "minor": (3, 11), "moderate": (14, 43), "serious": (60, 241)}
+# Stoppage time per period (REAL-012): base minutes and the range the board can show.
+ADDED_BASE = {1: 1.0, 2: 3.0, 3: 0.5, 4: 1.0}
+ADDED_RANGE = {1: (1, 4), 2: (3, 8), 3: (0, 3), 4: (1, 4)}
+SUB_LIMIT = (5, 6)                               # changes per side in normal time; one more in extra time
+RECEIVE_REACH = 6.0                              # metres: a receiver this close collects the ball where he is
+LATE_S = 3                                       # seconds a ball waits for a receiver still running onto it
+RUNNERS = ("ST", "LW", "RW", "AM", "LM", "RM")   # who gets balls played into space behind the line (REAL-016)
+CLAIM_REACH = 4.5                                # metres a keeper can reach for a cross
+URGENT_GAP = 20.0                                # metres out of position: he sprints back (REAL-014)
 HALVES = ((1, 0), (2, 1))                         # period, side kicking off
 FORWARD = ("ST", "LW", "RW", "AM")
 
@@ -64,11 +84,16 @@ SHOT_TECHNIQUE_MIX = {
     ("loose", False): (("half_volley", 0.14), ("volley", 0.04), ("lob", 0.02)),
 }
 DIVING_HEADER_SHARE = 0.056
+FINISH_WEIGHT = 1.2               # xG x (1 + FINISH_WEIGHT * (finishing - 0.7)): a 90 finisher gets 1.24
 # The engine decides once a second, so "his first decision after the ball arrived" also
 # catches a quick touch and pass inside that second. Only this share of those passes is
 # recorded as first time, which brings one-touch passes to the 16 % StatsBomb shows
 # (no carry between receiving and passing).
 FIRST_TIME_PASS_SHARE = 0.37
+CLOSE_IN_XG = 0.15               # below this, a player in space carries on towards goal rather than shoot (REAL-017)
+# A counter-attack (ATTR-003) has to reach the opponents' box within 9 s of winning the ball in
+# the own half. That gives about 3.5 a match, as StatsBomb's Premier League 2015/16 labels do.
+COUNTER_REACH, COUNTER_SECONDS = PITCH_LENGTH - BOX_DEPTH, 9
 
 
 @dataclass
@@ -77,19 +102,55 @@ class Params:
 
     pass_rate: dict = field(default_factory=lambda: {"slow": 0.28, "normal": 0.34, "fast": 0.42})
     pass_rate_pressed: float = 0.30
-    tackle_attempt: float = 0.10
-    foul_rate: float = 0.50
-    yellow_rate: float = 0.17
-    red_rate: float = 0.004
+    tackle_attempt: float = 0.17
+    foul_rate: float = 0.27
+    yellow_rate: float = 0.15
+    red_rate: float = 0.00243
     shot_base: float = 0.0
-    shot_xg_weight: float = 0.88
-    shot_min_xg: float = 0.03
+    shot_xg_weight: float = 2.2
+    shot_min_xg: float = 0.04
     block_base: float = 0.22
     block_per_defender: float = 0.12
     saved_share: float = 0.33
     post_share: float = 0.05
-    home_boost: float = 1.02                     # CTX-003, scaled by attendance in _success
-    long_shot_rate: float = 0.006                # per second on the ball 18-32 m out, scaled by long_shots
+    home_boost: float = 1.05                     # CTX-003, scaled by attendance in _success
+    long_shot_rate: float = 0.02                 # per second on the ball 18-32 m out, scaled by long_shots
+    # Game state (B12, REAL-001): urgency runs from -1 (protecting a lead late on) to +1 (chasing it).
+    state_line: float = 1.56                     # back-line shift in metres at full urgency, out of possession
+    state_press_at: float = 0.8                  # urgency beyond which a side presses one level higher or lower
+    man_line: float = 2.0                        # back-line shift per player more (+) or fewer (-) on the pitch
+    state_shot: float = 0.208                    # shot willingness x (1 + state_shot * urgency)
+    state_direct: float = 0.35                   # long-pass penalty x (1 - state_direct * urgency) when chasing
+    waste_s: float = 13.73                       # extra seconds the leading side takes over its restarts
+    # Chance creation (B12).
+    lane_cut: float = 0.084                      # cut-out chance for an opponent right on the passing lane
+    intercept_share: float = 0.451               # cut-outs recorded as interceptions; the rest are recoveries
+    high_pass_acc: float = 0.85                  # accuracy factor for a ball in the air (low passes: halfway)
+    clear_under_pressure: float = 0.407          # a defender pressed near his own goal clears it
+    clear_behind: float = 0.366                  # a clearance in his own box goes behind for a corner
+    loose_shot: float = 0.1                      # chance to strike a loose ball in front of goal first time, x (1 + 8 xG)
+    offside_pen: float = 3.2                     # passer's reluctance to pick a receiver standing offside
+    offside_slack: float = 1.1                   # metres a forward may drift beyond the last defender
+    claim_rate: float = 0.9                      # keeper comes for a cross dropping into his area
+    sweep_rate: float = 0.13                     # keeper rushes out to a ball played in behind
+    through_lead: float = 0.8                    # a runner level with the line gets the ball into space behind it
+    close_in: float = 0.5                        # shot willingness when free and the chance can still get better
+    aerial_contest: float = 4.91                 # metres: a defender this close to a long ball's drop challenges for it
+    line_lift: float = 2.5                       # metres added to every team's line height (REAL-015)
+    pass_forward: float = 0.043                  # pass choice: weight per metre gained towards goal
+    pass_threat: float = 20.0                    # pass choice: weight on threat gained
+    # Fatigue, injuries, VAR (B12).
+    fatigue_err: float = 0.347                   # pass accuracy x (1 - fatigue_err * (1 - fitness)); duels alike
+    injury_foul: float = 0.127                   # the fouled player is hurt
+    injury_sprint: float = 0.0003                # per second sprinting, x (1.3 - fitness): a pulled muscle
+    var_check: float = 0.25                      # a goal gets a visible VAR check (and stands)
+    var_pen_overturn: float = 0.2                # a penalty given is overturned on review
+    var_pen_award: float = 0.04                  # a tackle won in the box is reviewed and given as a penalty
+    var_disallow: float = 0.047                  # a goal is ruled out by VAR (offside, a foul, handball)
+    # How much the ratings matter (B12): a better side should win more often.
+    skill_pass: float = 0.6                      # pass accuracy x (1 + skill_pass * (passing - 0.75))
+    skill_def: float = 1.0                       # lane cut-out x (1 + skill_def * (interceptions - 0.7))
+    skill_gk: float = 0.827                      # goal chance x (1 - skill_gk * (keeper - 0.88))
 
 
 @dataclass
@@ -146,7 +207,7 @@ def xg_model(v: np.ndarray, header: bool = False, blockers: int = 0, pressed: bo
     p *= 0.8 ** blockers
     if pressed:
         p *= 0.85
-    p *= (0.75 + 0.5 * finishing) / 1.1
+    p *= 1 + FINISH_WEIGHT * (finishing - 0.7)
     return float(np.clip(p, 0.005, 0.95))
 
 
@@ -184,6 +245,8 @@ class Engine:
         self.attr = {pid: self._flatten(pl) for pid, pl in self.players.items()}
         self.shapes = [self._shape(k) for k in (0, 1)]
         self.move = MovementModel(self.rng)
+        self.move.offside_slack = self.p.offside_slack
+        self.move.line_lift = self.p.line_lift
         ref = match.context.referee
         self.strict = (ref.strictness / 60) if ref else 1.0
         self.card_rate = (ref.card_tendency / 60) if ref else 1.0
@@ -195,6 +258,10 @@ class Engine:
         self.fitness = np.ones((2, 11))
         self._stamina_key: tuple | None = None
         self._stamina_cache = np.zeros((2, 11))
+        self._physique_key: tuple | None = None
+        self._physique_cache = (np.zeros((2, 11)), np.zeros((2, 11)))
+        self.burst = np.zeros((2, 11))             # seconds of recent sprinting (REAL-014)
+        self.recovering = np.zeros((2, 11), dtype=bool)
         self.ball = np.array([PITCH_LENGTH / 2, PITCH_WIDTH / 2])
         self.ball_z = 0.0
         self.owner: tuple[int, int] | None = None
@@ -216,7 +283,8 @@ class Engine:
         self.pending_subs: list[int] = []
         self.kept: set[str] = set()               # players automatic substitutions leave alone (What-if)
         self.score = [0, 0]
-        self.half_counts = {"goals": 0, "subs": 0, "cards": 0}
+        self.urgency = [0.0, 0.0]                 # game state per side, see _update_state
+        self.half_counts = {"goals": 0, "subs": 0, "cards": 0, "injuries": 0, "var": 0}
 
         self.t = 0
         self.half = 0                             # index into HALVES; len(HALVES) once the match is over
@@ -227,6 +295,10 @@ class Engine:
         self.added: int | None = None
         self.period_end_at: int | None = None
         self.periods: list[PeriodInfo] = []
+        self.halves = list(HALVES)                # extra time adds two more (REAL-012)
+        self.decided_by = "normal_time"
+        self.shootout: list[int] | None = None    # penalties scored in a shootout, home and away
+        self.injured: list[tuple[int, str]] = []  # (side, player) waiting for a substitution (REAL-010)
         self.events: list[dict] = []
         self.frames: dict[str, list] = {k: [] for k in ("t", "period", "poss", "ball", "owner", "ids", "pos", "speed", "fit")}
 
@@ -245,7 +317,7 @@ class Engine:
         for g in ("attacking", "skill", "movement", "power", "mentality", "defending", "goalkeeping"):
             for k, v in getattr(a, g).model_dump().items():
                 flat[k] = v / 99
-        flat["pace"] = (flat["acceleration"] + flat["sprint_speed"]) / 2
+        flat["pace"] = 0.25 * flat["acceleration"] + 0.75 * flat["sprint_speed"]   # sets the top speed (REAL-014)
         flat["foot"] = pl.preferred_foot
         return flat
 
@@ -399,7 +471,8 @@ class Engine:
         self.restart = {"kind": kind, "team": team, "spot": self.ball.copy(), "period_start": period_start,
                         "waited": 0}
         self.restart["taker"] = self._choose_taker(team, kind, self.ball)
-        self.dead = int(wait)
+        # a side protecting a lead takes its time over its own restarts (REAL-001)
+        self.dead = int(wait) + int(self.p.waste_s * max(-self.urgency[team], 0.0))
 
     def _restart_targets(self, targets: np.ndarray) -> None:
         """During a stoppage the taker walks to the ball; after a goal everyone walks back to their half."""
@@ -436,7 +509,7 @@ class Engine:
         k, kind, spot, i = r["team"], r["kind"], r["spot"], r["taker"]
         if not self._active(k)[i]:
             i = r["taker"] = self._choose_taker(k, kind, spot)
-        if np.hypot(*(self.pos[k, i] - spot)) > 1.5 and r["waited"] < 20:
+        if np.hypot(*(self.pos[k, i] - spot)) > 1.5 and r["waited"] < 60:
             r["waited"] += 1
             return False
         self.restart = None
@@ -463,19 +536,27 @@ class Engine:
                 return self._shoot(k, i, v, under=False, free_kick=True)
             if kind == "header":
                 return self._shoot(k, i, v, under=True, header=True)   # headers are never first time (StatsBomb)
+            if kind == "loose_shot":                                    # a rebound or loose ball, struck first time
+                return self._shoot(k, i, v, under, first_time=True, incoming=None)
             return self._pass(k, i, v, under=False, restart=kind)
 
         role = self.shapes[k].roles[i]
         if d_opp < 1.8 and self.rng.random() < self.p.tackle_attempt:
             return self._challenge(k, i, j, v)
+        if v[0] < 22 and under and role != "GK" and self.rng.random() < self.p.clear_under_pressure:
+            return self._clearance(k, i)                             # no time near his own goal: away it goes
         if v[0] > 70:
             xg = xg_model(v, blockers=self._blockers(k, v), pressed=under, finishing=self._a(k, i, "finishing"))
             tendency = 1.2 if role in FORWARD else (0.5 if role in DEFENDER_ROLES else 0.9)
+            tendency *= 1 + self.p.state_shot * self.urgency[k]
+            if not under and d_opp > 5 and xg < CLOSE_IN_XG and v[0] < PITCH_LENGTH - 8:
+                tendency *= self.p.close_in          # free with the ball: take it closer first (REAL-017)
             if xg >= self.p.shot_min_xg and self.rng.random() < min(0.6, (self.p.shot_base + self.p.shot_xg_weight * xg) * tendency):
                 return self._shoot(k, i, v, under, first_time=quick, incoming=last)
         dist = float(np.hypot(*(v - GOAL)))
         if 18 <= dist <= 32 and abs(v[1] - PITCH_WIDTH / 2) < 16 and not _in_box(v) and role != "GK":
-            if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0):
+            if self.rng.random() < self.p.long_shot_rate * self._a(k, i, "long_shots") * (0.5 if under else 1.0) * (
+                    1 + self.p.state_shot * self.urgency[k]):
                 return self._shoot(k, i, v, under, first_time=quick, incoming=last)
         rate = self.p.pass_rate[self.tactics[k].tempo] + (self.p.pass_rate_pressed if under else 0.0)
         if role == "GK":
@@ -528,10 +609,17 @@ class Engine:
             return self._foul(opp, j, k, i, v)
         tackle = self._a(opp, j, "standing_tackle") * 0.6 + self._a(opp, j, "defensive_awareness") * 0.4
         keep = self._a(k, i, "dribbling") * 0.5 + self._a(k, i, "strength") * 0.2 + self._a(k, i, "ball_control") * 0.3
-        p_win = float(np.clip(0.45 + 0.6 * (tackle - keep), 0.1, 0.8))
+        # the fresher player has the edge (REAL-009)
+        fresh = self.fitness[opp, j] - self.fitness[k, i]
+        p_win = float(np.clip(0.45 + 0.6 * (tackle - keep) + 0.5 * self.p.fatigue_err * fresh, 0.1, 0.8))
         won = self.rng.random() < p_win
         e = self._emit("tackle", opp, j, location=self.pos[opp, j].copy(), outcome="success" if won else "fail",
                        success_prob=round(p_win, 3), counterpress=self.t - self.last_loss_t[opp] <= 5)
+        if won and _in_box(v) and self.rng.random() < self.p.var_pen_award:
+            # the referee waved play on; VAR sees a foul and gives the penalty (REAL-011)
+            rev = self._var_review(k, "penalty", e, "overturned", "foul_confirmed")
+            self._foul(opp, j, k, i, v, reviewed=rev)
+            return
         if won:
             if self.rng.random() < 0.65:
                 self._gain(opp, j)
@@ -539,9 +627,9 @@ class Engine:
                 self._lose_ball()
                 self.loose = True
                 self.ball = self._clip_pitch(self.ball + self.rng.normal(0, 3, 2))
-        _ = e
 
-    def _foul(self, k_def: int, j: int, k_att: int, i: int, v: np.ndarray, force_red: str | None = None) -> None:
+    def _foul(self, k_def: int, j: int, k_att: int, i: int, v: np.ndarray, force_red: str | None = None,
+              reviewed: dict | None = None) -> None:
         spot = self.ball.copy()
         penalty = _in_box(v)
         card = None
@@ -558,6 +646,8 @@ class Engine:
             reason = "reckless_challenge"
         detail = FoulDetail(foul_type="tackle", penalty_awarded=penalty, card=card, card_reason=reason).model_dump()
         foul = self._emit("foul", k_def, j, location=self.pos[k_def, j].copy(), foul=detail)
+        if reviewed:
+            self._link(reviewed, foul)
         if card:
             ce = self._emit("card", k_def, j, location=self.pos[k_def, j].copy(), foul=detail)
             self._link(foul, ce)
@@ -566,11 +656,54 @@ class Engine:
                 self.shapes[k_def].player_ids[j] = None
                 self._react_to_red(k_def)
         self.owner = None
-        if penalty:
+        if penalty and not reviewed and not force_red and self.rng.random() < self.p.var_pen_overturn:
+            # VAR: no foul after all; play restarts with the defending keeper (REAL-011)
+            rev = self._var_review(k_att, "penalty", foul, "overturned", "no_foul")
+            spot = from_view(np.array([5.5, PITCH_WIDTH / 2]), k_def)
+            self._set_restart("goal_kick", k_def, spot, wait=self.rng.integers(20, 40) + rev["var"]["duration_s"])
+        elif penalty:
             spot = from_view(np.array([PITCH_LENGTH - 11, PITCH_WIDTH / 2]), k_att)
             self._set_restart("penalty", k_att, spot, wait=self.rng.integers(60, 90))
         else:
             self._set_restart("free_kick", k_att, spot, wait=self.rng.integers(12, 30) + (15 if card else 0))
+        if self.shapes[k_att].player_ids[i] is not None and self.rng.random() < self.p.injury_foul:
+            self._injure(k_att, i, "contact")
+
+    def _var_review(self, k: int, of: str, event: dict, decision: str, reason: str) -> dict:
+        """A VAR review of `event` (REAL-011, EVT-016); k is the side that asked for or gains from it."""
+        detail = VarReview(review_of=of, reviewed_event_id=event["event_id"], decision=decision, reason=reason,
+                           duration_s=int(self.rng.integers(40, 150))).model_dump()
+        rev = self._emit("var_review", k, None, location=event.get("location"), var=detail)
+        self._link(event, rev)
+        self.half_counts["var"] += 1
+        return rev
+
+    def _injure(self, k: int, i: int, cause: str) -> None:
+        """A player is hurt (REAL-010, EVT-017). After a knock he is treated and plays on; anything
+        worse means a substitution at the next stoppage, or ten men if no change is left."""
+        pid = self._pid(k, i)
+        if pid is None or self.shapes[k].roles[i] == "GK" or any(p == pid for _, p in self.injured):
+            return
+        r, severity = self.rng.random(), "serious"
+        for name, share in SEVERITY:
+            if r < share:
+                severity = name
+                break
+            r -= share
+        lo, hi = DAYS_OUT[severity]
+        areas = INJURY_AREAS[cause]
+        info = InjuryInfo(area=areas[int(self.style_rng.integers(len(areas)))], severity=severity, cause=cause,
+                          can_continue=severity == "knock",
+                          expected_days_out=int(self.style_rng.integers(lo, hi))).model_dump()
+        self._emit("injury", k, i, location=self.pos[k, i].copy(), injury=info)
+        self.half_counts["injuries"] += 1
+        if self.dead > 0:
+            self.dead += int(self.rng.integers(30, 90))           # treatment on the pitch
+        if severity == "knock":
+            self.fitness[k, i] = max(self.fitness[k, i] - 0.05, 0.0)
+        else:
+            self.fitness[k, i] = min(self.fitness[k, i], 0.4)     # he limps on until the ball goes dead
+            self.injured.append((k, pid))
 
     def _dribble(self, k: int, i: int, j: int, v: np.ndarray) -> None:
         opp = 1 - k
@@ -612,10 +745,12 @@ class Engine:
         offside = (mates[cand, 0] > back) & (mates[cand, 0] > max(v[0], PITCH_LENGTH / 2))
         style = self.tactics[k].passing
         long_pen = {"short": 1.4, "mixed": 1.0, "direct": 0.55}[style]
+        long_pen *= 1 - self.p.state_direct * max(self.urgency[k], 0.0)     # chasing: go longer sooner
         tgain = np.array([threat_value(mates[m]) for m in cand]) - threat_value(v)
-        score = 0.05 * gains + 0.14 * np.minimum(open_, 10) - long_pen * (dists / 32) ** 2 + 12 * tgain
+        score = (self.p.pass_forward * gains + 0.14 * np.minimum(open_, 10) - long_pen * (dists / 32) ** 2
+                 + self.p.pass_threat * tgain)
         score -= np.array([1.2 if shape.roles[m] == "GK" else 0.0 for m in cand])
-        score -= 3.5 * offside
+        score -= self.p.offside_pen * offside
         if restart == "corner":
             score = np.where([_in_box(mates[m]) for m in cand], score + 4, score - 4)
         if restart == "goal_kick" and style == "direct":
@@ -624,6 +759,13 @@ class Engine:
         probs /= probs.sum()
         r = cand[int(self.rng.choice(len(cand), p=probs))]
         end_v = mates[r] + self.rng.normal(0, 0.8, 2)
+        through = False
+        if (restart is None and shape.roles[r] in RUNNERS and v[0] < back - 5 and back - 6 <= mates[r, 0] <= back + 0.5
+                and self.rng.random() < self.p.through_lead):
+            # a ball into the space behind the line for a runner who starts onside (REAL-016)
+            through = True
+            end_v = np.array([min(back + self.rng.uniform(6, 14), PITCH_LENGTH - 3),
+                              clip1(mates[r, 1] + self.rng.normal(0, 2), 3.0, PITCH_WIDTH - 3)])
         if restart == "throw_in":
             end_v = v + (mates[r] - v) * min(1.0, 18 / max(np.hypot(*(mates[r] - v)), 1e-6))
         dist = float(np.hypot(*(end_v - v)))
@@ -631,6 +773,8 @@ class Engine:
         # Success probability from distance, skill, lane interceptions and marking (ATTR-007).
         passing = self._a(k, i, "short_passing") if dist < 25 else self._a(k, i, "long_passing")
         acc = 1 - (1 - math.exp(-dist / 80)) * (1.25 - passing)
+        acc *= 1 + self.p.skill_pass * (passing - 0.75)
+        acc *= 1 - self.p.fatigue_err * (1 - self.fitness[k, i])          # tired legs, sloppier passes (REAL-009)
         seg = end_v - v
         seg_len2 = float(seg @ seg) or 1e-6
         lane = []
@@ -642,7 +786,9 @@ class Engine:
         dsegs = np.hypot(*(points - opp[opp_idx]).T)
         for n in np.flatnonzero((us > 0.05) & (dsegs < 2.5)):
             u, dseg = float(us[n]), float(dsegs[n])
-            w = 0.22 * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
+            w = self.p.lane_cut * (1 - dseg / 2.5) * (1.2 if u < 0.9 else 0.8)
+            w *= 1 + self.p.skill_def * (self._a(1 - k, int(opp_idx[n]), "interceptions") - 0.7)
+            w *= 1 - self.p.fatigue_err * (1 - self.fitness[1 - k, opp_idx[n]])
             lane.append((opp_idx[n], w, points[n].copy()))
             acc *= 1 - w
         marks = np.hypot(*(opp[opp_idx] - end_v).T)
@@ -657,8 +803,10 @@ class Engine:
         acc = self._success(k, acc)
 
         ptype = self._pass_type(k, v, end_v, r, restart, back)
-        height = "high" if ptype in ("cross", "corner", "long_ball") and self.rng.random() < 0.75 else (
-            "ground" if dist < 25 else "low")
+        height = self._pass_height(ptype, dist)
+        if height != "ground" and restart is None:          # a ball in the air is harder to bring down
+            acc = float(clip1(acc * (self.p.high_pass_acc if height == "high" else (1 + self.p.high_pass_acc) / 2),
+                              0.02, 0.99))
         foot = self.attr[self._pid(k, i)]["foot"]
         body = "other" if restart == "throw_in" else (
             f"{foot}_foot" if self.rng.random() < 0.8 else ("right_foot" if foot == "left" else "left_foot"))
@@ -667,8 +815,6 @@ class Engine:
             from_left = v[1] > PITCH_WIDTH / 2
             delivery = "inswing" if (from_left and foot == "right") or (not from_left and foot == "left") else "outswing"
         speed_ms = 11 + 0.35 * dist + self.rng.normal(0, 1.5)
-        if height == "high" and dist > 20:
-            self.rng.random()          # the draw the old chip label used: keeps every seed's run of play as before
         first_time = quick and restart is None and self.style_rng.random() < FIRST_TIME_PASS_SHARE
         technique, label_height, label_body = self._pass_technique(k, i, v, end_v, dist, height, body, bool(lane),
                                                                    incoming if first_time else None, restart)
@@ -689,13 +835,16 @@ class Engine:
 
         ok = self.rng.random() < acc
         end_abs = from_view(np.clip(end_v, [0.3, 0.3], [104.7, 67.7]), k)
+        if ok and ptype in ("through_ball", "long_ball") and self._keeper_sweep(k, i, end_abs, base, dist / speed_ms):
+            return
         if ok:
             pe = self._emit("pass", k, i, end_location=end_abs, outcome="success", receiver_id=self._pid(k, r),
                             threat=round(threat_value(end_v) - threat_value(v), 4), **base)
             pe["_break"] = any(v[0] < line <= end_v[0] for line in (mid, back))
             self.last_pass = {"event": pe, "receiver": (k, r)}
             self.flight = {"team": k, "slot": r, "end": end_abs, "arrive": self.t + max(1, math.ceil(dist / speed_ms)),
-                           "cross": ptype in ("cross", "corner") and height == "high", "height": height}
+                           "cross": ptype in ("cross", "corner") and height == "high", "height": height,
+                           "through": through, "pass": pe}
             self.owner = None
             self.ball_z = 2.0 if height == "high" else 0.0
             return
@@ -706,11 +855,13 @@ class Engine:
         cause = int(self.rng.choice(len(weights), p=weights))
         if cause < len(lane):
             j, _, point = lane[cause]
-            pe = self._emit("pass", k, i, end_location=from_view(point, k), outcome="fail", receiver_id=None, **base)
-            ie = self._emit("interception", 1 - k, j, location=from_view(point, k),
-                            counterpress=self.t - self.last_loss_t[1 - k] <= 5)
+            at = self._clip_pitch(from_view(point, k))              # a pass along the touchline is cut out on it
+            pe = self._emit("pass", k, i, end_location=at, outcome="fail", receiver_id=None, **base)
+            # a clean interception, or a block or deflection he then collects (EVT-009, EVT-012)
+            ie = self._emit("interception" if self.rng.random() < self.p.intercept_share else "ball_recovery",
+                            1 - k, j, location=at, counterpress=self.t - self.last_loss_t[1 - k] <= 5)
             self._link(pe, ie)
-            self.pos[1 - k, j] = from_view(point, k)
+            self.pos[1 - k, j] = at
             self._gain(1 - k, j)
             return
         if cause == len(lane):
@@ -775,6 +926,80 @@ class Engine:
             return "outside_foot", height, f"{foot}_foot"
         return "normal", height, body
 
+    def _pass_height(self, ptype: str, dist: float) -> str:
+        """ATTR-005 (B12): how high the ball travels, by pass type and length. Over a match this
+        gives about StatsBomb's 2022 World Cup mix: 75 % on the ground, 8 % low, 17 % high."""
+        if ptype == "throw_in":
+            return "low"
+        if ptype in ("cross", "corner"):
+            hi, lo = 0.85, 0.1
+        elif ptype in ("long_ball", "switch") or dist >= 32:
+            hi, lo = 0.75, 0.15
+        elif ptype in ("free_kick", "goal_kick") and dist >= 25:
+            hi, lo = 0.7, 0.15
+        elif dist >= 20:
+            hi, lo = 0.12, 0.2
+        else:
+            hi, lo = 0.02, 0.03
+        r = self.rng.random()
+        return "high" if r < hi else ("low" if r < hi + lo else "ground")
+
+    def _keeper(self, k: int) -> int | None:
+        """Slot of k's keeper, if he is on the pitch."""
+        roles = self.shapes[k].roles
+        if "GK" not in roles:
+            return None
+        g = roles.index("GK")
+        return g if self._active(k)[g] else None
+
+    def _keeper_claim(self, k: int) -> bool:
+        """A cross dropping into the keeper's area (B12, EVT-005): he comes for it and catches or
+        punches it. k is the crossing side."""
+        opp = 1 - k
+        g = self._keeper(opp)
+        if g is None:
+            return False
+        dv = self._view(self.ball, opp)
+        if dv[0] > 13 or abs(dv[1] - PITCH_WIDTH / 2) > 12:
+            return False
+        if np.hypot(*(self.pos[opp, g] - self.ball)) > CLAIM_REACH:
+            return False                                  # he came for it but is not there (no jumps)
+        skill = self._a(opp, g, "handling") * 0.5 + self._a(opp, g, "positioning") * 0.5
+        if self.rng.random() >= self.p.claim_rate * (1.15 - dv[0] / 13) * (0.5 + 0.6 * skill):
+            return False
+        punch = self.rng.random() < 0.3
+        self.pos[opp, g] = self.ball
+        self._emit("goalkeeper", opp, g, location=self.ball.copy(), keeper_action="punch" if punch else "claim",
+                   keeper_technique="standing")
+        self.last_pass = None
+        if punch:
+            self.owner, self.loose = None, True
+            self.ball = self._clip_pitch(from_view(np.array([self.rng.uniform(18, 32), self.rng.uniform(14, 54)]), opp))
+        else:
+            self._gain(opp, g)
+        return True
+
+    def _keeper_sweep(self, k: int, i: int, end_abs: np.ndarray, base: dict, flight_s: float) -> bool:
+        """A ball played in behind (B12, EVT-005): the keeper rushes off his line for a ball that
+        drops within his reach, runs onto it, and picks it up in his box or clears it."""
+        opp = 1 - k
+        g = self._keeper(opp)
+        if g is None:
+            return False
+        dv = self._view(end_abs, opp)
+        if dv[0] > 30 or abs(dv[1] - PITCH_WIDTH / 2) > 22:
+            return False
+        d_gk = float(np.hypot(*(self.pos[opp, g] - end_abs)))
+        if d_gk > 20 or self.rng.random() >= self.p.sweep_rate * (1 - d_gk / 22):
+            return False
+        pe = self._emit("pass", k, i, end_location=end_abs, outcome="fail", receiver_id=None, **base)
+        ge = self._emit("goalkeeper", opp, g, location=end_abs.copy(), keeper_action="sweep", keeper_technique="standing")
+        self._link(pe, ge)
+        self.owner, self.last_pass = None, None
+        self.flight = {"team": opp, "slot": g, "end": end_abs, "arrive": self.t + max(1, math.ceil(flight_s)),
+                       "cross": False, "height": "ground", "sweep": True}
+        return True
+
     def _pass_type(self, k: int, v: np.ndarray, end_v: np.ndarray, r: int, restart: str | None, back: float) -> str:
         """ATTR-004, first match wins."""
         if restart in ("corner", "free_kick", "throw_in", "goal_kick", "kick_off"):
@@ -805,19 +1030,36 @@ class Engine:
         if not self._active(k)[r]:
             self.loose = True
             return
-        if np.hypot(*(self.pos[k, r] - self.ball)) <= 6:
-            self.ball = self.pos[k, r].copy()                 # he collects it where he is
-        else:
-            self.pos[k, r] = self.ball
+        first = "late" not in f
+        if f.get("through") and self._defender_first(f, k, r):
+            return
+        if first and f["cross"] and self._keeper_claim(k):
+            return
+        if first and f.get("height") == "high" and not f["cross"] and self._aerial_contest(k, r):
+            return
+        if np.hypot(*(self.pos[k, r] - self.ball)) > RECEIVE_REACH:
+            # he is not there yet: the ball waits where it dropped and he runs onto it, rather
+            # than being put there (B11: nobody moves faster than he can run)
+            if f.get("late", 0) < LATE_S:
+                f["late"] = f.get("late", 0) + 1
+                f["arrive"] = self.t + 1
+                self.flight = f
+                return
+            self.loose = True
+            return
+        self.ball = self.pos[k, r].copy()                     # he collects it where he is
         self._gain(k, r)
         self.touch = {"who": (k, r), "t": self.t, "height": f.get("height", "ground")}
+        if f.get("sweep") and not _in_own_box(self._view(self.ball, k)):
+            return self._clearance(k, r)                      # a keeper outside his box kicks it away
         if f["cross"]:
             v = self._view(self.ball, k)
             j = self._nearest(1 - k, self.ball, outfield=True)
             att = self._a(k, r, "heading_accuracy") * 0.5 + self._a(k, r, "jumping") * 0.5
             dfn = self._a(1 - k, j, "heading_accuracy") * 0.4 + self._a(1 - k, j, "jumping") * 0.3 + \
                 self._a(1 - k, j, "defensive_awareness") * 0.3
-            if self.rng.random() < 0.45 + 0.5 * (dfn - att):
+            near = np.hypot(*(self.pos[1 - k, j] - self.ball)) <= self.p.aerial_contest
+            if near and self.rng.random() < 0.45 + 0.5 * (dfn - att):
                 da = self._emit("duel", k, r, location=self.ball.copy(), duel_type="aerial", outcome="fail")
                 dd = self._emit("duel", 1 - k, j, location=self.ball.copy(), duel_type="aerial", outcome="success")
                 self._link(da, dd)
@@ -826,6 +1068,28 @@ class Engine:
                 return self._clearance(1 - k, j)
             if _in_box(v) and self.rng.random() < 0.7:
                 self.forced = {"kind": "header"}
+
+    def _aerial_contest(self, k: int, r: int) -> bool:
+        """A long ball dropping near a defender (B12, EVT-007): he challenges in the air. If he wins
+        it he heads it clear in his own half and to a team-mate further up. k, r: the intended receiver."""
+        opp = 1 - k
+        j = self._nearest(opp, self.ball, outfield=True)
+        if np.hypot(*(self.pos[opp, j] - self.ball)) > self.p.aerial_contest:
+            return False
+        att = self._a(k, r, "heading_accuracy") * 0.4 + self._a(k, r, "jumping") * 0.3 + self._a(k, r, "strength") * 0.3
+        dfn = self._a(opp, j, "heading_accuracy") * 0.4 + self._a(opp, j, "jumping") * 0.3 + self._a(opp, j, "strength") * 0.3
+        won = self.rng.random() < 0.55 + 0.6 * (dfn - att)
+        a = self._emit("duel", k, r, location=self.ball.copy(), duel_type="aerial", outcome="fail" if won else "success")
+        d = self._emit("duel", opp, j, location=self.ball.copy(), duel_type="aerial", outcome="success" if won else "fail")
+        self._link(a, d)
+        if not won:
+            return False                                      # the receiver wins it and plays on
+        self.ball_z = 2.0
+        self.pos[opp, j] = self.ball
+        self._gain(opp, j)
+        if self._view(self.ball, opp)[0] < PITCH_LENGTH / 2:
+            self._clearance(opp, j)
+        return True
 
     def _clearance(self, k: int, j: int) -> None:
         """Defender j heads or kicks the ball away (EVT-010)."""
@@ -840,7 +1104,7 @@ class Engine:
             out = target.copy()
             out[1] = -1.0 if target[1] < PITCH_WIDTH / 2 else PITCH_WIDTH + 1
             return self._out_of_play(out, k)
-        if r < 0.45 and _in_own_box(self._view(self.ball, k)):
+        if r < 0.2 + self.p.clear_behind and _in_own_box(self._view(self.ball, k)):
             behind = from_view(np.array([-1.0, self._view(self.ball, k)[1]]), k)
             return self._out_of_play(behind, k)
         self.flight = {"team": None, "slot": None, "end": target, "arrive": self.t + 2, "cross": False}
@@ -878,8 +1142,11 @@ class Engine:
                 xg = float(np.clip(xg * TECHNIQUE_XG[technique], 0.005, 0.95))
         foot = self.attr[self._pid(k, i)]["foot"]
         aim_y = PITCH_WIDTH / 2 + self.rng.uniform(-3.4, 3.4)
+        # xG is the chance itself; whether it goes in also depends on the keeper (B12)
+        keeper = np.mean([self._a(opp, gk_slot, a) for a in ("diving", "reflexes", "positioning")])
+        p_goal = float(clip1(xg * (1 - self.p.skill_gk * (keeper - 0.88)), 0.002, 0.97))
         r = self.rng.random()
-        if r < xg:
+        if r < p_goal:
             outcome = "goal"
         else:
             p_block = 0.0 if penalty else min(0.55, self.p.block_base + self.p.block_per_defender * blockers)
@@ -893,15 +1160,19 @@ class Engine:
             else:
                 outcome = "off_target"
                 aim_y += self.rng.choice([-1, 1]) * self.rng.uniform(4, 9)
+        ruled_out = None
+        if outcome == "goal" and not penalty and self.rng.random() < self.p.var_disallow:
+            # VAR rules it out (REAL-011, EVT-016): mostly offside in the build-up
+            outcome = "disallowed"
+            ruled_out = ("offside", "offside", "offside", "foul_in_build_up", "handball")[int(self.style_rng.integers(5))]
         end_v = np.array([PITCH_LENGTH, aim_y])
-        if header:
-            self.rng.random()          # the draw the old diving-header label used: keeps every seed as before
         power = self._a(k, i, "shot_power")
         shot = self._emit(
             "shot", k, i, location=self.ball.copy(), end_location=from_view(end_v, k), shot_outcome=outcome,
             xg=round(xg, 4), body_part="head" if header else f"{foot}_foot", under_pressure=under,
             shot_technique=technique, first_time=first_time, keeper_location=gk,
-            shot_end_height_m=round(float(self.rng.uniform(0.1, 2.3) if outcome in ("goal", "saved") else self.rng.uniform(0, 4)), 2),
+            shot_end_height_m=round(float(self.rng.uniform(0.1, 2.3) if outcome in ("goal", "saved", "disallowed")
+                                          else self.rng.uniform(0, 4)), 2),
             ball_speed_kmh=round(float(np.clip((55 if header else 75) + 40 * power + self.rng.normal(0, 8), 30, 135)), 1),
             play_pattern_hint="penalty" if penalty else ("free_kick" if free_kick else None),
         )
@@ -909,14 +1180,22 @@ class Engine:
             self._link(self.last_pass["event"], shot)
         self.last_pass = None
         self.owner = None
+        if ruled_out:
+            rev = self._var_review(k, "goal", shot, "overturned", ruled_out)
+            self.possession = None
+            return self._set_restart("free_kick", opp, self._clip_pitch(self.ball),
+                                     wait=int(self.rng.integers(30, 60)) + rev["var"]["duration_s"])
         if outcome == "goal":
             self._emit("goalkeeper", opp, gk_slot, location=gk, keeper_action="goal_conceded",
                        keeper_technique="diving" if self.rng.random() < 0.6 else "standing")
             self.score[k] += 1
             self.half_counts["goals"] += 1
             self.possession = None
-            return self._set_restart("kick_off", opp, np.array([PITCH_LENGTH / 2, PITCH_WIDTH / 2]),
-                                     wait=self.rng.integers(45, 70))
+            wait = int(self.rng.integers(45, 70))
+            if self.rng.random() < self.p.var_check:             # checked by VAR, and it stands (REAL-011)
+                reason = ("offside", "foul_in_build_up", "handball")[int(self.style_rng.integers(3))]
+                wait += self._var_review(k, "goal", shot, "confirmed", reason)["var"]["duration_s"]
+            return self._set_restart("kick_off", opp, np.array([PITCH_LENGTH / 2, PITCH_WIDTH / 2]), wait=wait)
         if outcome == "saved":
             action = self.rng.choice(["shot_saved", "shot_parried", "tipped_over"], p=[0.5, 0.35, 0.15])
             ge = self._emit("goalkeeper", opp, gk_slot, location=gk, keeper_action=str(action),
@@ -970,6 +1249,11 @@ class Engine:
         v = self._view(self.ball, win)
         if _in_own_box(v) and self._pressure(win, j[win])[1] < 4.0:
             self._clearance(win, j[win])
+        elif v[0] > 80 and self.shapes[win].roles[j[win]] != "GK":
+            # a rebound or a loose ball in front of goal is struck first time (B12)
+            xg = xg_model(v, blockers=self._blockers(win, v), pressed=True, finishing=self._a(win, j[win], "finishing"))
+            if xg >= self.p.shot_min_xg and self.rng.random() < min(0.9, self.p.loose_shot * (1 + 8 * xg)):
+                self.forced = {"kind": "loose_shot"}
 
     # --- pressure events -------------------------------------------------------------
 
@@ -994,9 +1278,19 @@ class Engine:
 
     def _maybe_subs(self) -> None:
         minute = self.t // 60
+        limit = SUB_LIMIT[self.period >= 3]
+        if self.dead > 0 and self.injured:
+            for k, pid in list(self.injured):
+                self.injured.remove((k, pid))
+                if pid not in self.shapes[k].player_ids:
+                    continue                                  # already off
+                if self.subs_used[k] >= limit or not self._substitute(k, pid, reason="injury"):
+                    i = self.shapes[k].player_ids.index(pid)  # no change left: ten men (EVT-017)
+                    self.shapes[k].player_ids[i] = None
+                    self._react_to_red(k)
         for k in (0, 1):
-            due = sum(minute >= m for m in (58, 68, 78, 85))
-            if self.subs_used[k] < min(due, 5) and k not in self.pending_subs:
+            due = sum(minute >= m for m in (58, 68, 78, 85, 100))
+            if self.subs_used[k] < min(due, limit) and k not in self.pending_subs:
                 self.pending_subs.append(k)
         if self.dead <= 0 or not self.pending_subs:
             return
@@ -1036,6 +1330,7 @@ class Engine:
         for idx in removed:
             self.shapes[k].player_ids[idx] = None
         self.fitness[k, i] = 1.0
+        self.burst[k, i], self.recovering[k, i] = 0.0, False
         self.subs_used[k] += 1
         self.half_counts["subs"] += 1
         self._emit("substitution", k, i, substitution=Substitution(player_off_id=off, player_on_id=on,
@@ -1069,7 +1364,7 @@ class Engine:
         src = [old_ids.index(pid) if pid is not None and pid in old_ids else n for n, pid in enumerate(new_ids)]
         if src == list(range(11)):
             return
-        for arr in (self.pos, self.prev, self.speed, self.fitness, self.last_press,
+        for arr in (self.pos, self.prev, self.speed, self.fitness, self.last_press, self.burst, self.recovering,
                     self.move.offsets, self.move.offset_until, self.move.run_until):
             arr[k] = arr[k][src]
         if self.owner is not None and self.owner[0] == k:
@@ -1152,13 +1447,14 @@ class Engine:
 
     def _clock(self) -> None:
         period_t = self.t - self.period_start
-        if self.added is None and period_t >= 44 * 60:
+        length = PERIOD_LENGTH_MINUTES[self.period]
+        if self.added is None and period_t >= (length - 1) * 60:
             h = self.half_counts
-            base = 1.0 if self.period == 1 else 3.0
-            added = base + 0.5 * h["goals"] + 0.25 * h["subs"] + 0.3 * h["cards"] + self.rng.normal(0, 0.6)
-            self.added = int(np.clip(round(added), 1 if self.period == 1 else 3, 4 if self.period == 1 else 8))
+            added = (ADDED_BASE[self.period] + 0.5 * h["goals"] + 0.25 * h["subs"] + 0.3 * h["cards"]
+                     + 0.4 * h["injuries"] + 0.6 * h["var"] + self.rng.normal(0, 0.6))
+            self.added = int(np.clip(round(added), *ADDED_RANGE[self.period]))
             self._emit("added_time", self.possession or 0, None, added_minutes=self.added)
-            self.period_end_at = 45 * 60 + self.added * 60 + int(self.rng.integers(0, 40))
+            self.period_end_at = length * 60 + self.added * 60 + int(self.rng.integers(0, 40))
 
     def _period_over(self) -> bool:
         return self.period_end_at is not None and self.t - self.period_start >= self.period_end_at and self.flight is None
@@ -1168,7 +1464,7 @@ class Engine:
     def _start_period(self, kicking: int) -> None:
         self.period_start = self.t
         self.added, self.period_end_at = None, None
-        self.half_counts = {"goals": 0, "subs": 0, "cards": 0}
+        self.half_counts = {"goals": 0, "subs": 0, "cards": 0, "injuries": 0, "var": 0}
         self._kickoff_positions(kicking)
         if self.period == 1:
             for k in (0, 1):
@@ -1181,6 +1477,7 @@ class Engine:
         self._set_restart("kick_off", kicking, self.ball.copy(), wait=1, period_start=True)
 
     def _tick(self) -> None:
+        start = self.pos.copy()                   # where everybody was in the last frame
         if self.dead > 0:
             self.dead -= 1
             if self.dead == 0 and self.restart and not self._take_restart():
@@ -1195,6 +1492,7 @@ class Engine:
         self._apply_plants()
         self._pressures()
         self._maybe_subs()
+        self._update_state()
 
         carrier = self.owner
         flight_target = None
@@ -1205,17 +1503,118 @@ class Engine:
                                     self.loose, tuple(self.last_loss_t), flight_target)
         if carrier is not None:
             targets[carrier] = self.ball
+        self._keeper_targets(targets)
         self._restart_targets(targets)
         self.prev = self.pos.copy()
         active = np.stack([self._active(0), self._active(1)])
-        pace = np.stack([self.shapes[0].pace, self.shapes[1].pace])
-        self.pos, self.speed = MovementModel.step(self.pos, targets, pace, self.fitness, active)
+        self._move(targets, active)
         if carrier is not None:
             self.pos[carrier] = self.ball
         drain = (0.00003 + 0.000022 * self.speed + 0.00004 * (self.speed > 7)) * (1.45 - self._stamina())
         self.fitness = np.clip(self.fitness - drain, 0, 1)
+        for n in np.flatnonzero(self.speed > 7):                   # sprinting: now and then a muscle goes
+            k, i = divmod(int(n), 11)
+            if self.rng.random() < self.p.injury_sprint * (1.3 - self.fitness[k, i]):
+                self._injure(k, i, "fatigue" if self.fitness[k, i] < 0.7 else "non_contact")
+        self._limit_steps(start)
         self._record_frame()
         self._clock()
+
+    def _limit_steps(self, start: np.ndarray) -> None:
+        """A pick-up and a run in the same second must not add up to more than his top speed
+        (B11, REAL-014): shorten the step, and the ball comes with the man on it."""
+        top = self._physique()[0]
+        step = self.pos - start
+        dist = np.hypot(step[..., 0], step[..., 1])
+        over = dist > top
+        if not over.any():
+            return
+        scale = np.where(over, top / np.maximum(dist, 1e-9), 1.0)
+        self.pos = start + step * scale[..., None]
+        if self.owner is not None and over[self.owner]:
+            self.ball = self.pos[self.owner].copy()
+
+    def _update_state(self) -> None:
+        """Game state (B12, REAL-001): the score, the clock and the players on the pitch change how
+        each side plays. Urgency grows from 30' to 85': a side ahead drops deeper, presses less and
+        slows its restarts; a side behind pushes up, presses, shoots sooner and goes longer. A side
+        with a player more pushes up; a side a man short drops off."""
+        minute = PERIOD_BASE_MINUTE.get(self.period, 90) + (self.t - self.period_start) / 60
+        w = clip1((minute - 30) / 55, 0.0, 1.0)
+        men = [int(np.count_nonzero(self._active(k))) for k in (0, 1)]
+        for k in (0, 1):
+            d = self.score[k] - self.score[1 - k]
+            u = 0.0 if d == 0 else (URGENCY_LEAD if d > 0 else URGENCY_TRAIL)[min(abs(d), 3) - 1]
+            self.urgency[k] = u * w
+            extra = max(min(men[k] - men[1 - k], 2), -2)
+            self.move.line_shift[k] = self.p.state_line * self.urgency[k] + self.p.man_line * extra
+            at = self.p.state_press_at
+            self.move.press_shift[k] = 1 if self.urgency[k] > at else -1 if self.urgency[k] < -at else 0
+
+    def _defender_first(self, f: dict, k: int, r: int) -> bool:
+        """A ball in behind (REAL-016): the nearest defender gets there first if he is closer
+        than the runner; the pass then counts as failed and he has the ball."""
+        j = self._nearest(1 - k, self.ball, outfield=True)
+        d_def = float(np.hypot(*(self.pos[1 - k, j] - self.ball)))
+        if d_def > RECEIVE_REACH or d_def >= float(np.hypot(*(self.pos[k, r] - self.ball))):
+            return False
+        pe = f.get("pass")
+        if pe is not None:
+            pe.update(outcome="fail", receiver_id=None, threat=0.0)
+        self.last_pass = None
+        self._emit("ball_recovery", 1 - k, j, location=self.ball.copy())
+        self.pos[1 - k, j] = self.ball if d_def <= 1.0 else self.pos[1 - k, j]
+        self.ball = self.pos[1 - k, j].copy()
+        self._gain(1 - k, j)
+        return True
+
+    def _keeper_targets(self, targets: np.ndarray) -> None:
+        """A cross dropping into his area: the keeper sets off for it while it is in the air
+        (REAL-006). A ball played in behind: the nearest defender races the runner for it (REAL-016)."""
+        f = self.flight
+        if f and f.get("through") and f["team"] is not None:
+            opp = 1 - f["team"]
+            j = self._nearest(opp, f["end"], outfield=True)
+            targets[opp, j] = f["end"]
+            self.move.urgent[opp, j] = True
+        if not f or not f.get("cross") or f["team"] is None:
+            return
+        opp = 1 - f["team"]
+        g = self._keeper(opp)
+        dv = self._view(f["end"], opp)
+        if g is not None and dv[0] <= 13 and abs(dv[1] - PITCH_WIDTH / 2) <= 12:
+            targets[opp, g] = f["end"]
+            self.move.urgent[opp, g] = True
+
+    def _move(self, targets: np.ndarray, active: np.ndarray) -> None:
+        """One second of running (REAL-014): own top speed, acceleration, and a jog after a run of sprints."""
+        top, accel = self._physique()
+        top = np.where(self.recovering, np.minimum(top, RECOVER_MS), top)
+        # a defender or holding midfielder far out of position while defending sprints back
+        far = np.hypot(*(targets - self.pos).T).T > URGENT_GAP
+        backs = np.array([[r in DEFENDER_ROLES or r == "DM" for r in self.shapes[k].roles] for k in (0, 1)])
+        defending = np.array([[self.possession is not None and self.possession != k] * 11 for k in (0, 1)])
+        urgent = self.move.urgent | (far & backs & defending)
+        if self.owner is not None:
+            urgent[self.owner] = True                         # the man on the ball runs with it as he likes
+        if self.restart is not None:
+            urgent[self.restart["team"], self.restart["taker"]] = True
+        self.pos, self.speed = MovementModel.step(self.pos, targets, top, self.fitness, active, self.speed, accel,
+                                                  urgent)
+        sprinting = self.speed >= SPRINT_MS
+        self.burst = np.where(sprinting, self.burst + 1,
+                              np.maximum(self.burst - np.where(self.speed < 4, 1.0, 0.4), 0.0))
+        self.recovering = (self.recovering | (self.burst >= BURST_S)) & (self.burst > RECOVERED_S)
+
+    def _physique(self) -> tuple[np.ndarray, np.ndarray]:
+        """(2, 11) top speed and acceleration of whoever is in each slot, rebuilt when the players change."""
+        key = (tuple(self.shapes[0].player_ids), tuple(self.shapes[1].player_ids))
+        if key != self._physique_key:
+            self._physique_key = key
+            pace = np.array([[self._a(k, i, "pace") for i in range(11)] for k in (0, 1)])
+            acc = np.array([[self._a(k, i, "acceleration") for i in range(11)] for k in (0, 1)])
+            self._physique_cache = (top_speed(pace), ACCEL_MS2[0] + ACCEL_MS2[1] * acc)
+        return self._physique_cache
 
     def _stamina(self) -> np.ndarray:
         """(2, 11) stamina of whoever is in each slot, rebuilt only when the players on the pitch change."""
@@ -1246,8 +1645,8 @@ class Engine:
         Stopping and playing on gives exactly the match an uninterrupted run gives, so a deepcopy
         of a stopped engine is a save that can be played on many times (B04).
         """
-        while self.half < len(HALVES):
-            period, kicking = HALVES[self.half]
+        while self.half < len(self.halves):
+            period, kicking = self.halves[self.half]
             if not self.in_period:
                 self.period = period
                 self._start_period(kicking)
@@ -1266,15 +1665,111 @@ class Engine:
             self.t += 1
             self.half += 1
             self.in_period = False
+            if self.half == len(self.halves):
+                self._after_full_time(period)
         return True
+
+    def _after_full_time(self, period: int) -> None:
+        """Knock-out ties (REAL-012): level after 90 minutes, two halves of 15 minutes; still level,
+        a penalty shootout. League matches just end."""
+        comp = self.match.context.competition
+        if self.score[0] != self.score[1]:
+            if period > 2:
+                self.decided_by = "extra_time"
+        elif period == 2 and comp.extra_time:
+            self.halves += [(3, 0), (4, 1)]
+        elif comp.penalty_shootout:
+            self._shootout()
+
+    def _shootout(self) -> None:
+        """Penalty shootout (REAL-012, EVT-004): five kicks each, then sudden death, all at one goal.
+        Each kick is a shot in period 5 with its round; none counts in the match statistics. The
+        players wait in the centre circle and the taker walks to the spot, so the frames go on."""
+        self.period, self.period_start = 5, self.t
+        self.possession, self.owner = None, None
+        order = []
+        for k in (0, 1):
+            ids = [i for i, pid in enumerate(self.shapes[k].player_ids) if pid is not None]
+            keepers = [i for i in ids if self.shapes[k].roles[i] == "GK"]
+            order.append(sorted((i for i in ids if i not in keepers), key=lambda i: -self._a(k, i, "penalties")) + keepers)
+        circle = np.array([PITCH_LENGTH / 2, PITCH_WIDTH / 2])
+        for k in (0, 1):
+            self.pos[k] = circle + np.stack([np.cos(np.arange(11) * 0.57 + k * 3.14), np.sin(np.arange(11) * 0.57 + k * 3.14)], 1) * 8
+        goals, taken = [0, 0], [0, 0]
+        first = int(self.rng.integers(2))
+        rnd = 0
+        while True:
+            rnd += 1
+            for k in (first, 1 - first):
+                i = order[k][(rnd - 1) % len(order[k])]
+                goals[k] += self._shootout_kick(k, i, rnd)
+                taken[k] += 1
+                if taken[0] == taken[1] >= 5 and goals[0] != goals[1]:
+                    break
+                if max(taken) <= 5 and (goals[0] + 5 - taken[0] < goals[1] or goals[1] + 5 - taken[1] < goals[0]):
+                    break
+            else:
+                continue
+            break
+        self.shootout, self.decided_by = goals, "penalties"
+        self.t -= 1                                           # the last second with a frame
+        self._emit("period_end", 0, None)
+        self.periods.append(PeriodInfo(period=5, start_t=self.period_start, end_t=self.t))
+        self.t += 1
+
+    def _shootout_kick(self, k: int, i: int, rnd: int) -> int:
+        """One shootout kick: the taker walks to the spot, the other side's keeper to his line."""
+        opp = 1 - k
+        g = self._keeper(opp)
+        spot = np.array([PITCH_LENGTH - 11, PITCH_WIDTH / 2])
+        circle = self.pos.copy()
+        targets = circle.copy()
+        targets[k, i] = spot
+        if g is not None:
+            targets[opp, g] = np.array([PITCH_LENGTH - 0.5, PITCH_WIDTH / 2])
+        active = np.stack([self._active(0), self._active(1)])
+        top = self._physique()[0]
+        for _ in range(25):
+            self.prev = self.pos.copy()
+            self.pos, self.speed = MovementModel.step(self.pos, targets, top, self.fitness, active)
+            self.ball = self.pos[k, i].copy()
+            self._record_frame()
+            self.t += 1
+        self.ball = spot.copy()
+        keeper = np.mean([self._a(opp, g, a) for a in ("diving", "reflexes", "positioning")]) if g is not None else 0.5
+        p = float(np.clip(0.76 + 0.3 * (self._a(k, i, "penalties") - 0.7) - 0.25 * (keeper - 0.88), 0.55, 0.92))
+        r, r2 = self.rng.random(), self.rng.random()
+        outcome = "goal" if r < p else ("saved" if r2 < 0.65 else ("off_target" if r2 < 0.9 else "post"))
+        aim_y = PITCH_WIDTH / 2 + self.rng.uniform(-3.4, 3.4) + (self.rng.choice([-1, 1]) * 5 if outcome == "off_target" else 0)
+        gk_at = self.pos[opp, g].copy() if g is not None else np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
+        shot = self._emit("shot", k, i, location=spot.copy(), end_location=np.array([PITCH_LENGTH, aim_y]),
+                          shot_outcome=outcome, xg=round(p, 4), body_part=f"{self.attr[self._pid(k, i)]['foot']}_foot",
+                          shot_technique="normal", keeper_location=gk_at, shootout_round=rnd,
+                          shot_end_height_m=round(float(self.style_rng.uniform(0.1, 2.3)), 2),
+                          ball_speed_kmh=round(float(np.clip(80 + 40 * self._a(k, i, "shot_power") + self.style_rng.normal(0, 6), 60, 135)), 1))
+        shot["possession_id"], shot["play_pattern"] = None, "penalty"
+        if g is not None and outcome in ("goal", "saved"):
+            ge = self._emit("goalkeeper", opp, g, location=gk_at, keeper_action="goal_conceded" if outcome == "goal" else "shot_saved",
+                            keeper_technique="diving")
+            ge["possession_id"] = None
+            self._link(shot, ge)
+        for _ in range(10):                                   # back to the centre circle
+            self.prev = self.pos.copy()
+            self.pos, self.speed = MovementModel.step(self.pos, circle, top, self.fitness, active)
+            self._record_frame()
+            self.t += 1
+        return int(outcome == "goal")
 
     def run(self) -> SimOutput:
         self.play()
         self._finalise()
         f = self.frames
         final = self.match.model_copy(update={
-            "status": "finished", "clock": self.t - 1, "period": 2, "periods": self.periods,
-            "score": Score(home=self.score[0], away=self.score[1]), "decided_by": "normal_time",
+            "status": "finished", "clock": self.t - 1, "period": self.periods[-1].period, "periods": self.periods,
+            "score": Score(home=self.score[0], away=self.score[1],
+                           home_penalties=self.shootout[0] if self.shootout else None,
+                           away_penalties=self.shootout[1] if self.shootout else None),
+            "decided_by": self.decided_by,
         })
         return SimOutput(final, self.events, np.array(f["t"]), np.array(f["period"]), np.array(f["poss"]),
                          np.array(f["ball"]), f["owner"], f["ids"], np.array(f["pos"]), np.array(f["speed"]),
@@ -1321,8 +1816,8 @@ class Engine:
                         if e["type"] == "pass":
                             passes += 1
                         loc = e.get("end_location") or e["location"]
-                        if self._view(np.array(loc), k)[0] >= 70:
-                            if start_x < PITCH_LENGTH / 2 and e["t"] - start_t <= 10 and passes <= 4 and broke:
+                        if self._view(np.array(loc), k)[0] >= COUNTER_REACH:
+                            if start_x < PITCH_LENGTH / 2 and e["t"] - start_t <= COUNTER_SECONDS and passes <= 4 and broke:
                                 pattern = "counter"
                             break
             for e in evs:

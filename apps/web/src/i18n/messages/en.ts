@@ -107,6 +107,7 @@ export const en = {
   "event.pass": "Pass · {who} → {to}{tick}",
   "event.passSolo": "Pass · {who}{tick}",
   "event.goal": "GOAL · {who}",
+  "event.goalDisallowed": "GOAL ruled out by VAR · {who}",
   "event.shot": "Shot · {who} · xG {xg}",
   "event.red": "Red card · {who}",
   "event.yellow": "Yellow card · {who}",

@@ -132,8 +132,9 @@ def test_qa_003_players_keep_their_place_when_the_shape_changes(planted_out):
     assert jump_share(planted_out) < 1e-4
 
 
-def test_b04_planted_red_card_lands_just_after_the_minute(planted):
-    reds = [e for e in planted if e.type == "card" and e.foul.card == "red"]
+def test_b04_planted_red_card_lands_just_after_the_minute(planted_out, planted):
+    ids = {e["event_id"] for e in planted_out.events if e.get("_plant") is not None}   # not a red the match produced
+    reds = [e for e in planted if e.type == "card" and e.foul.card == "red" and e.event_id in ids]
     assert reds and reds[0].team == "away"
     assert reds[0].clock_label in ("38'", "39'", "40'")               # plants follow the scoreboard clock
 
@@ -174,7 +175,7 @@ def test_b02_demo_fixture_has_the_23_team_stats_for_match_and_halves():
 
 def test_attr_014_015_017_techniques_vary_like_real_matches():
     shots, passes = [], []
-    for seed in (3, 4, 5, 6):
+    for seed in (3, 4, 5, 6, 7, 8):
         events = simulate(build_demo_match(seed)).events_as_models()
         shots += [e for e in events if e.type == "shot" and e.play_pattern != "penalty"]
         passes += [e for e in events if e.type == "pass" and e.pass_type in ("regular", "long_ball", "through_ball")]

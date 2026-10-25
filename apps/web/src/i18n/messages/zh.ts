@@ -107,6 +107,7 @@ export const zh: Messages = {
   "event.pass": "传球 · {who} → {to}{tick}",
   "event.passSolo": "传球 · {who}{tick}",
   "event.goal": "进球 · {who}",
+  "event.goalDisallowed": "VAR 判进球无效 · {who}",
   "event.shot": "射门 · {who} · xG {xg}",
   "event.red": "红牌 · {who}",
   "event.yellow": "黄牌 · {who}",

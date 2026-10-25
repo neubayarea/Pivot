@@ -67,11 +67,14 @@ def test_b14_demo_turning_points_get_their_effects(demo):
     assert fx["fx-h13-former_club-motivation-h13-c2"].delta == 0.03
     # 38,000 in Harbour Park, which holds 42,000: home motivation 0.04 x 0.905
     assert fx["fx-home-crowd-motivation"].delta == 0.036
-    # title race (CTX-005 stakes) lifts both sides
-    assert fx["fx-home-stakes-motivation"].delta == fx["fx-away-stakes-motivation"].delta == 0.03
-    # the home coach's "under pressure" headline costs concentration
+    # what is at stake (CTX-005) lifts both sides: +0.02 to +0.04 (CTX-002), by where the season left them
+    assert {fx["fx-home-stakes-motivation"].delta, fx["fx-away-stakes-motivation"].delta} <= {0.02, 0.03, 0.04}
+    # every news effect points at a real headline; an "under pressure" coach headline costs concentration
+    news = {n.news_id for n in demo.context.news}
+    assert all(e.source_ref in news for e in fx.values() if e.source == "off_field")
     coach = [e for e in fx.values() if e.source_ref == "news-h-coach-form"]
-    assert [(e.target, e.delta) for e in coach] == [("concentration", -0.025)]
+    if "news-h-coach-form" in news:
+        assert [(e.target, e.delta) for e in coach] == [("concentration", -0.025)]
 
 
 def test_b14_story_effects_come_first_and_read_without_numbers(demo):

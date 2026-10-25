@@ -23,8 +23,9 @@ W = {
 SPRINT_MS = 7.0                      # 25.2 km/h
 
 # Per-position adjustment so each group averages about 6.7 over 30 simulated matches
-# (scripts/rating_report.py). Recompute whenever the weights or the simulator change.
-POSITION_OFFSET = {"GK": 0.05, "DF": 0.0, "MF": -0.9, "FW": -0.8}
+# (scripts/rating_report.py). Recompute whenever the weights or the simulator change
+# (last: after B12's simulator, #180).
+POSITION_OFFSET = {"GK": 0.05, "DF": 0.1, "MF": -0.4, "FW": -0.7}
 
 
 def player_match_stats(calc: StatCalculator, up_to_t: int | None = None) -> list[PlayerMatchStats]:

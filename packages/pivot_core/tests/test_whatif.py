@@ -3,7 +3,7 @@
 import pytest
 
 from pivot_core.domain import ScenarioSpec, TeamTactics
-from pivot_core.sim import DEMO_1021, simulate
+from pivot_core.sim import DEMO_1021, build_demo_match, simulate
 from pivot_core.sim.whatif import (
     copy_engine, play_on, prepare, run_arms, run_whatif, save, significant, summarise, wilson,
 )
@@ -84,7 +84,7 @@ def test_b04_playing_on_from_a_save_gives_the_same_match(ref, saved37):
         out = play_on(saved37)
         out._finalise()
         assert strip(out.events) == strip(ref.events)
-        assert out.score == [1, 0]
+        assert out.score == [ref.match.score.home, ref.match.score.away]
     assert saved37.t == 37 * 60
 
 
@@ -99,24 +99,30 @@ def test_b04_reseeded_runs_share_the_history_and_then_differ(ref, saved37):
 # --- B08: scenarios --------------------------------------------------------------------
 
 def test_b08_remove_red_card_keeps_the_player_on(ref, saved37):
-    red = event_id(ref, is_red)
-    base, cf = prepare(saved37, spec("remove_red_card", 37, target_event_id=red, team="away"))
+    red = next(e for e in ref.events if is_red(e) and e.get("_plant") is not None)
+    base, cf = prepare(saved37, spec("remove_red_card", 37, target_event_id=red["event_id"], team="away"))
     b, c = played(base, 4), played(cf, 4)
-    assert [e["player_id"] for e in b.events if is_red(e) and e["t"] >= 37 * 60] == ["a04"]
+    # the planted red goes to whoever is nearest the ball in this rerun, not always the same player
+    reds = [e for e in b.events if is_red(e) and e["t"] >= 37 * 60]
+    assert len(reds) == 1 and reds[0]["team"] == "away" and reds[0].get("_plant") == red["_plant"]
     assert not [e for e in c.events if is_red(e) and e["t"] >= 37 * 60]
-    assert sum(p is not None for p in c.shapes[1].player_ids) == 11
-    assert sum(p is not None for p in b.shapes[1].player_ids) == 10
+    on = sum(p is not None for p in saved37.shapes[1].player_ids)      # a red card earlier on stays
+    assert sum(p is not None for p in c.shapes[1].player_ids) == on
+    assert sum(p is not None for p in b.shapes[1].player_ids) == on - 1
 
 
 def test_b08_cancel_a_natural_substitution_keeps_both_players(ref, saved56):
-    sub = event_id(ref, lambda e: e["type"] == "substitution" and e["team"] == "home")
-    assert sub.startswith("m058")                         # h08 off for h16, a fatigue change
+    first = next(e for e in ref.events if e["type"] == "substitution" and e["team"] == "home")
+    assert first["event_id"].startswith("m058") and first["substitution"]["reason"] == "fatigue"
+    off, on = first["substitution"]["player_off_id"], first["substitution"]["player_on_id"]
     s = save_at(saved56, 58)
-    base, cf = prepare(s, spec("cancel_substitution", 58, target_event_id=sub, team="home"))
-    assert ("h08", "h16") in subs(played(base, 3), 58 * 60)          # forced back into the baseline
+    base, cf = prepare(s, spec("cancel_substitution", 58, target_event_id=first["event_id"], team="home"))
+    assert (off, on) in subs(played(base, 3), 58 * 60)               # forced back into the baseline
     after = played(cf, 25)
-    assert not [p for p in subs(after, 58 * 60) if {"h08", "h16"} & set(p)]
-    assert "h08" in after.shapes[0].player_ids
+    fatigue = [(e["substitution"]["player_off_id"], e["substitution"]["player_on_id"])
+               for e in later(after, 58 * 60, "substitution") if e["substitution"]["reason"] != "injury"]
+    assert not [p for p in fatigue if {off, on} & set(p)]          # an injury may still force a change
+    assert off in after.shapes[0].player_ids
 
 
 def test_b08_cancel_the_planted_63_change_cancels_its_tactics_too(ref, saved64):
@@ -158,7 +164,7 @@ def test_b08_change_formation_and_lineup(saved64):
     sheet = saved64.sheets[1].model_copy(update={"formation": "5-4-1"})
     _, cf = prepare(saved64, spec("change_formation", 64, team="away", team_sheet=sheet))
     assert cf.sheets[1].formation == "5-4-1"
-    assert sum(p is not None for p in cf.shapes[1].player_ids) == 10
+    assert sum(p is not None for p in cf.shapes[1].player_ids) == sum(p is not None for p in saved64.shapes[1].player_ids)
 
     home = saved64.sheets[0]
     off = next(s for s in home.starters if s.role != "GK" and s.player_id in saved64.shapes[0].player_ids)
@@ -169,11 +175,19 @@ def test_b08_change_formation_and_lineup(saved64):
     assert (off.player_id, on) in subs(played(cf, 4), 64 * 60)
 
 
-def test_b08_remove_goal_takes_it_off_the_score(ref, saved37):
-    goal = event_id(ref, lambda e: e["type"] == "shot" and e["shot_outcome"] == "goal")
-    base, cf = prepare(saved37, spec("remove_goal", 56, target_event_id=goal, team="home"))
-    assert base.score == [1, 0] and cf.score == [0, 0]
-    assert base.t == cf.t and cf.restart["kind"] == "goal_kick" and cf.restart["team"] == 1
+def test_b08_remove_goal_takes_it_off_the_score():
+    # the first seed whose match has a goal after 10' (the demo story itself may have none)
+    for seed in range(1, 30):
+        m = build_demo_match(seed)
+        goals = [e for e in simulate(m).events if e["type"] == "shot" and e["shot_outcome"] == "goal" and e["t"] >= 600]
+        if goals:
+            break
+    goal = goals[0]
+    k = 0 if goal["team"] == "home" else 1
+    base, cf = prepare(save(m, 10), spec("remove_goal", goal["t"] // 60 + 1, target_event_id=goal["event_id"],
+                                         team=goal["team"]))
+    assert base.score[k] == cf.score[k] + 1 and base.score[1 - k] == cf.score[1 - k]
+    assert base.t == cf.t and cf.restart["kind"] == "goal_kick" and cf.restart["team"] == 1 - k
 
 
 def test_b08_scenarios_reject_a_wrong_target(ref, saved37, saved64):
@@ -207,7 +221,7 @@ def test_b08_paired_runs_do_not_depend_on_the_pool(ref, saved64):
     pooled = run_arms(starts, 4, 1000, workers=2, progress=lambda d, t: calls.append((d, t)))
     assert alone == pooled
     assert calls[-1] == (8, 8)
-    assert all(h >= 1 for arm in alone for h, _ in arm)                    # Harbour City were 1-0 up at 88'
+    assert all(h >= late.score[0] and a >= late.score[1] for arm in alone for h, a in arm)   # goals stay scored
 
 
 def test_b08_run_whatif_returns_a_sim_result():
