@@ -40,6 +40,7 @@ DEFENDER_ROLES = {"LB", "CB", "RB", "LWB", "RWB"}
 GOAL = (PITCH_LENGTH, PITCH_WIDTH / 2)
 OPEN_PATTERNS = {"open_play", "counter"}
 DECIMALS = {"count": 0, "pct": 1, "xg": 3, "index": 3, "m": 1, "km": 2, "ratio": 2}
+MAX_STEP_M = 12.0                    # QA-003: a longer one-second step is a jump in the data, not running
 
 
 def _other(team: str) -> str:
@@ -49,6 +50,7 @@ def _other(team: str) -> str:
 @dataclass
 class _Frames:
     t: np.ndarray                       # (n,)
+    period: dict[int, int]              # t -> period
     possession: list[str | None]
     owner: list[str | None]
     pos: dict[str, dict[int, tuple[float, float]]]   # player -> t -> (x, y)
@@ -110,7 +112,7 @@ class StatCalculator:
             for p in f.players:
                 pos[p.player_id][f.t] = (p.x, p.y)
         kept = [f for f in frames if f.period != 5]
-        return _Frames(np.array([f.t for f in kept]), [f.possession for f in kept],
+        return _Frames(np.array([f.t for f in kept]), {f.t: f.period for f in kept}, [f.possession for f in kept],
                        [f.ball.owner_id for f in kept], pos)
 
     def _index_possessions(self) -> list[dict]:
@@ -152,6 +154,23 @@ class StatCalculator:
 
     def _view(self, point, team: str) -> tuple[float, float]:
         return attacking_view(point, team)
+
+    def running_steps(self, player_id: str, lo: float = 0, hi: float = math.inf) -> list[float]:
+        """Metres one player ran in each second that starts in [lo, hi), in time order (MET-019).
+
+        A step across half time (the walk back for the kick-off) or one longer than QA-003 allows
+        is a jump between two frames, not running, and is left out.
+        """
+        frames, period = self._frames.pos.get(player_id, {}), self._frames.period
+        out = []
+        for t in sorted(frames):
+            q = frames.get(t + 1)
+            if q is None or not lo <= t < hi or period[t] != period[t + 1]:
+                continue
+            d = math.dist(frames[t], q)
+            if d <= MAX_STEP_M:
+                out.append(d)
+        return out
 
     def _players_at(self, team: str, t: int) -> dict[str, tuple[float, float]]:
         return {pid: frames[t] for pid, frames in self._frames.pos.items()
@@ -325,14 +344,12 @@ class StatCalculator:
     def _m_distance_covered_km(self, ref: StatRef) -> float:
         total, steps = 0.0, 0
         lo, hi = max(ref.window[0] * 60, self._span[0]), min(ref.window[1] * 60, self._span[1])
-        for pid, frames in self._frames.pos.items():
+        for pid in self._frames.pos:
             if self.team_of.get(pid) != ref.team or (ref.player_id and pid != ref.player_id):
                 continue
-            for t, p in frames.items():
-                q = frames.get(t + 1)
-                if q is not None and lo <= t < hi:
-                    total += math.dist(p, q)
-                    steps += 1
+            run = self.running_steps(pid, lo, hi)
+            total += sum(run)
+            steps += len(run)
         if not steps:
             raise NoData("no tracking frames for these players in this window")
         return total / 1000

@@ -224,6 +224,14 @@ def test_met_019_distance_covered_adds_up_frame_steps():
     assert ask(c, "distance_covered_km", window=(0, 1)) == 0.3        # only steps that start in minute 0
 
 
+def test_met_019_half_time_walk_back_and_jumps_are_not_running():
+    xs = {2697: 10, 2698: 15, 2699: 20, 2700: 60, 2701: 65, 2702: 85, 2703: 90}   # 2700 starts period 2
+    fs = [frame(t, "home", {"h07": (x, 34)}) for t, x in xs.items()]
+    c = calc(frames=fs)
+    assert ask(c, "distance_covered_km", player="h07") == 0.02           # 4 steps of 5 m; 40 m and 20 m left out
+    assert c.running_steps("h07") == [5.0, 5.0, 5.0, 5.0]
+
+
 @pytest.mark.parametrize("start, end, expected", [
     ((20, 34), (49, 34), False), ((20, 34), (51, 34), True),     # own half: 30 m
     ((45, 34), (61, 34), True), ((45, 34), (59, 34), False),     # crossing halfway: 15 m
