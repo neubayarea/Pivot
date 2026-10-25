@@ -88,7 +88,7 @@ td b{color:var(--pitch)}
   <p class="eyebrow">Pivot · 给队友的一页图解</p>
   <h1>Pivot 是怎么运转的？</h1>
   <p class="lead">我们先造一场假比赛，让电脑<b>找出比赛在哪一刻变了</b>，再让 AI <b>用证据讲清楚为什么</b>，最后让你问一句<b>「如果当时不是这样呢？」</b></p>
-  <p class="small">四张图看完就懂。10/25 已按实际上线的样子更新：网站跑在一台服务器上，只有 AI 模型和 AI 结果的档案柜在微软云上。工程细节在 <a href="https://claude.ai/artifact/7YrS4ZZZWHFkjVZ5ckYLJA">Pivot 架构设计</a>。</p>
+  <p class="small">四张图看完就懂。10/25 已按实际上线的样子更新：网站跑在一台服务器上，AI 模型、AI 结果的档案柜和比赛文件的仓库在微软云上。工程细节在 <a href="https://claude.ai/artifact/7YrS4ZZZWHFkjVZ5ckYLJA">Pivot 架构设计</a>。</p>
 </header>
 
 <!-- ============ 图 1：整条流水线 ============ -->
@@ -96,14 +96,14 @@ td b{color:var(--pitch)}
   <h2>整条流水线</h2>
   <figure>
     <div class="fig-scroll">
-    <svg class="dia" viewBox="0 0 1040 570" role="img" aria-label="比赛动作从模拟球场经传送带到势头计，势头计发现转折后递任务单给 AI 解说团；这些都在甲骨文云服务器上的同一个程序里。解说团向 Azure 上的 AI 大脑借用模型写解释，并把结果存进 Azure 的档案柜；通过核对的解释经广播喇叭推到浏览器。模拟球场的比赛文件存在服务器硬盘上。在浏览器里点假如，会进入服务器上的推演实验室，结果也存进档案柜。">
+    <svg class="dia" viewBox="0 0 1040 570" role="img" aria-label="比赛动作从模拟球场经传送带到势头计，势头计发现转折后递任务单给 AI 解说团；这些都在甲骨文云服务器上的同一个程序里。解说团向 Azure 上的 AI 大脑借用模型写解释，并把结果存进 Azure 的档案柜；通过核对的解释经广播喇叭推到浏览器。模拟球场的比赛文件存在 Azure 的仓库里，服务器硬盘只当缓存。在浏览器里点假如，会进入服务器上的推演实验室，结果也存进档案柜。">
       <defs>
         <marker id="f1a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
       </defs>
 
       <!-- 微软 Azure -->
       <rect class="frame" x="300" y="14" width="520" height="176" rx="18"/>
-      <text class="frame-t start" x="316" y="38">微软 Azure 云（只放两样东西）</text>
+      <text class="frame-t start" x="316" y="38">微软 Azure 云</text>
 
       <rect class="card" x="345" y="56" width="64" height="78" rx="4"/>
       <line class="ink" x1="345" y1="82" x2="409" y2="82"/><line class="ink" x1="345" y1="108" x2="409" y2="108"/>
@@ -191,7 +191,7 @@ td b{color:var(--pitch)}
       <rect class="card" x="50" y="452" width="140" height="78" rx="8"/>
       <line class="grid" x1="62" y1="472" x2="178" y2="472"/>
       <circle class="fgfill" cx="170" cy="462" r="3"/>
-      <text class="t" x="120" y="494">服务器硬盘</text>
+      <text class="t" x="120" y="494">Blob 仓库</text>
       <text class="s" x="120" y="516">比赛文件，每场约 1 MB</text>
 
       <!-- 推演实验室 -->
@@ -211,7 +211,7 @@ td b{color:var(--pitch)}
       <text class="l start" x="950" y="470">结果</text>
     </svg>
     </div>
-    <figcaption>比赛动作从左往右流，都在服务器上的同一个程序里：球场造出动作，势头计发现转折，AI 解说团写好解释并核对数字，推到浏览器。只有两样东西在微软云上：AI 大脑（模型）和档案柜（AI 写的结果）。在浏览器里点「假如」，比赛会被送进实验室重踢。</figcaption>
+    <figcaption>比赛动作从左往右流，都在服务器上的同一个程序里：球场造出动作，势头计发现转折，AI 解说团写好解释并核对数字，推到浏览器。微软云上有三样东西：AI 大脑（模型）、档案柜（AI 写的结果）和仓库（比赛文件）。在浏览器里点「假如」，比赛会被送进实验室重踢。</figcaption>
     <div class="who">
       <span><i>A</i>平台：传送带、势头计、档案柜、喇叭、上云</span>
       <span><i>B</i>模拟：球场、实验室里的重踢</span>
@@ -394,7 +394,7 @@ td b{color:var(--pitch)}
       <tr><td>Agent</td><td><b>解说团里的一个人</b></td><td>判定员、写稿员、核对员，各管一件事</td></tr>
       <tr><td>Foundry</td><td><b>AI 大脑</b></td><td>我们向微软借用的 AI 模型（gpt-4.1-mini），附带考试和监控工具</td></tr>
       <tr><td>Cosmos DB</td><td><b>档案柜</b></td><td>AI 写的转折点、解释、工作记录和「假如」的结果放在这里。重启后直接读回，不用再让 AI 重写</td></tr>
-      <tr><td>服务器硬盘</td><td><b>比赛文件</b></td><td>模拟比赛的事件和每秒的跑位放在服务器硬盘上，不进 GitHub</td></tr>
+      <tr><td>Blob Storage</td><td><b>仓库</b></td><td>模拟比赛的事件和每秒的跑位放在 Azure 的仓库里，不进 GitHub。服务器先看自己硬盘上有没有，没有就去仓库取，仓库连不上就自己现生成。队友改了模拟规则后，在自己电脑上重新生成并上传一批</td></tr>
       <tr><td>Web PubSub（原计划）</td><td><b>广播喇叭</b></td><td>有新消息，就同时推到所有人的屏幕。实际上线时用程序自带的 WebSocket</td></tr>
       <tr><td>Dokploy</td><td><b>工位</b></td><td>我们的程序干活的地方：甲骨文云上的一台服务器。推送到 main 就会自动更新</td></tr>
     </tbody>
