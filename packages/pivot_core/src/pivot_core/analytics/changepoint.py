@@ -1,7 +1,8 @@
 """Momentum alarm (B06, ADR-0010): two-sided CUSUM on the per-minute momentum series.
 
-Defaults give about 3.8 candidates per simulated match (20 matches, scripts/alarm_report.py);
-the Judge then keeps the real ones. B09 tunes them further.
+Defaults give about 2.5 candidates per simulated match, almost every match between 1 and 3,
+about three in four with a goal, card, substitution or VAR call in their window (B09, 40
+matches on the B12 simulator); the Judge then keeps the real ones.
 
 How it works, minute by minute within each period:
 
@@ -40,15 +41,16 @@ KEY_TYPES = {"substitution", "tactical_shift", "card", "var_review"}
 @dataclass
 class DetectorParams:
     k: float = 0.1                   # drift: deviations smaller than this never accumulate
-    h: float = 1.2                   # alarm threshold on the running sum
+    h: float = 1.5                   # alarm threshold on the running sum (B09)
     baseline_min: int = 10           # minutes in the baseline mean
     confirm_min: int = 5             # the new level must hold this long (ADR-0010)
     min_swing: float = 0.3           # minimum |mean after - mean before|
     min_side_min: int = 3            # minutes of the same period needed on each side of the change
     restart_min: int = 10            # after a restart, a climb back to the pre-break leader is not a turn
     restart_lead: float = 0.2        # ... when that side's momentum before the break was at least this
-    min_gap_min: int = 8             # minutes between two candidates (ADR-0010)
+    min_gap_min: int = 12            # minutes between two candidates (ADR-0010; B09: 8 -> 12)
     max_per_match: int = 5           # ADR-0010
+    warmup_min: int = 10             # none in the first minutes of the match: no baseline yet (B09)
     window_before: int = 8           # evidence window handed to the Judge: [minute - 8, minute + 5)
     window_after: int = 5
 
@@ -174,6 +176,8 @@ class PivotDetector:
             if self._climbing_back(c, before, after):
                 continue
             if self.emitted and c.minute - self.emitted[-1].minute < p.min_gap_min:
+                continue
+            if c.minute < p.warmup_min:
                 continue
             if len(self.emitted) >= p.max_per_match:
                 continue
