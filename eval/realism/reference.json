@@ -70,6 +70,13 @@
         0.8
       ],
       "source": "B12 acceptance; long-run shootout average"
+    },
+    "red_cards": {
+      "range": [
+        0.05,
+        0.15
+      ],
+      "source": "PRD 6.3 target 0-0.15; top leagues about 0.1"
     }
   },
   "wc2022": {

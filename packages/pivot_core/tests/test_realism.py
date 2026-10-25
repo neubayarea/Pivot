@@ -1,11 +1,13 @@
-"""B12 realism rules: game state, team strength, formations. Test names carry the definition they cover."""
+"""B12 realism rules (docs/sim-realism.md). Test names carry the rule they cover."""
+
+import copy
 
 import numpy as np
 import pytest
 
 from pivot_core.domain.common import PITCH_LENGTH
 from pivot_core.sim import build_demo_match, simulate
-from pivot_core.sim.engine import Engine, xg_model
+from pivot_core.sim.engine import Engine, Params, xg_model
 from pivot_core.sim.movement import MovementModel, TeamShape, to_view
 
 
@@ -144,3 +146,131 @@ def test_evt_009_012_cut_out_passes_are_interceptions_or_recoveries(outs):
     for out in outs:
         types = [e["type"] for e in out.events]
         assert types.count("interception") > 5 and types.count("ball_recovery") > types.count("interception")
+
+
+# --- fatigue, injuries, VAR, extra time, referees (REAL-009 to REAL-013) ----------------
+
+def engine_on_ball(seed: int = 21, params: Params | None = None) -> Engine:
+    """An engine stopped at a second when somebody has the ball."""
+    e = Engine(build_demo_match(seed), seed, params)
+    e.play(until_t=300)
+    while e.owner is None or e.dead > 0 or e.flight is not None:
+        e.play(until_t=e.t + 1)
+    return e
+
+
+def test_real_009_tired_legs_pass_worse():
+    e = engine_on_ball()
+    fresh, tired = copy.deepcopy(e), copy.deepcopy(e)
+    fresh.fitness[:], tired.fitness[:] = 1.0, 0.6
+    k, i = e.owner
+    for eng in (fresh, tired):
+        eng._pass(k, i, eng._view(eng.ball, k), under=False)
+    last = [next(x for x in reversed(eng.events) if x["type"] == "pass") for eng in (fresh, tired)]
+    assert last[1]["success_prob"] < last[0]["success_prob"]
+
+
+def test_real_010_a_serious_injury_means_a_substitution_at_the_next_stoppage():
+    e = engine_on_ball()
+    k = 0
+    for i in range(1, 11):                                    # hurt outfield players until one cannot go on
+        e._injure(k, i, "contact")
+        if e.injured:
+            break
+    assert e.injured, "no injury worse than a knock in ten tries"
+    _, pid = e.injured[0]
+    hurt = [x for x in e.events if x["type"] == "injury" and x["player_id"] == pid][-1]
+    assert hurt["injury"]["can_continue"] is False and hurt["injury"]["expected_days_out"] > 0
+    e.dead = 10
+    e._maybe_subs()
+    sub = [x for x in e.events if x["type"] == "substitution"][-1]
+    assert sub["substitution"]["player_off_id"] == pid and sub["substitution"]["reason"] == "injury"
+    assert pid not in e.shapes[k].player_ids
+
+
+def test_real_010_knocks_are_common_and_players_play_on(outs):
+    injuries = [x for out in outs for x in out.events if x["type"] == "injury"]
+    assert injuries and sum(x["injury"]["can_continue"] for x in injuries) >= len(injuries) / 2
+
+
+def test_real_011_var_can_overturn_a_penalty():
+    e = engine_on_ball(params=Params(var_pen_overturn=1.0))
+    k, i = e.owner
+    j = e._nearest(1 - k, e.ball, outfield=True)
+    e._foul(1 - k, j, k, i, np.array([100.0, 34.0]))           # a foul in the box
+    rev = [x for x in e.events if x["type"] == "var_review"][-1]
+    foul = [x for x in e.events if x["type"] == "foul"][-1]
+    assert rev["var"]["review_of"] == "penalty" and rev["var"]["decision"] == "overturned"
+    assert rev["var"]["reviewed_event_id"] == foul["event_id"] and foul["event_id"] in rev["related_event_ids"]
+    assert e.restart["kind"] == "goal_kick" and e.restart["team"] == 1 - k
+
+
+def test_real_011_var_reviews_point_at_real_events(outs):
+    for out in outs:
+        ids = {x["event_id"] for x in out.events}
+        for rev in (x for x in out.events if x["type"] == "var_review"):
+            assert rev["var"]["reviewed_event_id"] in ids
+
+
+def knockout(seed: int, extra_time: bool = True):
+    m = build_demo_match(seed)
+    comp = m.context.competition.model_copy(update={"stage": "quarter_final", "extra_time": extra_time,
+                                                    "penalty_shootout": True})
+    return m.model_copy(update={"context": m.context.model_copy(update={"competition": comp})})
+
+
+def level_at_80(match) -> Engine:
+    e = Engine(match, match.seed)
+    e.play(until_t=80 * 60)
+    e.score = [1, 1]
+    return e
+
+
+def test_real_012_a_level_knockout_tie_goes_to_extra_time():
+    for seed in range(1, 15):
+        e = level_at_80(knockout(seed))
+        out = e.run()
+        if e.score[0] == e.score[1] or out.match.decided_by == "extra_time":
+            break
+    assert [p.period for p in out.match.periods][:4] == [1, 2, 3, 4]
+    assert out.match.decided_by in ("extra_time", "penalties")
+    assert np.array_equal(out.frames_t, np.arange(out.frames_t[0], out.frames_t[-1] + 1))   # QA-002 still holds
+
+
+def test_real_012_a_shootout_decides_a_level_tie():
+    for seed in range(1, 15):
+        e = level_at_80(knockout(seed, extra_time=False))
+        out = e.run()
+        if out.match.decided_by == "penalties":
+            break
+    s = out.match.score
+    assert s.home == s.away and s.home_penalties != s.away_penalties
+    kicks = [x for x in out.events if x["period"] == 5 and x["type"] == "shot"]
+    assert len(kicks) >= 6 and all(x["play_pattern"] == "penalty" and x["shootout_round"] for x in kicks)
+    assert sum(x["shot_outcome"] == "goal" for x in kicks if x["team"] == "home") == s.home_penalties
+    assert [p.period for p in out.match.periods][-1] == 5
+    assert np.array_equal(out.frames_t, np.arange(out.frames_t[0], out.frames_t[-1] + 1))
+    out.events_as_models()                                       # every kick follows the data format
+
+
+def test_real_012_shootout_kicks_go_in_about_three_times_in_four():
+    e = engine_on_ball()
+    e.record_frames = False
+    scored = sum(e._shootout_kick(n % 2, 1 + n % 10, 1 + n // 2) for n in range(400))
+    assert 0.7 <= scored / 400 <= 0.85
+
+
+def test_real_013_a_strict_referee_shows_more_cards():
+    cards = {}
+    for strict in (30, 90):
+        n = 0
+        for seed in (31, 32, 33):
+            m = build_demo_match(seed)
+            ref = m.context.referee.model_copy(update={"strictness": strict, "card_tendency": strict})
+            m = m.model_copy(update={"context": m.context.model_copy(update={"referee": ref})})
+            e = Engine(m, seed)
+            e.record_frames = False
+            e.play()
+            n += sum(x["type"] == "card" for x in e.events)
+        cards[strict] = n
+    assert cards[90] > cards[30] * 1.5
