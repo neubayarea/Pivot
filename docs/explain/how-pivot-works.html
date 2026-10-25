@@ -88,7 +88,7 @@ td b{color:var(--pitch)}
   <p class="eyebrow">Pivot · 给队友的一页图解</p>
   <h1>Pivot 是怎么运转的？</h1>
   <p class="lead">我们先造一场假比赛，让电脑<b>找出比赛在哪一刻变了</b>，再让 AI <b>用证据讲清楚为什么</b>，最后让你问一句<b>「如果当时不是这样呢？」</b></p>
-  <p class="small">四张图看完就懂。工程细节在 <a href="https://claude.ai/artifact/7YrS4ZZZWHFkjVZ5ckYLJA">Pivot 架构设计</a>。</p>
+  <p class="small">四张图看完就懂。10/25 已按实际上线的样子更新：网站跑在一台服务器上，只有 AI 模型和 AI 结果的档案柜在微软云上。工程细节在 <a href="https://claude.ai/artifact/7YrS4ZZZWHFkjVZ5ckYLJA">Pivot 架构设计</a>。</p>
 </header>
 
 <!-- ============ 图 1：整条流水线 ============ -->
@@ -96,109 +96,126 @@ td b{color:var(--pitch)}
   <h2>整条流水线</h2>
   <figure>
     <div class="fig-scroll">
-    <svg class="dia" viewBox="0 0 1040 500" role="img" aria-label="比赛动作从模拟球场经传送带到势头计，势头计发现转折后递任务单给 AI 解说团，解说团借用 Foundry 的 AI 大脑写解释并核对，通过广播喇叭推到屏幕；在屏幕上点假如会进入推演实验室；势头计和解说团的结果都存进档案柜；全部运行在微软 Azure 云上。">
+    <svg class="dia" viewBox="0 0 1040 570" role="img" aria-label="比赛动作从模拟球场经传送带到势头计，势头计发现转折后递任务单给 AI 解说团；这些都在甲骨文云服务器上的同一个程序里。解说团向 Azure 上的 AI 大脑借用模型写解释，并把结果存进 Azure 的档案柜；通过核对的解释经广播喇叭推到浏览器。模拟球场的比赛文件存在服务器硬盘上。在浏览器里点假如，会进入服务器上的推演实验室，结果也存进档案柜。">
       <defs>
         <marker id="f1a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
       </defs>
-      <rect class="frame" x="12" y="46" width="1016" height="440" rx="18"/>
-      <text class="frame-t start" x="28" y="34">全部跑在微软 Azure 云上</text>
 
-      <!-- AI 大脑 -->
-      <circle class="cloud" cx="616" cy="96" r="20"/><circle class="cloud" cx="642" cy="84" r="26"/><circle class="cloud" cx="668" cy="96" r="20"/>
-      <rect class="cloud" x="596" y="96" width="92" height="22" rx="11"/>
-      <text class="cloud-t" x="642" y="100">AI 大脑</text>
-      <text class="tiny" x="642" y="134">Foundry</text>
-      <line class="dash" x1="642" y1="140" x2="642" y2="158" marker-end="url(#f1a)"/>
+      <!-- 微软 Azure -->
+      <rect class="frame" x="300" y="14" width="520" height="176" rx="18"/>
+      <text class="frame-t start" x="316" y="38">微软 Azure 云（只放两样东西）</text>
+
+      <rect class="card" x="345" y="56" width="64" height="78" rx="4"/>
+      <line class="ink" x1="345" y1="82" x2="409" y2="82"/><line class="ink" x1="345" y1="108" x2="409" y2="108"/>
+      <rect class="fgfill" x="369" y="66" width="16" height="4" rx="2"/><rect class="fgfill" x="369" y="92" width="16" height="4" rx="2"/><rect class="fgfill" x="369" y="118" width="16" height="4" rx="2"/>
+      <text class="t" x="377" y="158">档案柜</text>
+      <text class="s" x="377" y="178">Cosmos DB 免费档</text>
+
+      <circle class="cloud" cx="616" cy="92" r="20"/><circle class="cloud" cx="642" cy="80" r="26"/><circle class="cloud" cx="668" cy="92" r="20"/>
+      <rect class="cloud" x="596" y="92" width="92" height="22" rx="11"/>
+      <text class="cloud-t" x="642" y="96">AI 大脑</text>
+      <text class="t" x="642" y="146">借用微软的 AI 模型</text>
+      <text class="s" x="642" y="168">Azure AI Foundry · gpt-4.1-mini</text>
+
+      <!-- 甲骨文服务器 -->
+      <rect class="frame" x="12" y="222" width="800" height="336" rx="18"/>
+      <text class="frame-t start" x="28" y="246">甲骨文云的一台服务器：整个网站是一个程序</text>
 
       <!-- 模拟球场 -->
-      <rect class="soft" x="50" y="146" width="140" height="90" rx="6"/>
-      <line class="pline" x1="120" y1="146" x2="120" y2="236"/>
-      <circle class="pline" cx="120" cy="191" r="15"/>
-      <rect class="pline" x="50" y="170" width="22" height="42"/>
-      <rect class="pline" x="168" y="170" width="22" height="42"/>
-      <circle class="plum" cx="94" cy="176" r="5"/><circle class="plum" cx="146" cy="208" r="5"/><circle class="fgfill" cx="152" cy="180" r="4.5"/>
-      <text class="t" x="120" y="268">模拟球场</text>
-      <text class="s" x="120" y="290">按规则踢出一场假比赛</text>
-      <circle class="badge" cx="190" cy="146" r="13"/><text class="badge-t" x="190" y="151">B</text>
+      <rect class="soft" x="50" y="262" width="140" height="90" rx="6"/>
+      <line class="pline" x1="120" y1="262" x2="120" y2="352"/>
+      <circle class="pline" cx="120" cy="307" r="15"/>
+      <rect class="pline" x="50" y="286" width="22" height="42"/>
+      <rect class="pline" x="168" y="286" width="22" height="42"/>
+      <circle class="plum" cx="94" cy="292" r="5"/><circle class="plum" cx="146" cy="324" r="5"/><circle class="fgfill" cx="152" cy="296" r="4.5"/>
+      <text class="t" x="120" y="384">模拟球场</text>
+      <text class="s" x="120" y="404">按规则踢出一场假比赛</text>
+      <circle class="badge" cx="190" cy="262" r="13"/><text class="badge-t" x="190" y="267">B</text>
 
       <!-- 传送带 -->
-      <line class="ink" x1="204" y1="191" x2="290" y2="191" marker-end="url(#f1a)"/>
-      <rect class="plum" x="214" y="174" width="12" height="12" rx="2"/><rect class="plum" x="234" y="174" width="12" height="12" rx="2"/><rect class="plum" x="254" y="174" width="12" height="12" rx="2"/>
-      <text class="l" x="247" y="162">一条条动作</text>
-      <text class="tiny" x="247" y="214">传送带</text>
+      <line class="ink" x1="204" y1="307" x2="290" y2="307" marker-end="url(#f1a)"/>
+      <rect class="plum" x="214" y="290" width="12" height="12" rx="2"/><rect class="plum" x="234" y="290" width="12" height="12" rx="2"/><rect class="plum" x="254" y="290" width="12" height="12" rx="2"/>
+      <text class="l" x="247" y="278">一条条动作</text>
+      <text class="tiny" x="247" y="330">传送带</text>
 
       <!-- 势头计 -->
-      <rect class="card" x="305" y="150" width="130" height="82" rx="6"/>
-      <line class="grid" x1="315" y1="191" x2="425" y2="191"/>
-      <polyline class="accline" points="315,191 330,180 345,172 360,168 375,175 390,194 405,210 420,216"/>
-      <circle class="plum" cx="391" cy="196" r="6"/>
-      <text class="t" x="370" y="268">势头计</text>
-      <text class="s" x="370" y="290">看比赛往哪边倒</text>
-      <circle class="badge" cx="435" cy="150" r="13"/><text class="badge-t" x="435" y="155">A</text>
+      <rect class="card" x="305" y="266" width="130" height="82" rx="6"/>
+      <line class="grid" x1="315" y1="307" x2="425" y2="307"/>
+      <polyline class="accline" points="315,307 330,296 345,288 360,284 375,291 390,310 405,326 420,332"/>
+      <circle class="plum" cx="391" cy="312" r="6"/>
+      <text class="t" x="370" y="384">势头计</text>
+      <text class="s" x="370" y="404">看比赛往哪边倒</text>
+      <circle class="badge" cx="435" cy="266" r="13"/><text class="badge-t" x="435" y="271">A</text>
 
       <!-- 任务单 -->
-      <line class="ink" x1="448" y1="191" x2="554" y2="191" marker-end="url(#f1a)"/>
-      <rect class="card" x="486" y="179" width="32" height="24" rx="3"/>
-      <line class="grid" x1="492" y1="187" x2="512" y2="187"/><line class="grid" x1="492" y1="195" x2="506" y2="195"/>
-      <text class="l" x="502" y="166">发现转折</text>
-      <text class="tiny" x="502" y="222">递一张任务单</text>
+      <line class="ink" x1="448" y1="307" x2="554" y2="307" marker-end="url(#f1a)"/>
+      <rect class="card" x="486" y="295" width="32" height="24" rx="3"/>
+      <line class="grid" x1="492" y1="303" x2="512" y2="303"/><line class="grid" x1="492" y1="311" x2="506" y2="311"/>
+      <text class="l" x="502" y="282">发现转折</text>
+      <text class="tiny" x="502" y="338">递一张任务单</text>
 
       <!-- AI 解说团 -->
-      <circle class="soft" cx="597" cy="178" r="13"/><path class="soft" d="M577 220 q20 -34 40 0 z"/>
-      <circle class="soft" cx="640" cy="178" r="13"/><path class="soft" d="M620 220 q20 -34 40 0 z"/>
-      <circle class="soft" cx="683" cy="178" r="13"/><path class="soft" d="M663 220 q20 -34 40 0 z"/>
-      <text class="tiny" x="597" y="238">判定</text><text class="tiny" x="640" y="238">写稿</text><text class="tiny" x="683" y="238">核对</text>
-      <text class="t" x="640" y="268">AI 解说团</text>
-      <text class="s" x="640" y="290">判定 · 写稿 · 核对数字</text>
-      <circle class="badge" cx="708" cy="154" r="13"/><text class="badge-t" x="708" y="159">D</text>
+      <circle class="soft" cx="597" cy="294" r="13"/><path class="soft" d="M577 336 q20 -34 40 0 z"/>
+      <circle class="soft" cx="640" cy="294" r="13"/><path class="soft" d="M620 336 q20 -34 40 0 z"/>
+      <circle class="soft" cx="683" cy="294" r="13"/><path class="soft" d="M663 336 q20 -34 40 0 z"/>
+      <text class="tiny" x="597" y="354">判定</text><text class="tiny" x="640" y="354">写稿</text><text class="tiny" x="683" y="354">核对</text>
+      <text class="t" x="640" y="384">AI 解说团</text>
+      <text class="s" x="640" y="404">判定 · 写稿 · 核对数字</text>
+      <circle class="badge" cx="708" cy="270" r="13"/><text class="badge-t" x="708" y="275">D</text>
+
+      <!-- 解说团 <-> AI 大脑 / 档案柜 -->
+      <line class="dash" x1="640" y1="194" x2="640" y2="256" marker-start="url(#f1a)" marker-end="url(#f1a)"/>
+      <text class="tiny start" x="652" y="218">借用模型</text>
+      <path class="dash" d="M592 262 C 520 236 470 150 420 104" marker-end="url(#f1a)"/>
+      <text class="tiny end" x="516" y="240">存结果，重启后读回</text>
 
       <!-- 广播喇叭 -->
-      <line class="ink" x1="722" y1="191" x2="830" y2="191" marker-end="url(#f1a)"/>
-      <rect class="card" x="760" y="184" width="9" height="15" rx="1"/>
-      <path class="card" d="M769 184 L790 172 L790 211 L769 199 Z"/>
-      <text class="l" x="776" y="160">通过核对的解释</text>
-      <text class="tiny" x="776" y="232">广播喇叭</text>
+      <line class="ink" x1="722" y1="307" x2="830" y2="307" marker-end="url(#f1a)"/>
+      <rect class="card" x="760" y="300" width="9" height="15" rx="1"/>
+      <path class="card" d="M769 300 L790 288 L790 327 L769 315 Z"/>
+      <text class="l" x="776" y="276">通过核对的解释</text>
+      <text class="tiny" x="776" y="348">广播喇叭</text>
 
-      <!-- 屏幕 -->
-      <rect class="card" x="845" y="148" width="130" height="84" rx="6"/>
-      <line class="ink" x1="910" y1="232" x2="910" y2="244"/><line class="ink" x1="888" y1="244" x2="932" y2="244"/>
-      <polyline class="accline" points="855,200 875,190 895,194 915,176 935,186"/>
-      <rect class="plumsoft" x="903" y="198" width="62" height="24" rx="4"/>
-      <text class="t" x="910" y="270">屏幕</text>
-      <text class="s" x="910" y="290">你看到的界面</text>
-      <circle class="badge" cx="975" cy="148" r="13"/><text class="badge-t" x="975" y="153">C</text>
+      <!-- 浏览器 -->
+      <rect class="card" x="845" y="264" width="130" height="84" rx="6"/>
+      <line class="ink" x1="910" y1="348" x2="910" y2="360"/><line class="ink" x1="888" y1="360" x2="932" y2="360"/>
+      <polyline class="accline" points="855,316 875,306 895,310 915,292 935,302"/>
+      <rect class="plumsoft" x="903" y="314" width="62" height="24" rx="4"/>
+      <text class="t" x="910" y="386">浏览器</text>
+      <text class="s" x="910" y="406">你看到的界面</text>
+      <circle class="badge" cx="975" cy="264" r="13"/><text class="badge-t" x="975" y="269">C</text>
 
-      <!-- 档案柜 -->
-      <path class="dash" d="M370 300 L476 346" marker-end="url(#f1a)"/>
-      <path class="dash" d="M640 300 L534 346" marker-end="url(#f1a)"/>
-      <text class="tiny end" x="412" y="338">存档</text>
-      <text class="tiny start" x="598" y="338">存档</text>
-      <rect class="card" x="470" y="350" width="70" height="84" rx="4"/>
-      <line class="ink" x1="470" y1="378" x2="540" y2="378"/><line class="ink" x1="470" y1="406" x2="540" y2="406"/>
-      <rect class="fgfill" x="498" y="361" width="14" height="4" rx="2"/><rect class="fgfill" x="498" y="389" width="14" height="4" rx="2"/><rect class="fgfill" x="498" y="417" width="14" height="4" rx="2"/>
-      <text class="t" x="505" y="458">档案柜</text>
-      <text class="s" x="505" y="478">每场比赛一个抽屉</text>
+      <!-- 服务器硬盘 -->
+      <line class="dash" x1="120" y1="414" x2="120" y2="448" marker-start="url(#f1a)" marker-end="url(#f1a)"/>
+      <text class="tiny start" x="132" y="436">存档，重启后读回</text>
+      <rect class="card" x="50" y="452" width="140" height="78" rx="8"/>
+      <line class="grid" x1="62" y1="472" x2="178" y2="472"/>
+      <circle class="fgfill" cx="170" cy="462" r="3"/>
+      <text class="t" x="120" y="494">服务器硬盘</text>
+      <text class="s" x="120" y="516">比赛文件，每场约 1 MB</text>
 
       <!-- 推演实验室 -->
-      <line class="ink" x1="888" y1="300" x2="888" y2="348" marker-end="url(#f1a)"/>
-      <line class="ink" x1="932" y1="350" x2="932" y2="302" marker-end="url(#f1a)"/>
-      <text class="l end" x="878" y="330">点「假如」</text>
-      <text class="l start" x="942" y="330">结果</text>
-      <circle class="fgfill" cx="868" cy="392" r="5"/>
-      <path class="ink" d="M868 392 C 888 392 892 368 912 368 L 942 368"/>
-      <path class="ink" d="M868 392 C 888 392 892 416 912 416 L 942 416"/>
-      <rect class="acc" x="946" y="361" width="22" height="14" rx="2"/>
-      <rect class="acc" x="946" y="409" width="36" height="14" rx="2"/>
-      <text class="t" x="910" y="458">推演实验室</text>
-      <text class="s" x="910" y="478">同一个球场，重踢 1,000 次</text>
-      <rect class="badge" x="806" y="380" width="44" height="24" rx="12"/><text class="badge-t" x="828" y="397">B·D</text>
+      <rect class="card" x="470" y="452" width="320" height="78" rx="8"/>
+      <circle class="fgfill" cx="500" cy="491" r="5"/>
+      <path class="ink" d="M500 491 C 516 491 520 474 536 474 L 556 474"/>
+      <path class="ink" d="M500 491 C 516 491 520 508 536 508 L 556 508"/>
+      <rect class="acc" x="560" y="468" width="22" height="12"/>
+      <rect class="acc" x="560" y="502" width="36" height="12"/>
+      <text class="t" x="706" y="486">推演实验室</text>
+      <text class="s" x="706" y="508">重踢很多次，结果存档案柜</text>
+
+      <!-- 点「假如」 -->
+      <path class="ink" d="M900 420 L900 478 L796 478" marker-end="url(#f1a)"/>
+      <text class="l start" x="912" y="452">点「假如」</text>
+      <path class="ink" d="M796 504 L940 504 L940 422" marker-end="url(#f1a)"/>
+      <text class="l start" x="950" y="470">结果</text>
     </svg>
     </div>
-    <figcaption>比赛动作从左往右流：球场造出动作，势头计发现转折，AI 解说团写好解释并核对数字，最后推到屏幕上。在屏幕上点「假如」，比赛会被送进实验室重踢。</figcaption>
+    <figcaption>比赛动作从左往右流，都在服务器上的同一个程序里：球场造出动作，势头计发现转折，AI 解说团写好解释并核对数字，推到浏览器。只有两样东西在微软云上：AI 大脑（模型）和档案柜（AI 写的结果）。在浏览器里点「假如」，比赛会被送进实验室重踢。</figcaption>
     <div class="who">
       <span><i>A</i>平台：传送带、势头计、档案柜、喇叭、上云</span>
       <span><i>B</i>模拟：球场、实验室里的重踢</span>
-      <span><i>C</i>前端：屏幕</span>
+      <span><i>C</i>前端：浏览器里的界面</span>
       <span><i>D</i>AI：解说团、实验室里的解释</span>
     </div>
   </figure>
@@ -325,7 +342,7 @@ td b{color:var(--pitch)}
       <text class="tiny" x="962" y="300">模拟，不是预测</text>
     </svg>
     </div>
-    <figcaption>从同一秒出发，一边照原样，一边只改一个决定，各踢 500 次。两边用的是同一批随机数，所以结果的差别只来自这个决定。图里的数字只是示意。</figcaption>
+    <figcaption>从同一秒出发，一边照原样，一边只改一个决定，各踢 500 次。两边用的是同一批随机数，所以结果的差别只来自这个决定。图里的数字只是示意。服务器只有 2 个核，一个没算过的新问题要等几分钟；演示比赛常用的问题已经提前算好存进档案柜，点了马上出结果。</figcaption>
   </figure>
 </section>
 
@@ -334,7 +351,7 @@ td b{color:var(--pitch)}
   <h2>出问题时的三道保险</h2>
   <figure>
     <div class="fig-scroll">
-    <svg class="dia" viewBox="0 0 1040 290" role="img" aria-label="三道保险：AI 太慢或出错时改用模板写一段；数字写错时打回重写，最多两次；云上完整版出问题时依次换成简化版和本地版。">
+    <svg class="dia" viewBox="0 0 1040 290" role="img" aria-label="三道保险：AI 太慢或出错时改用模板写一段；数字写错时打回重写，最多两次；Azure 档案柜连不上时改存服务器硬盘，网站照常打开。">
       <defs>
         <marker id="f4a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
       </defs>
@@ -351,18 +368,16 @@ td b{color:var(--pitch)}
       <text class="t" x="520" y="194">打回去重写</text><text class="s" x="520" y="220">最多 2 次，还不行就用模板</text>
 
       <rect class="warnbox" x="720" y="24" width="280" height="76" rx="12"/>
-      <text class="t" x="860" y="58">云上的完整版出问题</text><text class="s" x="860" y="82">某个服务没跑起来</text>
+      <text class="t" x="860" y="58">档案柜连不上</text><text class="s" x="860" y="82">比如网络断了、没有权限</text>
       <line class="ink" x1="860" y1="106" x2="860" y2="144" marker-end="url(#f4a)"/>
       <rect class="soft" x="720" y="150" width="280" height="110" rx="12"/>
-      <text class="t" x="860" y="190">换成更简单的版本</text>
-      <rect class="card" x="733" y="214" width="70" height="28" rx="14"/><text class="l" x="768" y="233">完整版</text>
-      <line class="ink" x1="806" y1="228" x2="822" y2="228" marker-end="url(#f4a)"/>
-      <rect class="card" x="825" y="214" width="70" height="28" rx="14"/><text class="l" x="860" y="233">简化版</text>
-      <line class="ink" x1="898" y1="228" x2="914" y2="228" marker-end="url(#f4a)"/>
-      <rect class="card" x="917" y="214" width="70" height="28" rx="14"/><text class="l" x="952" y="233">本地版</text>
+      <text class="t" x="860" y="190">改存服务器硬盘</text>
+      <rect class="card" x="738" y="214" width="106" height="28" rx="14"/><text class="l" x="791" y="233">Azure 档案柜</text>
+      <line class="ink" x1="848" y1="228" x2="866" y2="228" marker-end="url(#f4a)"/>
+      <rect class="card" x="870" y="214" width="106" height="28" rx="14"/><text class="l" x="923" y="233">服务器硬盘</text>
     </svg>
     </div>
-    <figcaption>目标只有一个：录 Demo 和评委打开网页的时候，页面不报错、不卡死。</figcaption>
+    <figcaption>目标只有一个：录 Demo 和评委打开网页的时候，页面不报错、不卡死。另外，模型当时没调通、只能用模板写的解释不会被存起来，下次重启会重新让 AI 写。</figcaption>
   </figure>
 </section>
 
@@ -373,15 +388,15 @@ td b{color:var(--pitch)}
     <thead><tr><th>工程师说的</th><th>在图里是</th><th>一句话解释</th></tr></thead>
     <tbody>
       <tr><td>Simulator</td><td><b>模拟球场</b></td><td>用规则和随机数“踢”出一场假比赛。比赛规定不能用真实数据</td></tr>
-      <tr><td>Event Hubs</td><td><b>传送带</b></td><td>把比赛动作按先后顺序一条条送过去</td></tr>
+      <tr><td>Event Hubs（原计划）</td><td><b>传送带</b></td><td>把比赛动作按先后顺序一条条送过去。实际上线时在程序内部传，没有用这个服务</td></tr>
       <tr><td>CUSUM</td><td><b>势头计里的报警器</b></td><td>曲线持续往一边跑，它就会响</td></tr>
-      <tr><td>Service Bus</td><td><b>任务单</b></td><td>活儿排队等着做；谁没做完，单子会自动回到队里</td></tr>
+      <tr><td>Service Bus（原计划）</td><td><b>任务单</b></td><td>活儿排队等着做。实际上线时在程序内部排队</td></tr>
       <tr><td>Agent</td><td><b>解说团里的一个人</b></td><td>判定员、写稿员、核对员，各管一件事</td></tr>
-      <tr><td>Foundry</td><td><b>AI 大脑</b></td><td>我们向微软借用的 AI 模型，附带考试和监控工具</td></tr>
-      <tr><td>Cosmos DB</td><td><b>档案柜</b></td><td>每场比赛的东西放进一个抽屉</td></tr>
-      <tr><td>Web PubSub</td><td><b>广播喇叭</b></td><td>有新消息，就同时推到所有人的屏幕</td></tr>
-      <tr><td>Container Apps · Functions</td><td><b>工位</b></td><td>我们的程序在微软机房里干活的地方</td></tr>
-      <tr><td>azd · Bicep</td><td><b>一键搭建</b></td><td>一条命令就把所有工位和设备搭好；比赛结束也能一条命令全部拆掉</td></tr>
+      <tr><td>Foundry</td><td><b>AI 大脑</b></td><td>我们向微软借用的 AI 模型（gpt-4.1-mini），附带考试和监控工具</td></tr>
+      <tr><td>Cosmos DB</td><td><b>档案柜</b></td><td>AI 写的转折点、解释、工作记录和「假如」的结果放在这里。重启后直接读回，不用再让 AI 重写</td></tr>
+      <tr><td>服务器硬盘</td><td><b>比赛文件</b></td><td>模拟比赛的事件和每秒的跑位放在服务器硬盘上，不进 GitHub</td></tr>
+      <tr><td>Web PubSub（原计划）</td><td><b>广播喇叭</b></td><td>有新消息，就同时推到所有人的屏幕。实际上线时用程序自带的 WebSocket</td></tr>
+      <tr><td>Dokploy</td><td><b>工位</b></td><td>我们的程序干活的地方：甲骨文云上的一台服务器。推送到 main 就会自动更新</td></tr>
     </tbody>
   </table></div>
 </section>
