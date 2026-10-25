@@ -196,14 +196,15 @@ class MovementModel:
             for i, r in enumerate(shape.roles):
                 if r not in BOX_RUNNERS:
                     continue
+                wide = abs(by - 34) > 18 and bx > 80        # a cross is coming: attack the six-yard box (REAL-017)
                 if r == "ST":
-                    gx, gy = 96.0, 34 + 0.15 * (by - 34)
+                    gx, gy = (100.0, 34 - 0.1 * (by - 34)) if wide else (96.0, 34 + 0.15 * (by - 34))
                 elif r == "AM":
                     gx, gy = 86.0, 34 + 0.3 * (by - 34)
                 elif r == "CM":                            # a late run to the edge of the box, in his channel
                     gx, gy = 84.0, 34 + (9.0 if ty[i] > 34 else -9.0)
                 elif (ty[i] - 34) * (by - 34) < 0:         # ball on the other flank: back post
-                    gx, gy = 95.0, 34 + (6.0 if ty[i] > 34 else -6.0)
+                    gx, gy = (99.0 if wide else 95.0), 34 + (6.0 if ty[i] > 34 else -6.0)
                 else:                                      # ball on his flank: come inside off the line
                     gx, gy = tx[i], 34 + (ty[i] - 34) * 0.6
                 weight = pull * BOX_RUNNERS[r]

@@ -12,10 +12,7 @@ from collections import defaultdict
 from ..domain import MatchEvent, MinuteMetric
 
 HALF_LIFE_MIN = 5.0
-# Scales typical minute-to-minute threat gaps to roughly ±0.6. 40 since B12: the new simulator
-# makes about half the threat a match the old one did (6 vs 13), so 30 gave a flatter curve and
-# 2.3 alarms a match instead of 3.3 (40 matches, mean |momentum| 0.30 as before).
-ALPHA = 40.0
+ALPHA = 30.0                         # scales typical minute-to-minute threat gaps to roughly ±0.6
 
 
 def momentum_series(match_id: str, events: list[MatchEvent]) -> list[MinuteMetric]:

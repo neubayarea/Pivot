@@ -90,6 +90,7 @@ FINISH_WEIGHT = 1.2               # xG x (1 + FINISH_WEIGHT * (finishing - 0.7))
 # recorded as first time, which brings one-touch passes to the 16 % StatsBomb shows
 # (no carry between receiving and passing).
 FIRST_TIME_PASS_SHARE = 0.37
+CLOSE_IN_XG = 0.15               # below this, a player in space carries on towards goal rather than shoot (REAL-017)
 # A counter-attack (ATTR-003) has to reach the opponents' box within 9 s of winning the ball in
 # the own half. That gives about 3.5 a match, as StatsBomb's Premier League 2015/16 labels do.
 COUNTER_REACH, COUNTER_SECONDS = PITCH_LENGTH - BOX_DEPTH, 9
@@ -106,14 +107,14 @@ class Params:
     yellow_rate: float = 0.15
     red_rate: float = 0.00243
     shot_base: float = 0.0
-    shot_xg_weight: float = 1.6
-    shot_min_xg: float = 0.02
+    shot_xg_weight: float = 2.2
+    shot_min_xg: float = 0.04
     block_base: float = 0.22
     block_per_defender: float = 0.12
     saved_share: float = 0.33
     post_share: float = 0.05
     home_boost: float = 1.05                     # CTX-003, scaled by attendance in _success
-    long_shot_rate: float = 0.03                 # per second on the ball 18-32 m out, scaled by long_shots
+    long_shot_rate: float = 0.02                 # per second on the ball 18-32 m out, scaled by long_shots
     # Game state (B12, REAL-001): urgency runs from -1 (protecting a lead late on) to +1 (chasing it).
     state_line: float = 1.56                     # back-line shift in metres at full urgency, out of possession
     state_press_at: float = 0.8                  # urgency beyond which a side presses one level higher or lower
@@ -124,19 +125,20 @@ class Params:
     # Chance creation (B12).
     lane_cut: float = 0.084                      # cut-out chance for an opponent right on the passing lane
     intercept_share: float = 0.451               # cut-outs recorded as interceptions; the rest are recoveries
-    high_pass_acc: float = 0.7                   # accuracy factor for a ball in the air (low passes: halfway)
+    high_pass_acc: float = 0.85                  # accuracy factor for a ball in the air (low passes: halfway)
     clear_under_pressure: float = 0.407          # a defender pressed near his own goal clears it
     clear_behind: float = 0.366                  # a clearance in his own box goes behind for a corner
     loose_shot: float = 0.1                      # chance to strike a loose ball in front of goal first time, x (1 + 8 xG)
-    offside_pen: float = 2.9                     # passer's reluctance to pick a receiver standing offside
-    offside_slack: float = 1.3                   # metres a forward may drift beyond the last defender
+    offside_pen: float = 3.2                     # passer's reluctance to pick a receiver standing offside
+    offside_slack: float = 1.1                   # metres a forward may drift beyond the last defender
     claim_rate: float = 0.9                      # keeper comes for a cross dropping into his area
     sweep_rate: float = 0.13                     # keeper rushes out to a ball played in behind
-    through_lead: float = 0.5                    # a runner level with the line gets the ball into space behind it
+    through_lead: float = 0.8                    # a runner level with the line gets the ball into space behind it
+    close_in: float = 0.5                        # shot willingness when free and the chance can still get better
     aerial_contest: float = 4.91                 # metres: a defender this close to a long ball's drop challenges for it
     line_lift: float = 2.5                       # metres added to every team's line height (REAL-015)
     pass_forward: float = 0.043                  # pass choice: weight per metre gained towards goal
-    pass_threat: float = 10.37                   # pass choice: weight on threat gained
+    pass_threat: float = 20.0                    # pass choice: weight on threat gained
     # Fatigue, injuries, VAR (B12).
     fatigue_err: float = 0.347                   # pass accuracy x (1 - fatigue_err * (1 - fitness)); duels alike
     injury_foul: float = 0.127                   # the fouled player is hurt
@@ -547,6 +549,8 @@ class Engine:
             xg = xg_model(v, blockers=self._blockers(k, v), pressed=under, finishing=self._a(k, i, "finishing"))
             tendency = 1.2 if role in FORWARD else (0.5 if role in DEFENDER_ROLES else 0.9)
             tendency *= 1 + self.p.state_shot * self.urgency[k]
+            if not under and d_opp > 5 and xg < CLOSE_IN_XG and v[0] < PITCH_LENGTH - 8:
+                tendency *= self.p.close_in          # free with the ball: take it closer first (REAL-017)
             if xg >= self.p.shot_min_xg and self.rng.random() < min(0.6, (self.p.shot_base + self.p.shot_xg_weight * xg) * tendency):
                 return self._shoot(k, i, v, under, first_time=quick, incoming=last)
         dist = float(np.hypot(*(v - GOAL)))
