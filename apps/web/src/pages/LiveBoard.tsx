@@ -8,6 +8,7 @@ import MatchStats from "../components/MatchStats";
 import MomentumChart from "../components/MomentumChart";
 import { MomentCards, OpenMoment } from "../components/Moments";
 import PitchBoard from "../components/PitchBoard";
+import SetPiecesAndShots from "../components/SetPieces";
 import StartDemoButton from "../components/StartDemoButton";
 import { useClock } from "../data/clock";
 import { keyMoments, matchPhase } from "../data/keyMoments";
@@ -15,7 +16,8 @@ import { useMatch } from "../data/match";
 import { useT } from "../i18n";
 
 // S1 · Match board (Ax32). One line saying what the page is for, the momentum line with the
-// numbered moments, one card per moment, the picked one opened, everything else folded below.
+// numbered moments, one card per moment, the picked one opened, everything else folded below:
+// set pieces and shot replays (Ax37), then the pitch, events and stats.
 // Layout follows docs/design/redesign-mockup.html. Ax38: the key moments (goals, red cards, ...)
 // sit under the pivots, and lead the page when a finished match never turned.
 export default function LiveBoard() {
@@ -132,6 +134,7 @@ export default function LiveBoard() {
         {!scheduled && (
           <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={key} onPick={pickKey} />
         )}
+        {!scheduled && <SetPiecesAndShots key={match.match_id} />}
         <details className="more">
           <summary>
             {t("moments.more")} <small>{t("moments.moreNote")}</small>
