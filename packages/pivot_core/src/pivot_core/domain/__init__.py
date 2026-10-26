@@ -32,7 +32,9 @@ from .people import (
 )
 from .pivots import MinuteMetric, Pivot, PivotCandidate
 from .realtime import Envelope
-from .scenarios import OutcomeDist, PlantSpec, Scenario, ScenarioSpec, SimResult
+from .scenarios import (
+    ArmStats, OutcomeDist, PlantSpec, Scenario, ScenarioSpec, ScoreShare, SimResult, Spread, TeamRunStats,
+)
 from .stats import STAT_UNITS, Claim, StatMetric, StatRef
 from .traces import AgentTrace, Verdict, VerifierIssue
 from .tracking import FRAME_RATE_HZ, BallPosition, PlayerPosition, TrackingFrame
@@ -50,7 +52,7 @@ CONTRACT_MODELS = (
     StatRef, Claim,
     ViewerPrefs, ExplanationSentence, Narrative,
     PivotCandidate, Pivot,
-    ScenarioSpec, PlantSpec, OutcomeDist, SimResult, Scenario,
+    ScenarioSpec, PlantSpec, OutcomeDist, Spread, TeamRunStats, ScoreShare, ArmStats, SimResult, Scenario,
     OverlayItem, OverlayFeed, OverlayCard, OverlayScoreboard, OverlayFrame, OverlayTimeline,
     PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport, Recap,
     VerifierIssue, Verdict, AgentTrace,
@@ -61,7 +63,7 @@ __all__ = [
     "CONTRACT_MODELS", "FRAME_RATE_HZ", "OVERLAY_CARD_SECONDS", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
     "ROLE_POSITION", "STAT_UNITS",
     "area_of", "attacking_view", "clock_label", "label_at", "lane_of", "period_starts", "third_of", "zone_of",
-    "AgentTrace", "Area", "AttackingAttributes", "AttributeSummary", "Audience", "BallPosition",
+    "AgentTrace", "Area", "ArmStats", "AttackingAttributes", "AttributeSummary", "Audience", "BallPosition",
     "BodyPart", "CareerStint", "Claim", "Coach", "CoachAttributes", "Competition",
     "ContextEffect", "DefendingAttributes", "FoulDetail", "HeadToHead", "InjuryInfo", "Envelope", "EventType", "ExplanationSentence",
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
@@ -74,7 +76,7 @@ __all__ = [
     "Personality", "Pivot", "PivotCandidate", "PlantSpec", "PlayPattern", "Player",
     "PlayerAttributes", "PlayerInstruction", "PlayerPosition", "Point", "PowerAttributes",
     "PreMatchCondition", "Recap", "Relationship", "Role", "Scenario", "ScenarioSpec", "Score",
-    "ShotOutcome", "Side", "SimResult", "SkillAttributes", "StatMetric", "StatRef",
-    "Substitution", "Team", "TeamSheet", "TeamTactics", "Third", "TrackingFrame", "Trait",
+    "ScoreShare", "ShotOutcome", "Side", "SimResult", "Spread", "SkillAttributes", "StatMetric", "StatRef",
+    "Substitution", "Team", "TeamRunStats", "TeamSheet", "TeamTactics", "Third", "TrackingFrame", "Trait",
     "Verdict", "VerifierIssue", "ViewerPrefs",
 ]

@@ -1,10 +1,17 @@
 """Comparator: explains why the what-if group ended differently from the baseline (D07).
 
 Outcome probabilities are not stat-vocabulary metrics, so a comparison carries no claims and
-no numbers; the S3 chart shows the recomputed distribution. The Verifier instead checks that
+never writes them; the S3 chart shows the recomputed distribution. The Verifier instead checks that
 each "more likely" style word matches the change of the outcome it describes, and that
 significance words only appear about outcomes whose intervals do not overlap (`significant`
 from the SimResult). The replays are a simulation, so the wording never goes past that.
+
+Why the groups differ (Bx10): a result with `baseline_stats` / `counterfactual_stats` also gives
+the usual final scores and each team's averages from the moment the replays start. A comparison
+may write those numbers (`replay_numbers`), and the Verifier checks each against the result
+(`replay_facts`): the right team, the right stat, as-played first in "from A to B", and "rose" or
+"fell" only for a change bigger than noise (`stat_changes`, Dx3). The template names the usual
+score in each group and the clearest change in shots or chance quality.
 
 `compare` is the entry point once a scenario has finished: Comparator ⇄ Verifier, then the
 template if no draft passes.
@@ -13,6 +20,7 @@ template if no draft passes.
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Mapping
 
@@ -32,12 +40,12 @@ from pivot_core.domain import (
 )
 
 from .explainer import KEY_TYPES, ExplainerDraft, audience_brief, parse_draft
-from .languages import COMPARISON, has_cjk
+from .languages import COMPARISON, REASONS, has_cjk
 from .models import ModelClient, ModelUnavailable
 from .pipeline import Step, StepRecorder
 from .prompts import Prompt, render
-from .template import clean_headline
-from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, OutcomeMention, StatSource, verify
+from .template import _label, clean_headline, possessive
+from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, OutcomeMention, ReplayFact, Replays, StatSource, verify
 from .vocabulary import BANNED_TERMS, SIGNIFICANCE_WORDS
 
 OUTCOMES = ("home_win", "draw", "away_win")
@@ -83,6 +91,86 @@ def outcome_names(team_names: Mapping[str, str], lang: str = "en") -> dict[str, 
 def changes(result: SimResult) -> dict[str, float]:
     keys = OUTCOMES + (("home_advance",) if result.baseline.home_advance is not None else ())
     return {k: (getattr(result.counterfactual, k) or 0) - (getattr(result.baseline, k) or 0) for k in keys}
+
+
+# The replays' per-team numbers a comparison may write (Bx10): decimals to write them with and the
+# Verifier's tolerance beyond rounding. Shares are written as percentages.
+REPLAY_STATS = {"goals": (1, 0.0), "shots": (1, 0.0), "shots_on_target": (1, 0.0), "xg": (2, 0.01),
+                "possession_pct": (0, 0.5), "cards": (1, 0.0), "red_cards": (1, 0.0)}
+GROUPS = (("baseline", "baseline_stats"), ("with_change", "counterfactual_stats"))
+Z95 = 1.959963984540054
+
+
+def _clear(m0: float, sd0: float, m1: float, sd1: float, n0: int, n1: int) -> bool:
+    """The two groups' means differ by more than about two standard errors, so it is not noise (Dx3).
+
+    The runs are paired, which would make the error smaller still; leaving that out only errs on
+    the side of calling a change small.
+    """
+    return _size(m0, sd0, m1, sd1, n0, n1) > Z95
+
+
+def _size(m0: float, sd0: float, m1: float, sd1: float, n0: int, n1: int) -> float:
+    """The gap between the means in standard errors (infinite when neither group varies)."""
+    gap, se = abs(m1 - m0), math.sqrt(sd0 * sd0 / n0 + sd1 * sd1 / n1)
+    if se == 0:
+        return math.inf if gap > 1e-9 else 0.0
+    return gap / se
+
+
+def stat_changes(result: SimResult) -> list[dict]:
+    """Each team's replay numbers as played and with the change, clearest change first; [] for an old result."""
+    b, c = result.baseline_stats, result.counterfactual_stats
+    if b is None or c is None:
+        return []
+    out = []
+    for side in ("home", "away"):
+        tb, tc = getattr(b, side), getattr(c, side)
+        for metric, (dp, _) in REPLAY_STATS.items():
+            sb, sc = getattr(tb, metric), getattr(tc, metric)
+            out.append({"team": side, "stat": metric, "baseline": round(sb.mean, dp), "with_change": round(sc.mean, dp),
+                        "clear": _clear(sb.mean, sb.sd, sc.mean, sc.sd, b.n_runs, c.n_runs),
+                        "_raw": (sb.mean, sc.mean), "_size": _size(sb.mean, sb.sd, sc.mean, sc.sd, b.n_runs, c.n_runs)})
+        pb, pc = tb.scored_share, tc.scored_share
+        sdb, sdc = math.sqrt(pb * (1 - pb)), math.sqrt(pc * (1 - pc))
+        out.append({"team": side, "stat": "scored_pct", "baseline": round(100 * pb), "with_change": round(100 * pc),
+                    "clear": _clear(pb, sdb, pc, sdc, b.n_runs, c.n_runs),
+                    "_raw": (100 * pb, 100 * pc), "_size": _size(pb, sdb, pc, sdc, b.n_runs, c.n_runs)})
+    out.sort(key=lambda d: (not d["clear"], -d["_size"]))
+    return out
+
+
+def replay_numbers(result: SimResult) -> dict | None:
+    """What the Comparator is shown of the replays, rounded as it may write them; None for an old result."""
+    if result.baseline_stats is None or result.counterfactual_stats is None:
+        return None
+    out = {}
+    for group, field in GROUPS:
+        a = getattr(result, field)
+        out[group] = {"top_scores": [{"score": f"{s.home}-{s.away}", "share_pct": round(100 * s.share)} for s in a.top_scores],
+                      **{side: {**{m: round(getattr(getattr(a, side), m).mean, dp) for m, (dp, _) in REPLAY_STATS.items()},
+                                "scored_pct": round(100 * getattr(a, side).scored_share)} for side in ("home", "away")}}
+    return out
+
+
+def replay_facts(result: SimResult) -> Replays | None:
+    """For the Verifier: every replay number a comparison may write, with its change and whether it is clear."""
+    if result.baseline_stats is None or result.counterfactual_stats is None:
+        return None
+    changes_ = {(d["team"], d["stat"]): d for d in stat_changes(result)}
+    facts, scores = [], set()
+    for group, field in GROUPS:
+        a = getattr(result, field)
+        for s in a.top_scores:
+            scores.add((s.home, s.away))
+            facts.append(ReplayFact("score_share", None, group, 100 * s.share, 0.5, None, False))
+        for side in ("home", "away"):
+            t = getattr(a, side)
+            for metric, (_, tol) in [*REPLAY_STATS.items(), ("scored_pct", (0, 0.5))]:
+                value = 100 * t.scored_share if metric == "scored_pct" else getattr(t, metric).mean
+                d = changes_[(side, metric)]
+                facts.append(ReplayFact(metric, side, group, value, tol, d["_raw"], d["clear"]))
+    return Replays(tuple(facts), frozenset(scores))
 
 
 def _spans(text: str, phrase: str):
@@ -150,9 +238,19 @@ def system_prompt(result: SimResult, prefs: ViewerPrefs, team_names: Mapping[str
     else:
         rule = (f"No interval separates the groups: say the difference is within noise, and never use "
                 f"{', '.join(SIGNIFICANCE_WORDS)}.")
+    if replay_numbers(result) is None:
+        numbers = ("**Write no numbers at all.** The chart next to your text already shows every percentage "
+                   "and interval, recomputed.")
+    else:
+        numbers = ("Say **why** the groups differ, with numbers from `replay_numbers` only, written as given: a final "
+                   "score from `top_scores` (\"2-1\") and its `share_pct`, or one team's average from the moment the "
+                   "replays start. Name the team and the stat before each number. Write \"from A to B\" with the "
+                   "as-played (baseline) value first. Say a number rose or fell only when `stat_changes` marks it "
+                   "`clear`; otherwise say it hardly changed. Never write the win, draw or loss percentages: the chart "
+                   "shows them.")
     return render("comparator", audience=audience_brief(prefs, team_names),
                   schema=json.dumps(ExplainerDraft.model_json_schema()), significance_rule=rule,
-                  banned_terms=", ".join(BANNED_TERMS), example=EXAMPLE.model_dump_json(indent=1))
+                  numbers_rule=numbers, banned_terms=", ".join(BANNED_TERMS), example=EXAMPLE.model_dump_json(indent=1))
 
 
 def build_messages(result: SimResult, *, scenario_label: str, target_event_id: str | None, at_minute: int,
@@ -168,6 +266,9 @@ def build_messages(result: SimResult, *, scenario_label: str, target_event_id: s
         "change": {k: round(v, 3) for k, v in changes(result).items()},
         "significant": result.significant,
     }
+    if (numbers := replay_numbers(result)) is not None:
+        request["replay_numbers"] = numbers
+        request["stat_changes"] = [{k: v for k, v in d.items() if not k.startswith("_")} for d in stat_changes(result)]
     text = json.dumps(request, ensure_ascii=False)
     if feedback and not feedback.passed:
         text += "\n\nThe Verifier rejected your previous comparison:\n" + "\n".join(
@@ -183,7 +284,8 @@ def verify_comparison(narrative: Narrative, result: SimResult, *, at_minute: int
     return verify(narrative, pivot_minute=at_minute, events=events, stats=stats or _NoClaims(),
                   significant=result.significant,
                   outcomes=outcome_mentions(result, team_names, narrative.prefs.language),
-                  allowed_evidence=citable_events(target_event_id, at_minute, events), team_names=team_names)
+                  allowed_evidence=citable_events(target_event_id, at_minute, events), team_names=team_names,
+                  replays=replay_facts(result))
 
 
 def _phrase(outcome: str, team_names: Mapping[str, str], lang: str = "en", key: str = "win") -> str:
@@ -210,10 +312,35 @@ def template_comparison(result: SimResult, *, evidence_id: str, team_names: Mapp
         second = phrases["apart"]
     else:
         first, headline, second = phrases["none"], phrases["none_h"], phrases["noise"]
+    texts = [first] + (reasons(result, team_names, lang, prefs.audience == "fan") or [second])
     return Narrative(prefs=prefs, headline=clean_headline(headline, lang),
-                     sentences=[ExplanationSentence(text=first, evidence_ids=[evidence_id]),
-                                ExplanationSentence(text=second, evidence_ids=[evidence_id])],
+                     sentences=[ExplanationSentence(text=t, evidence_ids=[evidence_id]) for t in texts[:3]],
                      source="template", verifier_attempts=verifier_attempts, chain_id=chain_id)
+
+
+TEMPLATE_STATS = ("shots", "xg")              # labelled in every language; fans get shots only (xG is jargon)
+
+
+def reasons(result: SimResult, team_names: Mapping[str, str], lang: str = "en", fan: bool = False) -> list[str]:
+    """Why the groups differ, for the template (Bx10): the usual final score in each group, and the
+    clearest change in one team's shots or chance quality, if any is clear. [] for an old result."""
+    b, c = result.baseline_stats, result.counterfactual_stats
+    if b is None or c is None or not b.top_scores or not c.top_scores:
+        return []
+    phrases = REASONS[lang]
+    was, now = (f"{s.home}-{s.away}" for s in (b.top_scores[0], c.top_scores[0]))
+    out = [phrases["scores_same"].format(a=was) if was == now else phrases["scores"].format(a=was, b=now)]
+    picks = [d for d in stat_changes(result) if d["clear"] and d["stat"] in TEMPLATE_STATS[:1 if fan else 2]]
+    if picks:
+        d = picks[0]
+        team, label, dp = team_names[d["team"]], _label(d["stat"], lang, fan), REPLAY_STATS[d["stat"]][0]
+        verb = "rose" if d["_raw"][1] > d["_raw"][0] else "fell"
+        if f"{verb}_pl" in phrases and label.startswith(("los ", "las ")):     # plural subject, plural verb
+            verb += "_pl"
+        out.append(phrases["stat_fan" if fan else "stat"].format(
+            team=team, owner=possessive(team), label=label, verb=phrases[verb],
+            a=f"{d['baseline']:.{dp}f}", b=f"{d['with_change']:.{dp}f}"))
+    return out
 
 
 class _NoClaims:

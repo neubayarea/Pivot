@@ -456,3 +456,51 @@ COMPARISON: dict[str, dict[str, str]] = {
         "noise": "Los intervalos se solapan en todos los resultados, así que la diferencia está dentro del ruido.",
     },
 }
+
+# Why the groups differ (Bx10): the usual final score, and the clearest change in one team's numbers.
+REASONS: dict[str, dict[str, str]] = {
+    "en": {
+        "scores": "As played, the most common final score was {a}; with the change it was {b}.",
+        "scores_same": "The most common final score was {a} in both groups of replays.",
+        "stat": "From that moment, {owner} {label} {verb} from {a} to {b} on average.",
+        "stat_fan": "From that moment, {owner} {label} {verb} to {b} on average.",
+        "rose": "rose", "fell": "fell",
+    },
+    "zh": {
+        "scores": "照原样重踢时最常见的终场比分是{a}，做出改变后是{b}。",
+        "scores_same": "有没有这一改变，重踢最常见的终场比分都是{a}。",
+        "stat": "从这时起，{team}的{label}平均从{a}{verb}到{b}。",
+        "stat_fan": "从这时起，{team}的{label}平均{verb}到{b}。",
+        "rose": "上升", "fell": "下降",
+    },
+    "es": {
+        "scores": "Tal como se jugó, el resultado final más repetido fue {a}; con el cambio, {b}.",
+        "scores_same": "El resultado final más repetido fue {a} con y sin el cambio.",
+        "stat": "Desde ese momento, {label} de {team} {verb} de {a} a {b} de media.",
+        "stat_fan": "Desde ese momento, {label} de {team} {verb} a {b} de media.",
+        "rose": "subió", "fell": "bajó", "rose_pl": "subieron", "fell_pl": "bajaron",
+    },
+}
+
+# Words for the What-if numbers that are not match stats (Bx10). A number about one of them must
+# sit in a sentence that names it, as a stat's number must name the stat.
+REPLAY_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
+    "en": {"goals": ("goal", "goals"), "scored_pct": ("scored", "score at least"),
+           "cards": ("card", "cards", "booking", "bookings"), "red_cards": ("red card", "red cards", "sent off"),
+           "score_share": ("score", "scores", "scoreline", "result")},
+    "zh": {"goals": ("进球",), "scored_pct": ("进球", "破门"), "cards": ("牌",), "red_cards": ("红牌", "罚下"),
+           "score_share": ("比分",)},
+    "es": {"goals": ("gol", "goles"), "scored_pct": ("marcó", "marcaron", "anotó", "anotaron"),
+           "cards": ("tarjeta", "tarjetas"), "red_cards": ("tarjeta roja", "tarjetas rojas", "expulsión"),
+           "score_share": ("resultado", "resultados", "marcador")},
+}
+
+
+def replay_names(lang: str) -> dict[str, frozenset[str]]:
+    """Lower-cased words for the What-if-only numbers, each with the numbers it could mean."""
+    names: dict[str, set[str]] = {}
+    for table in (REPLAY_NAMES["en"], REPLAY_NAMES.get(lang, {})):
+        for metric, words in table.items():
+            for w in words:
+                names.setdefault(w, set()).add(metric)
+    return {w: frozenset(ms) for w, ms in names.items()}

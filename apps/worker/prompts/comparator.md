@@ -20,8 +20,7 @@ Return one JSON object that matches this schema, and nothing else:
 
 - `headline`: at most 8 words, no digits.
 - `sentences`: 1 to 3, each at most 30 words.
-- **Write no numbers at all.** The chart next to your text already shows every percentage
-  and interval, recomputed. Leave `claims` empty.
+- {{numbers_rule}} Leave `claims` empty.
 - `evidence_ids`: cite only ids from the request's `evidence_ids` (the event the scenario
   changed, or, for a tactical change, events around the minute it starts from).
 - Name the outcome right before you say it got more or less likely ("a {team} win became
