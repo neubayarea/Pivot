@@ -461,3 +461,43 @@ details.more > summary small { font-weight: 600; letter-spacing: .04em; text-tra
   .settings { position: static; }
   .settings-pop { left: 14px; right: 14px; top: calc(100% - 4px); width: auto; max-width: none; }
 }
+
+/* ---------- Match board: key moments (Ax38) ---------- */
+.mom-key { cursor: pointer; }
+.mom-key .hit { fill: transparent; }
+.mom-key .ring { fill: var(--pv-gold); stroke: var(--pv-ink); stroke-width: 2; }
+.mom-key:focus { outline: none; }
+.mom-key:focus-visible .hit { stroke: var(--pv-gold); stroke-width: 3; }
+.km-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+.km-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.km-legend .km-pv { font-family: var(--pv-display); font-weight: 400; font-size: 17px; color: var(--pv-ink); }
+.km-gl { flex: none; }
+.keys { border: 3px solid var(--pv-ink); background: var(--pv-sheet); padding: 12px 16px 14px; display: grid; gap: 10px; min-width: 0; }
+.keys-hd { display: flex; align-items: baseline; gap: 4px 14px; flex-wrap: wrap; }
+.keys-hd h2 { font-family: var(--pv-display); font-weight: 400; font-size: 22px; text-transform: uppercase; }
+.keys-hd p { font-size: var(--pv-fs-sm); }
+.km-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.km-list li + li { border-top: 1px solid var(--pv-hair); }
+.km { width: 100%; text-align: left; background: transparent; border: 0; border-left: 4px solid transparent; padding: 7px 8px; display: grid; grid-template-columns: 4.2em 16px 3.4em minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; cursor: pointer; color: var(--pv-ink); font: inherit; }
+.km:hover { background: var(--pv-gold-soft); }
+.km[aria-pressed="true"] { background: var(--pv-gold-soft); border-left-color: var(--pv-gold); }
+.km-min { font-family: var(--pv-display); font-weight: 400; font-size: 19px; line-height: 1; }
+.km-team { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .08em; }
+.km.to-home .km-team { color: var(--pv-home); }
+.km.to-away .km-team { color: var(--pv-away); }
+.km-what { font-weight: 600; min-width: 0; }
+.km.goal .km-what { font-weight: 800; }
+.km-tags { display: flex; align-items: center; justify-content: flex-end; gap: 6px 8px; flex-wrap: wrap; }
+.km-tag { font-family: var(--pv-label); font-weight: 700; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border: 2px solid var(--pv-ink); }
+.km-tag.big { background: var(--pv-gold); color: var(--pv-on-gold); }
+.km-score { font-family: var(--pv-display); font-size: 17px; min-width: 2.6em; text-align: right; }
+.km-pv { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .04em; white-space: nowrap; }
+.km-pitch { margin: 0; display: grid; gap: 6px; max-width: 640px; }
+.km-pitch figcaption { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+.km-pitch figcaption b { color: var(--pv-ink); }
+@media (max-width: 720px) {
+  .keys { padding: 10px 12px; }
+  .km { grid-template-columns: 3.6em 16px minmax(0, 1fr); padding: 7px 4px; }
+  .km-team { display: none; }
+  .km-tags { grid-column: 3 / -1; justify-content: flex-start; }
+}
