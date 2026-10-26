@@ -106,6 +106,41 @@
       "title": "AgentTrace",
       "type": "object"
     },
+    "ArmStats": {
+      "additionalProperties": false,
+      "description": "Why an arm came out as it did: its final scores and each team's numbers after the replay start.",
+      "properties": {
+        "away": {
+          "$ref": "#/$defs/TeamRunStats"
+        },
+        "from_t": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "home": {
+          "$ref": "#/$defs/TeamRunStats"
+        },
+        "n_runs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "top_scores": {
+          "items": {
+            "$ref": "#/$defs/ScoreShare"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "n_runs",
+        "from_t",
+        "top_scores",
+        "home",
+        "away"
+      ],
+      "title": "ArmStats",
+      "type": "object"
+    },
     "AttackingAttributes": {
       "additionalProperties": false,
       "properties": {
@@ -3898,6 +3933,31 @@
       "title": "Score",
       "type": "object"
     },
+    "ScoreShare": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "home": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "share": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "home",
+        "away",
+        "share"
+      ],
+      "title": "ScoreShare",
+      "type": "object"
+    },
     "SetPieceTactics": {
       "additionalProperties": false,
       "properties": {
@@ -3971,8 +4031,30 @@
         "baseline": {
           "$ref": "#/$defs/OutcomeDist"
         },
+        "baseline_stats": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArmStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "counterfactual": {
           "$ref": "#/$defs/OutcomeDist"
+        },
+        "counterfactual_stats": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArmStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "executor": {
           "enum": [
@@ -4063,6 +4145,33 @@
         "ball_control"
       ],
       "title": "SkillAttributes",
+      "type": "object"
+    },
+    "Spread": {
+      "additionalProperties": false,
+      "description": "One number over all runs of an arm: its mean, standard deviation and 10th/90th percentiles.",
+      "properties": {
+        "mean": {
+          "type": "number"
+        },
+        "p10": {
+          "type": "number"
+        },
+        "p90": {
+          "type": "number"
+        },
+        "sd": {
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "mean",
+        "sd",
+        "p10",
+        "p90"
+      ],
+      "title": "Spread",
       "type": "object"
     },
     "StatRef": {
@@ -4298,6 +4407,50 @@
         "points"
       ],
       "title": "TeamForm",
+      "type": "object"
+    },
+    "TeamRunStats": {
+      "additionalProperties": false,
+      "description": "What one team did from the replay start to the end, over all runs of an arm (Bx10).",
+      "properties": {
+        "cards": {
+          "$ref": "#/$defs/Spread"
+        },
+        "goals": {
+          "$ref": "#/$defs/Spread"
+        },
+        "possession_pct": {
+          "$ref": "#/$defs/Spread"
+        },
+        "red_cards": {
+          "$ref": "#/$defs/Spread"
+        },
+        "scored_share": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "shots": {
+          "$ref": "#/$defs/Spread"
+        },
+        "shots_on_target": {
+          "$ref": "#/$defs/Spread"
+        },
+        "xg": {
+          "$ref": "#/$defs/Spread"
+        }
+      },
+      "required": [
+        "goals",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "possession_pct",
+        "cards",
+        "red_cards",
+        "scored_share"
+      ],
+      "title": "TeamRunStats",
       "type": "object"
     },
     "TeamSheet": {

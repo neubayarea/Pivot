@@ -9,7 +9,8 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
    template sentence without numbers cites `NO_EVIDENCE`)
 3. numbers: every claim recomputes within tolerance in its stat's unit, and every number in the
    text is one of them, on a team and a stat the sentence is talking about ("ten men" is checked
-   against the red cards instead)
+   against the red cards instead); in comparisons, a number may instead be one of the replays'
+   own (`Replays`, Bx10), and a final score ("2-1") must be one of their most common
 4. direction: rose/fell words match the sign of the change between two claimed windows, "from A to B"
    follows the order of the windows, and doubled/halved and "three times as many" style words match the ratio; in
    comparisons, "more likely" style words match the outcome they describe
@@ -73,6 +74,53 @@ class OutcomeMention(NamedTuple):
     end: int
     delta: float
     significant: bool
+
+
+class ReplayFact(NamedTuple):
+    """A number a comparison may write (Bx10): one team's average over one group of replays, from
+    the moment they start, or the share of a final score."""
+
+    metric: str                               # shots, xg, ... goals, cards, red_cards, scored_pct, score_share
+    team: str | None                          # None for score_share
+    group: str                                # "baseline" (as played) or "with_change"
+    value: float
+    tolerance: float                          # allowed gap beyond rounding, as TOLERANCE
+    pair: tuple[float, float] | None          # (as played, with the change) for this metric and team
+    clear: bool                               # the groups differ by more than noise (Dx3)
+
+
+class Replays(NamedTuple):
+    facts: tuple[ReplayFact, ...]
+    scores: frozenset[tuple[int, int]]        # final scores a comparison may name (each group's most common)
+
+
+# A final score in running text, "2-1" (an en dash too, after `_spelled`).
+_SCORE = re.compile(r"(?<!\d)(?<!\d\.)(\d+)\s?-\s?(\d+)(?!\d|\.\d)")
+
+
+def _mask_scores(plain: str, allowed: Collection[tuple[int, int]]) -> tuple[str, list[str]]:
+    """Blank out the final scores in `plain`, so their digits are not read as numbers; and the ones not allowed."""
+    wrong = []
+    for m in _SCORE.finditer(plain):
+        if (int(m.group(1)), int(m.group(2))) not in allowed:
+            wrong.append(m.group())
+    return _SCORE.sub(lambda m: " " * len(m.group()), plain), wrong
+
+
+def _fact_matches(number: str, fact: ReplayFact) -> bool:
+    decimals = len(number.split(".")[1]) if "." in number else 0
+    return abs(float(number) - fact.value) <= max(fact.tolerance, 0.5 * 10**-decimals) + 1e-9
+
+
+def _fact_backwards(text: str, lang: str, facts: list[ReplayFact]) -> list[tuple[str, str]]:
+    """"from A to B" phrases where A is the with-change value and B the as-played one."""
+    wrong = []
+    for a, b in lang_rules.FROM_TO[lang].findall(_plain(text, lang)):
+        orders = {fa.group == "baseline" for fa in facts if _fact_matches(a, fa) for fb in facts
+                  if _fact_matches(b, fb) and (fa.metric, fa.team) == (fb.metric, fb.team) and fa.group != fb.group}
+        if orders == {False}:
+            wrong.append((a, b))
+    return wrong
 
 
 def _compute(stats: StatSource, ref: StatRef) -> float | None:
@@ -151,6 +199,15 @@ def _stat_names(lang: str) -> dict[str, frozenset[str]]:
                     names.setdefault(part, set()).add(metric)
     return {name: frozenset(m for other, ms in names.items() if re.search(_pattern(name), other) for m in ms)
             for name in names}
+
+
+@cache
+def _with_replay_names(lang: str) -> dict[str, frozenset[str]]:
+    """`_stat_names` plus the words for the What-if-only numbers (goals, cards, ...)."""
+    merged = dict(_stat_names(lang))
+    for name, metrics in lang_rules.replay_names(lang).items():
+        merged[name] = merged.get(name, frozenset()) | metrics
+    return merged
 
 
 def _matches(number: str, claim: Claim, actual: float | None) -> bool:
@@ -357,11 +414,15 @@ def verify(
     context: Sequence[ContextItem] = (),
     team_names: Mapping[str, str] | None = None,
     max_sentences: int = 3,
+    replays: Replays | None = None,
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
 
     `outcomes` is for comparisons: given a sentence, it returns each outcome the sentence
     names, so "more likely" style and significance words are checked against that outcome.
+    `replays` is for comparisons too (Bx10): the replays' numbers a sentence may write instead of
+    claims, and the final scores it may name. "Rose"/"fell" next to them must match the change
+    between the groups, and only a clear change may be called a rise or a fall.
     `allowed_evidence`, when given, replaces the minute window: only those ids may be cited.
     `context` is the match-context items the writer was shown (`explainer.shown_context`).
     `team_names` ("home"/"away" to display names) let the number check see which team a number is about.
@@ -458,9 +519,18 @@ def verify(
                 actuals[k] = None             # reported once: its number in the text is checked against the claim
         # A number belongs to a team named before it and to a stat the sentence names, when it names any.
         plain = _plain(s.text, lang)
+        stat_names = _stat_names(lang)
+        if replays:
+            plain, wrong_scores = _mask_scores(plain, replays.scores)
+            for sc in wrong_scores:
+                usual = ", ".join(f"{h}-{a}" for h, a in sorted(replays.scores))
+                issue("number_mismatch", f"The score {sc} in sentence {i + 1} is not one of the replays' most common "
+                      f"final scores ({usual}).", i)
+            stat_names = _with_replay_names(lang)
         teams = _mentions(plain, team_phrases)
-        named_stats = {m for _, ms in _mentions(plain.lower(), _stat_names(lang)) for m in ms}
+        named_stats = {m for _, ms in _mentions(plain.lower(), stat_names) for m in ms}
         numbers = _numbers(plain, names.values())
+        used: list[ReplayFact] = []           # replay numbers the sentence writes
         # "Ten men" is not a stat: it must be the players either side had at an event the sentence cites.
         counts = lang_rules.player_counts(plain, lang)
         on_pitch = {n for e in s.evidence_ids if e in events for n in men_at(events.values(), events[e].t).values()}
@@ -475,6 +545,22 @@ def verify(
             same = [c for c, actual in zip(s.claims, actuals) if _matches(n, c, actual)]
             fits = [c for c in same if (not before or c.stat_ref.team in before)
                     and (not named_stats or c.stat_ref.metric in named_stats)]
+            if not same and replays:
+                hits = [f for f in replays.facts if _fact_matches(n, f)]
+                fits_f = [f for f in hits if (f.team is None or not before or f.team in before)
+                          and (not named_stats or f.metric in named_stats)]
+                used += fits_f
+                if hits and not fits_f:
+                    said = ([f"about {' or '.join(names[side] for side in sorted(before))}"] if before else []) + \
+                        ([f"on {' or '.join(sorted(named_stats))}"] if named_stats else [])
+                    meant = ", ".join(dict.fromkeys(f"{f.metric} for {names.get(f.team, f.team) if f.team else 'the score'}"
+                                                    for f in hits))
+                    issue("number_mismatch", f"The number {n} in sentence {i + 1} is the replays' {meant}, but the "
+                          f"sentence has it {' and '.join(said)}; name the team and the stat it is about.", i)
+                elif not hits:
+                    issue("number_mismatch", f"The number {n} in sentence {i + 1} is not one of the replay numbers; "
+                          "copy one from replay_numbers or drop it.", i)
+                continue
             if not same:
                 issue("number_mismatch", f"The number {n} in sentence {i + 1} has no matching claim; "
                       "copy one from the stat sheet or drop the number.", i)
@@ -493,6 +579,12 @@ def verify(
         pairs = _pairs(list(s.claims), stats)
         for a, b in _backwards(s.text, lang, list(s.claims)):
             issue("direction_mismatch", f"'{a} to {b}' is backwards: {b} is the earlier value and {a} the later one.", i)
+        changed = list(dict.fromkeys(f[:2] + (f.pair, f.clear) for f in used if f.pair))   # (metric, team, pair, clear)
+        pairs += [p for *_, p, _ in changed]
+        if replays:
+            for a, b in _fact_backwards(s.text, lang, list(replays.facts)):
+                issue("direction_mismatch", f"'{a} to {b}' is backwards: {b} is the as-played value and {a} the one "
+                      "with the change; write the as-played value first.", i)
         magnitudes = [(w, f) for w, f in magnitude_words.items() if _has_word(s.text, (w,))]
         multiples = lang_rules.multiples(_spelled(s.text, lang), lang)
         if multiples and not pairs:
@@ -506,7 +598,25 @@ def verify(
                 issue("number_mismatch", f"'{w}' means about {factor:g}x, but the change was {ratios}.", i)
         up, down = _direction_words(s.text, lang, up_words), _direction_words(s.text, lang, down_words)
         deltas = [vb - va for va, vb in pairs] if up or down else []
-        if (up or down) and not deltas and outcomes:
+        if (up or down) and changed and outcomes:
+            # Replay numbers: "rose"/"fell" are about them, "more likely" stays about the outcomes.
+            likely_up, likely_down = lang_rules.likely_up(lang), lang_rules.likely_down(lang)
+            if any(w in likely_up + likely_down for w in up + down):
+                for problem in _outcome_directions(s.text, outcomes(s.text), likely_up, likely_down):
+                    issue("direction_mismatch", problem, i)
+            for words, sign in (([w for w in up if w not in likely_up], 1), ([w for w in down if w not in likely_down], -1)):
+                if not words:
+                    continue
+                moved = [c for c in changed if sign * (c[2][1] - c[2][0]) > 0]
+                if not moved:
+                    issue("direction_mismatch", f"'{words[0]}' says it went {'up' if sign > 0 else 'down'}, but "
+                          f"from the as-played replays to the ones with the change it did not.", i)
+                elif not any(c[3] for c in moved):
+                    metric, team, (va, vb), _ = moved[0]
+                    issue("significance_unsupported", f"'{words[0]}' overstates it: {metric} for "
+                          f"{names.get(team, team)} only went from {va:g} to {vb:g}, within noise in the replays; "
+                          "say it hardly changed.", i)
+        elif (up or down) and not deltas and outcomes:
             for problem in _outcome_directions(s.text, outcomes(s.text), up_words, down_words):
                 issue("direction_mismatch", problem, i)
         elif up or down:

@@ -8,7 +8,9 @@ How a scenario is run (ADR-0009):
    the counterfactual gets the change (`_apply`, one rule per scenario type below).
 3. Run i of both arms copies its starting point, reseeds it with `seed_base + i` and plays to
    full time (`play_on`). Paired seeds: the two arms differ only by the change.
-4. `summarise` counts wins, draws and losses per arm with Wilson 95 % intervals.
+4. `summarise` counts wins, draws and losses per arm with Wilson 95 % intervals; `describe` adds
+   why (Bx10): the usual final scores and each team's goals, shots, xG, possession and cards
+   from the saved minute on, counted by `play_counted` as each run is played.
 
 A new seed does not repeat what happened after the save, so an event a scenario takes away
 must be put back into the baseline by hand. Planted events (the demo's 38' red card and 63'
@@ -41,12 +43,16 @@ import math
 import os
 import pickle
 import time
+from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import Executor, ProcessPoolExecutor, as_completed
+from typing import NamedTuple
 
 import numpy as np
 
-from ..domain import Match, OutcomeDist, PlantSpec, ScenarioSpec, SimResult
+from ..domain import (
+    ArmStats, Match, OutcomeDist, PlantSpec, ScenarioSpec, ScoreShare, SimResult, Spread, TeamRunStats,
+)
 from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_WIDTH
 from .engine import SIDES, Engine, Params
 from .formations import FORMATIONS
@@ -59,6 +65,10 @@ MAX_SUBS = 5
 MOVE_RANGE = (46, 85)                 # clock minutes a moved substitution may land on (D07 catalog)
 CHUNK = 10                            # runs per pool task: small enough for a smooth progress bar
 Z95 = 1.959963984540054
+# What a run counts per team after the save, in the order of Run.home / Run.away (Bx10).
+# possession_s: seconds with the ball in play and the team on it.
+RUN_STATS = ("goals", "shots", "shots_on_target", "xg", "possession_s", "cards", "red_cards")
+TOP_SCORES = 5
 
 Score = tuple[int, int]
 Progress = Callable[[int, int], None]     # (runs finished, runs in total)
@@ -90,6 +100,45 @@ def play_on(saved: Engine, seed: int | None = None) -> Engine:
         eng.reseed(seed)
     eng.play()
     return eng
+
+
+class Run(NamedTuple):
+    """One rerun: the final score and each team's numbers from the save to the end (`RUN_STATS`)."""
+
+    score: Score
+    home: tuple[float, ...]
+    away: tuple[float, ...]
+
+
+def play_counted(saved: Engine, seed: int) -> Run:
+    """`play_on` with the seed, counting what each team did after the save (Bx10).
+
+    The match is played one second at a time, which gives exactly the match `play_on` gives
+    (stopping and playing on changes nothing), so possession can be read off every second the
+    way the frames record it: ball in play and a team on it. The rest comes from the events.
+    """
+    eng = copy_engine(saved)
+    eng.reseed(seed)
+    first, before = len(eng.events), list(eng.score)
+    live = [0, 0]
+    while not eng.play(until_t=eng.t + 1):
+        if eng.dead == 0 and eng.possession is not None:
+            live[eng.possession] += 1
+    shots, on_target, xg, cards, reds = [0, 0], [0, 0], [0.0, 0.0], [0, 0], [0, 0]
+    for e in eng.events[first:]:
+        if e["period"] == 5:                            # shootout kicks are not match statistics
+            continue
+        k = SIDES.index(e["team"])
+        if e["type"] == "shot":
+            shots[k] += 1
+            on_target[k] += e["shot_outcome"] in ("goal", "saved")
+            xg[k] += e.get("xg") or 0.0
+        elif e["type"] == "card":
+            cards[k] += 1
+            reds[k] += e["foul"]["card"] in ("red", "second_yellow")
+    side = [(eng.score[k] - before[k], shots[k], on_target[k], round(xg[k], 4), live[k], cards[k], reds[k])
+            for k in (0, 1)]
+    return Run(_score(eng), *side)
 
 
 # --- scenarios -------------------------------------------------------------------------
@@ -258,14 +307,14 @@ def prepare(saved: Engine, spec: ScenarioSpec) -> tuple[Engine, Engine]:
 _STARTS: dict[str, Engine] = {}           # per worker process: starting points already unpickled
 
 
-def run_shard(key: str, blob: bytes, seeds: list[int]) -> list[Score]:
-    """Final scores of the runs `seeds` from a pickled starting point (one pool task; ADR-0009)."""
+def run_shard(key: str, blob: bytes, seeds: list[int]) -> list[Run]:
+    """The runs `seeds` from a pickled starting point (one pool task; ADR-0009)."""
     start = _STARTS.get(key)
     if start is None:
         if len(_STARTS) >= 4:
             _STARTS.pop(next(iter(_STARTS)))
         start = _STARTS[key] = pickle.loads(blob)
-    return [_score(play_on(start, s)) for s in seeds]
+    return [play_counted(start, s) for s in seeds]
 
 
 def _score(eng: Engine) -> Score:
@@ -273,21 +322,21 @@ def _score(eng: Engine) -> Score:
 
 
 def run_arms(starts: Sequence[Engine], n_runs: int, seed_base: int, workers: int | None = None,
-             progress: Progress | None = None, pool: Executor | None = None) -> list[list[Score]]:
-    """Final scores of `n_runs` runs from each starting point; run i uses `seed_base + i` in every arm.
+             progress: Progress | None = None, pool: Executor | None = None) -> list[list[Run]]:
+    """`n_runs` runs from each starting point; run i uses `seed_base + i` in every arm.
 
     `workers` <= 1 with no `pool` runs in this process. A long-lived `pool` can be passed in to
-    skip the start-up of a new one. The scores do not depend on how the runs are spread.
+    skip the start-up of a new one. The runs do not depend on how they are spread.
     """
     seeds = list(range(seed_base, seed_base + n_runs))
     total = len(starts) * n_runs
-    results: list[list[Score]] = [[(0, 0)] * n_runs for _ in starts]
+    results: list[list[Run]] = [[None] * n_runs for _ in starts]     # type: ignore[list-item]
     done = 0
     workers = workers or os.cpu_count() or 1
     if pool is None and workers <= 1:
         for i, s in enumerate(seeds):
             for a, start in enumerate(starts):
-                results[a][i] = _score(play_on(start, s))
+                results[a][i] = play_counted(start, s)
                 done += 1
                 if progress:
                     progress(done, total)
@@ -329,6 +378,35 @@ def summarise(scores: Sequence[Score]) -> OutcomeDist:
     return OutcomeDist(**{key: c / n for key, c in counts.items()}, ci95={key: wilson(c, n) for key, c in counts.items()})
 
 
+def spread(values: Sequence[float]) -> Spread:
+    """Mean, standard deviation and 10th/90th percentiles (nearest rank) of one number over the runs."""
+    n = len(values)
+    mean = sum(values) / n
+    v = sorted(values)
+    cut = (n - 1) // 10
+    return Spread(mean=round(mean, 3), sd=round(math.sqrt(sum((x - mean) ** 2 for x in values) / n), 3),
+                  p10=round(v[cut], 3), p90=round(v[n - 1 - cut], 3))
+
+
+def describe(runs: Sequence[Run], from_t: int) -> ArmStats:
+    """What the runs of one arm have in common: the usual final scores and each team's numbers (Bx10)."""
+    n = len(runs)
+    counts = Counter(r.score for r in runs)
+    top = sorted(counts.items(), key=lambda sc: (-sc[1], sc[0]))[:TOP_SCORES]
+    possession = [100 * r.home[4] / (r.home[4] + r.away[4]) if r.home[4] + r.away[4] else 50.0 for r in runs]
+    teams = {}
+    for k, side in enumerate(SIDES):
+        rows = [r.home if k == 0 else r.away for r in runs]
+        cols = dict(zip(RUN_STATS, zip(*rows)))
+        teams[side] = TeamRunStats(
+            goals=spread(cols["goals"]), shots=spread(cols["shots"]), shots_on_target=spread(cols["shots_on_target"]),
+            xg=spread(cols["xg"]), possession_pct=spread(possession if k == 0 else [100 - p for p in possession]),
+            cards=spread(cols["cards"]), red_cards=spread(cols["red_cards"]),
+            scored_share=round(sum(g > 0 for g in cols["goals"]) / n, 4))
+    return ArmStats(n_runs=n, from_t=from_t, top_scores=[ScoreShare(home=h, away=a, share=round(c / n, 4))
+                                                         for (h, a), c in top], **teams)
+
+
 def significant(a: OutcomeDist, b: OutcomeDist) -> dict[str, bool]:
     """True for an outcome only when the two arms' intervals do not overlap."""
     out = {}
@@ -348,13 +426,13 @@ def run_whatif(match: Match, spec: ScenarioSpec, *, seed: int | None = None, pla
     """
     t0 = time.perf_counter()
     base, cf = prepare(save(match, spec.at_minute, seed, plants, params), spec)
-    runs = n_runs or spec.n_runs
-    scores = run_arms([base, cf], runs, spec.seed_base, workers, progress, pool)
-    b, c = summarise(scores[0]), summarise(scores[1])
+    runs = run_arms([base, cf], n_runs or spec.n_runs, spec.seed_base, workers, progress, pool)
+    b, c = (summarise([r.score for r in arm]) for arm in runs)
     return SimResult(scenario_id=scenario_id or f"{match.match_id}:{spec.pivot_id}:{spec.type}", baseline=b,
-                     counterfactual=c, significant=significant(b, c),
+                     counterfactual=c, baseline_stats=describe(runs[0], base.t),
+                     counterfactual_stats=describe(runs[1], cf.t), significant=significant(b, c),
                      runtime_ms=int((time.perf_counter() - t0) * 1000), executor="local_pool")
 
 
-__all__ = ["clock_minute", "copy_engine", "find_event", "play_on", "prepare", "run_arms", "run_shard", "run_whatif",
-           "save", "significant", "summarise", "wilson"]
+__all__ = ["RUN_STATS", "Run", "clock_minute", "copy_engine", "describe", "find_event", "play_counted", "play_on",
+           "prepare", "run_arms", "run_shard", "run_whatif", "save", "significant", "spread", "summarise", "wilson"]

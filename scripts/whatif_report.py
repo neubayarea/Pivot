@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""What-if on the demo match (the demo-1021 preset): win/draw/loss with and without one change, and how long it takes.
+"""What-if on the demo match (the demo-1021 preset): win/draw/loss with and without one change, why
+(the usual final scores and each team's numbers after the change, Bx10), and how long it takes.
 
   uv run scripts/whatif_report.py                      # both scenarios, 200 runs per arm
   uv run scripts/whatif_report.py --n 200 500 1000     # runtime at each size
@@ -47,6 +48,51 @@ def pct(d, key: str) -> str:
     return f"{getattr(d, key) * 100:5.1f}% [{lo * 100:4.1f}-{hi * 100:4.1f}]"
 
 
+ROWS = (("goals", "goals", 2, 0), ("shots", "shots", 1, 0), ("shots_on_target", "on target", 1, 0),
+        ("xg", "xG", 2, 1), ("possession_pct", "possession %", 0, 0), ("cards", "cards", 2, 0),
+        ("red_cards", "red cards", 2, 0))                   # field, label, decimals for the mean, for the range
+
+
+def show_stats(res) -> None:
+    """Bx10: the usual final scores and each team's numbers after the saved minute, both arms side by side."""
+    arms = (("as played", res.baseline_stats), ("changed", res.counterfactual_stats))
+    if any(a is None for _, a in arms):
+        return
+    minute = arms[0][1].from_t // 60
+    for label, a in arms:
+        top = ", ".join(f"{s.home}-{s.away} {s.share * 100:.0f}%" for s in a.top_scores)
+        print(f"{'':>8}  {label:<15} final scores: {top}")
+    print(f"\n{'':>8}  from {minute}:00 on (mean [10th-90th]) {'Harbour City':^35} {'Rovers':^35}")
+    print(f"{'':>8}  {'':<24} {'as played':>17} {'changed':>17} {'as played':>17} {'changed':>17}")
+
+    for key, name, dp, rp in ROWS:
+        cells = [f"{sp.mean:.{dp}f} [{sp.p10:.{rp}f}-{sp.p90:.{rp}f}]"
+                 for sp in (getattr(getattr(a, side), key) for side in ("home", "away") for _, a in arms)]
+        print(f"{'':>8}  {name:<24} " + " ".join(f"{c:>17}" for c in cells))
+    cells = [f"{getattr(a, side).scored_share * 100:.0f}%" for side in ("home", "away") for _, a in arms]
+    print(f"{'':>8}  {'scored at least once':<24} " + " ".join(f"{c:>17}" for c in cells))
+
+
+def show_template(res, evidence_id: str, at_minute: int) -> None:
+    """What "Why it differs" says without a model (the template), checked by the Verifier as on the site."""
+    from pivot_core.domain import ViewerPrefs
+    from pivot_worker.comparator import template_comparison, verify_comparison
+    from pivot_worker.testing import FakeStats, event
+
+    match = DEMO_1021.build()
+    teams = {"home": match.home.name, "away": match.away.name}
+    events = {evidence_id: event(evidence_id, at_minute, "card")}
+    for lang in ("en", "zh"):
+        for audience in ("analyst", "fan"):
+            n = template_comparison(res, evidence_id=evidence_id, team_names=teams,
+                                    prefs=ViewerPrefs(language=lang, audience=audience))
+            ok = verify_comparison(n, res, at_minute=at_minute, events=events, stats=FakeStats({}),
+                                   team_names=teams, target_event_id=evidence_id).passed
+            print(f"\n{'':>8}  template, {lang} {audience} (Verifier {'passes' if ok else 'REJECTS'}): {n.headline}")
+            for s in n.sentences:
+                print(f"{'':>10}  {s.text}")
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -70,6 +116,8 @@ def main() -> None:
                 print(f"{n:>8}  {arm:<15} {pct(d, 'home_win'):<24} {pct(d, 'draw'):<24} {pct(d, 'away_win'):<24} {t}")
             sig = [k for k, v in res.significant.items() if v]
             print(f"{'':>8}  significant: {', '.join(sig) or 'none'}")
+            show_stats(res)
+            show_template(res, sp.target_event_id, sp.at_minute)
 
 
 if __name__ == "__main__":

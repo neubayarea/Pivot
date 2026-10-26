@@ -53,6 +53,56 @@ export interface VerifierIssue {
   sentence_index: number | null;
 }
 /**
+ * Why an arm came out as it did: its final scores and each team's numbers after the replay start.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "ArmStats".
+ */
+export interface ArmStats {
+  away: TeamRunStats;
+  from_t: number;
+  home: TeamRunStats;
+  n_runs: number;
+  top_scores: ScoreShare[];
+}
+/**
+ * What one team did from the replay start to the end, over all runs of an arm (Bx10).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamRunStats".
+ */
+export interface TeamRunStats {
+  cards: Spread;
+  goals: Spread;
+  possession_pct: Spread;
+  red_cards: Spread;
+  scored_share: number;
+  shots: Spread;
+  shots_on_target: Spread;
+  xg: Spread;
+}
+/**
+ * One number over all runs of an arm: its mean, standard deviation and 10th/90th percentiles.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "Spread".
+ */
+export interface Spread {
+  mean: number;
+  p10: number;
+  p90: number;
+  sd: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "ScoreShare".
+ */
+export interface ScoreShare {
+  away: number;
+  home: number;
+  share: number;
+}
+/**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "AttackingAttributes".
  */
@@ -1188,7 +1238,9 @@ export interface Scenario {
  */
 export interface SimResult {
   baseline: OutcomeDist;
+  baseline_stats?: ArmStats | null;
   counterfactual: OutcomeDist;
+  counterfactual_stats?: ArmStats | null;
   executor: "local_pool" | "aca_jobs";
   narrative: Narrative | null;
   runtime_ms: number;

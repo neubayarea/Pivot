@@ -221,7 +221,7 @@ def test_b08_paired_runs_do_not_depend_on_the_pool(ref, saved64):
     pooled = run_arms(starts, 4, 1000, workers=2, progress=lambda d, t: calls.append((d, t)))
     assert alone == pooled
     assert calls[-1] == (8, 8)
-    assert all(h >= late.score[0] and a >= late.score[1] for arm in alone for h, a in arm)   # goals stay scored
+    assert all(h >= late.score[0] and a >= late.score[1] for arm in alone for (h, a), _, _ in arm)   # goals stay scored
 
 
 def test_b08_run_whatif_returns_a_sim_result():
