@@ -1,59 +1,32 @@
+# TEMPORARY (Bx5 #161, do not merge): the frame tests from main and from the fix, 8 at once each, on the Mac.
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  lint:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
-      # Ruff 0.17 widened its default rules, so pin the version and select the
-      # classic defaults explicitly. E741 is ignored until existing code is tidied.
-      - run: uvx ruff@0.17.2 check --select E4,E7,E9,F --ignore E741 .
-
-  test:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
-      - run: uv sync --locked
-      - run: uv run pytest
-
-  contracts:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
-      - run: uv sync --locked
-      - run: uv run scripts/export_contracts.py
-      - name: Fail if the committed contracts are out of date
-        run: git diff --exit-code packages/contracts
-
-  secrets:
+  bx5-stress:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      # Scans only the commits in this push or pull request. The trufflehog action is a Docker
-      # action, which a macOS runner cannot run, so the command line version is used (brew install trufflehog).
-      - name: Scan new commits for secrets
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      - uses: astral-sh/setup-uv@v10.3.2
+      - run: uv sync --locked
+      - run: git show origin/main:apps/api/tests/test_sims.py > apps/api/tests/test_sims_main.py
+      - name: stress
         run: |
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            trufflehog git file://. --results=verified,unknown --fail --no-update
-          else
-            trufflehog git file://. --since-commit "$BASE" --branch HEAD --results=verified,unknown --fail --no-update
-          fi
+          for f in test_sims_main test_sims; do
+            for round in 1 2; do
+              for i in $(seq 1 8); do
+                uv run pytest -q -p no:cacheprovider --basetemp=/tmp/bx5-$f-$round-$i apps/api/tests/$f.py \
+                  -k "frames_of_a or frames_404 or lists_simulated" > /tmp/bx5-$f-$round-$i.txt 2>&1 &
+              done
+              wait
+            done
+            echo "== $f"; grep -hoE "[0-9]+ (failed|passed)[^=]*" /tmp/bx5-$f-*.txt | sed 's/ in .*//' | sort | uniq -c
+            grep -h "^E  " /tmp/bx5-$f-*.txt | sort | uniq -c | head -5
+          done
