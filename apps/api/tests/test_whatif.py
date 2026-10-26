@@ -112,6 +112,24 @@ def test_post_then_poll_until_completed_with_a_narrative(client, runner):
     assert len({t["chain_id"] for t in traces}) == 1 and traces[0]["chain_id"].startswith("whatif:")
 
 
+def test_the_comparison_comes_in_the_asked_language_without_a_new_run(client, runner):
+    """Ax31 (#188): `?lang=` writes the comparison in that language from the same result, once."""
+    scenario = client.post("/api/scenarios", json={"pivot_id": PIVOT_ID, "type": "cancel_substitution"}).json()
+    sid = scenario["scenario_id"]
+    english = wait_done(client, sid)["result"]["narrative"]
+    assert english["prefs"]["language"] == "en"
+
+    chinese = client.get(f"/api/scenarios/{sid}?lang=zh").json()["result"]
+    assert chinese["narrative"]["prefs"]["language"] == "zh"
+    assert any("\u4e00" <= ch <= "\u9fff" for ch in chinese["narrative"]["headline"])
+    assert chinese["counterfactual"] == wait_done(client, sid)["result"]["counterfactual"]
+    assert client.get(f"/api/scenarios/{sid}?lang=es").json()["result"]["narrative"]["prefs"]["language"] == "es"
+    assert client.get(f"/api/scenarios/{sid}").json()["result"]["narrative"] == english
+    assert len(runner.calls) == 1                                  # no replay for another language
+    again = client.get(f"/api/scenarios/{sid}?lang=zh").json()["result"]["narrative"]
+    assert again == chinese["narrative"]                           # written once, then kept
+
+
 def test_progress_and_end_are_pushed_on_the_match_channel(client):
     with client.websocket_connect(f"/api/ws/matches/{DEMO_MATCH_ID}") as ws:
         scenario = client.post("/api/scenarios", json={"pivot_id": PIVOT_ID, "type": "remove_goal"}).json()

@@ -170,6 +170,27 @@ def test_new_run_of_the_pivot_drops_the_stored_versions(client):
     assert len(models.calls) == 2 and again["narrative"]["chain_id"] == "c-demo-61-rerun"
 
 
+def test_an_english_card_stored_as_the_chinese_one_is_written_again(client):
+    """#184: versions stored before the Verifier checked the language are not served as Chinese."""
+    repo = app.state.adapters.matches
+    pivot = asyncio.run(repo.get_pivot(DEMO_MATCH_ID, PIVOT_ID))
+    english = pivot.narrative.model_copy(update={"prefs": ViewerPrefs(language="zh", audience="fan")})
+    asyncio.run(repo.upsert_narrative(DEMO_MATCH_ID, PIVOT_ID, english))
+    models = ScriptedModelClient(standard=[ZH_DRAFT])
+    use_models(models)
+    served = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "zh", "audience": "fan"}).json()
+    assert len(models.calls) == 1 and served["narrative"]["headline"] == "换人之后流浪者掌控比赛"
+
+
+def test_an_english_draft_for_chinese_is_sent_back(client):
+    english = json.dumps({"headline": "Rovers seize control after the change", "sentences": [{
+        "text": "Rovers made a change and soon equalised, turning the game.",
+        "evidence_ids": ["m061-s00126", "m064-s00134"]}]})
+    use_models(ScriptedModelClient(standard=[english, ZH_DRAFT]))
+    pivot = client.get(f"/api/pivots/{PIVOT_ID}", params={"lang": "zh"}).json()
+    assert pivot["narrative"]["headline"] == "换人之后流浪者掌控比赛" and pivot["narrative"]["verifier_attempts"] == 2
+
+
 @pytest.mark.parametrize("params", [{"lang": "fr"}, {"audience": "coach"}, {"team": "middle"}, {"player": "nobody"}])
 def test_bad_parameters_are_422(client, params):
     assert client.get(f"/api/pivots/{PIVOT_ID}", params=params).status_code == 422

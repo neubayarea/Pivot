@@ -27,6 +27,7 @@ from pivot_core.domain import Narrative, Pivot, PivotCandidate, Verdict, Verifie
 from pivot_core.ports import MatchRepository
 from pivot_worker import explainer
 from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, match_stats, with_computed
+from pivot_worker.languages import wrong_script
 from pivot_worker.models import ModelClient, ModelUnavailable, model_client_from_env
 from pivot_worker.template import template_explain
 from pivot_worker.verifier import verify
@@ -91,7 +92,11 @@ class Personalizer:
     async def _stored(self, pivot: Pivot, prefs: ViewerPrefs) -> Narrative | None:
         narrative = await self.repo.get_narrative(pivot.match_id, pivot.pivot_id, prefs)
         # Written for an earlier run of this pivot (the worker wrote it again since): stale.
-        return narrative if narrative and narrative.chain_id == pivot.chain_id else None
+        if narrative is None or narrative.chain_id != pivot.chain_id:
+            return None
+        # Stored before the Verifier checked the language (#184): an English card kept as the Chinese one.
+        texts = [narrative.headline, *(s.text for s in narrative.sentences)]
+        return None if any(wrong_script(text, prefs.language) for text in texts) else narrative
 
     async def _write(self, pivot: Pivot, prefs: ViewerPrefs) -> Narrative | None:
         view = await load_view(self.repo, pivot.match_id, self.stats_factory)

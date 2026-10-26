@@ -241,7 +241,7 @@ SENT_OFF = event("m063-s01030", 60, "card", team="away",
 ])
 def test_players_on_the_pitch_must_fit_the_red_cards(events, stats, lang, text, ok):
     evs = {**events, SENT_OFF.event_id: SENT_OFF}
-    narrative = Narrative(prefs=ViewerPrefs(language=lang), headline="Harbour lose a man",
+    narrative = Narrative(prefs=ViewerPrefs(language=lang), headline="Harbour人数劣势" if lang == "zh" else "Harbour lose a man",
                           sentences=[s(text, evidence=[SENT_OFF.event_id])], source="llm")
     verdict = check(narrative, evs, stats, team_names={"home": "Rovers", "away": "Harbour"})
     assert codes(verdict) == ([] if ok else ["number_mismatch"]), verdict.issues

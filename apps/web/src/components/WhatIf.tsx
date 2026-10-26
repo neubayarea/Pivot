@@ -6,11 +6,12 @@ import { useClock } from "../data/clock";
 import { ApiError } from "../data/live/api";
 import type { MatchView } from "../data/match";
 import {
-  OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, useOptionMinute, type Outcome,
-  type RunState, type ScenarioOption,
+  OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, useComparisonIn, useOptionMinute,
+  type Outcome, type RunState, type ScenarioApi, type ScenarioOption,
 } from "../data/scenarios";
-import { useT, type T } from "../i18n";
+import { narrativeLang, usePrefs, useT, type T } from "../i18n";
 import Button from "./Button";
+import LangTag from "./LangTag";
 import Stamp from "./Stamp";
 
 type Teams = MatchView["teams"];
@@ -194,10 +195,12 @@ type ResultProps = {
   option: ScenarioOption | undefined;
   teams: Teams;
   onReset: () => void;
+  /** Where to ask for the comparison in the page's language; left out, the run's own one shows. */
+  source?: ScenarioApi;
 };
 
-export function ScenarioResult({ state, option, teams, onReset }: ResultProps) {
-  const t = useT();
+export function ScenarioResult({ state, option, teams, onReset, source }: ResultProps) {
+  const { prefs, t } = usePrefs();
   const minuteOf = useOptionMinute();
   const { minute } = useClock();
   const { scenario, cached } = state;
@@ -207,7 +210,9 @@ export function ScenarioResult({ state, option, teams, onReset }: ResultProps) {
   const from = minute(scenario.spec.at_minute);
   const moveTo = typeof scenario.spec.params.new_minute === "number" ? scenario.spec.params.new_minute + 1 : undefined;
   const change = option ? optionLabel(option, t, moveTo, minuteOf(option)) : scenario.spec.type;
-  const sentences = r.narrative?.sentences ?? [];
+  const { narrative, writing } = useComparisonIn(source, scenario, prefs.language);
+  const served = narrativeLang(narrative);
+  const sentences = narrative?.sentences ?? [];
   return (
     <div className="result">
       <div className="stamps">
@@ -229,10 +234,15 @@ export function ScenarioResult({ state, option, teams, onReset }: ResultProps) {
       <Ranges result={r} teams={teams} />
       <div className="why">
         <span className="label muted">{t("whatif.comparison")}</span>
-        {r.narrative ? (
+        {narrative ? (
           <>
-            <p><b>{r.narrative.headline}</b></p>
-            {sentences.map((s, i) => <p key={i}>{s.text}</p>)}
+            {writing && served && (
+              <div className="lang-note" role="note">
+                {t("why.writing", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
+              </div>
+            )}
+            <p lang={served ?? undefined}><b>{narrative.headline}</b> <LangTag lang={served} /></p>
+            {sentences.map((s, i) => <p key={i} lang={served ?? undefined}>{s.text}</p>)}
           </>
         ) : (
           <p className="muted">{t("whatif.noNarrative")}</p>

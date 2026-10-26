@@ -219,7 +219,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
             {state.phase === "failed" && (
               <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={tryAnother} />
             )}
-            {state.phase === "done" && <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} />}
+            {state.phase === "done" && <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} source={source} />}
           </div>
           <p className="fine">{t("whatif.fine")}</p>
         </Card>

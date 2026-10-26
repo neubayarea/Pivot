@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { Claim, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { involves, useMatch } from "../data/match";
+import { useLocalising } from "../data/view";
 import { narrativeLang, usePrefs } from "../i18n";
 import Card from "./Card";
 import { surname } from "./FocusPickers";
@@ -66,6 +67,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   const { eventById, playerName } = useMatch();
   const { prefs, t } = usePrefs();
   const { minute } = useClock();
+  const localising = useLocalising();
   const focus = prefs.focus_player_id;
   const name = nameMatcher(playerName(focus));
   const narrative = pivot?.narrative;
@@ -87,11 +89,11 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
       {fellBack && (
         // A div, not a p: the drop cap goes on the first paragraph of the explanation.
         <div className="lang-note" role="note">
-          {t("why.fallback", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
+          {t(localising ? "why.writing" : "why.fallback", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
         </div>
       )}
       {narrative.sentences.map((s, i) => (
-        <p key={i}>
+        <p key={i} lang={fellBack ? served : undefined}>
           <Highlighted text={s.text} claims={s.claims} name={name} />
           {s.evidence_ids.map((id) => {
             const e = eventById(id);

@@ -3,8 +3,8 @@
 // second (a pushed "scenario" envelope wakes it sooner) and resolves with the settled Scenario.
 // Finished runs are kept for the session, so asking the same thing again answers at once.
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { OutcomeDist, Scenario, SimResult } from "@pivot/contracts";
-import type { T } from "../i18n";
+import type { Narrative, OutcomeDist, Scenario, SimResult } from "@pivot/contracts";
+import type { Lang, T } from "../i18n";
 import { eventMinute, useClock } from "./clock";
 import { api, type RunCount, type ScenarioOption, type StartScenario } from "./live/api";
 import { subscribeScenario } from "./live/scenarioFeed";
@@ -15,7 +15,8 @@ export type { RunCount, ScenarioOption, StartScenario };
 export type ScenarioApi = {
   options: (pivotId: string) => Promise<ScenarioOption[]>;
   start: (body: StartScenario) => Promise<Scenario>;
-  get: (scenarioId: string) => Promise<Scenario>;
+  /** With `lang`, the comparison in that language (the mock ignores it: it writes in the page's). */
+  get: (scenarioId: string, lang?: Lang) => Promise<Scenario>;
 };
 
 export const liveScenarioApi: ScenarioApi = {
@@ -220,3 +221,30 @@ export const pct = (p: number) => Math.round(100 * p);
 
 /** The 95% range of one outcome, falling back to the point when the API left it out. */
 export const ci = (d: OutcomeDist, k: Outcome): [number, number] => d.ci95[k] ?? [d[k], d[k]];
+
+/**
+ * A finished run's comparison in the viewer's language (Ax31). Runs are written in English; the API
+ * writes another language from the same result on its first request, so switching the page's
+ * language never replays the match. Until that arrives (or if it fails) the run's own one shows,
+ * with `writing` true while it is on its way.
+ */
+export function useComparisonIn(source: ScenarioApi | undefined, scenario: Scenario, lang: Lang) {
+  const own: Narrative | null = scenario.result?.narrative ?? null;
+  const needed = !!source && !!own && own.prefs.language !== lang;
+  const key = `${scenario.scenario_id}|${lang}`;
+  const [got, setGot] = useState<{ key: string; narrative: Narrative | null } | null>(null);
+  useEffect(() => {
+    if (!needed || !source) return;
+    let alive = true;
+    source.get(scenario.scenario_id, lang).then(
+      (s) => alive && setGot({ key, narrative: s.result?.narrative ?? null }),
+      () => alive && setGot({ key, narrative: null }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [source, needed, key, scenario.scenario_id, lang]);
+  if (!needed) return { narrative: own, writing: false };
+  const arrived = got?.key === key;
+  return { narrative: (arrived && got.narrative) || own, writing: !arrived };
+}
