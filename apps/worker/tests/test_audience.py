@@ -44,6 +44,26 @@ def test_focus_team_and_player_shape_the_prompt_and_the_sheet(events, stats):
         e for e in request["events"] if e["id"] == "m063-s01080").items()
 
 
+def test_ax49_a_picked_team_owns_the_headline_and_a_fan_hears_a_supporter():
+    analyst = ex.audience_brief(ViewerPrefs(focus_team="away"), TEAMS)
+    fan = ex.audience_brief(ViewerPrefs(audience="fan", focus_team="away"), TEAMS)
+    neutral_fan = ex.audience_brief(FAN, TEAMS)
+    assert "The headline is about Harbour too" in analyst and "never as the other side's win" in analyst
+    assert "Harbour supporters would feel it" in fan and "supporters would feel" not in analyst
+    assert "feeling of the moment" in neutral_fan and "feeling" not in ex.audience_brief(ViewerPrefs(), TEAMS)
+
+
+@pytest.mark.parametrize("side,headline", [("home", "Momentum swings to Rovers"), ("away", "Harbour lose their grip")])
+def test_ax49_template_headline_takes_the_picked_teams_side(events, stats, side, headline):
+    for audience in ("analyst", "fan"):
+        prefs = ViewerPrefs(audience=audience, focus_team=side)
+        narrative = template_explain(candidate(), events=events, stats=stats, team_names=TEAMS, prefs=prefs)
+        assert narrative.headline == headline
+        assert verify(narrative, pivot_minute=63, events=events, stats=stats).passed
+    # No team picked: the headline still names the event that set it off.
+    assert template_explain(candidate(), events=events, stats=stats, team_names=TEAMS).headline != headline
+
+
 def test_fan_versions_may_not_use_jargon(events, stats):
     def card(prefs):
         return Narrative(prefs=prefs, headline="Rovers take over", source="llm", sentences=[

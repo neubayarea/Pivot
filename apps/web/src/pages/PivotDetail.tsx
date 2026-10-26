@@ -5,6 +5,7 @@ import Button from "../components/Button";
 import Card from "../components/Card";
 import { describe } from "../components/EventFeed";
 import Pitch, { whoFromSquads } from "../components/Pitch";
+import PlayerCard from "../components/PlayerCard";
 import { PivotStamp, Severity, pivotHeadline } from "../components/PivotList";
 import Scrubber from "../components/Scrubber";
 import Sourced, { formatValue } from "../components/Sourced";
@@ -161,6 +162,7 @@ export default function PivotDetail() {
         <div className="stack">
           <WhyItTurned pivot={pivot} selected={new Set(selected ? [selected] : [])} onToggle={jump}
             chipHint={tr("detail.chipHint")} outside={outside} />
+          <PlayerCard upTo={to} />
           {detail.beforeAfter.length > 0 && beforeWin && afterWin && (
             <Card title={tr("detail.ba")} note={tr("detail.baNote")}>
               <table className="ba">

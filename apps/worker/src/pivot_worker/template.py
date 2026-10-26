@@ -156,6 +156,10 @@ def template_explain(
         momentum = "momentum" if gaining else "momentum_lost"
         sentences.append(ExplanationSentence(text=phrases[momentum].format(team=team), evidence_ids=ids[:4]))
         fallback_headline = phrases[f"{momentum}_h"].format(team=team)
+        # A viewer who picked a team reads the headline from their side ("Northgate Rovers lose their
+        # grip"), not the event's ("A card changes the game").
+        if prefs.focus_team:
+            headline = fallback_headline
         return Narrative(prefs=prefs, headline=clean_headline(headline or fallback_headline, lang),
                          sentences=sentences[:3], source="template", verifier_attempts=verifier_attempts,
                          chain_id=chain_id)
