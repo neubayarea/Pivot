@@ -53,7 +53,7 @@ export const goalX = (team: Side) => (team === "home" ? PITCH_L : 0);
 /** Distance from the team's own goal line, as the team sees the pitch. */
 const fromOwnGoal = (x: number, team: Side) => (team === "home" ? x : PITCH_L - x);
 
-const oldestFirst = (events: MatchEvent[]) => [...events].sort((a, b) => a.t - b.t || a.seq - b.seq);
+export const oldestFirst = (events: MatchEvent[]) => [...events].sort((a, b) => a.t - b.t || a.seq - b.seq);
 
 export function freeKickZone(e: MatchEvent): FreeKickZone {
   const [x, y] = e.location ?? [PITCH_L / 2, PITCH_W / 2];
@@ -208,26 +208,36 @@ export const CLIP_AFTER = 2;
 const ON_BALL = new Set<MatchEvent["type"]>(["pass", "carry", "dribble", "shot"]);
 
 /**
- * One clip per shot, oldest first: from the start of the attack (the shooting team's first action in
- * that possession) but no more than CLIP_BEFORE and no less than CLIP_MIN seconds before the shot,
- * to CLIP_AFTER after it. A shot is from a set piece if its possession began with a corner, free
- * kick or penalty, or a corner or free kick by the same team came in the same possession just before.
+ * Where the clip of a shot (or any goal) at `e` starts: the start of the attack (the team's first
+ * action in that possession) but no more than CLIP_BEFORE and no less than CLIP_MIN seconds before.
+ * `all` is oldest first; `team` is the attacking side (the scorer's, for an own goal).
+ */
+export function attackFrom(all: readonly MatchEvent[], e: MatchEvent, team: Side = e.team): number {
+  const start = all.find((x) => x.team === team && x.possession_id !== null && x.possession_id === e.possession_id && x.t <= e.t)?.t ?? e.t;
+  return Math.max(0, Math.max(e.t - CLIP_BEFORE, Math.min(start, e.t - CLIP_MIN)));
+}
+
+/** The team's passes, carries and dribbles from `from` up to the shot `e`, ending with it. */
+export function attackChain(all: readonly MatchEvent[], e: MatchEvent, from: number, team: Side = e.team): MatchEvent[] {
+  return all.filter((x) => x.team === team && ON_BALL.has(x.type) && x.t >= from && (x.t < e.t || x === e) && x.seq <= e.seq);
+}
+
+/**
+ * One clip per shot, oldest first: from attackFrom() to CLIP_AFTER after the shot. A shot is from a
+ * set piece if its possession began with a corner, free kick or penalty, or a corner or free kick by
+ * the same team came in the same possession just before.
  */
 export function shotClips(events: MatchEvent[], end = Infinity): ShotClip[] {
   const all = oldestFirst(events);
   const pieces = setPieces(all);
   return all.filter((e) => e.type === "shot").map((shot) => {
-    const attack = all.filter((e) => e.team === shot.team && e.possession_id !== null && e.possession_id === shot.possession_id && e.t <= shot.t);
-    const start = attack[0]?.t ?? shot.t;
-    const from = Math.max(0, Math.max(shot.t - CLIP_BEFORE, Math.min(start, shot.t - CLIP_MIN)));
+    const from = attackFrom(all, shot);
     const to = Math.min(end, shot.t + CLIP_AFTER);
     const piece = pieces.some((p) => p.event.team === shot.team && p.event.possession_id === shot.possession_id
       && p.event.t <= shot.t && shot.t - p.event.t <= FOLLOW_S);
     const source: ShotSource = piece || shot.play_pattern === "corner" || shot.play_pattern === "free_kick" || shot.play_pattern === "penalty"
       ? "set_piece" : shot.play_pattern === "counter" ? "counter" : "open_play";
-    const chain = all.filter((e) => e.team === shot.team && ON_BALL.has(e.type) && e.t >= from && (e.t < shot.t || e === shot)
-      && e.seq <= shot.seq);
-    return { shot, source, from, to, chain };
+    return { shot, source, from, to, chain: attackChain(all, shot, from) };
   });
 }
 
@@ -255,13 +265,13 @@ export function frameBetween(frames: TrackingFrame[], t: number): TrackingFrame 
 }
 
 /**
- * The ball as the clip draws it at `t`: from the second before the shot it flies from where the
+ * The ball as a clip draws it at `t`: from the second before the shot it flies from where the
  * frames had it to the shot's end point and stays there. The frames cannot be used for that last
  * stretch: after a goal they already have the ball back on the centre spot in the shot's second.
  */
-export function clipBall(clip: ShotClip, frames: TrackingFrame[], t: number): { x: number; y: number } | null {
-  const end = clip.shot.end_location;
-  const start = clip.shot.t - 1;
+export function clipBall(shot: MatchEvent, frames: TrackingFrame[], t: number): { x: number; y: number } | null {
+  const end = shot.end_location;
+  const start = shot.t - 1;
   if (!end || t < start) return null;
   const from = frameBetween(frames, start)?.ball ?? { x: end[0], y: end[1] };
   const k = Math.min(1, t - start);

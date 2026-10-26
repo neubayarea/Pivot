@@ -57,7 +57,13 @@
 .sh-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--pv-ink-2); }
 .sh-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.clip-goal { font-family: var(--pv-display); font-size: 20px; background: var(--pv-gold); color: var(--pv-on-gold); padding: 0 10px; border: 2px solid var(--pv-ink); box-shadow: 3px 3px 0 var(--pv-ink); }
+.clip-banner { font-family: var(--pv-display); font-weight: 400; font-size: 20px; background: var(--pv-gold); color: var(--pv-on-gold); padding: 0 10px; border: 2px solid var(--pv-ink); box-shadow: 3px 3px 0 var(--pv-ink); margin-left: 8px; }
+.clip-banner.red { background: var(--pv-red); color: var(--pv-sheet); }
+.clip-banner.penalty, .clip-banner.var { background: var(--pv-sheet); color: var(--pv-ink); }
+.clip:focus-visible { outline: 3px solid var(--pv-gold); outline-offset: 3px; }
+.clip-ctl .again { font-size: 16px; width: 36px; height: 32px; border: 2px solid var(--pv-ink); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; }
+.clip-ctl .again:disabled { opacity: .5; cursor: default; }
+.clip-keys { font-size: 11px; }
 .clip-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--pv-label); }
 .clip-ctl input[type="range"] { flex: 1 1 160px; accent-color: var(--pv-gold); }
 .clip-ctl .play { font-size: 14px; width: 36px; height: 32px; border: 2px solid var(--pv-ink); background: var(--pv-gold); color: var(--pv-on-gold); cursor: pointer; }
