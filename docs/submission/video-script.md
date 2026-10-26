@@ -6,6 +6,8 @@ Demo match: **M-seed-29**, Harbour City 3–1 Northgate Rovers, https://pivot.in
 
 Every shot below was walked through on the live site on **2026-10-26**. What we saw is under each shot. Lines marked **⟳ check live** depend on AI text or simulation results that are being regenerated after the simulator version changed. Before recording, run the [checks](#before-recording) and change the narration if the site shows something else.
 
+> **All minutes, scores, player names and percentages in this script are as seen on 2026-10-26 and are subject to the final live site.** #245 (set-piece positions) will be merged before recording; after it the demo match's events, score and moment minutes can change and every result is recomputed. The structure of the video stays the same: re-read the numbers off the final live site, then update the narration and [video-captions.srt](video-captions.srt).
+
 ## Shot list
 
 | # | Time | Picture (what to click) | Narration (words) | Judging point |
@@ -22,6 +24,10 @@ Every shot below was walked through on the live site on **2026-10-26**. What we 
 | 10 | 1:47–1:54.5 | End card: Pivot logo or the match page top, with text *pivot.in-stacks.com · github.com/neubayarea/Pivot · All clubs, players and matches are synthetic.* | Every match here is synthetic, as the rules require. Next: real match data. This is Pivot. **(16)** | Data rules, what comes next |
 
 Total: 251 words. If it runs long, cut "Every version is checked again." from shot 7 (5 words).
+
+### Which what-if to use
+
+Use **Remove the red card**. In the precomputed results (#246, M-seed-29, 200 runs each) it is the only change with a large effect: seen from the 62′ moment, a Harbour City win goes 81 % → 47 % and a Northgate win 3 % → 28 %; seen from 75′, 86 % → 49 % and 2 % → 24 %. Disallowing the 40′ goal (from 38′) moves a home win 95 % → 83 %. Cancelling or moving a substitution, or pressing higher, changes the result by 1–3 points, too little to show. The script runs the red-card chip from moment ① (on 10/26: 80 % → 52 %); if the final site shows a bigger drop from moment ② or ③, run it from that moment's panel instead and say those numbers.
 
 ### Why this order
 
