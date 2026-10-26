@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
 import { involves, type Side, type SquadPlayer } from "../data/view";
 import { PITCH } from "../fixtures/pivot-detail";
@@ -18,16 +18,28 @@ type Props = {
   /** The followed player (C08): gold outline on his dot, a gold ring on actions he took part in. */
   focus?: string | null;
   /** Side and shirt number of each player; without it, ids like the fixture's "hcy-11" are read. */
-  who?: (id: string) => { home: boolean; shirt: string };
+  who?: (id: string) => Who;
   /** How long the dots glide to the next frame; the time between frames, so motion looks continuous. */
   stepMs?: number;
+  /** The player picked on the board (Ax36): a ring and a label with his name. */
+  picked?: string | null;
+  /** Tapping or clicking a dot picks that player; tapping him again lets go. */
+  onPick?: (id: string | null) => void;
+  /** Players in the event just shown, drawn with a dashed gold ring. */
+  marked?: ReadonlySet<string>;
+  /** Text for a player's label and tooltip, e.g. "9 · Name · ST". */
+  tag?: (id: string) => string;
+  /** Drawn under the players: the team-shape layer (Ax36). */
+  under?: ReactNode;
 };
+
+export type Who = { home: boolean; shirt: string };
 
 // The fixture's ids are "<club>-<shirt>", Harbour City's club code "hcy".
 const fromId = (id: string) => ({ home: id.startsWith("hcy"), shirt: id.slice(id.lastIndexOf("-") + 1) });
 /** `who` for tracking frames, whose ids (sim ids like "h01") are looked up in the squads. */
-export function whoFromSquads(squads: Record<Side, SquadPlayer[]>): (id: string) => { home: boolean; shirt: string } {
-  const map = new Map<string, { home: boolean; shirt: string }>();
+export function whoFromSquads(squads: Record<Side, SquadPlayer[]>): (id: string) => Who {
+  const map = new Map<string, Who>();
   for (const side of ["home", "away"] as const) {
     for (const p of squads[side]) map.set(p.player_id, { home: side === "home", shirt: p.shirt === null ? "" : String(p.shirt) });
   }
@@ -90,19 +102,32 @@ function Action({ e, on, mine }: { e: MatchEvent; on: boolean; mine: boolean }) 
   );
 }
 
-export default function Pitch({ frame, actions, selected, label, focus = null, who = fromId, stepMs }: Props) {
+export default function Pitch({ frame, actions, selected, label, focus = null, who = fromId, stepMs,
+  picked = null, onPick, marked, tag, under }: Props) {
   const ball = px([frame.ball.x, frame.ball.y]);
   const style = stepMs ? ({ "--pv-step": `${Math.round(stepMs)}ms` } as CSSProperties) : undefined;
+  // The ball carrier's ring is the board's (onPick); the detail page marks its evidence instead.
+  const carrier = onPick ? frame.ball.owner_id : null;
+  const pickedAt = picked ? frame.players.find((p) => p.player_id === picked) : undefined;
   return (
     <svg className="pitch" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} style={style}>
       <Markings />
+      {under}
       {actions.filter((e) => e.event_id !== selected).map((e) => <Action key={e.event_id} e={e} on={false} mine={involves(e, focus)} />)}
       {frame.players.map((p) => {
         const { home, shirt } = who(p.player_id);
         const followed = p.player_id === focus;
+        const ring = p.player_id === picked ? "picked" : marked?.has(p.player_id) ? "marked" : p.player_id === carrier ? "carrier" : "";
         return (
-          <g key={p.player_id} className={`pl${followed ? " followed" : ""}`} style={{ transform: `translate(${p.x * S}px, ${p.y * S}px)` }}>
+          <g key={p.player_id} className={`pl${followed ? " followed" : ""}${ring ? ` ${ring}` : ""}${onPick ? " pick" : ""}`}
+            style={{ transform: `translate(${p.x * S}px, ${p.y * S}px)` }} data-player={p.player_id}
+            onClick={onPick ? () => onPick(p.player_id === picked ? null : p.player_id) : undefined}>
+            {tag && <title>{tag(p.player_id)}</title>}
+            {onPick && <circle r={16} fill="transparent" />}
             {followed && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />}
+            {ring === "picked" && <circle r={15} fill="none" stroke="var(--pv-ink)" strokeWidth={3} />}
+            {ring === "marked" && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} strokeDasharray="5 3" />}
+            {ring === "carrier" && <circle r={13} fill="none" stroke="var(--pv-sheet)" strokeWidth={2.5} />}
             <circle r={9} fill={home ? "var(--pv-home)" : "var(--pv-away)"} stroke={followed ? "var(--pv-gold)" : "var(--pv-ink)"} strokeWidth={followed ? 3 : 2} />
             <text y={4} fontSize={10} fontWeight={700} textAnchor="middle" fill="var(--pv-sheet)">
               {shirt}
@@ -114,6 +139,20 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
         <circle r={4} fill="var(--pv-sheet)" stroke="var(--pv-ink)" strokeWidth={1.5} />
       </g>
       {actions.filter((e) => e.event_id === selected).map((e) => <Action key={e.event_id} e={e} on mine={involves(e, focus)} />)}
+      {pickedAt && tag && <Label x={pickedAt.x * S} y={pickedAt.y * S} text={tag(pickedAt.player_id)} />}
     </svg>
+  );
+}
+
+/** The picked player's name above his dot, kept inside the pitch. */
+function Label({ x, y, text }: { x: number; y: number; text: string }) {
+  const w = Math.min(W - 8, text.length * 7 + 14);
+  const cx = Math.min(W - w / 2 - 4, Math.max(w / 2 + 4, x));
+  const cy = y < 40 ? y + 32 : y - 28;
+  return (
+    <g className="pl-label" pointerEvents="none">
+      <rect x={cx - w / 2} y={cy - 11} width={w} height={22} fill="var(--pv-sheet)" stroke="var(--pv-ink)" strokeWidth={2} />
+      <text x={cx} y={cy + 4.5} fontSize={13} fontWeight={700} textAnchor="middle" fill="var(--pv-ink)">{text}</text>
+    </g>
   );
 }
