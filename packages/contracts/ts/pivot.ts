@@ -1150,6 +1150,18 @@ export interface PlayerMatchStats {
   xg: number;
 }
 /**
+ * A turning point a player took part in.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerPivotLink".
+ */
+export interface PlayerPivotLink {
+  event_ids: string[];
+  in_trigger: boolean;
+  minute: number;
+  pivot_id: string;
+}
+/**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "PlayerPosition".
  */
@@ -1159,6 +1171,34 @@ export interface PlayerPosition {
   speed_ms: number;
   x: number;
   y: number;
+}
+/**
+ * What the page can show about one player, up to a point in the match (focus-player card).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerReport".
+ */
+export interface PlayerReport {
+  event_ids: string[];
+  name: string;
+  pivots: PlayerPivotLink[];
+  player_id: string;
+  role: string;
+  shirt_number: number;
+  stats: PlayerMatchStats | null;
+  team: "home" | "away";
+}
+/**
+ * GET /api/matches/{id}/players/stats: every player of both squads, or the one asked for.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerStatsReport".
+ */
+export interface PlayerStatsReport {
+  match_id: string;
+  players: PlayerReport[];
+  source: "stored" | "computed";
+  up_to_t: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

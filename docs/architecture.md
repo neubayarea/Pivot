@@ -564,6 +564,7 @@ verify(draft, match, pivot):
 | POST | `/api/matches/{id}/control` | start、pause、resume、speed、seek | 每 IP 每分钟 30 次 |
 | GET | `/api/matches/{id}/timeline?from=&to=&sinceSeq=` | 分钟指标和事件，用于断线补齐 | — |
 | GET | `/api/matches/{id}/pivots` | 转折点列表 | — |
+| GET | `/api/matches/{id}/players/stats?up_to=&player=` | 每名球员到第 `up_to` 秒为止的数据（RAT-001）、参与的事件、卷入的转折点；只读，不经过 AI | — |
 | GET | `/api/matches/{id}/pivots/{pivotId}` | 转折点详情 | — |
 | POST | `/api/matches/{id}/pivots/{pivotId}/feedback` | 标记“不是转折点”（Won't，接口先预留） | — |
 | GET | `/api/matches/{id}/events/{eventId}` | 单个事件 | — |

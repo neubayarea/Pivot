@@ -14,6 +14,7 @@ from pivot_worker.models import model_client_from_env
 
 from .demo import seed_demo
 from .personalize import personalizer_from_env
+from .players import router as players_router
 from .realtime import router as realtime_router
 from .routes import router
 from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
@@ -34,6 +35,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.personalizer = personalizer_from_env(app.state.adapters.matches)
     # Local profile starts empty, so put one demo match in for frontend work. PIVOT_DEMO=0 turns it off.
     app.state.fixture_frames = {}
+    app.state.fixture_files = {}
+    # players.py: per-player numbers, worked out once per match on first use
+    app.state.player_calcs, app.state.player_lines, app.state.player_calcs_lock = {}, {}, asyncio.Lock()
     replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
     demo_id = None
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
@@ -43,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             try:
                 match_id, frames = await load_fixture(app.state.adapters, fixture, replays)
                 demo_id = match_id
+                app.state.fixture_files[match_id] = fixture       # its saved player lines (players.py)
                 if frames is not None:
                     app.state.fixture_frames[match_id] = frames
                 log.info("loaded recorded demo %s from %s", match_id, fixture)
@@ -99,6 +104,7 @@ app.add_middleware(
 # Tracking frames are ~1.7 KB of JSON a second of play; gzip takes a five-minute window to ~60 KB.
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
+app.include_router(players_router)
 app.include_router(realtime_router)
 app.include_router(whatif_router)
 
