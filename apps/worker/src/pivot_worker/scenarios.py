@@ -80,10 +80,16 @@ class ScenarioOption:
                             n_runs=n_runs, seed_base=seed_base)
 
 
+def card_colour(e: MatchEvent) -> str | None:
+    """"yellow", "second_yellow" or "red" for a card event, else None. The simulator and feeds put the
+    colour in `foul.card`; hand-made events may still use `meta`."""
+    if e.type != "card":
+        return None
+    return (e.foul.card if e.foul else None) or e.meta.get("card") or e.meta.get("colour") or e.meta.get("color")
+
+
 def is_red_card(e: MatchEvent) -> bool:
-    """The simulator and feeds put the colour in `foul.card`; hand-made events may still use `meta`."""
-    colour = (e.foul.card if e.foul else None) or e.meta.get("card") or e.meta.get("colour") or e.meta.get("color")
-    return e.type == "card" and colour in ("red", "second_yellow")
+    return card_colour(e) in ("red", "second_yellow")
 
 
 def is_goal(e: MatchEvent) -> bool:

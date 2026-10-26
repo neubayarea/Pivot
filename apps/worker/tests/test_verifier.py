@@ -253,6 +253,40 @@ def test_ten_men_before_the_red_card_is_wrong(events, stats):
     assert codes(check(early, {**events, late.event_id: late}, stats)) == ["number_mismatch"]
 
 
+# Ax53 (#261): a straight red written as a booking ("was booked", "被黄牌罚下") is wrong; so is a yellow
+# written as a sending-off. A second yellow is both, so either word is fine there.
+BOOKED = event("m063-s01031", 60, "card", team="away",
+               foul=FoulDetail(foul_type="tackle", card="yellow", card_reason="reckless_challenge"))
+SECOND = event("m063-s01032", 60, "card", team="away",
+               foul=FoulDetail(foul_type="tackle", card="second_yellow", card_reason="reckless_challenge"))
+
+
+@pytest.mark.parametrize("lang,text,cited,ok", [
+    ("en", "Lisais was booked at 60', leaving Harbour with ten men.", SENT_OFF, False),
+    ("en", "Lisais was sent off at 60', leaving Harbour with ten men.", SENT_OFF, True),
+    ("zh", "E. Lisais在60'被黄牌罚下，Harbour只剩十人。", SENT_OFF, False),
+    ("zh", "E. Lisais在60'被红牌罚下，Harbour只剩十人。", SENT_OFF, True),
+    ("es", "Lisais vio la amarilla en el 60' y Harbour se quedó con diez jugadores.", SENT_OFF, False),
+    ("es", "Lisais fue expulsado en el 60' y Harbour se quedó con diez jugadores.", SENT_OFF, True),
+    ("en", "Lisais was sent off at 60'.", BOOKED, False),
+    ("en", "Lisais was booked at 60'.", BOOKED, True),
+    ("en", "Lisais was booked again and sent off at 60'.", SECOND, True),
+])
+def test_a_card_is_named_in_its_colour(events, stats, lang, text, cited, ok):
+    evs = {**events, cited.event_id: cited}
+    headline = "Harbour人数劣势" if lang == "zh" else "Harbour lose a man"
+    narrative = Narrative(prefs=ViewerPrefs(language=lang), headline=headline, source="llm",
+                          sentences=[s(text, evidence=[cited.event_id])])
+    verdict = check(narrative, evs, stats, team_names={"home": "Rovers", "away": "Harbour"})
+    assert codes(verdict) == ([] if ok else ["evidence_invalid"]), verdict.issues
+
+
+def test_a_headline_calling_a_red_card_a_booking_is_wrong(events, stats):
+    evs = {**events, SENT_OFF.event_id: SENT_OFF}
+    narrative = card(s("Harbour lost a man at 60'.", evidence=[SENT_OFF.event_id]), headline="Lisais booking flips it")
+    assert codes(check(narrative, evs, stats)) == ["evidence_invalid"]
+
+
 def test_a_direction_word_about_a_stat_still_needs_its_claims(events, stats):
     evs = {**events, SENT_OFF.event_id: SENT_OFF}
     text = s("With ten men after 60', Harbour's passing dropped.", evidence=[SENT_OFF.event_id])

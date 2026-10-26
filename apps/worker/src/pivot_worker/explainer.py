@@ -32,6 +32,7 @@ from .context import ContextItem, involved_in, relevant
 from .languages import INSTRUCTIONS, jargon
 from .matchstate import goal_scores, match_state, previous_tactics, tactics_line
 from .prompts import Prompt, render
+from .scenarios import card_colour
 from .template import possessive
 from .verifier import EVIDENCE_AFTER, EVIDENCE_BEFORE, StatSource
 from .vocabulary import BANNED_TERMS, DOWN_WORDS, SIGNIFICANCE_WORDS, UP_WORDS, vocabulary_markdown
@@ -128,6 +129,8 @@ def event_line(e: MatchEvent, team_names: Mapping[str, str], player_names: Mappi
             line[key] = value
     if e.substitution:
         line["substitution"] = e.substitution.model_dump(exclude_defaults=True)
+    if colour := card_colour(e):            # "card" alone reads as a booking: a red card was written as "booked" (#261)
+        line["card"] = colour
     if e.tactics:
         line |= tactics_line(e.tactics, previous_tactics)
     if score_after:
