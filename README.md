@@ -198,16 +198,12 @@ Every match, club, coach, player and referee in Pivot is **synthetic**, generate
 
 ## Team
 
-<!-- TODO: names and roles as the team wants them credited -->
-
 | Line | Area | GitHub |
 |---|---|---|
-| A | Platform: API, real-time, deployment | |
-| B | Simulator, momentum and pivot detection | |
-| C | Web front end | |
-| D | AI agents and verification | |
-
-Contributors: [@Carry3](https://github.com/Carry3), [@momomojun](https://github.com/momomojun), [@JadenChen10](https://github.com/JadenChen10), [@Avril131](https://github.com/Avril131).
+| A | Platform: API, real-time, deployment, Azure | [@Carry3](https://github.com/Carry3) |
+| B | Simulator, momentum and pivot detection | [@momomojun](https://github.com/momomojun) |
+| C | Web front end | [@Avril131](https://github.com/Avril131) |
+| D | AI agents and verification | [@JadenChen10](https://github.com/JadenChen10) |
 
 ## How we used AI tools
 
@@ -216,5 +212,4 @@ Contributors: [@Carry3](https://github.com/Carry3), [@momomojun](https://github.
 
 ## License
 
-<!-- TODO: no license chosen yet -->
-No license has been chosen yet.
+[MIT](LICENSE). The match data is synthetic; see [Data and disclaimer](#data-and-disclaimer).
