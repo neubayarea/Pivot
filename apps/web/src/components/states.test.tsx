@@ -7,13 +7,14 @@ import { describe, expect, it } from "vitest";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { classifyLoadError } from "../data/live/provider";
 import { ApiError } from "../data/live/api";
-import { startDemo, REPLAY_URL } from "../data/demo";
-import { MatchContext, computeStats, type Connection, type MatchView } from "../data/match";
+import { startDemo, replayUrl, REPLAY_URL } from "../data/demo";
+import { MatchContext, computeStats, isRedCard, type Connection, type MatchView } from "../data/match";
 import LiveBoard from "../pages/LiveBoard";
 import PivotDetail from "../pages/PivotDetail";
 import { ErrorScreen } from "./ErrorBoundary";
 import EventFeed from "./EventFeed";
 import PivotList from "./PivotList";
+import Playback from "./Playback";
 import { Startup } from "./StartupScreen";
 
 const narrative = {
@@ -37,7 +38,7 @@ function matchView(over: Partial<MatchView> = {}, status: MatchView["match"]["st
     },
     teams: { home: team("home", "Northvale"), away: team("away", "Eastport") },
     events: [], metrics: [], pivots, stats: computeStats([]),
-    playerName: (id) => id ?? "", eventById: () => undefined,
+    squads: { home: [], away: [] }, playerName: (id) => id ?? "", eventById: () => undefined,
     pivotDetail: (id) => {
       const p = pivots.find((x) => x.pivot_id === id);
       return p && { pivot: p, window: [0, 60], frames: [{ match_id: "m1", period: 1, t: 0, possession: null, players: [], ball: { owner_id: null, x: 0, y: 0, z: 0 } }], beforeAfter: [] };
@@ -95,18 +96,17 @@ describe("load errors", () => {
     expect(classifyLoadError(new TypeError("Failed to fetch"), null)).toEqual({ kind: "unreachable" });
   });
 
-  it("falls back to the fixture replay when the API cannot start a demo", async () => {
-    const real = globalThis.fetch;
-    globalThis.fetch = (async () => new Response("", { status: 404 })) as typeof fetch;
+  it("replays the chosen match, or the fixture when there is none to name", () => {
     (globalThis as { window?: unknown }).window = { location: { search: "" } };
-    let went = "";
+    const went: string[] = [];
     try {
-      await startDemo(undefined, (u) => (went = u));
+      startDemo("M-seed-505", (u) => went.push(u));
+      startDemo(undefined, (u) => went.push(u));
     } finally {
-      globalThis.fetch = real;
       delete (globalThis as { window?: unknown }).window;
     }
-    expect(went).toBe(REPLAY_URL);
+    expect(went).toEqual([replayUrl("M-seed-505"), REPLAY_URL]);
+    expect(replayUrl("M-seed-505")).toBe("/?match=M-seed-505&from=0");
   });
 });
 
@@ -137,8 +137,32 @@ describe("live board states", () => {
     expect(html).not.toContain("70′");
   });
 
+  it("has a pitch board once the match has started", () => {
+    const html = render(<LiveBoard />, matchView());
+    expect(html).toContain("On the pitch");
+    expect(html).toContain("No player positions for this match.");
+    expect(render(<LiveBoard />, matchView({}, "scheduled"))).not.toContain("On the pitch");
+  });
+
+  it("puts one timeline over the whole replay, and none on the live feed", () => {
+    const playback = { playing: true, setPlaying: () => {}, setSpeed: () => {}, restart: () => {}, seek: () => {}, end: 5700 };
+    const html = render(<Playback />, matchView({ playback, pivots: [pivot(63, "confirmed")] }));
+    expect(html).toContain('type="range"');
+    expect(html).toContain('max="5700"');
+    expect(html).toContain("64′");                 // elapsed minute 63 is the 64th minute on the clock
+    expect(html).toContain("Restart");
+    expect(render(<Playback />, matchView())).toBe("");
+  });
+
   it("says when the event feed is empty", () => {
     expect(render(<EventFeed highlight={new Set()} />, matchView())).toContain("No events yet");
+  });
+
+  it("reads a red card from foul.card, as the simulator sends it, or the fixture's meta.card", () => {
+    const card = (card: "yellow" | "second_yellow" | "red") => ({ type: "card" as const, meta: {},
+      foul: { foul_type: "tackle" as const, advantage_played: false, penalty_awarded: false, card, card_reason: null } });
+    expect([card("red"), card("second_yellow"), card("yellow")].map(isRedCard)).toEqual([true, true, false]);
+    expect(isRedCard({ type: "card", foul: null, meta: { card: "red" } })).toBe(true);
   });
 });
 

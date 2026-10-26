@@ -1,7 +1,7 @@
 import asyncio
 
-from pivot_adapters.local import InMemoryMatchRepository
-from pivot_api.demo import DEMO_MATCH_ID, demo_match, seed_demo
+from pivot_adapters.local import InMemoryMatchRepository, InMemoryTraceRepository
+from pivot_api.demo import DEMO_MATCH_ID, demo_match, demo_traces, seed_demo
 
 
 def test_matches_upsert_and_most_recent_first():
@@ -29,4 +29,13 @@ def test_seeding_twice_changes_nothing():
         assert len(await repo.list_events(DEMO_MATCH_ID)) == before
         assert len(await repo.list_matches()) == 1
         assert len(await repo.list_pivots(DEMO_MATCH_ID)) == 2
+    asyncio.run(run())
+
+
+def test_seeding_traces_twice_changes_nothing():
+    async def run():
+        repo, traces = InMemoryMatchRepository(), InMemoryTraceRepository()
+        await seed_demo(repo, traces)
+        await seed_demo(repo, traces)
+        assert len(await traces.list_traces(DEMO_MATCH_ID)) == len(demo_traces())
     asyncio.run(run())

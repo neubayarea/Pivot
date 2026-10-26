@@ -28,5 +28,6 @@
 ## 不要做的事
 
 - 不直接推送到 `main`，不强推，不改看板字段和选项的结构。
+- 不把生成的比赛数据（`.pivot-data/`、批量生成的 `*.json.gz` 等）提交进仓库，规则见 [docs/match-data.md](docs/match-data.md)。
 - 不把密钥、令牌写进仓库或 issue。Plane 的密钥只在 `~/.config/pivot/plane.env`，不要打印它。
 - `docs/plan/tasks.csv` 是原始清单，只有在开会决定改计划时才改；额外任务只在 GitHub 上开，不写进这个文件。

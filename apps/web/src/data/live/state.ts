@@ -25,6 +25,17 @@ export function applySnapshot(prev: LiveState | null, snap: Snapshot): LiveState
   return { match: snap.match, events, metrics: sortBy(snap.metrics, (m) => m.minute), pivots: sortBy(snap.pivots, (p) => p.minute) };
 }
 
+/** The pivot list again, refetched for another language or viewing mode. */
+export const applyPivots = (s: LiveState, pivots: Pivot[]): LiveState => ({ ...s, pivots: sortBy(pivots, (p) => p.minute) });
+
+/** One pivot refetched in the viewer's language after the feed pushed its English version. */
+export function applyPivot(s: LiveState, pivot: Pivot): LiveState {
+  if (pivot.match_id !== s.match.match_id) return s;
+  // The checker can rule a pivot out while its translation is in flight; keep the ruling.
+  if (s.pivots.some((x) => x.pivot_id === pivot.pivot_id && x.status === "rejected")) return s;
+  return { ...s, pivots: upsert(s.pivots, pivot, (x) => x.minute, (x) => x.pivot_id) };
+}
+
 export function applyEnvelope(s: LiveState, env: Envelope): LiveState {
   if (env.match_id !== s.match.match_id) return s;
   const p = env.payload as Record<string, unknown>;

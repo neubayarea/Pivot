@@ -1,0 +1,138 @@
+// "Start demo" on a stored match (Ax9): loads the whole match over REST once, then plays it back on
+// a clock in the browser, the way the fixture replay does. Events, the momentum curve and pivots
+// appear as the clock reaches them; nothing on the server changes, so it works on any deploy.
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { Match, MatchEvent, Pivot1 as Pivot, Score } from "@pivot/contracts";
+import { usePrefs } from "../../i18n";
+import { ConnectionContext, MatchContext, type Connection, type MatchView, type Speed } from "../view";
+import type { MatchChoice } from "../choice";
+import { api } from "./api";
+import { classifyLoadError, listPivotsFor, pickMatch, toView } from "./provider";
+import type { LiveState } from "./state";
+
+const TICK_MS = 250;
+/** A pivot shows as "pending" once its minute is over, and settles this many seconds later (as the worker would). */
+const SETTLE_S = 40;
+
+/** `?from=` (minutes) asks for a replay of the chosen match from there; null when the link has none. */
+export function replayStart(search: string): number | null {
+  const from = new URLSearchParams(search).get("from");
+  const minute = from === null || from === "" ? NaN : Number(from);
+  return Number.isFinite(minute) ? Math.max(0, minute * 60) : null;
+}
+
+/** Where the replay stops: the final clock of a finished match, else its last event. */
+export const replayEnd = ({ match, events }: LiveState) =>
+  Math.max(match.status === "finished" ? match.clock : 0, events.at(-1)?.t ?? 0);
+
+const goals = (events: MatchEvent[]): Score => {
+  const score: Score = { home: 0, away: 0, home_penalties: null, away_penalties: null };
+  for (const e of events) if (e.type === "shot" && e.shot_outcome === "goal") score[e.team]++;
+  return score;
+};
+
+/** The match as it stood at `clock`: what happened by then, and pivots in the state they would have had. */
+export function stateAt(full: LiveState, clock: number, playing: boolean): LiveState {
+  const end = replayEnd(full);
+  const events = full.events.filter((e) => e.t <= clock);
+  const minute = clock / 60;
+  const pivots = full.pivots
+    .filter((p) => p.status !== "rejected" && clock >= (p.minute + 1) * 60)
+    .map((p): Pivot => (clock >= (p.minute + 1) * 60 + SETTLE_S ? p : { ...p, status: "pending", narrative: null }));
+  const second = full.match.periods.filter((p) => p.period > 1 && clock >= p.start_t).at(-1);
+  const match: Match = {
+    ...full.match,
+    clock,
+    period: second?.period ?? 1,
+    status: clock >= end ? "finished" : playing ? "live" : "paused",
+    score: clock >= end ? full.match.score : goals(events),
+  };
+  return { match, events, metrics: full.metrics.filter((m) => m.minute <= minute), pivots };
+}
+
+type Props = { children: ReactNode; fallback: ReactNode; choice: MatchChoice; from: number };
+
+export default function ReplayProvider({ children, fallback, choice, from }: Props) {
+  const [full, setFull] = useState<LiveState | null>(null);
+  const [connection, setConnection] = useState<Connection | null>(null);
+  const [clock, setClock] = useState(from);
+  const [playing, setPlaying] = useState(true);
+  const [speed, setSpeed] = useState<Speed>(20);
+  const { prefs } = usePrefs();
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+  const matchId = useRef<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const id = (matchId.current = await pickMatch(choice));
+      const [match, events, metrics, pivots] = await Promise.all([
+        api.getMatch(id), api.listEvents(id), api.getTimeline(id), listPivotsFor(id, prefsRef.current),
+      ]);
+      if (alive) setFull({ match, events, metrics, pivots });
+    })().catch((err) => {
+      if (!alive) return;
+      setConnection({
+        state: "failed", attempt: 0, problem: classifyLoadError(err, choice.fromUrl ? choice.id : null),
+        retryNow: () => window.location.reload(),
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // A new language or viewing mode refetches the pivots only; on failure the old ones stay.
+  const key = `${prefs.language}|${prefs.audience}|${prefs.focus_team}|${prefs.focus_player_id}`;
+  const loadedKey = useRef(key);
+  useEffect(() => {
+    const id = matchId.current;
+    if (loadedKey.current === key || !id) return;
+    loadedKey.current = key;
+    let alive = true;
+    listPivotsFor(id, prefsRef.current).then(
+      (pivots) => alive && setFull((prev) => (prev ? { ...prev, pivots } : prev)),
+      (err) => console.warn("Could not refetch pivots for", key, err),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+
+  const end = full ? replayEnd(full) : Infinity;
+  useEffect(() => {
+    if (!playing || !full) return;
+    const timer = setInterval(() => setClock((c) => Math.min(end, c + (speed * TICK_MS) / 1000)), TICK_MS);
+    return () => clearInterval(timer);
+  }, [playing, speed, end, full]);
+
+  useEffect(() => {
+    if (clock >= end) setPlaying(false);
+  }, [clock, end]);
+
+  // Like the fixture: events and pivots only change on whole seconds.
+  const second = Math.floor(clock);
+  const data = useMemo(() => (full ? toView(stateAt(full, second, playing)) : null), [full, second, playing]);
+  const view = useMemo<MatchView | null>(() => data && {
+    ...data,
+    match: { ...data.match, speed },
+    playback: {
+      playing,
+      setPlaying,
+      setSpeed,
+      restart: () => {
+        setClock(from);
+        setPlaying(true);
+      },
+      seek: (t: number) => setClock(Math.min(end, Math.max(0, t))),
+      end,
+    },
+  }, [data, playing, speed, from, end]);
+
+  return (
+    <ConnectionContext.Provider value={connection}>
+      {view ? <MatchContext.Provider value={view}>{children}</MatchContext.Provider> : fallback}
+    </ConnectionContext.Provider>
+  );
+}

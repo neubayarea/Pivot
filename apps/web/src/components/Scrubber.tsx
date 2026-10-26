@@ -1,4 +1,5 @@
-import { clockLabel } from "../fixtures/demo-1021";
+import { useClock } from "../data/clock";
+import { useT } from "../i18n";
 
 type Props = {
   window: [number, number];
@@ -6,32 +7,36 @@ type Props = {
   onChange: (t: number) => void;
   playing: boolean;
   onPlayingChange: (playing: boolean) => void;
-  /** Minute marked in red on the track: the pivot itself. */
-  pivotMinute: number;
-  /** Seconds of the evidence events, drawn as gold ticks; `on` is the selected one. */
-  marks: { t: number; on: boolean }[];
+  /** Minutes marked in red on the track: the pivot itself on S2, every pivot so far in the replay bar. */
+  pivotMinutes: number[];
+  /** Seconds of the evidence events, drawn as gold ticks if inside the window; `on` is the selected one, `mine` the followed player's. */
+  marks: { t: number; on: boolean; mine?: boolean }[];
 };
 
-/** Pitch timeline: drag or play through the window around a pivot, one frame per second. */
-export default function Scrubber({ window: [from, to], t, onChange, playing, onPlayingChange, pivotMinute, marks }: Props) {
-  const pct = (s: number) => `${((s - from) / (to - from)) * 100}%`;
+/** Timeline: drag or play through a window of the match (around a pivot, or all of it), one second a step. */
+export default function Scrubber({ window: [from, to], t, onChange, playing, onPlayingChange, pivotMinutes, marks }: Props) {
+  const tr = useT();
+  const { minute, at, clock } = useClock();
+  const pct = (s: number) => `${((s - from) / Math.max(1, to - from)) * 100}%`;
+  // Anything outside the window would sit past the ends of the track, so it is not drawn.
+  const inside = (s: number) => s >= from && s <= to;
   return (
     <div className="scrub">
-      <button type="button" className="play" aria-label={playing ? "Pause" : "Play"} onClick={() => onPlayingChange(!playing)}>
+      <button type="button" className="play" aria-label={tr(playing ? "scrub.pause" : "scrub.play")} onClick={() => onPlayingChange(!playing)}>
         {playing ? "❚❚" : "▶"}
       </button>
       <div className="track">
-        {marks.map((m) => (
-          <i key={m.t} className={`mk${m.on ? " on" : ""}`} style={{ left: pct(m.t) }} />
+        {marks.filter((m) => inside(m.t)).map((m) => (
+          <i key={m.t} className={`mk${m.on ? " on" : ""}${m.mine ? " mine" : ""}`} style={{ left: pct(m.t) }} />
         ))}
-        <i className="pv-mk" style={{ left: pct(pivotMinute * 60) }} />
-        <input type="range" min={from} max={to} step={1} value={t} aria-label="Match time"
-          aria-valuetext={clockLabel(t)} onChange={(e) => onChange(Number(e.target.value))} />
-        <span style={{ left: 0 }}>{from / 60}′</span>
-        <span className="pv-lbl" style={{ left: pct(pivotMinute * 60) }}>{pivotMinute}′</span>
-        <span style={{ right: 0 }}>{to / 60}′</span>
+        {pivotMinutes.filter((m) => inside(m * 60)).map((m) => <i key={m} className="pv-mk" style={{ left: pct(m * 60) }} />)}
+        <input type="range" min={from} max={to} step={1} value={t} aria-label={tr("scrub.time")}
+          aria-valuetext={clock(t)} onChange={(e) => onChange(Number(e.target.value))} />
+        <span style={{ left: 0 }}>{at(from)}′</span>
+        {pivotMinutes.filter((m) => inside(m * 60)).map((m) => <span key={m} className="pv-lbl" style={{ left: pct(m * 60) }}>{minute(m)}′</span>)}
+        <span style={{ right: 0 }}>{at(Math.max(from, to - 1))}′</span>
       </div>
-      <span className="now num">{clockLabel(t)}</span>
+      <span className="now num">{clock(t)}</span>
     </div>
   );
 }

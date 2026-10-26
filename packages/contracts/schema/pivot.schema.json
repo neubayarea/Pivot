@@ -1717,7 +1717,8 @@
                 "saved",
                 "off_target",
                 "blocked",
-                "post"
+                "post",
+                "disallowed"
               ],
               "type": "string"
             },

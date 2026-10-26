@@ -1,10 +1,10 @@
-import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
-import type { ViewerPrefs } from "@pivot/contracts";
 import ConnectionBanner from "./components/ConnectionBanner";
+import Playback from "./components/Playback";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import { MatchProvider } from "./data/match";
+import { usePrefs } from "./i18n";
 import AgentTraces from "./pages/AgentTraces";
 import LiveBoard from "./pages/LiveBoard";
 import NotFound from "./pages/NotFound";
@@ -24,21 +24,16 @@ const WAITING = (
   </>
 );
 
-const DEFAULT_PREFS: ViewerPrefs = {
-  audience: "analyst",
-  language: "en",
-  focus_team: null,
-  focus_player_id: null,
-};
-
 export default function App() {
-  const [prefs, setPrefs] = useState<ViewerPrefs>(DEFAULT_PREFS);
+  const { prefs, setPrefs } = usePrefs();
 
   return (
     <MatchProvider fallback={WAITING}>
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <ConnectionBanner />
-      <main className="page">
+      <Playback />
+      {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}
+      <main className="page" data-fav={prefs.focus_team ?? undefined}>
         <Routes>
           <Route path="/" element={<LiveBoard />} />
           <Route path="/pivot/:id" element={<PivotDetail />} />

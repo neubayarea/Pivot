@@ -1,17 +1,41 @@
 import { Fragment } from "react";
 import type { Claim, Pivot1 as Pivot } from "@pivot/contracts";
-import { useMatch } from "../data/match";
+import { useClock } from "../data/clock";
+import { involves, useMatch } from "../data/match";
+import { narrativeLang, usePrefs } from "../i18n";
 import Card from "./Card";
+import { surname } from "./FocusPickers";
 import Sourced from "./Sourced";
 
-// Numbers the verifier checked ("9 to 3", "6 of 8", "48% to 61%") get the highlighter.
-const FIGURE = /(\d+(?:\.\d+)?%? (?:to|of) \d+(?:\.\d+)?%?)/;
+// Numbers the verifier checked get the highlighter: "9 to 3", "6 of 8", "48% to 61%"; in Spanish
+// "de 9 a 3", "del 48% al 61%", "6 de 8"; in Chinese "从 9 次降到 3 次", "8 战 6 胜", "16 次中有 14 次".
+const FIGURE =
+  /(\d+(?:\.\d+)?%? ?(?:to|of|a|al|de|次?(?:升到|降到|增至|减至|到)|战|次中有) ?\d+(?:\.\d+)?%?)/;
 
-function Highlighted({ text, claims }: { text: string; claims: Claim[] }) {
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Matches the followed player's full name or surname as a whole word; null when none is followed. */
+export function nameMatcher(name: string): RegExp | null {
+  if (!name) return null;
+  const forms = [...new Set([name, surname(name)])].map(escape).join("|");
+  return new RegExp(`((?<!\\p{L})(?:${forms})(?!\\p{L}))`, "u");
+}
+
+/** The followed player's name gets the gold highlighter, like the checked figures. */
+function Named({ text, name }: { text: string; name: RegExp | null }) {
+  if (!name) return <>{text}</>;
+  return (
+    <>
+      {text.split(name).map((part, i) => (i % 2 ? <span key={i} className="hl who">{part}</span> : <Fragment key={i}>{part}</Fragment>))}
+    </>
+  );
+}
+
+function Highlighted({ text, claims, name }: { text: string; claims: Claim[]; name: RegExp | null }) {
   return (
     <>
       {text.split(FIGURE).map((part, i) => {
-        if (!(i % 2)) return <Fragment key={i}>{part}</Fragment>;
+        if (!(i % 2)) return <Named key={i} text={part} name={name} />;
         // Figures and claims line up in order; extra figures share the sentence's last claim.
         const claim = claims[Math.min((i - 1) / 2, claims.length - 1)];
         return claim ? (
@@ -34,40 +58,61 @@ type Props = {
   onToggle: (eventId: string) => void;
   /** What clicking an evidence chip does, for its tooltip. */
   chipHint?: string;
+  /** Evidence outside the pitch timeline (S2): its chip says so, since it has no tick to jump to. */
+  outside?: ReadonlySet<string>;
 };
 
-export default function WhyItTurned({ pivot, selected, onToggle, chipHint = "Highlight this event in the feed" }: Props) {
-  const { eventById } = useMatch();
+export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outside }: Props) {
+  const { eventById, playerName } = useMatch();
+  const { prefs, t } = usePrefs();
+  const { minute } = useClock();
+  const focus = prefs.focus_player_id;
+  const name = nameMatcher(playerName(focus));
   const narrative = pivot?.narrative;
   if (!pivot || !narrative) {
     return (
-      <Card title="Why it turned" className="why">
-        <p className="muted">The verified explanation for the latest pivot appears here.</p>
+      <Card title={t("why.title")} className="why">
+        <p className="muted">{t("why.empty")}</p>
       </Card>
     );
   }
   const claims = narrative.sentences.reduce((n, s) => n + s.claims.length, 0);
   const evidence = new Set(narrative.sentences.flatMap((s) => s.evidence_ids)).size;
   const auto = pivot.status === "degraded";
+  // The API writes English when it cannot write the asked language; say so instead of hiding it.
+  const served = narrativeLang(narrative);
+  const fellBack = served !== null && served !== prefs.language;
   return (
-    <Card title="Why it turned" note={`${pivot.minute}′ · ${auto ? "auto summary" : "verified"}`} className="why drop">
+    <Card title={t("why.title")} note={`${minute(pivot.minute)}′ · ${t(auto ? "why.noteAuto" : "why.noteVerified")}`} className="why drop">
+      {fellBack && (
+        // A div, not a p: the drop cap goes on the first paragraph of the explanation.
+        <div className="lang-note" role="note">
+          {t("why.fallback", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
+        </div>
+      )}
       {narrative.sentences.map((s, i) => (
         <p key={i}>
-          <Highlighted text={s.text} claims={s.claims} />
-          {s.evidence_ids.map((id) => (
-            <Fragment key={id}>
-              {" "}
-              <button type="button" className={`ev${selected.has(id) ? " on" : ""}`} aria-pressed={selected.has(id)}
-                title={chipHint} onClick={() => onToggle(id)}>
-                #{eventById(id)?.seq ?? id}
-              </button>
-            </Fragment>
-          ))}
+          <Highlighted text={s.text} claims={s.claims} name={name} />
+          {s.evidence_ids.map((id) => {
+            const e = eventById(id);
+            // ★ marks the evidence the followed player took part in.
+            const star = !!e && involves(e, focus);
+            const out = !!outside?.has(id);
+            return (
+              <Fragment key={id}>
+                {" "}
+                <button type="button" className={`ev${selected.has(id) ? " on" : ""}${star ? " star" : ""}${out ? " out" : ""}`}
+                  aria-pressed={selected.has(id)} title={chipHint ?? t("why.chipHint")} onClick={() => onToggle(id)}>
+                  {star && "★ "}#{e?.seq ?? id}
+                  {out && <span className="ev-out"> · {t("why.outside")}</span>}
+                </button>
+              </Fragment>
+            );
+          })}
         </p>
       ))}
       <span className="pipe">
-        {auto ? "Judge ✓ · AI explanation delayed · automatic summary" : "Judge ✓ · Explainer ✓ · Verifier ✓"}{" "}
-        {claims} claims · {evidence} evidence
+        {t(auto ? "why.pipeAuto" : "why.pipeOk")} {t("why.counts", { claims, evidence })}
       </span>
     </Card>
   );

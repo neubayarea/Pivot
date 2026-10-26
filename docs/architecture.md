@@ -1,7 +1,89 @@
 # Pivot 架构设计
 
-> 版本 v1.0 · 2026-10-23 · 状态：评审通过，待实施 · 适用范围：黑客松交付（10/26 提交）
+> 版本 v1.1 · 2026-10-25 · 状态：已上线（https://pivot.in-stacks.com）· 适用范围：黑客松交付（10/26 提交）
 > 上游文档：Pivot PRD v1.0 · 决策记录：[`docs/adr/`](adr/)
+>
+> **先看下面「实际上线的样子」这一节。** 第 2 节以后的 C4 图和部署形态是 10/23 定的原计划（全部跑在 Azure 上），实际交付做了取舍，对照表写在那一节里。
+
+## 实际上线的样子（10/25 更新）
+
+### 一句话
+
+网站只有**一个程序**，跑在**甲骨文云的一台服务器**上；AI 用 **Azure AI Foundry** 的模型，AI 写的东西存在 **Azure Cosmos DB**；模拟出来的比赛文件存在服务器的硬盘上。
+
+### 架构图
+
+```mermaid
+flowchart LR
+  browser["浏览器<br/>React 网页<br/>回放、进度条、球场看板都在浏览器里跑"]
+
+  subgraph oracle["甲骨文云服务器 · Ampere A1 2 核 11 GB · Dokploy 部署"]
+    traefik["Traefik<br/>HTTPS 证书 · 域名"]
+    subgraph app["Pivot 程序（一个容器、一个进程：pivot_api.single）"]
+      api["接口 FastAPI<br/>REST + WebSocket 实时推送"]
+      mem[("内存<br/>比赛、事件、每分钟指标<br/>任务队列")]
+      worker["AI 小组<br/>Agent Framework 工作流<br/>判断员 → 写稿员 ⇄ 核对员"]
+      whatif["「假如」推演<br/>进程池重踢比赛<br/>→ 对比员 ⇄ 核对员"]
+      sim["模拟器 + 势头计<br/>启动时生成比赛、找候选转折点"]
+    end
+    disk[("持久硬盘 /data<br/>sims/ 模拟比赛文件<br/>（每场事件 + 每秒跑位）")]
+  end
+
+  subgraph azure["Microsoft Azure（Azure for Students 订阅）"]
+    foundry["Azure AI Foundry<br/>gpt-4.1-mini<br/>North Central US"]
+    cosmos[("Cosmos DB 免费档<br/>数据库 pivot · 容器 results<br/>转折点、解释、AI 工作记录、「假如」结果<br/>West US 2")]
+  end
+
+  repo[("GitHub 仓库<br/>演示比赛 demo-1021<br/>（eval/fixtures）")]
+
+  browser <-->|"HTTPS / WSS"| traefik --> api
+  api <--> mem
+  sim --> mem
+  sim <-->|"读写缓存"| disk
+  repo -.->|"打包进镜像"| sim
+  mem -->|"候选转折点"| worker
+  api -->|"发起推演"| whatif
+  worker -->|"调模型"| foundry
+  whatif -->|"调模型"| foundry
+  worker <-->|"存结果 / 重启读回"| cosmos
+  whatif <-->|"存结果 / 重启读回"| cosmos
+  worker -->|"新转折点"| api
+```
+
+服务器登录 Azure 用的是一个服务主体（`AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET`，只填在 Dokploy 的设置里），Foundry 和 Cosmos DB 都用它，不用账号密钥。所有设置项见 [`deploy/oracle/.env.example`](../deploy/oracle/.env.example)。
+
+### 每样数据存在哪
+
+| 数据 | 存在哪 | 重启后 | 说明 |
+|---|---|---|---|
+| 演示比赛 demo-1021（事件、指标、每秒跑位） | GitHub 仓库 `eval/fixtures/`，打包进镜像 | 一直在 | 录 Demo 用的固定比赛，唯一提交进仓库的比赛数据 |
+| 其他模拟比赛（6 场，每场事件 + 每秒跑位） | 服务器硬盘 `/data/sims/`（Dokploy 持久卷 `pivot-data`） | 直接读回；改了模拟器代码会自动重新生成 | 不进 GitHub，见 [比赛数据放在哪](match-data.md) |
+| 比赛、事件、每分钟指标（运行中） | 程序内存 | 启动时从上面两处重新载入 | |
+| AI 写的东西：转折点判断、解释（各语言、各观众版本）、AI 工作记录 | **Azure Cosmos DB**（`PIVOT_RESULTS_BACKEND=cosmos`） | 直接读回，不再调模型 | Cosmos 连不上时自动改存硬盘 `/data/results/`；模型当时没调通、退回模板的结果不存，下次重试 |
+| 「假如」推演结果（两组胜平负、对比解释） | **Azure Cosmos DB**，同一个容器 | 直接读回，同一个问题再问是瞬间出结果 | |
+| 任务队列、实时推送 | 程序内存 | 重启清空 | 单进程，所以不需要消息服务 |
+| 其他模拟比赛的文件，改放 **Azure Blob** `pivotstore1024`（`PIVOT_SIMS_BACKEND=blob`，默认仍是硬盘） | 容器 `sims` | 先看硬盘缓存，没有就从 Blob 下载，Blob 也没有才自己生成并上传 | Blob 出问题时自动退回硬盘；批量上传见 `scripts/sims_blob.py` 和 [比赛数据放在哪](match-data.md) |
+
+### 原计划 vs 实际
+
+| 部分 | 原计划（第 2–5 节） | 实际 | 为什么 |
+|---|---|---|---|
+| 运行在哪 | Azure Container Apps（api / simulator / worker 分开） | 甲骨文云一台服务器，一个进程，Dokploy 部署，推送到 `main` 自动上线 | 学生订阅的免费额度撑不住 24 小时运行，学校策略禁止虚拟机挂公网 IP；时间只剩 3 天 |
+| 比赛事件流 | Event Hubs | 进程内 | 单进程不需要 |
+| AI 任务队列 | Service Bus | 进程内队列（`WorkQueue` 的本机实现） | 同上 |
+| 实时推送 | Web PubSub | FastAPI 自带的 WebSocket | 同上 |
+| AI 结果存储 | Cosmos DB Serverless | **Cosmos DB 免费档**（共享 1000 RU/s），可切回硬盘 | 免费；保留了端口与适配器的分层，切换只改设置 |
+| 比赛数据存储 | Cosmos DB | 服务器硬盘上的文件 | 每场带每秒跑位约 1 MB，整读整写，用文件最简单 |
+| AI 模型 | Foundry 上 standard + mini 两个部署 | Foundry 上的 gpt-4.1-mini | 学生订阅只有这类模型的配额 |
+| Agent 编排 | Microsoft Agent Framework | **同原计划** | |
+| 「假如」重踢 | 进程池，规模大时用 Container Apps Jobs | 进程池（服务器 2 核，演示比赛的常用问题提前算好存进 Cosmos） | |
+| 部署脚本 | azd + Bicep 一键创建 | Dokploy 网页配置 + [`deploy/oracle/`](../deploy/oracle/)；Azure 资源在门户和 `az` 命令里手动建 | Bicep 方案（#86）没跑通，已搁置 |
+
+### 比赛文件为什么不放 Cosmos DB
+
+模拟比赛文件（每场约 1 MB 压缩，解开后约 10 MB 的 JSON，每秒一帧约 6000 帧）整读整写，不需要按条件查询。Cosmos DB 的一条记录最多 2 MB，要切成很多块，每块写入都消耗读写额度，免费档每秒只有 1000，容易被限流。这类大文件的合适位置是 Azure Blob：便宜、整文件读写、没有大小问题。搬过去以后（已实现，Ax15）服务器自己就不存任何数据，还可以在自己电脑上提前生成一大批比赛上传，服务器只负责读。这件事还没做，现在放在服务器硬盘上。
+
+架构上的核心决策都还成立：领域核心不依赖云服务（端口与适配器），计算与生成分离（数字由核对员重算），Agent Framework 编排的固定工作流，模拟器可以存档续跑。变的只是「适配器插在哪」。
 
 ## 0. 摘要
 
@@ -66,6 +148,8 @@ Pivot 是一个事件驱动的多 Agent 系统，做三件事：从合成比赛�
 
 - **约束**：只能使用合成数据；不得使用英超标识、真实球队或真实球员；技术栈以微软为主（Foundry、Agent Framework、Azure）；GitHub 仓库必须公开；视频短于 2 分钟。
 - **假设**：所选区域的 Foundry 有 standard 和 mini 两档模型可用，且配额足够；团队有权在订阅里创建资源；每人每天有效开发约 10 小时；评审主要看视频，同时可能访问公网 Demo，直到 11/20 公布结果。
+
+> 以下第 2–5 节是 10/23 的原计划。实际上线的样子见文档开头的「实际上线的样子」。
 
 ## 2. C4 第 1 层：系统上下文
 

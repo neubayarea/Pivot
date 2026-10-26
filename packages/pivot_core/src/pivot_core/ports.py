@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Pivot
+from .domain import AgentTrace, Envelope, Match, MatchEvent, MinuteMetric, Narrative, Pivot, Scenario, ViewerPrefs
 
 # Service Bus queue names (architecture §7.2).
 PIVOT_CANDIDATES = "pivot-candidates"
@@ -97,6 +97,14 @@ class MatchRepository(Protocol):
         """Pivots of a match in minute order."""
         ...
 
+    async def upsert_narrative(self, match_id: str, pivot_id: str, narrative: Narrative) -> None:
+        """Store one version of a pivot's text, keyed by (pivot_id, narrative.prefs); replaces the same key (A11)."""
+        ...
+
+    async def get_narrative(self, match_id: str, pivot_id: str, prefs: ViewerPrefs) -> Narrative | None:
+        """The stored version for exactly these viewer preferences, or None."""
+        ...
+
 
 class TraceRepository(Protocol):
     """Agent traces (Cosmos `agent_traces` in the cloud)."""
@@ -107,6 +115,33 @@ class TraceRepository(Protocol):
 
     async def list_traces(self, match_id: str, chain_id: str | None = None) -> list[AgentTrace]:
         """Traces of a match, optionally one chain, ordered by chain then step."""
+        ...
+
+
+class ResultCache(Protocol):
+    """Keeps the AI's results (pivots, narrative versions, agent traces) of a match across restarts (Ax10).
+
+    Results belong to one version of a match's source data: opening the match at another version
+    starts it empty, so a changed match is written again instead of reusing stale text.
+    """
+
+    async def open_match(self, match_id: str, version: str) -> int:
+        """Put this version's stored results back into the repositories and keep storing new ones. Returns the pivot count.
+
+        Call it after storing the match and before its candidates go on the queue.
+        """
+        ...
+
+    def scenarios(self, match_id: str) -> dict[str, Scenario]:
+        """Finished what-if scenarios read back or stored for this version of the match, by cache key (A09)."""
+        ...
+
+    async def store_scenario(self, match_id: str, key: str, scenario: Scenario) -> None:
+        """Keep a finished what-if scenario under the caller's cache key. Ignored for a match never opened."""
+        ...
+
+    async def close(self) -> None:
+        """Release the connection to the store, if it has one, at shutdown."""
         ...
 
 

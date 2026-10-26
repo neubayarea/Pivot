@@ -1,13 +1,19 @@
 // The one place S1 and S2 get match data from. By default it follows the live API and WebSocket
-// feed (data/live); with `?fixture=1`, or VITE_PIVOT_FIXTURE=1 at build time, it replays the
+// feed (data/live); `?match=…&from=0` replays that stored match from kick-off instead (Start demo,
+// data/live/replay); with `?fixture=1`, or VITE_PIVOT_FIXTURE=1 at build time, it replays the
 // local demo-1021 fixture on a timer so the board can be shown without a backend; add
-// `&degraded=1` to show every pivot as an automatic summary (the AI-down state). Pages call
-// useMatch() either way.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+// `&degraded=1` to show every pivot as an automatic summary (the AI-down state). The fixture's
+// explanations come in the viewer's language (fixtures/demo-1021-i18n). Pages call useMatch() either way.
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Match, Pivot1 as Pivot, Score } from "@pivot/contracts";
-import { DEMO_1021, clockLabel, type MatchFixture } from "../fixtures/demo-1021";
+import { DEMO_1021, ROSTER, clockLabel, type MatchFixture } from "../fixtures/demo-1021";
+import { localisePivot, localiseRowLabel } from "../fixtures/demo-1021-i18n";
+import { useLang, type Lang } from "../i18n";
+import { MatchChoiceContext, initialMatch, readSavedMatch, saveMatch, type MatchChoice } from "./choice";
 import LiveProvider from "./live/provider";
-import { MatchContext, computeStats, type MatchView, type Speed } from "./view";
+import ReplayProvider, { replayStart } from "./live/replay";
+import { FixtureContext, MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
 
 export * from "./view";
 
@@ -20,14 +26,22 @@ export function fixtureMode(search = window.location.search): boolean {
 
 const TICK_MS = 250;
 
+// The fixture's ids end in the shirt number: "hcy-11" is Harbour City's number 11.
+const FIXTURE_SQUADS = Object.fromEntries((["home", "away"] as Side[]).map((side) => [
+  side,
+  ROSTER[side].map(([player_id, name]) => ({ player_id, name, shirt: Number(player_id.split("-").pop()) || null })).sort(byShirt),
+])) as MatchView["squads"];
+
 /** What a pivot looks like when the Explainer timed out and the template wrote the summary. */
 function degrade(p: Pivot): Pivot {
   if (p.status !== "confirmed") return p;
   return { ...p, status: "degraded", narrative: p.narrative && { ...p.narrative, source: "template" } };
 }
 
-function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed, degraded: boolean): Omit<MatchView, "playback"> {
-  const settled = (p: Pivot) => (degraded ? degrade(p) : p);
+function view(
+  fx: MatchFixture, clock: number, playing: boolean, speed: Speed, degraded: boolean, lang: Lang,
+): Omit<MatchView, "playback"> {
+  const settled = (p: Pivot) => (degraded ? degrade(localisePivot(p, lang)) : localisePivot(p, lang));
   const shown = fx.events.filter((e) => e.t <= clock);
   const score: Score = { home: 0, away: 0, home_penalties: null, away_penalties: null };
   for (const e of shown) if (e.shot_outcome === "goal") score[e.team]++;
@@ -48,12 +62,15 @@ function view(fx: MatchFixture, clock: number, playing: boolean, speed: Speed, d
     metrics: fx.metrics.filter((m) => m.minute <= minute),
     pivots,
     stats: computeStats(shown),
+    squads: FIXTURE_SQUADS,
     playerName: (id) => (id ? (fx.players[id] ?? id) : ""),
     eventById: (id) => fx.events.find((e) => e.event_id === id),
     pivotDetail: (id) => {
       const timeline = fx.pivots.find((p) => p.pivot.pivot_id === id);
       const detail = fx.details[id];
-      return timeline && detail ? { ...detail, pivot: settled(timeline.pivot) } : undefined;
+      if (!timeline || !detail) return undefined;
+      const beforeAfter = detail.beforeAfter.map((r) => ({ ...r, label: localiseRowLabel(r.label, lang) }));
+      return { ...detail, beforeAfter, pivot: settled(timeline.pivot) };
     },
   };
 }
@@ -74,10 +91,36 @@ type ProviderProps = {
 export function MatchProvider({ children, fallback = null }: ProviderProps) {
   // Decided once: in-app links drop `?fixture=1`, and the source must not switch under the pages.
   const [fixture] = useState(() => fixtureMode());
-  return fixture ? (
-    <FixtureProvider>{children}</FixtureProvider>
-  ) : (
-    <LiveProvider fallback={fallback}>{children}</LiveProvider>
+  return fixture
+    ? <FixtureContext.Provider value={true}><FixtureProvider>{children}</FixtureProvider></FixtureContext.Provider>
+    : <ChosenLiveProvider fallback={fallback}>{children}</ChosenLiveProvider>;
+}
+
+/**
+ * The live feed for the viewer's chosen match, or its replay when the link asks for one; picking
+ * another goes to its S1 and starts a fresh feed (not a replay).
+ */
+function ChosenLiveProvider({ children, fallback }: ProviderProps) {
+  const [choice, setChoice] = useState<MatchChoice>(() => initialMatch(window.location.search, readSavedMatch()));
+  const [from, setFrom] = useState(() => replayStart(window.location.search));
+  const navigate = useNavigate();
+  const choose = useCallback((id: string) => {
+    saveMatch(id);
+    setChoice({ id, fromUrl: true });
+    setFrom(null);
+    const search = new URLSearchParams(window.location.search);
+    search.set("match", id);
+    search.delete("from");
+    navigate({ pathname: "/", search: `?${search}` });
+  }, [navigate]);
+  const value = useMemo(() => ({ choice, choose }), [choice, choose]);
+  const key = `${choice.id ?? ""}|${from ?? "live"}`;
+  return (
+    <MatchChoiceContext.Provider value={value}>
+      {from === null
+        ? <LiveProvider key={key} choice={choice} fallback={fallback}>{children}</LiveProvider>
+        : <ReplayProvider key={key} choice={choice} from={from} fallback={fallback}>{children}</ReplayProvider>}
+    </MatchChoiceContext.Provider>
   );
 }
 
@@ -86,6 +129,7 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<Speed>(5);
   const [degraded] = useState(() => new URLSearchParams(window.location.search).get("degraded") === "1");
+  const lang = useLang();
 
   useEffect(() => {
     if (!playing) return;
@@ -102,8 +146,8 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
   // Events and pivots only change on whole seconds, so recompute once per second of match time.
   const second = Math.floor(clock);
   const data = useMemo(
-    () => view(fixture, second, playing, speed, degraded),
-    [fixture, second, playing, speed, degraded],
+    () => view(fixture, second, playing, speed, degraded, lang),
+    [fixture, second, playing, speed, degraded, lang],
   );
   const value = useMemo<MatchView>(
     () => ({
@@ -116,6 +160,8 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
           setClock(startClock(fixture));
           setPlaying(true);
         },
+        seek: (t: number) => setClock(Math.min(fixture.endAt, Math.max(0, t))),
+        end: fixture.endAt,
       },
     }),
     [data, playing, fixture],

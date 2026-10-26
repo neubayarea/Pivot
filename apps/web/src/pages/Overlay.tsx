@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import type { OverlayCard, OverlayScoreboard } from "@pivot/contracts";
 import { api } from "../data/live/api";
+import { useT } from "../i18n";
 import { cardAt, clockMode, replayClock, severityDots, type ClockMode } from "../overlay/clock";
 import "../styles/overlay.css";
 
@@ -105,10 +106,11 @@ function useStageScale(): number {
 }
 
 function ScoreBug({ sb }: { sb: OverlayScoreboard }) {
+  const t = useT();
   const { home, away, home_penalties: hp, away_penalties: ap } = sb.score;
   const pens = hp !== null && ap !== null ? ` (${hp}–${ap})` : "";
   return (
-    <div className="ovbug num" aria-label="Score">
+    <div className="ovbug num" aria-label={t("overlay.score")}>
       <span>
         {sb.home_short} {home}–{away}
         {pens} {sb.away_short}
@@ -119,17 +121,18 @@ function ScoreBug({ sb }: { sb: OverlayScoreboard }) {
 }
 
 function Card({ card, leaving }: { card: OverlayCard; leaving: boolean }) {
+  const t = useT();
   return (
     <div className={`ov${leaving ? " leaving" : ""}`}>
       <span className="mn num">{card.minute_label}</span>
       <div className="bd">
-        <span className="k">Pivot · Momentum → {card.direction_team}</span>
+        <span className="k">{t("overlay.kicker", { team: card.direction_team })}</span>
         <span className="x">{card.headline}</span>
         {card.subline && <span className="s">{card.subline}</span>}
       </div>
       <div className="ft">
-        <span>{card.status === "confirmed" ? "Pivot · verified by event data" : "Pivot · partial data"}</span>
-        <b aria-label={`Severity ${card.severity} of 3`}>{severityDots(card.severity)}</b>
+        <span>{t(card.status === "confirmed" ? "overlay.verified" : "overlay.partial")}</span>
+        <b aria-label={t("pivot.severity", { n: card.severity })}>{severityDots(card.severity)}</b>
       </div>
     </div>
   );
@@ -147,6 +150,7 @@ export default function Overlay() {
   const { clock, scoreboard, card, error } = useOverlay(matchId, mode);
   const { shown, leaving } = usePresence(card);
   const scale = useStageScale();
+  const t = useT();
 
   // The page is a layer over video: no paper, no dots, nothing behind the graphics.
   useEffect(() => {
@@ -154,12 +158,12 @@ export default function Overlay() {
     return () => document.documentElement.classList.remove("overlay-page");
   }, []);
 
-  const modeLabel = mode.kind === "replay" ? `replay ×${mode.speed}` : mode.kind;
+  const modeLabel = mode.kind === "replay" ? t("overlay.mode.replay", { speed: mode.speed }) : t(`overlay.mode.${mode.kind}`);
   return (
     <div className={`ovs${preview ? " preview" : ""}`} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
       {preview && (
         <span className="tag num">
-          Broadcast feed (placeholder) · {modeLabel}
+          {t("overlay.preview")} · {modeLabel}
           {clock !== null && ` · ${fmtClock(clock)}`}
           {error && ` · ${error}`}
         </span>

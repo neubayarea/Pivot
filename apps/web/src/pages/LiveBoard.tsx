@@ -1,21 +1,25 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Card from "../components/Card";
 import EventFeed from "../components/EventFeed";
 import Kicker from "../components/Kicker";
 import MatchStats from "../components/MatchStats";
 import MomentumChart from "../components/MomentumChart";
+import PitchBoard from "../components/PitchBoard";
 import PivotList, { pivotHeadline } from "../components/PivotList";
-import Playback from "../components/Playback";
 import StartDemoButton from "../components/StartDemoButton";
 import WhyItTurned from "../components/WhyItTurned";
+import { useClock } from "../data/clock";
 import { useMatch } from "../data/match";
+import { useT } from "../i18n";
 
 // S1 · Live board. Layout follows "05 S1" in docs/design/matchday-programme.html.
 export default function LiveBoard() {
   const { match, teams, metrics, pivots, playback } = useMatch();
+  const t = useT();
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   const latest = pivots.find((p) => p.status === "confirmed" || p.status === "degraded") ?? null;
-  const minute = Math.floor(match.clock / 60);
+  const { minute, at } = useClock();
   const scheduled = match.status === "scheduled";
   // On the live feed a finished match leaves nothing in progress; the fixture has its own Restart.
   const over = match.status === "finished" && !playback;
@@ -31,34 +35,38 @@ export default function LiveBoard() {
     <>
       {latest?.status === "degraded" && (
         <div className="banner warn" role="status">
-          AI explanations delayed. Showing automatic summaries.
+          {t("banner.degraded")}
         </div>
       )}
       <div className="headline">
         {latest ? (
           <div className="latest" key={latest.pivot_id}>
-            <Kicker>Latest pivot · {latest.minute}′</Kicker>
-            <span className="x">{pivotHeadline(latest, teams)}</span>
+            <Kicker>{t("board.latest", { minute: minute(latest.minute) })}</Kicker>
+            <span className="x">{pivotHeadline(latest, teams, t)}</span>
           </div>
         ) : scheduled ? (
           <div className="latest">
-            <Kicker>Kick-off pending</Kicker>
-            <span className="x">{teams.home.short_name} v {teams.away.short_name}</span>
+            <Kicker>{t("board.kickoffPending")}</Kicker>
+            <span className="x">{t("board.versus", { home: teams.home.short_name, away: teams.away.short_name })}</span>
           </div>
         ) : (
           <div className="latest">
-            <Kicker>Kick-off</Kicker>
-            <span className="x">Watching for the first pivot</span>
+            <Kicker>{t("board.kickoff")}</Kicker>
+            <span className="x">{t("board.watching")}</span>
           </div>
         )}
         <span className="sp" />
-        {over && <StartDemoButton>Start demo</StartDemoButton>}
-        <Playback />
+        {latest && (
+          <Link to={`/whatif/${latest.pivot_id}`} className="btn" aria-label={`${t("detail.whatIf")} ${t("board.latest", { minute: minute(latest.minute) })}`}>
+            {t("detail.whatIf")}
+          </Link>
+        )}
+        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
       </div>
       <div className="grid1">
         <div className="stack">
           <Card
-            title="Momentum"
+            title={t("board.momentum")}
             note={
               <>
                 <span style={{ color: "var(--pv-home)" }}>■</span> {teams.home.name} &nbsp;
@@ -68,7 +76,7 @@ export default function LiveBoard() {
           >
             {scheduled ? (
               <div className="empty-box">
-                Kick-off pending · <StartDemoButton matchId={match.match_id}>Start match</StartDemoButton>
+                {t("board.kickoffPending")} · <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
               </div>
             ) : metrics.length ? (
               <MomentumChart
@@ -78,21 +86,22 @@ export default function LiveBoard() {
                 awayLabel={teams.away.short_name}
               />
             ) : (
-              <div className="empty-box muted">The momentum line starts after the first minute of play.</div>
+              <div className="empty-box muted">{t("board.momentumEmpty")}</div>
             )}
           </Card>
+          {!scheduled && <PitchBoard key={match.match_id} />}
           <div className="lower">
             <WhyItTurned pivot={latest} selected={evidence} onToggle={toggle} />
-            <Card title="Events" note="auto-scroll">
+            <Card title={t("board.events")} note={t("board.autoScroll")}>
               <EventFeed highlight={evidence} />
             </Card>
           </div>
         </div>
         <div className="stack">
-          <Card title="Pivots" note={`${pivots.length} this match`}>
+          <Card title={t("board.pivots")} note={t("board.pivotsNote", { n: pivots.length })}>
             <PivotList activeId={latest?.pivot_id ?? null} />
           </Card>
-          <Card title="Match stats" note={`0′–${minute}′`}>
+          <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`}>
             <MatchStats />
           </Card>
         </div>

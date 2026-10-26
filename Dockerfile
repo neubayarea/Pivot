@@ -24,10 +24,12 @@ ENV UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1
 COPY pyproject.toml uv.lock ./
 COPY packages ./packages
 COPY apps ./apps
+COPY eval/fixtures ./eval/fixtures
 RUN uv sync --frozen --no-dev --package pivot-api
 COPY --from=web /web/apps/web/dist ./web
 
-ENV PATH="/app/.venv/bin:$PATH" HOST=0.0.0.0 PORT=8000 PIVOT_WEB_DIST=/app/web
+ENV PATH="/app/.venv/bin:$PATH" HOST=0.0.0.0 PORT=8000 PIVOT_WEB_DIST=/app/web \
+    PIVOT_DEMO_FIXTURE=/app/eval/fixtures/demo-1021.json
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"
 CMD ["python", "-m", "pivot_api.single"]

@@ -13,6 +13,7 @@
 要知道的后果：
 
 - **重启就清空数据**。程序重启后只剩自带的演示比赛，这是有意的（演示用）。
+- **生成的比赛存在服务器硬盘上，不进 GitHub**。启动时自己生成，存到 `PIVOT_DATA_DIR`，详见 [比赛数据放在哪](match-data.md)。
 - **只能跑一份**。实时推送只在同一个进程里有效，不要开多个 app 容器。
 
 用到的文件都在 [`deploy/oracle/`](../deploy/oracle)：
@@ -167,6 +168,8 @@ AI 相关的几项（`PIVOT_PIPELINE`、`PIVOT_FOUNDRY_*`、`PIVOT_MODEL_*`、`A
 
 `.env` 里有密钥，**不要提交到 git，不要发到群里**（`.gitignore` 已经忽略了它）。
 
+用 Dokploy 部署时没有 `.env` 文件：把 `.env.example` 里的各行复制到应用的 Environment 页再改值。注意 `PIVOT_WS_URL` 要自己填成 `wss://<域名>/api/ws`，`PIVOT_DATA_DIR` 填挂了持久卷的文件夹（例如 `/data`）。
+
 ## 8. 启动
 
 ```bash
@@ -235,5 +238,18 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `PIVOT_WORKER` / `PIVOT_SIMULATOR` | `1` 在同一个进程里运行 AI 小组 / 模拟器，`0` 关掉（模拟器的实时入口还没做，做好后自动启用） |
 | `PIVOT_PIPELINE` | `fake` 用固定解释，`detect` 用真正的判定、写稿、核对流程（D06） |
 | `PIVOT_FOUNDRY_ENDPOINT`、`PIVOT_FOUNDRY_API_VERSION`、`PIVOT_MODEL_STANDARD`、`PIVOT_MODEL_MINI` | Foundry 模型的地址和部署名，D 线提供 |
-| `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供 |
+| `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供。三个要一起填；填了密钥就只用这个服务主体登录 |
 | `PIVOT_WEB_DIST` | 网页文件的位置，镜像里已经设好，不用填 |
+| `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 6，`0` 不生成 |
+| `PIVOT_DATA_DIR` | 生成的比赛和 AI 写的结果存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
+| `PIVOT_RESULTS` | `1`（默认）把 AI 写的结果存到 `PIVOT_DATA_DIR/results/`，重启后读回来不再调模型；`0` 只放在内存里 |
+| `PIVOT_RESULTS_TAG` | 默认空。改成一个新值再部署，就丢掉存下的结果、让 AI 全部重写，见 [比赛数据放在哪](match-data.md) |
+| `PIVOT_RESULTS_BACKEND` | AI 写的结果存哪：`files`（默认）存硬盘；`cosmos` 存 Azure Cosmos DB，启动时连不上就自动退回硬盘，见 [存到 Cosmos DB](match-data.md#存到-azure-cosmos-db) |
+| `PIVOT_COSMOS_ENDPOINT` | `cosmos` 时必填，Cosmos 账号地址，例如 `https://pivot-cosmos.documents.azure.com:443/`。用上面的 `AZURE_*` 服务主体登录，不用填密钥 |
+| `PIVOT_COSMOS_DATABASE` | 默认 `pivot` |
+| `PIVOT_SIMS_BACKEND` | 模拟比赛文件存哪：`files`（默认）只存硬盘；`blob` 以 Azure Blob 为准、硬盘当缓存，连不上 Blob 就只用硬盘，见 [模拟比赛放到 Blob](match-data.md#模拟比赛放到-azure-blob) |
+| `PIVOT_BLOB_ENDPOINT` | `blob` 时必填，存储账号地址，例如 `https://pivotstore1024.blob.core.windows.net/`。用 `AZURE_*` 服务主体登录，不用填密钥 |
+| `PIVOT_BLOB_CONTAINER` | 默认 `sims` |
+| `PIVOT_WHATIF_WORKERS` | 「假如」重踢比赛用几个进程，默认比 CPU 核数少 1（至少 1），留一个核给网站和直播回放 |
+| `PIVOT_WHATIF_WARM` | 启动后先在后台把录好的演示比赛每个转折点的前几个「假如」按钮算好，默认 `2`，`0` 不算。算好的结果和 AI 的结果存在一起，重启不用再算 |
+| `PIVOT_WHATIF_MAX_QUEUED` | 最多排队几个「假如」，再多就请用户稍后再试，默认 `20` |

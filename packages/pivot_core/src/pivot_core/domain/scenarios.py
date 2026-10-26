@@ -34,7 +34,7 @@ class ScenarioSpec(Model):
 class PlantSpec(Model):
     """Force an event at a given minute. Used by the eval seeds and the demo preset."""
 
-    minute: Minute
+    minute: Minute                            # scoreboard minute (63 = 63'), not elapsed minutes
     type: Literal["red_card", "substitution", "goal", "press_change", "formation_change", "injury"]
     team: Side
     params: dict[str, int | str] = {}
