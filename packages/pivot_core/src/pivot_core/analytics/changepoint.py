@@ -1,8 +1,10 @@
 """Momentum alarm (B06, ADR-0010): two-sided CUSUM on the per-minute momentum series.
 
-Defaults give about 2.5 candidates per simulated match, almost every match between 1 and 3,
-about three in four with a goal, card, substitution or VAR call in their window (B09, 40
-matches on the B12 simulator); the Judge then keeps the real ones.
+Defaults give about 2.5 candidates per simulated match, five in six matches between 1 and 3,
+about four in five with a goal, card, substitution or VAR call in their window (B06-opta, 200
+demo-preset matches; 1.4 per real 2022 World Cup match, as before); the Judge then keeps the
+real ones. Thresholds are on the Opta-style momentum (MET-024), whose spread is about 0.65 of
+the old one's.
 
 How it works, minute by minute within each period:
 
@@ -40,14 +42,14 @@ KEY_TYPES = {"substitution", "tactical_shift", "card", "var_review"}
 
 @dataclass
 class DetectorParams:
-    k: float = 0.1                   # drift: deviations smaller than this never accumulate
-    h: float = 1.5                   # alarm threshold on the running sum (B09)
+    k: float = 0.04                  # drift: deviations smaller than this never accumulate (B06-opta: 0.1 -> 0.04)
+    h: float = 1.4                   # alarm threshold on the running sum (B09: 1.5; B06-opta: 1.4)
     baseline_min: int = 10           # minutes in the baseline mean
     confirm_min: int = 5             # the new level must hold this long (ADR-0010)
-    min_swing: float = 0.3           # minimum |mean after - mean before|
+    min_swing: float = 0.25          # minimum |mean after - mean before| (B06-opta: 0.3 -> 0.25)
     min_side_min: int = 3            # minutes of the same period needed on each side of the change
     restart_min: int = 10            # after a restart, a climb back to the pre-break leader is not a turn
-    restart_lead: float = 0.2        # ... when that side's momentum before the break was at least this
+    restart_lead: float = 0.13       # ... when that side's momentum before the break was at least this (0.2 x 0.65)
     min_gap_min: int = 12            # minutes between two candidates (ADR-0010; B09: 8 -> 12)
     max_per_match: int = 5           # ADR-0010
     warmup_min: int = 10             # none in the first minutes of the match: no baseline yet (B09)
@@ -71,11 +73,12 @@ def key_events(events: list[MatchEvent], window: tuple[int, int]) -> list[str]:
 
 
 def severity(swing: float, key_ids: list[str], events_by_id: dict[str, MatchEvent]) -> int:
-    """ADR-0010: 3 for a big swing or a goal / red card nearby, 2 for a medium swing or a substitution."""
+    """ADR-0010: 3 for a big swing or a goal / red card nearby, 2 for a medium swing or a substitution.
+    Swing cut-offs 0.4 / 0.3 are the old 0.6 / 0.45 scaled to the Opta-style momentum's spread."""
     types = {events_by_id[i].type for i in key_ids if i in events_by_id}
-    if abs(swing) >= 0.6 or types & {"shot", "card"}:          # key "shot" ids are goals, key cards are reds
+    if abs(swing) >= 0.4 or types & {"shot", "card"}:          # key "shot" ids are goals, key cards are reds
         return 3
-    if abs(swing) >= 0.45 or "substitution" in types:
+    if abs(swing) >= 0.3 or "substitution" in types:
         return 2
     return 1
 
