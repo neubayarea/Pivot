@@ -4,7 +4,7 @@ import { useFrames } from "../data/live/frames";
 import { useT } from "../i18n";
 import Card from "./Card";
 import { describe } from "./EventFeed";
-import Pitch from "./Pitch";
+import Pitch, { whoFromSquads } from "./Pitch";
 
 // A shot stays drawn this many seconds after it was taken.
 const SHOT_FOR = 3;
@@ -25,13 +25,7 @@ export default function PitchBoard() {
   const now = Math.floor(match.clock);
   const { frame, missing } = useFrames(fixture ? null : match.match_id, now);
 
-  const who = useMemo(() => {
-    const map = new Map<string, { home: boolean; shirt: string }>();
-    for (const side of ["home", "away"] as const) {
-      for (const p of squads[side]) map.set(p.player_id, { home: side === "home", shirt: p.shirt === null ? "" : String(p.shirt) });
-    }
-    return (id: string) => map.get(id) ?? { home: id.startsWith("h"), shirt: "" };
-  }, [squads]);
+  const who = useMemo(() => whoFromSquads(squads), [squads]);
 
   const note = t("board.pitchNote", { team: teams.home.short_name });
   if (missing) {
