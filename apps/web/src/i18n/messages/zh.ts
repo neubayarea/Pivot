@@ -227,6 +227,10 @@ export const zh: Messages = {
   "why.counts": "数据 {claims} 项 · 证据 {evidence} 条",
   "why.fallback": "暂时没有{wanted}解释，先显示{served}版。",
   "why.writing": "正在写{wanted}解释，先显示{served}版。",
+  "why.fanWriting": "正在写球迷版，先显示分析师版。",
+  "why.fanFallback": "暂时没有球迷版，先显示分析师版。",
+  "why.fanWritingLang": "正在写{wanted}球迷版，先显示{served}分析师版。",
+  "why.fanFallbackLang": "暂时没有{wanted}球迷版，先显示{served}分析师版。",
 
   "metric.possession_pct": "控球率 %",
   "metric.pass_accuracy_pct": "传球成功率 %",

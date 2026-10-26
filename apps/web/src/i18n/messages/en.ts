@@ -227,6 +227,10 @@ export const en = {
   "why.counts": "{claims} claims · {evidence} evidence",
   "why.fallback": "No {wanted} explanation yet. Showing the {served} version.",
   "why.writing": "Writing the {wanted} explanation. Showing the {served} version for now.",
+  "why.fanWriting": "Writing the fan version. Showing the analyst version for now.",
+  "why.fanFallback": "No fan version yet. Showing the analyst version.",
+  "why.fanWritingLang": "Writing the fan version in {wanted}. Showing the {served} analyst version for now.",
+  "why.fanFallbackLang": "No fan version in {wanted} yet. Showing the {served} analyst version.",
 
   "metric.possession_pct": "Possession %",
   "metric.pass_accuracy_pct": "Pass accuracy %",

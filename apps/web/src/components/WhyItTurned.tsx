@@ -3,7 +3,7 @@ import type { Claim, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { involves, useMatch } from "../data/match";
 import { useLocalising } from "../data/view";
-import { narrativeLang, usePrefs } from "../i18n";
+import { narrativeLang, usePrefs, type MessageKey } from "../i18n";
 import Card from "./Card";
 import { surname } from "./FocusPickers";
 import Sourced from "./Sourced";
@@ -53,6 +53,13 @@ function Highlighted({ text, claims, name }: { text: string; claims: Claim[]; na
   );
 }
 
+/** The note over an explanation that is not the one asked for: another language, the analyst version, or both. */
+function noteKey(otherLang: boolean, analystForFan: boolean, writing: boolean): MessageKey {
+  if (!analystForFan) return writing ? "why.writing" : "why.fallback";
+  if (otherLang) return writing ? "why.fanWritingLang" : "why.fanFallbackLang";
+  return writing ? "why.fanWriting" : "why.fanFallback";
+}
+
 type Props = {
   pivot: Pivot | null;
   selected: ReadonlySet<string>;
@@ -84,12 +91,15 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   // The API writes English when it cannot write the asked language; say so instead of hiding it.
   const served = narrativeLang(narrative);
   const fellBack = served !== null && served !== prefs.language;
+  // Likewise the analyst version while the fan one is written (or when it could not be).
+  const plainForFan = prefs.audience === "fan" && narrative.prefs.audience !== "fan";
+  const vars = { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served ?? "en"}`) };
   return (
     <Card title={t("why.title")} note={`${minute(pivot.minute)}′ · ${t(auto ? "why.noteAuto" : "why.noteVerified")}`} className="why drop">
-      {fellBack && (
+      {(fellBack || plainForFan) && (
         // A div, not a p: the drop cap goes on the first paragraph of the explanation.
         <div className="lang-note" role="note">
-          {t(localising ? "why.writing" : "why.fallback", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
+          {t(noteKey(fellBack, plainForFan, localising), vars)}
         </div>
       )}
       {narrative.sentences.map((s, i) => (

@@ -228,6 +228,10 @@ export const es: Messages = {
   "why.counts": "{claims} datos · {evidence} evidencias",
   "why.fallback": "Aún no hay explicación en {wanted}. Se muestra la versión en {served}.",
   "why.writing": "Escribiendo la explicación en {wanted}. Mientras tanto, se muestra la versión en {served}.",
+  "why.fanWriting": "Escribiendo la versión para aficionados. Mientras tanto, se muestra la de analista.",
+  "why.fanFallback": "Aún no hay versión para aficionados. Se muestra la de analista.",
+  "why.fanWritingLang": "Escribiendo la versión para aficionados en {wanted}. Mientras tanto, se muestra la de analista en {served}.",
+  "why.fanFallbackLang": "Aún no hay versión para aficionados en {wanted}. Se muestra la de analista en {served}.",
 
   "metric.possession_pct": "Posesión %",
   "metric.pass_accuracy_pct": "Precisión de pase %",

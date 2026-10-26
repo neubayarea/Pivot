@@ -114,6 +114,41 @@ describe("switching language", () => {
   });
 });
 
+describe("fan mode on the analyst version (Ax50)", () => {
+  const why = (pivot: typeof pv74, localising = false) =>
+    render(
+      <FixtureProvider>
+        <LocalisingContext.Provider value={localising}>
+          <WhyItTurned pivot={pivot} selected={new Set()} onToggle={() => {}} />
+        </LocalisingContext.Provider>
+      </FixtureProvider>,
+    );
+  const asFan = (p: typeof pv74, language: Lang = "en") =>
+    ({ ...p, narrative: { ...p.narrative!, prefs: { ...p.narrative!.prefs, audience: "fan", language } } }) as typeof pv74;
+
+  it("says the fan version is being written, in every language", () => {
+    withWindow("?mode=fan&lang=en");
+    expect(why(pv74, true)).toContain("Writing the fan version. Showing the analyst version for now.");
+    withWindow("?mode=fan&lang=zh");
+    expect(why(localisePivot(pv74, "zh"), true)).toContain("正在写球迷版，先显示分析师版。");
+    withWindow("?mode=fan&lang=es");
+    expect(why(localisePivot(pv74, "es"), true)).toContain("Escribiendo la versión para aficionados.");
+  });
+
+  it("names both when the English analyst version stands in for a Chinese fan one", () => {
+    withWindow("?mode=fan&lang=zh");
+    expect(why(pv74, true)).toContain("正在写中文球迷版，先显示英文分析师版。");
+    expect(why(pv74)).toContain("暂时没有中文球迷版，先显示英文分析师版。");
+  });
+
+  it("says nothing once the fan version is in, or for an analyst", () => {
+    withWindow("?mode=fan&lang=zh");
+    expect(why(asFan(localisePivot(pv74, "zh"), "zh"))).not.toContain("lang-note");
+    withWindow("?mode=analyst&lang=en");
+    expect(why(pv74, true)).not.toContain("lang-note");
+  });
+});
+
 describe("missing translations", () => {
   it("fall back to English and warn once in dev", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
