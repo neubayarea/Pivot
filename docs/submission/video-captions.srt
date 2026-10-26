@@ -1,0 +1,121 @@
+1
+00:00:00,100 --> 00:00:05,402
+Match stats tell you what happened: 57%
+possession, 13 shots.
+
+2
+00:00:05,452 --> 00:00:07,507
+Not why the game turned.
+
+3
+00:00:08,100 --> 00:00:12,926
+Pivot finds the moments that turned a
+match, explains why,
+
+4
+00:00:12,976 --> 00:00:16,793
+and lets you replay it with one thing
+changed.
+
+5
+00:00:17,100 --> 00:00:21,162
+Here's a synthetic match. Harbour City 3,
+Northgate 1.
+
+6
+00:00:21,212 --> 00:00:24,588
+Pivot found three turning points. A red
+card.
+
+7
+00:00:24,638 --> 00:00:28,166
+A substitution that pulled Harbour City
+deeper.
+
+8
+00:00:28,216 --> 00:00:31,364
+And a second change that won control back.
+
+9
+00:00:32,100 --> 00:00:38,180
+Pick one. The AI explains why it mattered,
+and every number is checked.
+
+10
+00:00:38,230 --> 00:00:43,793
+Northgate's passes fell from 12 to 6.
+Hover it to see its source.
+
+11
+00:00:44,100 --> 00:00:46,836
+So did the red card decide it?
+
+12
+00:00:46,886 --> 00:00:53,336
+Remove it, and Pivot replays the rest of
+the match 200 times each way.
+
+13
+00:00:53,386 --> 00:00:59,650
+Harbour City's win chance drops from 80%
+to 52%. A clear difference.
+
+14
+00:01:00,100 --> 00:01:04,619
+Two minutes after the red card, Harbour
+City scored.
+
+15
+00:01:04,669 --> 00:01:07,079
+Here it is at quarter speed.
+
+16
+00:01:08,100 --> 00:01:13,793
+From a corner. Four attackers, three
+defenders, and nobody tight on them.
+
+17
+00:01:15,100 --> 00:01:19,507
+One click, and it's all in Chinese. Or
+Spanish.
+
+18
+00:01:20,100 --> 00:01:24,412
+Every card comes from a Microsoft Agent
+Framework workflow.
+
+19
+00:01:24,462 --> 00:01:28,256
+A Judge confirms the moment. An Explainer
+writes it.
+
+20
+00:01:28,306 --> 00:01:30,844
+A Verifier recomputes every number.
+
+21
+00:01:30,894 --> 00:01:36,536
+Here, it caught the model giving Harbour
+City the other team's pass accuracy,
+
+22
+00:01:36,586 --> 00:01:37,793
+and sent it back.
+
+23
+00:01:38,100 --> 00:01:41,085
+The agents run on Azure AI Foundry.
+
+24
+00:01:41,135 --> 00:01:45,507
+Results live in Cosmos DB, matches in Blob
+Storage.
+
+25
+00:01:46,100 --> 00:01:50,407
+Every match here is synthetic, as the
+rules require.
+
+26
+00:01:50,457 --> 00:01:53,507
+Next: real match data. This is Pivot.
