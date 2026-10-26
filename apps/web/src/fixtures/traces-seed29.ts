@@ -1,6 +1,8 @@
 // The detect chains of M-seed-29 as the live API served them on 10/25
 // (GET https://pivot.in-stacks.com/api/matches/M-seed-29/traces, What-if chains left out): p39 is
 // sent back three times and ends with the template; p69 and p89 pass first time. Used by the S4 tests.
+// A recording from before B06-opta (10/26): the demo's pivots are now p37, p66 and p79; these ids stay
+// as they were served, since the tests only read how chains are grouped and shown.
 import type { AgentTrace } from "@pivot/contracts";
 
 export const SEED29_TRACES: AgentTrace[] = [

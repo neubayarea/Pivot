@@ -88,7 +88,7 @@ def test_target_prefers_a_trigger_then_the_lead_up_then_a_tactical_substitution(
     assert by_type(sc.options_for(pivot(minute=38, triggers=()), goals))["remove_goal"].at_minute == 30
 
 
-# --- the recorded demo (eval/fixtures/demo-1021.json, M-seed-41) ----------------------------
+# --- the recorded demo (eval/fixtures/demo-1021.json, M-seed-29) ----------------------------
 
 FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
 
@@ -108,25 +108,25 @@ def demo():
     return {e.event_id: e for e in events}, at
 
 
-def test_demo_39_offers_removing_the_planted_red_card(demo):
+def test_demo_37_offers_removing_the_planted_red_card(demo):
     events, at = demo
-    for o in (at(39), at(39, triggers=False)):
+    for o in (at(37), at(37, triggers=False)):
         red = o["remove_red_card"]
         assert red.enabled and red.label == "Remove 38′ red card"
         assert events[red.target_event_id].foul.card == "red" and red.at_minute == 37 and red.team == "away"
 
 
 @pytest.mark.parametrize("triggers", [True, False])
-def test_demo_69_substitution_chips_target_the_planted_tactical_change(demo, triggers):
+def test_demo_66_substitution_chips_target_the_planted_tactical_change(demo, triggers):
     events, at = demo
-    o = at(69, triggers)
+    o = at(66, triggers)
     for type_ in ("cancel_substitution", "move_substitution"):
         sub = events[o[type_].target_event_id]
         assert sub.minute == 66 and sub.substitution.reason == "tactical"   # 63' on the clock
         assert (sub.substitution.player_off_id, sub.substitution.player_on_id) == ("h09", "h15")
     # The chip reads the substitution's minute exactly as the event list does (G2, Ax27).
     assert sub.clock_label == "63'" and o["cancel_substitution"].label == "Cancel 63′ substitution"
-    assert o["change_press"].label == "Press higher from 65′"     # pivot minute 69 on the clock
+    assert o["change_press"].label == "Press higher from 62′"     # pivot minute 66 on the clock
 
 
 def test_move_minute_range():

@@ -60,7 +60,7 @@ def test_deployed_pipeline_writes_verified_numbers_from_the_stat_sheet(monkeypat
     metrics = {c["stat_ref"]["metric"] for c in model.sheets[0]}
     assert {"passes", "shots", "xg", "pressures", "momentum_avg"} <= metrics
     with_numbers = [p for p in pivots if p.status == "confirmed" and p.narrative.sentences[0].claims]
-    assert {p.minute for p in with_numbers} >= {39, 69}
+    assert {p.minute for p in with_numbers} >= {37, 66}
 
 
 def test_personalizer_from_env_uses_the_stat_calculator(monkeypatch):

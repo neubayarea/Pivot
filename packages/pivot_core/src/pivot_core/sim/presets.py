@@ -4,8 +4,9 @@
 at 38', Harbour City take control and lead; at 63' Harbour City take off a winger for a holding
 midfielder and drop deeper, and Rovers come back into the game. Only the two planted events
 are forced; goals and the turning points come out of the simulation itself. Seed 29 was
-picked by scripts/make_demo.py after B12 and B09 (one of 21 in 800) because the alarm fires at
-39', 69' and 89' on its own and nowhere else; a04, back at the club he left on bad terms, is
+picked by scripts/make_demo.py after B12 and B09 (one of 21 in 800) because the alarm fired at
+39', 69' and 89' on its own and nowhere else (since B06-opta, the Opta-style momentum: elapsed
+37, 66 and 79, shown as 38', 62' and 75'); a04, back at the club he left on bad terms, is
 sent off at 38'; Harbour City score at 11', 40' and 52', have a penalty overturned by VAR at
 46', and Rovers pull one back at 86': 3-1. (Seed 41 told the story before B12.)
 """
