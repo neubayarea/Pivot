@@ -8,7 +8,8 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
    (comparisons instead cite only the ids they were offered; with no event in that window, a
    template sentence without numbers cites `NO_EVIDENCE`)
 3. numbers: every claim recomputes within tolerance in its stat's unit, and every number in the
-   text is one of them, on a team and a stat the sentence is talking about
+   text is one of them, on a team and a stat the sentence is talking about ("ten men" is checked
+   against the red cards instead)
 4. direction: rose/fell words match the sign of the change between two claimed windows, "from A to B"
    follows the order of the windows, and doubled/halved and "three times as many" style words match the ratio; in
    comparisons, "more likely" style words match the outcome they describe
@@ -34,7 +35,7 @@ from pivot_core.domain.stats import STAT_UNITS, Claim
 
 from . import languages as lang_rules
 from .context import ContextItem, involved_in, mentions
-from .matchstate import score_line
+from .matchstate import men_at, score_line
 from .scenarios import is_goal
 from .vocabulary import STAT_TERMS
 
@@ -176,6 +177,16 @@ def _spans(text: str, words: tuple[str, ...]) -> list[tuple[int, int, str]]:
 
 def _has_word(text: str, words: tuple[str, ...]) -> list[str]:
     found = {w for *_, w in _spans(text, words)}
+    return [w for w in words if w in found]
+
+
+def _direction_words(text: str, lang: str, words: tuple[str, ...]) -> list[str]:
+    """Direction words in `text`, except those about players on the pitch ("dropped to ten men", "降至10人")."""
+    spelled = lang_rules.spell_out(lang_rules.normalise(text, lang), lang)
+    counts = lang_rules.player_counts(spelled, lang)
+    found = {w for _, end, w in _spans(spelled, words)
+             if not any(at >= end and len(spelled[end:at]) <= 12 and not re.search(r"\d", spelled[end:at])
+                        for at in counts)}
     return [w for w in words if w in found]
 
 
@@ -444,13 +455,23 @@ def verify(
         teams = _mentions(plain, team_phrases)
         named_stats = {m for _, ms in _mentions(plain.lower(), _stat_names(lang)) for m in ms}
         numbers = _numbers(plain, names.values())
+        # "Ten men" is not a stat: it must be the players either side had at an event the sentence cites.
+        counts = lang_rules.player_counts(plain, lang)
+        on_pitch = {n for e in s.evidence_ids if e in events for n in men_at(events.values(), events[e].t).values()}
         for at, n in numbers:
+            if at in counts:
+                if counts[at] not in on_pitch:
+                    had = " or ".join(map(str, sorted(on_pitch))) or "11"
+                    issue("number_mismatch", f"Sentence {i + 1} says {n} players, but at the events it cites the "
+                          f"teams had {had} on the pitch.", i)
+                continue
             before = {side for start, sides in teams if start < at for side in sides}
             same = [c for c, actual in zip(s.claims, actuals) if _matches(n, c, actual)]
             fits = [c for c in same if (not before or c.stat_ref.team in before)
                     and (not named_stats or c.stat_ref.metric in named_stats)]
             if not same:
-                issue("number_mismatch", f"The number {n} in sentence {i + 1} has no matching claim.", i)
+                issue("number_mismatch", f"The number {n} in sentence {i + 1} has no matching claim; "
+                      "copy one from the stat sheet or drop the number.", i)
             elif not fits:
                 said = ([f"about {' or '.join(names[side] for side in sorted(before))}"] if before else []) + \
                     ([f"on {' or '.join(sorted(named_stats))}"] if named_stats else [])
@@ -477,7 +498,7 @@ def verify(
             if not any(_magnitude_fits(factor, va, vb) for va, vb in pairs):
                 ratios = ", ".join(f"{vb / va:.2g}x" if va else "from zero" for va, vb in pairs)
                 issue("number_mismatch", f"'{w}' means about {factor:g}x, but the change was {ratios}.", i)
-        up, down = _has_word(s.text, up_words), _has_word(s.text, down_words)
+        up, down = _direction_words(s.text, lang, up_words), _direction_words(s.text, lang, down_words)
         deltas = [vb - va for va, vb in pairs] if up or down else []
         if (up or down) and not deltas and outcomes:
             for problem in _outcome_directions(s.text, outcomes(s.text), up_words, down_words):
