@@ -61,7 +61,9 @@ STAT_TERMS: dict[str, StatTerm] = {t.metric: t for t in (
        "more careless or more pressured on the ball"),
     StatTerm("momentum_avg", "momentum", "who was on top",
        "Mean of the per-minute momentum index over the window, from the team's point of view "
-       "(above 0 means the team was on top), -1 to 1.", "metrics", "the team was more on top"),
+       "(above 0 means the team was on top), -1 to 1. Each minute's index compares the two sides' "
+       "most dangerous moments of that minute and the few before it (Opta's match momentum).", "metrics",
+       "the team was more on top"),
     StatTerm("line_height_m", "defensive line height", "how high the defence stood",
        "Mean distance of the back line from its own goal, in metres.", "tracking", "a higher, braver defensive line"),
     StatTerm("team_width_m", "team width", "how wide they spread",

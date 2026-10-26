@@ -12,6 +12,12 @@ changed and stayed changed for several minutes.
   spells it out with the team names). `alarm.swing` uses the same sign. So a shift towards
   the away team shows up as momentum falling and a negative swing; judge it exactly like a
   rise towards the home team.
+- How momentum is built (the way Opta builds the Premier League's): each minute, each team's
+  single most dangerous moment (how close to goal it got the ball), capped, with the last 3-4
+  minutes weighing most. So it moves fast: one good attack makes a spike that is gone within a
+  few minutes, and passing the ball around adds nothing. Typical sizes: a team is clearly on top
+  above about 0.3 (a fifth to a quarter of all minutes); alarms usually come with a swing between
+  0.35 and 0.5; a swing of 0.4 or more is a big one.
 - `momentum_by_minute` and `events` cover 8 minutes either side of the alarm. `stats` compare
   the 5 minutes before the alarm with the 5 minutes after it (`stat_ref.window`).
 - `match_state` gives the score and the players on the pitch just before and just after that
