@@ -9,6 +9,7 @@ from pivot_core.domain import MatchEvent
 from pivot_core.domain.common import PITCH_LENGTH
 from pivot_core.sim import build_demo_match, simulate
 from pivot_core.sim.engine import Engine, Params, xg_model
+from pivot_core.sim.formations import DEFENDER_ROLES
 from pivot_core.sim.movement import BURST_S, RECOVER_MS, SPRINT_MS, MovementModel, TeamShape, to_view
 
 
@@ -340,3 +341,83 @@ def test_real_016_runners_get_balls_into_space_behind_the_line():
         e.play()
         counts.append(sum(x["type"] == "pass" and x.get("pass_type") == "through_ball" for x in e.events))
     assert counts[1] > counts[0] + 10
+
+
+def _home_targets(press: str, ball_x: float, line_lift: float = 0.0):
+    """Home targets out of possession (the away No. 9 on the ball), with the home side pressing `press`."""
+    m = build_demo_match(3, home_formation="4-4-2")
+    pace = {p.player_id: 0.7 for p in m.home.squad + m.away.squad}
+    shape = TeamShape.from_sheet(0, m.home.sheet, m.home.tactics.model_copy(update={"press": press}), pace)
+    other = TeamShape.from_sheet(1, m.away.sheet, m.away.tactics, pace)
+    model = MovementModel(np.random.default_rng(0))
+    model.line_lift = line_lift
+    pos = np.zeros((2, 11, 2))
+    pos[0], pos[1] = shape.anchors, to_view(other.anchors, 1)
+    ball = np.array([ball_x, 34.0])
+    targets = model.targets(0, (shape, other), pos, ball, 1, (1, 9), False, (-99, -99), None)
+    return shape.roles, targets[0], model.pressers
+
+
+def test_real_015_every_back_line_sits_line_lift_metres_higher():
+    lift = Params().line_lift
+    assert lift > 0
+    roles, flat, _ = _home_targets("low", 52.5)
+    _, lifted, _ = _home_targets("low", 52.5, line_lift=lift)
+    backs = [i for i, r in enumerate(roles) if r in DEFENDER_ROLES]
+    assert np.allclose(lifted[backs, 0] - flat[backs, 0], lift)
+
+
+def test_real_015_low_and_mid_blocks_only_press_near_their_own_goal():
+    # PRESS_ZONE: a low block closes down inside 40 m of its goal, a mid block inside 60 m, a high one everywhere
+    pressing = {p: {b: bool(_home_targets(p, b)[2]) for b in (35.0, 50.0, 70.0)} for p in ("low", "mid", "high")}
+    assert pressing["low"] == {35.0: True, 50.0: False, 70.0: False}
+    assert pressing["mid"] == {35.0: True, 50.0: True, 70.0: False}
+    assert pressing["high"] == {35.0: True, 50.0: True, 70.0: True}
+
+
+def _cross_targets(ball_y: float):
+    """Home targets with the near-side winger on the ball 17 m from goal and the away side back on its line."""
+    m = build_demo_match(3, home_formation="4-3-3")
+    pace = {p.player_id: 0.7 for p in m.home.squad + m.away.squad}
+    shape = TeamShape.from_sheet(0, m.home.sheet, m.home.tactics, pace)
+    other = TeamShape.from_sheet(1, m.away.sheet, m.away.tactics, pace)
+    model = MovementModel(np.random.default_rng(0))
+    pos = np.zeros((2, 11, 2))
+    pos[0], pos[1] = shape.anchors, to_view(other.anchors, 1)
+    pos[1, :, 0] = 101.0                                            # nobody to be offside against short of the line
+    ball = np.array([88.0, ball_y])
+    near = next(i for i, r in enumerate(shape.roles) if r == "LW")  # ball on the left: the left winger has it
+    targets = model.targets(0, (shape, other), pos, ball, 0, (0, near), False, (-99, -99), None)
+    return shape.roles, targets[0]
+
+
+def test_real_017_forwards_attack_the_six_yard_box_when_a_cross_is_coming():
+    roles, central = _cross_targets(34.0 + 12)
+    _, wide = _cross_targets(34.0 + 25)                             # out by the touchline: a cross is coming
+    st, far = roles.index("ST"), roles.index("RW")                  # the right winger is on the far side
+    assert wide[st, 0] > central[st, 0] + 3 and wide[st, 0] > PITCH_LENGTH - 7
+    assert wide[far, 0] > central[far, 0] + 3
+
+
+def _shoots(close_in: float, tries: int = 2000) -> int:
+    """How often a free striker at a tight angle in the box shoots, every other choice stubbed out."""
+    e = engine_on_ball(params=Params(close_in=close_in))
+    k, i = 0, next(n for n, r in enumerate(e.shapes[0].roles) if r == "ST")
+    v = np.array([90.0, 27.0])                    # in the box, so the long-shot rule stays out of it
+    e.owner, e.forced, e.touch, e.urgency = (k, i), None, None, [0.0, 0.0]
+    e.pos[k, i], e.ball = v, v.copy()
+    e.pos[1], e.prev[1] = np.array([20.0, 34.0]), np.array([20.0, 34.0])   # nobody near him
+    shots = []
+    e._shoot = lambda *a, **kw: shots.append(1)
+    e._pass = e._carry = e._dribble = e._challenge = e._clearance = lambda *a, **kw: None
+    xg = xg_model(v, finishing=e._a(k, i, "finishing"))
+    assert e.p.shot_min_xg <= xg < 0.15                             # worth a shot, but he can still make it better
+    for _ in range(tries):
+        e._on_ball()
+    return len(shots)
+
+
+def test_real_017_a_free_player_takes_a_poor_chance_closer_before_shooting():
+    rule_on, rule_off = _shoots(Params().close_in), _shoots(1.0)
+    assert Params().close_in < 1
+    assert rule_off > 100 and rule_on < 0.7 * rule_off
