@@ -108,7 +108,9 @@ export const api = {
       headers: { accept: "application/json", "content-type": "application/json" },
       body: JSON.stringify(body),
     }),
-  getScenario: (scenarioId: string) => request<Scenario>(`/scenarios/${encodeURIComponent(scenarioId)}`),
+  /** `lang` asks for the comparison in that language; the API writes it from the same result on first request. */
+  getScenario: (scenarioId: string, lang?: ViewerPrefs["language"]) =>
+    request<Scenario>(`/scenarios/${encodeURIComponent(scenarioId)}${lang ? `?lang=${lang}` : ""}`),
   /** Every agent step for one match, grouped by chain_id and in step order (Ax4). */
   listMatchTraces: (id: string) => request<AgentTrace[]>(`${m(id)}/traces`),
   /** The chains whose input_ref is this pivot id, a candidate the Judge turned down included; 404 when neither exists. */

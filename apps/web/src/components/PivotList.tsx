@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { useMatch, type MatchView } from "../data/match";
-import { useT, type T } from "../i18n";
+import { narrativeLang, useT, type T } from "../i18n";
+import LangTag from "./LangTag";
 import Stamp from "./Stamp";
 
 /** How far the checking pipeline got: verified by the AI, or the template fallback when it timed out. */
@@ -49,7 +50,7 @@ export default function PivotList({ activeId }: { activeId: string | null }) {
         ) : (
           <Link key={p.pivot_id} to={`/pivot/${p.pivot_id}`} className={`pv to-${p.direction}${p.pivot_id === activeId ? " active" : ""}`}>
             <span className="m">{minute(p.minute)}′</span>
-            <span className="tt">{pivotHeadline(p, teams, t)}</span>
+            <span className="tt">{pivotHeadline(p, teams, t)} <LangTag lang={narrativeLang(p.narrative)} /></span>
             <span className="meta">
               <Severity level={p.severity} />
               <PivotStamp status={p.status} />

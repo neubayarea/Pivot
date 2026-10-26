@@ -181,7 +181,7 @@ def compare(text, lang="en"):
     result = SimResult(scenario_id="M-test:s1", baseline=base, counterfactual=cf,
                        significant={"home_win": True, "draw": False, "away_win": False},
                        runtime_ms=900, executor="local_pool")
-    narrative = Narrative(prefs=ViewerPrefs(language=lang), headline="Keeping Moreau on", source="llm",
+    narrative = Narrative(prefs=ViewerPrefs(language=lang), headline="保留Moreau" if lang == "zh" else "Keeping Moreau on", source="llm",
                           sentences=[ExplanationSentence(text=text, evidence_ids=["m063-s02302"])])
     verdict = cmp.verify_comparison(narrative, result, at_minute=62, events=CMP_EVENTS, stats=FakeStats({}),
                                     team_names=CMP_TEAMS, target_event_id="m063-s02302")

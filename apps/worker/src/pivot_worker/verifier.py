@@ -40,6 +40,7 @@ from .scenarios import is_goal
 from .vocabulary import STAT_TERMS
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
+_LANG_NAME = {"en": "English", "es": "Spanish", "zh": "Simplified Chinese"}
 # What a template sentence cites when no event falls in the evidence window: it is accepted only
 # then, only from the template, and only for a sentence with no numbers, claims or context.
 NO_EVIDENCE = "none"
@@ -389,6 +390,11 @@ def verify(
         issue("number_mismatch", "The headline must not contain digits.")
     if spelled := lang_rules.number_words(narrative.headline, lang):
         issue("number_mismatch", f"The headline must not contain numbers, even as words: remove '{spelled[0]}'.")
+    # The language asked for (Ax31, #184): an English draft must not pass as the Chinese version.
+    for i, text in [(None, narrative.headline), *enumerate(s.text for s in narrative.sentences)]:
+        if lang_rules.wrong_script(text, lang):
+            where = "The headline" if i is None else f"Sentence {i + 1}"
+            issue("schema_invalid", f"{where} is not in {_LANG_NAME[lang]}; write it in {_LANG_NAME[lang]}.", i)
     fan = narrative.prefs.audience == "fan"
     jargon = lang_rules.jargon(lang) if fan else ()
     banned = lang_rules.banned_terms(lang) + jargon

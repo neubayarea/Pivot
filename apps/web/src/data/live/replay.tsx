@@ -3,11 +3,11 @@
 // appear as the clock reaches them; nothing on the server changes, so it works on any deploy.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, Pivot1 as Pivot, Score } from "@pivot/contracts";
-import { usePrefs } from "../../i18n";
-import { ConnectionContext, MatchContext, type Connection, type MatchView, type Speed } from "../view";
+import { needsLocalised, usePrefs } from "../../i18n";
+import { ConnectionContext, LocalisingContext, MatchContext, type Connection, type MatchView, type Speed } from "../view";
 import type { MatchChoice } from "../choice";
 import { api } from "./api";
-import { classifyLoadError, listPivotsFor, pickMatch, toView } from "./provider";
+import { classifyLoadError, firstPivots, listPivotsFor, pickMatch, toView } from "./provider";
 import type { LiveState } from "./state";
 
 const TICK_MS = 250;
@@ -62,15 +62,33 @@ export default function ReplayProvider({ children, fallback, choice, from }: Pro
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
   const matchId = useRef<string | null>(null);
+  const [localising, setLocalising] = useState(false);
+
+  /** The pivots again in the viewer's language and mode; on failure the old ones stay. */
+  const localise = useRef((isAlive: () => boolean) => {
+    const id = matchId.current;
+    if (!id) return;
+    const asked = prefsRef.current;
+    const current = () => isAlive() && prefsRef.current === asked;
+    setLocalising(true);
+    listPivotsFor(id, asked).then(
+      (pivots) => current() && setFull((prev) => (prev ? { ...prev, pivots } : prev)),
+      (err) => console.warn("Could not refetch pivots for", asked, err),
+    ).finally(() => current() && setLocalising(false));
+  }).current;
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const id = (matchId.current = await pickMatch(choice));
+      const asked = prefsRef.current;
       const [match, events, metrics, pivots] = await Promise.all([
-        api.getMatch(id), api.listEvents(id), api.getTimeline(id), listPivotsFor(id, prefsRef.current),
+        api.getMatch(id), api.listEvents(id), api.getTimeline(id), firstPivots(id, asked),
       ]);
-      if (alive) setFull({ match, events, metrics, pivots });
+      if (!alive) return;
+      setFull({ match, events, metrics, pivots });
+      // Opened on the English pivots (see firstPivots), or the viewer switched while this loaded.
+      if (needsLocalised(asked) || prefsRef.current !== asked) localise(() => alive);
     })().catch((err) => {
       if (!alive) return;
       setConnection({
@@ -83,22 +101,18 @@ export default function ReplayProvider({ children, fallback, choice, from }: Pro
     };
   }, []);
 
-  // A new language or viewing mode refetches the pivots only; on failure the old ones stay.
+  // A new language or viewing mode refetches the pivots only.
   const key = `${prefs.language}|${prefs.audience}|${prefs.focus_team}|${prefs.focus_player_id}`;
   const loadedKey = useRef(key);
   useEffect(() => {
-    const id = matchId.current;
-    if (loadedKey.current === key || !id) return;
+    if (loadedKey.current === key || !matchId.current) return;
     loadedKey.current = key;
     let alive = true;
-    listPivotsFor(id, prefsRef.current).then(
-      (pivots) => alive && setFull((prev) => (prev ? { ...prev, pivots } : prev)),
-      (err) => console.warn("Could not refetch pivots for", key, err),
-    );
+    localise(() => alive);
     return () => {
       alive = false;
     };
-  }, [key]);
+  }, [key, localise]);
 
   const end = full ? replayEnd(full) : Infinity;
   useEffect(() => {
@@ -132,7 +146,9 @@ export default function ReplayProvider({ children, fallback, choice, from }: Pro
 
   return (
     <ConnectionContext.Provider value={connection}>
-      {view ? <MatchContext.Provider value={view}>{children}</MatchContext.Provider> : fallback}
+      <LocalisingContext.Provider value={localising}>
+        {view ? <MatchContext.Provider value={view}>{children}</MatchContext.Provider> : fallback}
+      </LocalisingContext.Provider>
     </ConnectionContext.Provider>
   );
 }

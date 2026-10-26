@@ -3,7 +3,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Match, Pivot1 as Pivot } from "@pivot/contracts";
+import type { AgentTrace, Match, Pivot1 as Pivot } from "@pivot/contracts";
 import { toView } from "../data/live/provider";
 import { MatchContext } from "../data/match";
 import { fixtureTraceSource, groupChains, liveTraceSource, refMinute, type TraceState } from "../data/traces";
@@ -107,6 +107,24 @@ describe("S4 agent trace page", () => {
     expect(html.match(/class="trace-step"/g)).toHaveLength(10);       // p69 and p89 three each, p39 four
     expect(html.match(/class="trace-step bad"/g)).toHaveLength(4);    // p39: three rejections and the template
     expect(html.match(/Verified/g)).toHaveLength(2);
+  });
+
+  it("writes the worker's fixed lines in the page's language and marks the AI's own words (Ax31)", () => {
+    const base = SEED29_TRACES[0];
+    const step = (n: number, agent: AgentTrace["agent"], output_summary: string, status: AgentTrace["status"] = "ok") =>
+      ({ ...base, chain_id: "detect:M-seed-29:69:d1", trace_id: `x:${n}`, step: n, agent, output_summary, status, verdict: null });
+    const traces = [
+      step(0, "judge", "is_pivot=true severity=2: Harbour City dropped deeper and lost the ball more."),
+      step(1, "explainer", "unavailable: TimeoutError", "error"),
+      step(2, "template", "Harbour City change shifts the balance", "degraded"),
+    ];
+    const zh = text(page(ready(traces), { lang: "zh" }));
+    expect(zh).toContain("模型没有回应（TimeoutError）");
+    expect(zh).not.toContain("unavailable:");
+    expect(zh).toContain("Harbour City dropped deeper and lost the ball more. 原文");
+    const en = text(page(ready(traces)));
+    expect(en).toContain("The model did not answer (TimeoutError)");
+    expect(en).not.toContain(" original");
   });
 
   it("speaks Chinese and Spanish", () => {

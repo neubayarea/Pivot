@@ -2,9 +2,9 @@
 // LiveState folds both together, and this turns it into the MatchView the pages read.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, Pivot1 as Pivot, TrackingFrame, ViewerPrefs } from "@pivot/contracts";
-import { needsLocalised, usePrefs } from "../../i18n";
+import { DEFAULT_PREFS, needsLocalised, usePrefs } from "../../i18n";
 import {
-  ConnectionContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
+  ConnectionContext, LocalisingContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
 import { isRecordedDemo, type MatchChoice } from "../choice";
 import { clockAt } from "../clock";
@@ -48,6 +48,14 @@ export function classifyLoadError(err: unknown, asked: string | null): LoadProbl
 }
 
 /**
+ * The pivots for the first load. Another language or mode is written on its first request, which can
+ * take a minute, so the page opens on the stored English version and asks for the viewer's own after
+ * (`localise`), instead of showing the loading skeleton until every pivot has been written.
+ */
+export const firstPivots = (id: string, prefs: ViewerPrefs) =>
+  listPivotsFor(id, needsLocalised(prefs) ? DEFAULT_PREFS : prefs);
+
+/**
  * Pivots written for these prefs. A focus player the API does not know (saved while watching
  * another match) gets a 422; drop him rather than fail the load. TopBar clears the setting too.
  */
@@ -71,6 +79,7 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
   const [state, setState] = useState<LiveState | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>({ state: "connecting", attempt: 0 });
   const [problem, setProblem] = useState<LoadProblem | null>(null);
+  const [localising, setLocalising] = useState(false);
   const stateRef = useRef<LiveState | null>(null);
   stateRef.current = state;
   const socketRef = useRef<LiveSocket | null>(null);
@@ -85,12 +94,13 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
   /** Refetch the pivot list for the current prefs; on failure the old list stays until the next resync. */
   const refreshPivots = useRef(() => {
     const id = matchIdRef.current;
-    if (!id || !stateRef.current) return;
+    if (!id) return;
     const asked = prefsRef.current;
+    setLocalising(true);
     listPivotsFor(id, asked).then(
       (pivots) => current(asked) && setState((prev) => (prev ? applyPivots(prev, pivots) : prev)),
       (err) => console.warn("Could not refetch pivots for", prefsKey(asked), err),
-    );
+    ).finally(() => current(asked) && setLocalising(false));
   }).current;
 
   useEffect(() => {
@@ -114,13 +124,15 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
         const id = matchIdRef.current!;
         const since = full ? -1 : lastEventSeq(stateRef.current);
         const asked = prefsRef.current;
+        const first = !stateRef.current;
         const [match, events, metrics, pivots] = await Promise.all([
-          api.getMatch(id), api.listEvents(id, since), api.getTimeline(id), listPivotsFor(id, asked),
+          api.getMatch(id), api.listEvents(id, since), api.getTimeline(id),
+          first ? firstPivots(id, asked) : listPivotsFor(id, asked),
         ]);
         if (!alive()) return;
         setState((prev) => applySnapshot(prev, { match, events, metrics, pivots, full }));
-        // The viewer switched language while this was loading: these pivots are in the old one.
-        if (!current(asked)) refreshPivots();
+        // Opened on the English pivots, or the viewer switched language while this was loading.
+        if ((first && needsLocalised(asked)) || !current(asked)) refreshPivots();
       },
       onEnvelope: (env) => {
         if (!alive()) return;
@@ -165,7 +177,9 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
 
   return (
     <ConnectionContext.Provider value={connection}>
-      {view ? <MatchContext.Provider value={view}>{children}</MatchContext.Provider> : fallback}
+      <LocalisingContext.Provider value={localising}>
+        {view ? <MatchContext.Provider value={view}>{children}</MatchContext.Provider> : fallback}
+      </LocalisingContext.Provider>
     </ConnectionContext.Provider>
   );
 }

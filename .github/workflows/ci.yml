@@ -30,6 +30,18 @@ jobs:
       - run: uv sync --locked
       - run: uv run pytest
 
+  # The web page's tests, including the i18n guard (no English typed into JSX, Ax31), and its type check.
+  web:
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npx -y pnpm@12.3.4 install --frozen-lockfile --filter web...
+      - run: npx -y pnpm@12.3.4 --filter web test
+      - run: npx -y pnpm@12.3.4 --filter web lint
+
   contracts:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
