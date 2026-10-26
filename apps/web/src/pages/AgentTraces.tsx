@@ -11,7 +11,7 @@ import { useFixture, useMatch } from "../data/match";
 import {
   fixtureTraceSource, liveTraceSource, refMinute, useTraceChains, type TraceChain, type TraceState,
 } from "../data/traces";
-import { isMessageKey, useT, type T } from "../i18n";
+import { isMessageKey, usePrefs, useT, type T } from "../i18n";
 import "../styles/traces.css";
 
 // S4 · Agent trace (US-08). One card per detect chain, one row per agent handoff: the Judge's
@@ -37,14 +37,45 @@ function judgeCall(summary: string): { pivot: boolean; severity: number | null; 
   return m ? { pivot: m[1] === "true", severity: m[2] ? Number(m[2]) : null, reason: m[3] } : null;
 }
 
+/** What a model wrote, as recorded: shown in its own words, and marked so on a page in another language. */
+function Original({ t, children }: { t: T; children: ReactNode }) {
+  const { prefs } = usePrefs();
+  return (
+    <>
+      {children}
+      {prefs.language !== "en" && <> <abbr className="lang-tag" title={t("trace.originalNote")}>{t("trace.original")}</abbr></>}
+    </>
+  );
+}
+
+/**
+ * The fixed lines the worker and the API write about a step (pivot_worker/detect.py, comparator.py,
+ * pivot_api/whatif.py), in the page's language; null for anything else. The error itself stays raw.
+ */
+function machineLine(t: T, s: AgentTrace): string | null {
+  const text = s.output_summary;
+  let m: RegExpExecArray | null;
+  if ((m = /^unavailable \((.*)\); detector only$/s.exec(text))) return t("trace.judge.unavailable", { why: m[1] });
+  if ((m = /^unavailable: (.*)$/s.exec(text))) return t("trace.unavailable", { why: m[1] });
+  if ((m = /^workflow failed \((.*)\); template card$/s.exec(text))) return t("trace.template.failed", { why: m[1] });
+  if ((m = /^(\d+) replays per arm from (\d+)' in ([\d.]+)s$/.exec(text))) {
+    return t("trace.executor.ran", { n: m[1], minute: m[2], time: `${m[3]} s` });
+  }
+  if (s.agent === "executor" && (m = /^error: (.*)$/s.exec(text))) return t("trace.executor.error", { why: m[1] });
+  if (text === "invalid output") return t("trace.invalidOutput");
+  return null;
+}
+
 function summary(t: T, s: AgentTrace, draft: number): ReactNode {
+  const fixed = machineLine(t, s);
+  if (fixed !== null) return fixed;
   if (s.agent === "judge") {
     const call = judgeCall(s.output_summary);
     if (!call) return s.output_summary;
     return (
       <>
         <b>{call.pivot ? t("trace.judge.yes", { n: call.severity ?? "?" }) : t("trace.judge.no")}</b>
-        {call.reason && <> · {call.reason}</>}
+        {call.reason && <> · <Original t={t}>{call.reason}</Original></>}
       </>
     );
   }
@@ -55,16 +86,16 @@ function summary(t: T, s: AgentTrace, draft: number): ReactNode {
         <b>{t("trace.verifier.fail")}</b>
         {s.verdict.issues.map((i, n) => (
           <span key={n} className="issue">
-            {t("trace.reason", { code: label(t, "trace.issue", i.code), message: clip(i.message) })}
+            <Original t={t}>{t("trace.reason", { code: label(t, "trace.issue", i.code), message: clip(i.message) })}</Original>
           </span>
         ))}
       </>
     );
   }
-  if (s.agent === "explainer") {
+  if (s.agent === "explainer" || s.agent === "comparator") {
     return (
       <>
-        <b>{draft === 0 ? t("trace.explainer.draft") : t("trace.explainer.rewrite", { n: draft })}</b> · “{clip(s.output_summary)}”
+        <b>{draft === 0 ? t("trace.explainer.draft") : t("trace.explainer.rewrite", { n: draft })}</b> · <Original t={t}>“{clip(s.output_summary)}”</Original>
       </>
     );
   }
@@ -132,7 +163,7 @@ function Chain({ chain, pivot }: { chain: TraceChain; pivot: Pivot | undefined }
       {chain.steps.map((s) => {
         const start = offset;
         offset += s.latency_ms;
-        const draft = s.agent === "explainer" ? drafts++ : 0;
+        const draft = s.agent === "explainer" || s.agent === "comparator" ? drafts++ : 0;
         return <Step key={s.trace_id} s={s} offset={start} draft={draft} />;
       })}
     </Card>

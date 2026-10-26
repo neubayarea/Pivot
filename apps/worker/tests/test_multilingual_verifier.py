@@ -35,6 +35,17 @@ def test_numbers_written_as_words_are_checked(events, stats, lang, text, expecte
     assert codes(card(lang, text, RISE), events, stats) == expected
 
 
+# 1b. The draft is in the asked language (Ax31, #184): an English card is not the Chinese version.
+@pytest.mark.parametrize("lang,text,expected", [
+    ("zh", "Rovers' final-third passes rose from three to nine.", ["schema_invalid"]),
+    ("zh", "Rovers的前场传球从三上升到九。", []),
+    ("en", "Rovers的前场传球从三上升到九。", ["schema_invalid"]),
+    ("es", "Rovers的前场传球从三上升到九。", ["schema_invalid"]),
+])
+def test_a_card_in_another_language_is_sent_back(events, stats, lang, text, expected):
+    assert codes(card(lang, text, RISE), events, stats) == expected
+
+
 def test_everyday_words_with_numerals_are_not_numbers():
     assert numbers_in("Rovers在61'吃到一张牌，这一刻进入前场三区的传球变多", "zh") == []
     assert numbers_in("此后五分钟，Rovers的威胁值从0.21上升到0.57。", "zh") == ["0.21", "0.57"]

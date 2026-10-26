@@ -17,7 +17,8 @@ def candidate():
                           key_event_ids=["m063-s01042"], window=(58, 68))
 
 
-def card(lang, text, claims=(), headline="Rovers take over"):
+def card(lang, text, claims=(), headline=None):
+    headline = headline or ("Rovers接管比赛" if lang == "zh" else "Rovers take over")
     return Narrative(prefs=ViewerPrefs(language=lang), headline=headline, source="llm",
                      sentences=[ExplanationSentence(text=text, evidence_ids=["m063-s01042"], claims=list(claims))])
 

@@ -3,6 +3,7 @@
     GET  /api/pivots/{pivot_id}/scenarios   chips from the D07 catalog, disabled ones with the reason
     POST /api/scenarios                     {pivot_id, type, n_runs?: 200|500|1000, params?} -> 202 Scenario
     GET  /api/scenarios/{scenario_id}       the Scenario: status, done, and the result once completed
+                                            (`?lang=zh|es`: the comparison in that language, Ax31)
 
 A POST builds the `ScenarioSpec` from the chip and puts it on a queue; one scenario runs at a time and
 the rest wait (`WhatIf`). A run replays the match it was asked about with the seed and plants it was
@@ -18,6 +19,10 @@ A finished scenario is cached by (match version, pivot, type, target event, para
 `seed_base` derived from the pivot and type, so the same question twice gets the same answer at once.
 The cache goes through the result store (files or Cosmos DB, Ax10/Ax11), so it survives a restart; a
 comparison that came from the template is written again on the first request after one.
+
+Runs write the comparison in English. A GET with `?lang=` for another language writes that version
+from the same result on first request (Comparator ⇄ Verifier, template without a model) and keeps it
+in memory, so switching the page's language never replays the match.
 
 200 replays per arm take ~45 s from the 38' red card on a 10-core laptop and several minutes on a
 2-core VM, so the recorded demo's first `PIVOT_WHATIF_WARM` chips of each pivot are run in the
@@ -41,6 +46,7 @@ import multiprocessing
 import os
 import time
 import uuid
+from collections import defaultdict
 from collections.abc import Callable
 from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass, field
@@ -51,7 +57,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from pivot_adapters import Adapters
-from pivot_core.domain import AgentTrace, Envelope, Match, Pivot, Scenario, ScenarioSpec, SimResult
+from pivot_core.domain import AgentTrace, Envelope, Match, Narrative, Pivot, Scenario, ScenarioSpec, SimResult, ViewerPrefs
+from pivot_core.domain.narrative import Language
 from pivot_core.domain.scenarios import ScenarioType
 from pivot_core.sim.whatif import run_whatif
 from pivot_worker.comparator import compare
@@ -155,6 +162,8 @@ class WhatIf:
         self._pool: Executor | None = None
         self._task: asyncio.Task | None = None
         self._pushes: set[asyncio.Future] = set()  # progress pushes in flight
+        self._written: dict[tuple[str, Language], Narrative] = {}   # (scenario id, language) -> comparison
+        self._writing: defaultdict[tuple[str, Language], asyncio.Lock] = defaultdict(asyncio.Lock)
 
     @classmethod
     def from_env(cls, adapters: Adapters, replays: dict[str, Replay], models: ModelClient) -> WhatIf:
@@ -235,6 +244,42 @@ class WhatIf:
                 self._keep(key, stored)
                 return stored
         return None
+
+    async def in_language(self, scenario: Scenario, lang: Language) -> Scenario:
+        """The scenario with its comparison in `lang`: written from the same result on first request, then kept."""
+        result = scenario.result
+        if scenario.status != "completed" or result is None or result.narrative is None \
+                or result.narrative.prefs.language == lang:
+            return scenario
+        key = (scenario.scenario_id, lang)
+        async with self._writing[key]:       # two polls at once: write it once
+            if (narrative := self._written.get(key)) is None:
+                spec = scenario.spec
+                chain = f"whatif:{scenario.scenario_id}:{lang}-{uuid.uuid4().hex[:6]}"
+                narrative = self._written[key] = await self._compare(
+                    scenario, result, await self._label(spec), _ChainTraces(self, chain, scenario), chain,
+                    ViewerPrefs(language=lang))
+        return scenario.model_copy(update={"result": result.model_copy(update={"narrative": narrative})})
+
+    async def _label(self, spec: ScenarioSpec) -> str:
+        """The chip's English label, as the run was given it (the Comparator names the change with it)."""
+        try:
+            pivot, match = await self.pivot(spec.pivot_id)
+            option = next(o for o in await self.options(pivot, match) if o.type == spec.type)
+        except (LookupError, StopIteration):
+            return spec.type.replace("_", " ")
+        if spec.type == "move_substitution" and "new_minute" in spec.params:
+            return CATALOG["move_substitution"].label.format(new_minute=f"{int(spec.params['new_minute']) + 1}{PRIME}")
+        return option.label
+
+    async def _compare(self, scenario: Scenario, result: SimResult, label: str, steps: _ChainTraces, chain: str,
+                       prefs: ViewerPrefs | None = None) -> Narrative:
+        spec, match_id = scenario.spec, scenario.match_id
+        match = await self.adapters.matches.get_match(match_id)
+        events = {e.event_id: e for e in await self.adapters.matches.list_events(match_id)}
+        return await compare(result, scenario_label=label, target_event_id=spec.target_event_id,
+                             at_minute=spec.at_minute, events=events, team_names=_team_names(match),
+                             models=self.models, record=steps.record, prefs=prefs, chain_id=chain)
 
     def _stored(self, match_id: str) -> dict[str, Scenario]:
         results = self.adapters.results
@@ -325,11 +370,7 @@ class WhatIf:
                 return
             await steps.record(Step("executor", f"{runs} replays per arm from {spec.at_minute + 1}' in "
                                                 f"{time.perf_counter() - t0:.1f}s"))
-        match = await self.adapters.matches.get_match(match_id)
-        events = {e.event_id: e for e in await self.adapters.matches.list_events(match_id)}
-        narrative = await compare(result, scenario_label=job.label, target_event_id=spec.target_event_id,
-                                  at_minute=spec.at_minute, events=events, team_names=_team_names(match),
-                                  models=self.models, record=steps.record, chain_id=chain)
+        narrative = await self._compare(scenario, result, job.label, steps, chain)
         done = await self._update(job.scenario_id, "scenario.completed", status="completed", done=total,
                                   result=result.model_copy(update={"narrative": narrative}))
         if self.adapters.results is not None:
@@ -429,12 +470,16 @@ async def create_scenario(request: Request, body: ScenarioRequest) -> Scenario:
 
 
 @router.get("/scenarios/{scenario_id}")
-async def get_scenario(request: Request, scenario_id: str) -> Scenario:
-    """Status, `done` (replays finished in both arms, out of 2 × spec.n_runs) and, once completed, the result."""
-    scenario = _whatif(request).get(scenario_id)
+async def get_scenario(request: Request, scenario_id: str, lang: Language = "en") -> Scenario:
+    """Status, `done` (replays finished in both arms, out of 2 × spec.n_runs) and, once completed, the result.
+
+    `lang` (en/zh/es) asks for the comparison in that language; the first such request writes it.
+    """
+    whatif = _whatif(request)
+    scenario = whatif.get(scenario_id)
     if scenario is None:
         raise HTTPException(404, f"scenario {scenario_id!r} not found")
-    return scenario
+    return await whatif.in_language(scenario, lang)
 
 
 __all__ = ["WhatIf", "chip", "cache_key", "router", "seed_base", "with_params"]

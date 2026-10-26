@@ -204,6 +204,17 @@ def has_cjk(text: str) -> bool:
     return bool(_CJK.search(text))
 
 
+_LATIN_WORD = re.compile(r"[A-Za-zÀ-ÿ]+")
+
+
+def wrong_script(text: str, lang: str) -> bool:
+    """Chinese asked for and an English sentence written (a bare name like "Rovers" is fine), or Chinese in a
+    Latin-script language. English and Spanish share a script, so one cannot be told from the other here."""
+    if lang == "zh":
+        return not has_cjk(text) and len(_LATIN_WORD.findall(text)) >= 3
+    return has_cjk(text)
+
+
 def length(text: str, lang: str) -> int:
     """Words for English and Spanish; CJK characters plus any Latin words for Chinese."""
     if lang == "zh":

@@ -38,6 +38,9 @@ class AnsweringModel:
         evidence = [i for i in key if i in shown][:1] or shown[:1]
         if tier == "mini":
             reply = {"is_pivot": True, "severity": 2, "trigger_event_ids": evidence, "reason": "momentum swung"}
+        elif any("简体中文" in m["content"] for m in messages):       # asked for Chinese: answers in Chinese
+            reply = {"headline": "比赛在这里转向",
+                     "sentences": [{"text": "这一刻之后比赛势头转向。", "evidence_ids": evidence}]}
         else:
             reply = {"headline": "The game turns here",
                      "sentences": [{"text": "The momentum swung after this moment.", "evidence_ids": evidence}]}

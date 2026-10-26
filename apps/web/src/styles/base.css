@@ -38,10 +38,24 @@ button { font: inherit; color: inherit; }
 .top > .sp, .top > .score { flex-shrink: 1; }
 .top > .score { min-width: 0; }
 .score .tm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-/* Mid-width screens: team codes instead of names, then icon-only pickers, so the bar never scrolls sideways. */
-@media (max-width: 1279px) {
+/* Mid-width screens: team codes instead of names, then icon-only pickers, so the bar never scrolls sideways.
+   Below these widths the full names were cut mid-word ("HARBOU…"); Spanish labels need the most room (#195). */
+/* The codes never give way (#195: in English and Spanish they were squeezed to nothing at 1024-1279px). */
+@media (max-width: 1439px) {
   .top .tm-full { display: none; }
   .top .tm-short { display: inline; }
+  .top > .score { flex-shrink: 0; min-width: max-content; }
+}
+@media (max-width: 1535px) {
+  :lang(es) .top .tm-full { display: none; }
+  :lang(es) .top .tm-short { display: inline; }
+  :lang(es) .top > .score { flex-shrink: 0; min-width: max-content; }
+}
+/* Then the match picker and the picker labels give way. */
+@media (max-width: 1279px) {
+  .top > .match-pick { flex-shrink: 1; }
+  .top .match-pick select { min-width: 0; width: 100%; }
+  .top .pick-label { display: none; }
 }
 @media (max-width: 1099px) {
   /* Wrap only as a last resort, e.g. a longer status stamp such as "Full time". */
@@ -303,6 +317,8 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 400; font-size: 1
 
 /* "Showing English": the API could not write the explanation in the viewer's language. */
 .lang-note { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .04em; color: var(--pv-warn-fg); background: var(--pv-warn-bg); padding: 3px 8px; margin: 8px 0 4px; display: inline-block; }
+/* "EN" after an AI headline that is not in the page's language (LangTag). */
+.lang-tag { font-family: var(--pv-label); font-weight: 700; font-size: .7em; letter-spacing: .04em; color: var(--pv-warn-fg); background: var(--pv-warn-bg); padding: 0 4px; vertical-align: .15em; text-decoration: none; cursor: help; }
 
 /* ---------- Viewer settings (C08) ---------- */
 /* ♥ team and ★ player pickers: the select sits invisibly over the label so the native menu still opens. */

@@ -9,6 +9,7 @@ import type { Pivot1 as Pivot } from "@pivot/contracts";
 import WhyItTurned from "../components/WhyItTurned";
 import { prefsQuery, withServedPrefs } from "../data/live/api";
 import { FixtureProvider } from "../data/match";
+import { LocalisingContext } from "../data/view";
 import { DEMO_1021 } from "../fixtures/demo-1021";
 import { localisePivot } from "../fixtures/demo-1021-i18n";
 import LiveBoard from "../pages/LiveBoard";
@@ -97,6 +98,19 @@ describe("switching language", () => {
     expect(html).toContain("暂时没有中文解释，先显示英文版。");
     withWindow("?lang=en");
     expect(render(<FixtureProvider><WhyItTurned pivot={pv74} selected={new Set()} onToggle={() => {}} /></FixtureProvider>)).not.toContain("lang-note");
+  });
+
+  it("says the asked language is on its way while the API writes it (Ax31)", () => {
+    withWindow("?lang=zh");
+    const html = render(
+      <FixtureProvider>
+        <LocalisingContext.Provider value={true}>
+          <WhyItTurned pivot={pv74} selected={new Set()} onToggle={() => {}} />
+        </LocalisingContext.Provider>
+      </FixtureProvider>,
+    );
+    expect(html).toContain("正在写中文解释，先显示英文版。");
+    expect(html).toContain('lang="en"');                       // the English sentences say what they are
   });
 });
 
