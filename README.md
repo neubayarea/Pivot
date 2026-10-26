@@ -1,57 +1,202 @@
 # Pivot
 
-Microsoft × Premier League 黑客松项目。架构见 [docs/architecture.md](docs/architecture.md)，协作约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+**Pivot finds the moments that turned a football match, explains why they mattered with numbers it has checked itself, and lets you replay the match with one thing changed.**
 
-## 目录
+Built for the Microsoft × Premier League hackathon. The challenge asks us to *explain why a moment matters*. Pivot answers in three steps:
 
-| 目录 | 内容 |
-| --- | --- |
-| `apps/api` | FastAPI 后台（A），目前只有 `/healthz` |
-| `apps/simulator` | 比赛模拟器（B），占位 |
-| `apps/worker` | AI 工作流与 Agent（D），占位 |
-| `apps/web` | 网页界面（C），Vite + React + TypeScript |
-| `packages/pivot_core` | 共享的领域模型和核心逻辑 |
-| `packages/contracts` | 导出的 JSON Schema 和 TS 类型（脚本生成，不要手改） |
+1. **Find it.** A momentum meter follows the match minute by minute and flags the minutes where the game swung.
+2. **Explain it.** A team of AI agents on Microsoft Agent Framework and Azure AI Foundry writes the explanation. Every number in the text is recomputed by a deterministic checker before it reaches the screen.
+3. **Test it.** "What if the red card had not been given?" Pivot replays the rest of the match hundreds of times with and without the change and shows how the result shifts, with 95 % confidence ranges.
 
-## 本地怎么跑
+All matches, clubs and players are synthetic (see [Data](#data-and-disclaimer)).
 
-需要先装 [uv](https://docs.astral.sh/uv/)。
+![Pivot live board: momentum chart, pivot cards, pitch and match stats](docs/screenshots/submission/02-match-pivot-cards.png)
 
-```bash
-uv sync                      # 装好所有 Python 包和开发工具
-uv run ruff check .          # 代码检查
-uv run pytest                # 跑测试
-uv run python -m pivot_api   # 启动 API，打开 http://127.0.0.1:8000/healthz
-pnpm install && pnpm --filter web dev   # 启动网页，打开 http://localhost:5173
+## Try it
+
+**Live demo: https://pivot.in-stacks.com/?match=M-seed-29**
+
+No sign-in is needed. The link opens the demo match, Harbour City 3–1 Northgate Rovers. A private window works best, because the site remembers the last match you opened.
+
+| Step | Do this | You should see |
+|---|---|---|
+| 1 | Open the link | The match board: score, momentum chart, the list of **Pivots**, the pitch and match stats. The red lines on the momentum chart are the pivots. |
+| 2 | Click **Start demo**, then **60×** | The match replays from 0′. Momentum is drawn live, players move on the pitch, and each pivot card appears at the minute it was detected. |
+| 3 | Click the **89′** pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1553`. |
+| 4 | Click an evidence number | The mini pitch shows that event (a shot gets an arrow) and the timeline jumps to that second. |
+| 5 | Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar | The explanation is rewritten for that audience and language. It goes through the same checks, so the evidence numbers stay. |
+| 6 | Go back, open the **39′** pivot (the red card), click **What if…** | The What-if Lab, with five scenarios for this moment. |
+| 7 | Pick **Remove 38′ red card**, keep **200** runs, click **Run simulation** | This scenario was computed in advance, so the result is instant: win/draw/loss "as played" vs "with the change", 95 % ranges, and a short "Why it differs". |
+
+The live server has only 2 CPU cores. Scenarios not computed in advance take a few minutes there and queue behind each other, so please stay with the one in step 7. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
+
+To see what the AI agents did for a pivot, open the raw agent trace: https://pivot.in-stacks.com/api/pivots/M-seed-29:p89/traces. It lists each step (Judge, Explainer, Verifier), the model used, latency, tokens and the verdict.
+
+| Pivot detail with evidence | What-if result |
+|---|---|
+| ![Pivot detail page](docs/screenshots/submission/03-pivot-89-detail.png) | ![What-if Lab result](docs/screenshots/submission/04-whatif-result.png) |
+
+More screenshots: [home](docs/screenshots/submission/01-home.png), [dark mode](docs/screenshots/submission/05-match-pivot-cards-dark.png).
+
+## How it works
+
+```mermaid
+flowchart LR
+  browser["Browser<br/>React + TypeScript<br/>replay, momentum chart, pitch"]
+
+  subgraph vm["Oracle Cloud VM · 2 cores · deployed with Dokploy"]
+    subgraph app["Pivot: one container, one process (pivot_api.single)"]
+      api["FastAPI<br/>REST + WebSocket"]
+      sim["Simulator + momentum meter<br/>generates matches, flags candidate pivots"]
+      detect["Detect workflow<br/>(Microsoft Agent Framework)<br/>Judge → Explainer ⇄ Verifier → template fallback"]
+      whatif["What-if runner<br/>process pool, paired seeds<br/>→ Comparator ⇄ Verifier"]
+    end
+    disk[("Disk cache<br/>simulated match files")]
+  end
+
+  subgraph azure["Microsoft Azure"]
+    foundry["Azure AI Foundry<br/>gpt-4.1-mini"]
+    cosmos[("Azure Cosmos DB<br/>pivots, explanations,<br/>agent traces, what-if results")]
+    blob[("Azure Blob Storage<br/>simulated match library")]
+  end
+
+  browser <-->|"HTTPS / WSS"| api
+  sim --> detect
+  api --> whatif
+  detect -->|"model calls"| foundry
+  whatif -->|"model calls"| foundry
+  detect <--> cosmos
+  whatif <--> cosmos
+  sim <--> disk
+  disk <-.->|"optional, PIVOT_SIMS_BACKEND=blob"| blob
+  detect -->|"new pivot"| api
 ```
 
-单进程跑整套（API、实时推送、worker、网页都在 http://127.0.0.1:8000）：
+1. **Simulator.** A possession-chain engine plays a full match with 22 rated players: events (passes, shots with xG, fouls, cards, substitutions, VAR) plus player positions every second. Each match is reproducible from its seed and can be saved at any minute and played on.
+2. **Momentum meter.** Per-minute momentum is `tanh(α · EWMA(threat_home − threat_away))` with a 5-minute half-life. A two-sided CUSUM change-point alarm flags the minutes where it swings and stays swung. These are *candidates*; on simulated matches the alarm raises about 2.5 per match.
+3. **Detect workflow** (Microsoft Agent Framework `WorkflowBuilder`):
+   - **Judge** (LLM) decides whether a candidate really is a turning point and how severe it is.
+   - **Explainer** (LLM) writes a headline and up to three sentences. Each sentence cites event ids, and each number cites a stat reference.
+   - **Verifier** (deterministic code) recomputes every cited number from the events and checks the score, which side momentum went to, and that every cited event was actually offered. If a check fails, the draft goes back to the Explainer with the problems listed. After three failed checks, or on a model error or timeout, a **template explainer** writes a plain, correct card instead (shown as "Auto summary").
+4. **What-if Lab.** The match is saved at the pivot minute and played on N times as it was and N times with the change. Run *i* of both groups uses the same random seed, so the only difference between the pair is the change. Results are win/draw/loss shares with Wilson 95 % intervals. The **Comparator** (LLM) writes "Why it differs". The Verifier only allows "more likely"-style words that match the computed change, and only allows "clear difference" when the intervals do not overlap.
+5. **Personalisation.** Analyst or Fan wording, a focus team or player, and English / Chinese / Spanish. Every version goes through the same Verifier.
+
+Design decisions are recorded in [docs/adr/](docs/adr/). The full architecture, including how the original all-Azure plan maps to what is deployed, is in [docs/architecture.md](docs/architecture.md) (Chinese).
+
+## Microsoft technology
+
+| Technology | What Pivot uses it for |
+|---|---|
+| **Azure AI Foundry** (gpt-4.1-mini) | The Judge, Explainer and Comparator agents. Calls have per-attempt timeouts and a shared deadline, so a slow model degrades to the template instead of breaking the page. |
+| **Microsoft Agent Framework** | The detect pipeline is an Agent Framework workflow: `Executor` nodes for Judge, Explainer, Verifier and Template, with the rewrite loop and fallbacks as edges ([`apps/worker/src/pivot_worker/detect.py`](apps/worker/src/pivot_worker/detect.py)). |
+| **Azure Cosmos DB** (free tier) | Stores everything the AI produced: pivot verdicts, explanations per language and audience, agent traces, and what-if results. A restart reads them back instead of calling the model again, and a repeated what-if question answers instantly. If Cosmos DB is unreachable, results go to local files. |
+| **Azure Blob Storage** | The library of simulated match files (events plus per-second tracking, about 1 MB each compressed). Blob is the source of truth and the disk is a cache. Matches can be generated on a laptop and uploaded with [`scripts/sims_blob.py`](scripts/sims_blob.py). |
+| **Microsoft Entra ID** | The server signs in to Foundry, Cosmos DB and Blob with a service principal and role assignments. No account keys are stored anywhere. |
+| **GitHub** (Actions, Projects) | CI on every pull request: lint, Python tests, a check that the generated contracts are up to date, and a secret scan. All work was planned as issues on a GitHub Projects board. |
+
+## Why you can trust the numbers
+
+Language models are good at telling a story and bad at arithmetic. Pivot keeps the two jobs apart:
+
+- **The model never computes a number that reaches the screen unchecked.** Each number in an explanation carries a stat reference (for example "home shots, minutes 30–39"). The Verifier recomputes it from the event log and rejects the draft if it does not match within tolerance.
+- **Every sentence cites evidence.** Event ids link each sentence to real events in the match, so you can click and see them on the pitch.
+- **Facts are checked too, not only numbers.** The Verifier checks the score at each minute, which side momentum went to, that cited events and player context belong to the moment, red-card counts ("ten men" only when it fits), and that "more/less likely" in what-if text matches the computed change.
+- **There is always a correct fallback.** If no draft passes after three tries, or the model is slow or down, a template explanation built only from verified stats is shown and marked "Auto summary". The page never shows an error instead of an answer.
+- **What-if results are reproducible.** The same scenario gives the same numbers on any machine (fixed seeds, paired runs). They are labelled "Simulated, not a prediction".
+
+## How realistic is the simulator?
+
+Pivot explains synthetic matches, so the simulator has to play like real football. [`scripts/realism_scorecard.py`](scripts/realism_scorecard.py) compares simulated matches with real Premier League numbers ([`eval/realism/reference.json`](eval/realism/reference.json)): the 2023/24 and 2024/25 seasons (760 matches, football-data.co.uk) and StatsBomb open data for 2015/16 (380 matches) for event-level stats.
+
+Below is a run of 60 simulated matches with the demo pairing (`uv run scripts/realism_scorecard.py --matches 60 --red 30`, run 10/25). **29 of 44 checks are within tolerance.** A selection, including misses:
+
+| Per match | Simulated | Premier League | Source | Within tolerance |
+|---|---|---|---|---|
+| Goals | 2.9 | 3.1 | 2023–25 | ✓ |
+| Goals in the first half | 44.8 % | 43.8 % | 2023–25 | ✓ |
+| Shots | 25.4 | 26.8 | 2023–25 | ✓ |
+| Shots on target | 9.6 | 9.5 | 2023–25 | ✓ |
+| Fouls | 22.9 | 22.1 | 2023–25 | ✓ |
+| Yellow cards | 3.7 | 4.1 | 2023–25 | ✓ |
+| Passes (no throw-ins) | 825 | 924 | 2015/16 | ✓ |
+| Pass height: ground / low / high | 66 / 11 / 23 % | 64 / 13 / 23 % | 2015/16 | ✓ |
+| Pressures | 274 | 304 | 2015/16 | ✓ |
+| Home / draw / away | 40 / 30 / 30 % | 43 / 23 / 34 % | 2023–25 | (60 matches) |
+| Pass accuracy | 70.8 % | 76.0 % | 2015/16 | ✗ |
+| Interceptions | 13.4 | 23.5 | 2015/16 | ✗ |
+| Clearances | 26.4 | 57.0 | 2015/16 | ✗ |
+| xG per shot | 0.127 | 0.105–0.125 | literature | ✗ |
+
+Effects matter as much as averages, because Pivot explains *changes*. With an away red card at 38′ (30 paired seeds), the 11-man side's share of shots rises from 0.61 to 0.77; in Premier League 2015/16 matches with a red card it was 0.72. The leading side's back line drops late in the game (−1.8 m against a real range of −1 to −8 m) and the trailing side's moves up (+2.2 m against +1 to +8 m). The simulator rules behind these numbers are in [docs/sim-realism.md](docs/sim-realism.md) (Chinese).
+
+## Run it locally
+
+You need [uv](https://docs.astral.sh/uv/) (Python 3.12) and [pnpm](https://pnpm.io/) (Node 20.19+). `PIVOT_PIPELINE=fake` uses the template explainer instead of Azure, so **no keys or Azure account are needed**.
 
 ```bash
-pnpm --filter web build && uv run python -m pivot_api.single
+uv sync && pnpm install && pnpm --filter web build
 ```
-
-用 Docker 跑同样的单进程镜像：
 
 ```bash
-docker build -t pivot .
-docker run --rm -p 8000:8000 pivot
+PIVOT_PIPELINE=fake PIVOT_SIM_MATCHES=1 PIVOT_WHATIF_WARM=0 PIVOT_DATA_DIR=.pivot-data uv run python -m pivot_api.single
 ```
 
-部署到甲骨文虚拟机见 [docs/deploy-oracle.md](docs/deploy-oracle.md)。
+Open http://127.0.0.1:8000/?match=M-seed-29. The site, API, WebSocket, simulator, agents and what-if runner all run in this one process. Explanations are template text in this mode, which is expected. A 200-run what-if takes about 30 seconds on a laptop. Add `PORT=8011` in front to use another port.
 
-## AI 模型（D01）
-
-Agent 用两个 Foundry 模型部署：`standard`（Explainer、Comparator、Translator）和 `mini`（Judge）。代码里只认环境变量，不写死模型名：
-
-| 变量 | 含义 |
-| --- | --- |
-| `PIVOT_FOUNDRY_ENDPOINT` | Foundry（Azure OpenAI）资源的终结点，例如 `https://<resource>.openai.azure.com/` |
-| `PIVOT_MODEL_STANDARD` | standard 部署的名字 |
-| `PIVOT_MODEL_MINI` | mini 部署的名字 |
-
-本地用 `az login` 的身份访问，不用 API 密钥；账号需要在该资源上有 “Cognitive Services OpenAI User” 角色。验证两个部署都能用、同时 10 个请求不被限流：
+Checks and tests:
 
 ```bash
-uv run scripts/foundry_quota_test.py
+uv run ruff check . && uv run pytest
 ```
+
+```bash
+pnpm --filter web test
+```
+
+To use real models, set `PIVOT_PIPELINE=detect`, `PIVOT_FOUNDRY_ENDPOINT`, `PIVOT_MODEL_STANDARD` and `PIVOT_MODEL_MINI`, and sign in with `az login` (an identity with the "Cognitive Services OpenAI User" role). All settings for the deployed server are listed in [deploy/oracle/.env.example](deploy/oracle/.env.example), and deployment is described in [docs/deploy-oracle.md](docs/deploy-oracle.md). A `Dockerfile` builds the same single-process image (`docker build -t pivot . && docker run --rm -p 8000:8000 pivot`).
+
+Developer notes in Chinese: [docs/dev-setup.zh.md](docs/dev-setup.zh.md). Contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Repository layout
+
+| Path | What is in it |
+|---|---|
+| [`apps/api`](apps/api) | FastAPI app: REST, WebSocket, what-if endpoints; `pivot_api.single` runs everything in one process |
+| [`apps/worker`](apps/worker) | The agents: Judge, Explainer, Verifier, Comparator, templates, the Agent Framework workflow |
+| [`apps/web`](apps/web) | React + TypeScript + Vite front end: live board, pivot detail, What-if Lab, broadcast overlay |
+| [`apps/simulator`](apps/simulator) | Command-line entry point for the simulator |
+| [`packages/pivot_core`](packages/pivot_core) | Domain models (the shared contract), simulator, momentum, change-point detection, what-if runner |
+| [`packages/pivot_adapters`](packages/pivot_adapters) | Storage adapters: local files, Azure Cosmos DB, Azure Blob Storage |
+| [`packages/contracts`](packages/contracts) | JSON Schema and TypeScript types generated from the domain models |
+| [`eval/`](eval) | The demo match fixture and the real-football reference numbers |
+| [`scripts/`](scripts) | Realism scorecard, demo/season generators, Blob upload, Foundry quota test, project tooling |
+| [`deploy/oracle`](deploy/oracle) | Deployment settings for the Oracle VM (Dokploy) |
+| [`docs/`](docs) | Architecture, ADRs, data definitions, test checklist, screenshots |
+
+## Data and disclaimer
+
+Every match, club, coach, player and referee in Pivot is **synthetic**, generated by the simulator from a seed. There are no real clubs, real players, Premier League marks or broadcast footage. Real football data is used only as summary numbers to calibrate the simulator (above), and the raw files are not in this repository. What-if results come from a simulation of a synthetic match. They are not predictions about real football.
+
+## Team
+
+<!-- TODO: names and roles as the team wants them credited -->
+
+| Line | Area | GitHub |
+|---|---|---|
+| A | Platform: API, real-time, deployment | |
+| B | Simulator, momentum and pivot detection | |
+| C | Web front end | |
+| D | AI agents and verification | |
+
+Contributors: [@Carry3](https://github.com/Carry3), [@momomojun](https://github.com/momomojun), [@JadenChen10](https://github.com/JadenChen10), [@Avril131](https://github.com/Avril131).
+
+## How we used AI tools
+
+- **Claude Code** (Anthropic) was the main coding assistant. Team members worked with it on issues from the project board, one issue per branch and pull request, and reviewed and merged the results. Commits it helped write carry a `Co-Authored-By: Claude` line, which is the case for most commits in this repository. The rules agents follow in this repo are in [AGENTS.md](AGENTS.md).
+- **GitHub Copilot**: <!-- TODO: describe how the team used Copilot, or remove this line if it was not used -->
+- **Inside the product**, the language model only writes words. Detection is done by the momentum meter and change-point alarm, numbers are computed by code, and the Verifier checks every draft (see [Why you can trust the numbers](#why-you-can-trust-the-numbers)).
+
+## License
+
+<!-- TODO: no license chosen yet -->
+No license has been chosen yet.
