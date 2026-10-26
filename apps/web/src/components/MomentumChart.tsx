@@ -8,10 +8,14 @@ type Props = {
   pivots: Pivot[];
   homeLabel: string;
   awayLabel: string;
+  /** The board's numbered moments (①②③): pivot ids in order, drawn as big buttons that open one. */
+  numbered?: string[];
+  selected?: string | null;
+  onPick?: (pivotId: string) => void;
 };
 
 // Geometry follows the S1 mock in docs/design/matchday-programme.html.
-const W = 780, H = 220, L = 34, R = 12, T = 18, B = 26;
+const W = 780, H = 230, L = 34, R = 12, T = 28, B = 26;
 const MID = T + (H - T - B) / 2;
 const AMP = (H - T - B) / 2;
 const y = (v: number) => MID - v * AMP;
@@ -22,7 +26,7 @@ const TICKS = [0, 15, 30, 45, 60, 75, 90];
  * The axis runs on elapsed minutes, so stoppage time takes room, but reads the match clock:
  * each tick sits where the clock showed it, and the second half starts at its real kick-off.
  */
-export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }: Props) {
+export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick }: Props) {
   const clip = useId().replace(/[^\w-]/g, "");
   const t = useT();
   const { periods, minute } = useClock();
@@ -81,6 +85,21 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }:
       {pivots.map((p) => {
         const pending = p.status === "pending";
         const label = `${minute(p.minute)}′`;
+        const n = numbered?.indexOf(p.pivot_id) ?? -1;
+        if (n >= 0 && onPick) {
+          const cx = x(p.minute);
+          const open = () => onPick(p.pivot_id);
+          return (
+            <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} role="button" tabIndex={0}
+              aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) })}
+              onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
+              <line x1={cx} x2={cx} y1={T + 2} y2={H - B} />
+              <circle cx={cx} cy={T - 2} r={14} />
+              <text x={cx} y={T + 3} textAnchor="middle">{n + 1}</text>
+              <text className="mk-min" x={cx + 18} y={T - 4}>{label}</text>
+            </g>
+          );
+        }
         const w = Math.max(34, 7 * label.length + 6);     // 45+2′ needs more room than 64′
         return (
           <g key={p.pivot_id} className={pending ? "mom-pending" : undefined}>
