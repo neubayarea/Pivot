@@ -62,6 +62,37 @@ class PlayerMatchStats(Model):
     sprints: Annotated[int, Field(ge=0)] = 0
 
 
+class PlayerPivotLink(Model):
+    """A turning point a player took part in."""
+
+    pivot_id: str
+    minute: Minute
+    in_trigger: bool                          # one of the events that set the pivot off is theirs
+    event_ids: list[str]                      # their events from 5 minutes before to 5 after the pivot
+
+
+class PlayerReport(Model):
+    """What the page can show about one player, up to a point in the match (focus-player card)."""
+
+    player_id: str
+    name: str
+    team: Side
+    shirt_number: Annotated[int, Field(ge=1, le=99)]
+    role: str                                 # detailed role, e.g. "CB"
+    stats: PlayerMatchStats | None = None     # None: has not been on the pitch by up_to_t
+    event_ids: list[str] = []                 # events they took part in, in order
+    pivots: list[PlayerPivotLink] = []
+
+
+class PlayerStatsReport(Model):
+    """GET /api/matches/{id}/players/stats: every player of both squads, or the one asked for."""
+
+    match_id: str
+    up_to_t: ClockSeconds                     # elapsed seconds the numbers cover
+    source: Literal["stored", "computed"]     # the numbers saved with the match, or worked out for up_to_t
+    players: list[PlayerReport]
+
+
 OVERLAY_CARD_SECONDS = 12                     # how long a pivot card stays on screen
 
 
