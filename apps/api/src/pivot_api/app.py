@@ -65,11 +65,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # What-if replays (A09): one at a time in the background; the recorded demo's chips run first.
     app.state.whatif = WhatIf.from_env(app.state.adapters, replays, model_client_from_env())
     app.state.whatif.start()
-    if demo_id is not None and (warm := int(os.getenv("PIVOT_WHATIF_WARM") or DEFAULT_WARM)) > 0:
-        tasks.append(asyncio.create_task(app.state.whatif.warm(demo_id, warm), name="whatif-warm"))
-    # Chinese and Spanish versions of the demo's pivots (Ax35), written once the worker has the English ones.
+    # Chinese and Spanish versions of the demo's pivots (Ax35), written once the worker has the English ones,
+    # and of its finished what-ifs (Ax39), once the warm-up has run.
     langs = [x.strip() for x in (os.getenv("PIVOT_PREWARM_LANGS") or "zh,es").split(",")
              if x.strip() in ("zh", "es")]
+    if demo_id is not None:
+        warm = int(os.getenv("PIVOT_WHATIF_WARM") or DEFAULT_WARM)
+        tasks.append(asyncio.create_task(_warm_whatif(app.state.whatif, demo_id, warm, langs), name="whatif-warm"))
     prewarm = [m.strip() for m in (os.getenv("PIVOT_PREWARM_MATCHES") or demo_id or "").split(",") if m.strip()]
     if langs and prewarm:
         tasks.append(asyncio.create_task(_prewarm(app.state.personalizer, prewarm, langs), name="prewarm"))
@@ -92,6 +94,17 @@ async def _prewarm(personalizer, match_ids: list[str], langs: list[str]) -> None
                      await personalizer.prewarm(match_id, langs))
         except Exception:
             log.exception("prewarm of %s failed", match_id)
+
+
+async def _warm_whatif(whatif: WhatIf, match_id: str, per_pivot: int, langs: list[str]) -> None:
+    try:
+        if per_pivot > 0:
+            await whatif.warm(match_id, per_pivot)
+        if langs:
+            log.info("what-if comparisons of %s translated into %s: %d", match_id, ",".join(langs),
+                     await whatif.prewarm(match_id, langs))
+    except Exception:
+        log.exception("what-if warm-up of %s failed", match_id)
 
 
 app = FastAPI(title="Pivot API", lifespan=lifespan)

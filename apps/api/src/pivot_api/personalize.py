@@ -197,12 +197,7 @@ class Personalizer:
                          view: MatchView) -> tuple[Narrative | None, int]:
         """`source` translated into `prefs.language`, checked; (None, checks) if no attempt passed."""
         lang = prefs.language
-        system = TRANSLATE_PROMPT.format(
-            language=LANGUAGE_NAMES[lang], audience="football fan" if prefs.audience == "fan" else "match analyst",
-            headline=MAX_HEADLINE[lang], unit="characters" if lang == "zh" else "words", instruction=INSTRUCTIONS[lang])
-        user = json.dumps({"headline": source.headline, "sentences": [s.text for s in source.sentences]},
-                          ensure_ascii=False)
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        messages = translation_messages(source, prefs)
         checks = 0
         for checks in range(1, MAX_CHECKS + 1):
             try:
@@ -245,6 +240,17 @@ class Personalizer:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
                       context=explainer.shown_context(candidate, view.events, view.context),
                       team_names=view.team_names)
+
+
+def translation_messages(source: Narrative, prefs: ViewerPrefs) -> list[dict[str, str]]:
+    """The translator's request: `source`'s headline and sentence texts, in order, into `prefs.language`."""
+    lang = prefs.language
+    system = TRANSLATE_PROMPT.format(
+        language=LANGUAGE_NAMES[lang], audience="football fan" if prefs.audience == "fan" else "match analyst",
+        headline=MAX_HEADLINE[lang], unit="characters" if lang == "zh" else "words", instruction=INSTRUCTIONS[lang])
+    user = json.dumps({"headline": source.headline, "sentences": [s.text for s in source.sentences]},
+                      ensure_ascii=False)
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
 def translated_narrative(source: Narrative, raw: str, prefs: ViewerPrefs, checks: int,

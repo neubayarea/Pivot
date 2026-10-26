@@ -195,8 +195,8 @@ type ResultProps = {
   option: ScenarioOption | undefined;
   teams: Teams;
   onReset: () => void;
-  /** Where to ask for the comparison in the page's language; left out, the run's own one shows. */
-  source?: ScenarioApi;
+  /** Where to ask for the comparison in the page's language when the run's own one is in another (Ax39). */
+  source: ScenarioApi;
 };
 
 export function ScenarioResult({ state, option, teams, onReset, source }: ResultProps) {

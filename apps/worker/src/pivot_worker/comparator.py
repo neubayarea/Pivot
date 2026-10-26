@@ -177,8 +177,11 @@ def build_messages(result: SimResult, *, scenario_label: str, target_event_id: s
 
 
 def verify_comparison(narrative: Narrative, result: SimResult, *, at_minute: int, events: Mapping[str, MatchEvent],
-                      stats: StatSource, team_names: Mapping[str, str], target_event_id: str | None) -> Verdict:
-    return verify(narrative, pivot_minute=at_minute, events=events, stats=stats, significant=result.significant,
+                      team_names: Mapping[str, str], target_event_id: str | None,
+                      stats: StatSource | None = None) -> Verdict:
+    """The Verifier on a comparison; `stats` only matters if it carries claims, which a comparison never does."""
+    return verify(narrative, pivot_minute=at_minute, events=events, stats=stats or _NoClaims(),
+                  significant=result.significant,
                   outcomes=outcome_mentions(result, team_names, narrative.prefs.language),
                   allowed_evidence=citable_events(target_event_id, at_minute, events), team_names=team_names)
 
