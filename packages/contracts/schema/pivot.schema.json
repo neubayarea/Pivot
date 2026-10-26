@@ -3437,6 +3437,37 @@
       "title": "PlayerMatchStats",
       "type": "object"
     },
+    "PlayerPivotLink": {
+      "additionalProperties": false,
+      "description": "A turning point a player took part in.",
+      "properties": {
+        "event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "in_trigger": {
+          "type": "boolean"
+        },
+        "minute": {
+          "maximum": 180,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pivot_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pivot_id",
+        "minute",
+        "in_trigger",
+        "event_ids"
+      ],
+      "title": "PlayerPivotLink",
+      "type": "object"
+    },
     "PlayerPosition": {
       "additionalProperties": false,
       "properties": {
@@ -3474,6 +3505,105 @@
         "fitness"
       ],
       "title": "PlayerPosition",
+      "type": "object"
+    },
+    "PlayerReport": {
+      "additionalProperties": false,
+      "description": "What the page can show about one player, up to a point in the match (focus-player card).",
+      "properties": {
+        "event_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pivots": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PlayerPivotLink"
+          },
+          "type": "array"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "shirt_number": {
+          "maximum": 99,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "stats": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlayerMatchStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "player_id",
+        "name",
+        "team",
+        "shirt_number",
+        "role",
+        "stats",
+        "event_ids",
+        "pivots"
+      ],
+      "title": "PlayerReport",
+      "type": "object"
+    },
+    "PlayerStatsReport": {
+      "additionalProperties": false,
+      "description": "GET /api/matches/{id}/players/stats: every player of both squads, or the one asked for.",
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerReport"
+          },
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "stored",
+            "computed"
+          ],
+          "type": "string"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "source",
+        "players"
+      ],
+      "title": "PlayerStatsReport",
       "type": "object"
     },
     "PowerAttributes": {

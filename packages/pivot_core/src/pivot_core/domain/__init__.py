@@ -22,7 +22,7 @@ from .narrative import Audience, ExplanationSentence, Language, Narrative, Viewe
 from .officials import FoulDetail, InjuryInfo, Referee, VarReview
 from .outputs import (
     OVERLAY_CARD_SECONDS, OverlayCard, OverlayFeed, OverlayFrame, OverlayItem, OverlayScoreboard,
-    OverlayTimeline, PlayerMatchStats, Recap,
+    OverlayTimeline, PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport, Recap,
 )
 from .people import (
     ROLE_POSITION, AttackingAttributes, AttributeSummary, CareerStint, Coach, CoachAttributes,
@@ -54,7 +54,7 @@ CONTRACT_MODELS = (
     PivotCandidate, Pivot,
     ScenarioSpec, PlantSpec, OutcomeDist, Spread, TeamRunStats, ScoreShare, ArmStats, SimResult, Scenario,
     OverlayItem, OverlayFeed, OverlayCard, OverlayScoreboard, OverlayFrame, OverlayTimeline,
-    PlayerMatchStats, Recap,
+    PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport, Recap,
     VerifierIssue, Verdict, AgentTrace,
     Envelope,
 )
@@ -68,7 +68,8 @@ __all__ = [
     "ContextEffect", "DefendingAttributes", "FoulDetail", "HeadToHead", "InjuryInfo", "Envelope", "EventType", "ExplanationSentence",
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
     "MatchEvent", "MentalityAttributes", "MinuteMetric", "MovementAttributes", "Narrative",
-    "OffFieldEvent", "OutcomeDist", "PastMeeting", "PlayerMatchStats", "Referee", "SetPieceTactics",
+    "OffFieldEvent", "OutcomeDist", "PastMeeting", "PlayerMatchStats", "PlayerPivotLink", "PlayerReport",
+    "PlayerStatsReport", "Referee", "SetPieceTactics",
     "TeamForm", "VarReview", "OverlayCard", "OverlayFeed", "OverlayFrame", "OverlayItem",
     "OverlayScoreboard", "OverlayTimeline", "PassHeight", "PassTechnique", "PassType", "ShotTechnique",
     "Period", "PeriodInfo",
