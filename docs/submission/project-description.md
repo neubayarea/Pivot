@@ -36,9 +36,9 @@ Pivot spots the turning points of a football match, has AI agents explain why ea
 Live site: https://pivot.in-stacks.com/?match=M-seed-29 (no sign-in; a private window is best).
 
 1. The link opens the demo match, Harbour City 3–1 Northgate Rovers. Click **Start demo**, then **60×**, to watch momentum and the pivots appear live.
-2. Click the **89′** pivot. Read "Why it turned" and click an evidence number (for example `#1553`) to see the event on the pitch.
+2. Click the **85′** pivot. Read "Why it turned" and click an evidence number (for example `#1553`) to see the event on the pitch.
 3. Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar.
-4. Open the **39′** pivot (the red card), click **What if…**, choose **Remove 38′ red card** with **200** runs, and click **Run simulation**. This result was computed in advance and appears instantly. Please avoid other scenarios on the live server: it has 2 CPU cores and new scenarios take several minutes.
+4. Open the **40′** pivot (the red card), click **What if…**, choose **Remove 38′ red card** with **200** runs, and click **Run simulation**. This result was computed in advance and appears instantly. Please avoid other scenarios on the live server: it has 2 CPU cores and new scenarios take several minutes.
 5. Optional: the raw agent trace for a pivot is at https://pivot.in-stacks.com/api/pivots/M-seed-29:p89/traces.
 
 To run locally without any keys, follow "Run it locally" in the README (`PIVOT_PIPELINE=fake`). Everything works, including every what-if scenario. Explanations are template text in that mode.

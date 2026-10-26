@@ -22,10 +22,10 @@ No sign-in is needed. The link opens the demo match, Harbour City 3–1 Northgat
 |---|---|---|
 | 1 | Open the link | The match board: score, momentum chart, the list of **Pivots**, the pitch and match stats. The red lines on the momentum chart are the pivots. |
 | 2 | Click **Start demo**, then **60×** | The match replays from 0′. Momentum is drawn live, players move on the pitch, and each pivot card appears at the minute it was detected. |
-| 3 | Click the **89′** pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1553`. |
+| 3 | Click the **85′** pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1553`. |
 | 4 | Click an evidence number | The mini pitch shows that event (a shot gets an arrow) and the timeline jumps to that second. |
 | 5 | Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar | The explanation is rewritten for that audience and language. It goes through the same checks, so the evidence numbers stay. |
-| 6 | Go back, open the **39′** pivot (the red card), click **What if…** | The What-if Lab, with five scenarios for this moment. |
+| 6 | Go back, open the **40′** pivot (the red card), click **What if…** | The What-if Lab, with five scenarios for this moment. |
 | 7 | Pick **Remove 38′ red card**, keep **200** runs, click **Run simulation** | This scenario was computed in advance, so the result is instant: win/draw/loss "as played" vs "with the change", 95 % ranges, and a short "Why it differs". |
 
 The live server has only 2 CPU cores. Scenarios not computed in advance take a few minutes there and queue behind each other, so please stay with the one in step 7. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
