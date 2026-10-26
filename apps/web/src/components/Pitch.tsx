@@ -31,6 +31,8 @@ type Props = {
   tag?: (id: string) => string;
   /** Drawn under the players: the team-shape layer (Ax36). */
   under?: ReactNode;
+  /** Drawn over everything: a clip's marks (Ax42). */
+  over?: ReactNode;
 };
 
 export type Who = { home: boolean; shirt: string };
@@ -103,7 +105,7 @@ function Action({ e, on, mine }: { e: MatchEvent; on: boolean; mine: boolean }) 
 }
 
 export default function Pitch({ frame, actions, selected, label, focus = null, who = fromId, stepMs,
-  picked = null, onPick, marked, tag, under }: Props) {
+  picked = null, onPick, marked, tag, under, over }: Props) {
   const ball = px([frame.ball.x, frame.ball.y]);
   const style = stepMs ? ({ "--pv-step": `${Math.round(stepMs)}ms` } as CSSProperties) : undefined;
   // The ball carrier's ring is the board's (onPick); the detail page marks its evidence instead.
@@ -139,6 +141,7 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
         <circle r={4} fill="var(--pv-sheet)" stroke="var(--pv-ink)" strokeWidth={1.5} />
       </g>
       {actions.filter((e) => e.event_id === selected).map((e) => <Action key={e.event_id} e={e} on mine={involves(e, focus)} />)}
+      {over}
       {pickedAt && tag && <Label x={pickedAt.x * S} y={pickedAt.y * S} text={tag(pickedAt.player_id)} />}
     </svg>
   );

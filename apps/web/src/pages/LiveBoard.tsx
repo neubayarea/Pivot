@@ -38,15 +38,8 @@ export default function LiveBoard() {
   const score = { home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}` };
   const keys = useMemo(() => keyMoments(events, finished), [events, finished]);
   const [key, setKey] = useState<string | null>(null);
-  const pickKey = (id: string) => {
-    setKey(id);
-    const k = keys.find((k) => keyId(k) === id);
-    // The replay goes to that second and stops there, so the pitch (under More details) shows it.
-    if (k && playback) {
-      playback.setPlaying(false);
-      playback.seek(k.event.t);
-    }
-  };
+  // Ax42: a key moment plays as a clip under it in the list; the main replay stays put.
+  const pickKey = (id: string | null) => setKey(id);
 
   // Another match or another moment: the evidence picked for the last one no longer applies.
   useEffect(() => {
@@ -119,7 +112,7 @@ export default function LiveBoard() {
                 label: t("keys.open", { minute: k.event.clock_label.replace(/'$/, ""), what: keyWhat(k, t, playerName, (s) => teams[s].short_name) }),
               }))}
               keySelected={key}
-              onKey={pickKey}
+              onKey={(id) => setKey(id === key ? null : id)}
             />
           ) : (
             <div className="empty-box muted">{t("board.momentumEmpty")}</div>

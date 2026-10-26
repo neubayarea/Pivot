@@ -1,51 +1,28 @@
 // Set pieces and shot clips on the match board (Ax37), folded below the moments like "More details".
 // Set pieces: every corner and every free kick near the goal it attacks, with what came of it, and
 // the pitch stopped at the kick showing who stood in the box, how the defenders marked and the wall.
-// Shots: one card per shot; opening one replays the attack on the pitch, the dots moved smoothly
-// between the once-a-second frames. The rules are in data/setpieces.ts.
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+// Shots: one card per shot; opening one replays the attack on the pitch in the clip player shared
+// with the key moments (Ax42). The rules are in data/setpieces.ts.
+import { useMemo, useState, type ReactNode } from "react";
 import type { TrackingFrame } from "@pivot/contracts";
 import { useClock } from "../data/clock";
+import { fromShot } from "../data/clips";
 import { useFrameWindow } from "../data/live/frames";
-import { fixtureMode, useMatch } from "../data/match";
+import { useMatch } from "../data/match";
 import {
-  clipBall, frameBefore, frameBetween, goalX, MARK_M, setPieces, setupAt, shotClips, tally, PITCH_W,
+  frameBefore, goalX, MARK_M, setPieces, setupAt, shotClips, tally, PITCH_W,
   type SetPiece, type SetPieceResult, type ShotClip, type ShotSource,
 } from "../data/setpieces";
 import { useT, type MessageKey } from "../i18n";
 import { describe } from "./EventFeed";
-import Pitch, { whoFromSquads } from "./Pitch";
+import ClipPlayer, { useFramesMatch, usePeople } from "./ClipPlayer";
+import Pitch from "./Pitch";
 import Segmented from "./Segmented";
-import { lineupAt } from "./shape";
 import "../styles/setpieces.css";
 
 const S = 5;
 const HASHES = ["#set-pieces", "#shots"] as const;
 type Tab = "set" | "shots";
-
-/** Who is who for these pitches: side, shirt, keeper, and the tooltip text. */
-function usePeople() {
-  const { squads, sheets, events } = useMatch();
-  const who = useMemo(() => whoFromSquads(squads), [squads]);
-  const players = useMemo(() => new Map([...squads.home, ...squads.away].map((p) => [p.player_id, p])), [squads]);
-  const roles = useMemo(() => (sheets ? lineupAt(sheets, events, Infinity).roles : null), [sheets, events]);
-  return {
-    who,
-    isHome: (id: string) => who(id).home,
-    isKeeper: (id: string) => (roles?.get(id) ?? players.get(id)?.role) === "GK",
-    tag: (id: string) => {
-      const p = players.get(id);
-      return [p?.shirt ?? "", p?.name ?? id].filter((x) => x !== "").join(" · ");
-    },
-  };
-}
-
-/** The match id frames are fetched for; null in the fixture or with no browser (the tests). */
-function useFramesMatch(): string | null {
-  const { match } = useMatch();
-  const [fixture] = useState(() => typeof window === "undefined" || fixtureMode());
-  return fixture ? null : match.match_id;
-}
 
 export default function SetPiecesAndShots() {
   const { events } = useMatch();
@@ -232,7 +209,7 @@ export function ShotBoard() {
           {shown.map((c) => <ShotCard key={c.shot.event_id} c={c} on={c === open} onPick={() => setPicked(c.shot.event_id)} />)}
           {!shown.length && <p className="muted">{t("shots.noneHere")}</p>}
         </div>
-        {open && <ClipPlayer key={open.shot.event_id} clip={open} />}
+        {open && <ShotClipView key={open.shot.event_id} clip={open} />}
       </div>
     </div>
   );
@@ -256,108 +233,23 @@ function ShotCard({ c, on, onPick }: { c: ShotClip; on: boolean; onPick: () => v
   );
 }
 
-const RATES = [0.5, 1] as const;
-
-/** The attack before one shot, played on the pitch with the dots moved smoothly between frames. */
-function ClipPlayer({ clip }: { clip: ShotClip }) {
+/** The attack before one shot, in the shared clip player. */
+function ShotClipView({ clip }: { clip: ShotClip }) {
   const { teams, playerName } = useMatch();
   const t = useT();
   const { at, clock } = useClock();
   const people = usePeople();
-  const matchId = useFramesMatch();
-  const frames = useFrameWindow(matchId, clip.from, clip.to);
-  const [pos, setPosState] = useState(clip.from);
-  const posAt = useRef(clip.from);
-  const setPos = (p: number) => {
-    posAt.current = p;
-    setPosState(p);
-  };
-  const [playing, setPlaying] = useState(true);
-  const [rate, setRate] = useState<(typeof RATES)[number]>(1);
-  const [pickedPlayer, setPickedPlayer] = useState<string | null>(null);
-  const last = useRef<number | null>(null);
-  const ready = !!frames?.length;
-
-  useEffect(() => {
-    if (!playing || !ready) return;
-    let id = 0;
-    last.current = null;
-    const step = (now: number) => {
-      const dt = last.current === null ? 0 : (now - last.current) / 1000;
-      last.current = now;
-      const next = Math.min(clip.to, posAt.current + dt * rate);
-      posAt.current = next;
-      setPosState(next);
-      if (next >= clip.to) setPlaying(false);
-      else id = requestAnimationFrame(step);
-    };
-    id = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(id);
-  }, [playing, ready, rate, clip.to]);
-
-  const between = frames ? frameBetween(frames, pos) : null;
-  const flying = frames ? clipBall(clip, frames, pos) : null;
-  const frame = between && flying ? { ...between, ball: { ...between.ball, ...flying, owner_id: null } } : between;
-  const goal = clip.shot.shot_outcome === "goal";
-  const shotTaken = pos >= clip.shot.t;
-  const played = clip.chain.filter((e) => e.t <= pos);
-  const now = played.at(-1);
-  const order = [...new Set(clip.chain.map((e) => e.player_id).filter((id): id is string => !!id))];
-  const toggle = () => {
-    if (!playing && pos >= clip.to) setPos(clip.from);
-    setPlaying(!playing);
-  };
-
-  let pitch: ReactNode;
-  if (matchId === null || (frames && !frames.length)) pitch = <div className="empty-box muted">{t("board.pitchNone")}</div>;
-  else if (!frame || !frames) pitch = <div className="empty-box muted">{t("board.pitchLoading")}</div>;
-  else {
-    pitch = (
-      <Pitch frame={frame} actions={played.filter((e) => e.type === "pass" || e.type === "shot")} selected={null} who={people.who}
-        stepMs={1} label={t("shots.pitchLabel", { minute: `${at(clip.shot.t)}′` })}
-        picked={pickedPlayer} onPick={setPickedPlayer} tag={people.tag} marked={new Set(order)}
-        under={<BallTrail frames={frames} pos={Math.min(pos, clip.shot.t - 1)} now={frame} />} />
-    );
-  }
-
+  const c = useMemo(() => fromShot(clip), [clip]);
   return (
-    <div className={`clip${goal ? " goal" : ""}`}>
-      <h4>
+    <ClipPlayer clip={c} label={t("shots.pitchLabel", { minute: `${at(clip.shot.t)}′` })} intro={t("shots.buildUp")}
+      title={<>
         {at(clip.shot.t)}′ · {playerName(clip.shot.player_id)} · {teams[clip.shot.team].short_name}
         {" "}<span className="sh-out">{t(`shots.out.${clip.shot.shot_outcome ?? "off_target"}` as MessageKey)}</span>
-        {goal && shotTaken && <span className="clip-goal">{t("shots.goalBanner")}</span>}
-      </h4>
-      {pitch}
-      <div className="clip-ctl">
-        <button type="button" className="play" aria-label={t(playing ? "scrub.pause" : "scrub.play")} onClick={toggle} disabled={!ready}>
-          {playing ? "❚❚" : "▶"}
-        </button>
-        <input type="range" min={clip.from} max={clip.to} step={0.1} value={pos} aria-label={t("scrub.time")}
-          aria-valuetext={clock(pos)} disabled={!ready}
-          onChange={(e) => {
-            setPlaying(false);
-            setPos(Number(e.target.value));
-          }} />
-        <span className="num">{clock(pos)}</span>
-        <Segmented label={t("shots.speed")} value={String(rate)} onChange={(v) => setRate(Number(v) as (typeof RATES)[number])}
-          options={RATES.map((r) => ({ value: String(r), label: `${r}×` }))} />
-      </div>
-      <p className="pitch-cap">
-        {now ? <><b>{at(now.t)}′ · {teams[now.team].short_name}</b> {describe(now, playerName, t)}</> : <span className="muted">{t("shots.buildUp")}</span>}
-      </p>
+      </>}>
       <p className="clip-chain">
-        <b>{t("shots.involved")}</b> {order.map((id) => people.tag(id)).join(" → ")}
+        <b>{t("shots.involved")}</b> {c.involved.map((id) => people.tag(id)).join(" → ")}
       </p>
       <small className="muted">{t("shots.how", { from: clock(clip.from), to: clock(clip.to) })}</small>
-    </div>
-  );
-}
-
-/** Where the ball has been since the clip began, up to now (frames up to `pos`, then the ball as drawn). */
-function BallTrail({ frames, pos, now }: { frames: TrackingFrame[]; pos: number; now: TrackingFrame }) {
-  const pts = [...frames.filter((f) => f.t <= pos).map((f) => f.ball), now.ball];
-  return (
-    <polyline className="ball-trail" pointerEvents="none" fill="none"
-      points={pts.map((b) => `${b.x * S + 8},${b.y * S - 8}`).join(" ")} />
+    </ClipPlayer>
   );
 }

@@ -1,30 +1,21 @@
 // The board's key moments (Ax38): goals, red cards, penalties and VAR reversals, under the
-// numbered pivots. Picking one moves the replay there (and the pitch with it); a match that is
-// not being replayed shows the pitch at that second and offers a replay from just before it.
-import { useMemo, useState } from "react";
+// numbered pivots. Picking one opens its clip under it (Ax42, rules in data/clips.ts) and leaves
+// the main replay alone; "In the main replay" moves the replay there.
+import { useEffect, useMemo } from "react";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
-import { useFrames } from "../data/live/frames";
+import { useClock } from "../data/clock";
+import { keyClip } from "../data/clips";
 import { linkedPivot, type KeyKind, type KeyMoment, type Window } from "../data/keyMoments";
-import { fixtureMode, useMatch, type Side } from "../data/match";
+import { useMatch, type Side } from "../data/match";
 import { useT, type MessageKey, type T } from "../i18n";
-import Pitch, { whoFromSquads } from "./Pitch";
+import ClipPlayer, { KeyMark, usePeople } from "./ClipPlayer";
+
+export { KeyMark };
 
 /** ①, ②, ③: the badge a numbered pivot wears on the board. */
 export const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCharCode(0x2460 + n - 1) : `(${n})`);
 
 export const keyId = (k: KeyMoment) => k.event.event_id;
-
-/** The small mark for a key moment, centred on (x, y): a ball for a goal, a card for a red, a diamond otherwise. */
-export function KeyMark({ kind, side, x, y, size = 1 }: { kind: KeyKind; side: Side; x: number; y: number; size?: number }) {
-  if (kind === "goal") {
-    return <circle cx={x} cy={y} r={5.5 * size} fill={side === "home" ? "var(--pv-home)" : "var(--pv-away)"} stroke="var(--pv-ink)" strokeWidth={1.5} />;
-  }
-  if (kind === "red") {
-    return <rect x={x - 3.5 * size} y={y - 5 * size} width={7 * size} height={10 * size} fill="var(--pv-red)" stroke="var(--pv-ink)" strokeWidth={1.5} />;
-  }
-  const d = 5.5 * size;
-  return <path d={`M${x},${y - d} L${x + d},${y} L${x},${y + d} L${x - d},${y} Z`} fill="var(--pv-sheet)" stroke="var(--pv-ink)" strokeWidth={1.5} />;
-}
 
 const Glyph = ({ kind, side }: { kind: KeyKind; side: Side }) => (
   <svg className="km-gl" viewBox="0 0 16 16" width={16} height={16} aria-hidden="true">
@@ -60,25 +51,38 @@ export function KeyLegend({ kinds, pivots }: { kinds: ReadonlySet<KeyKind>; pivo
   );
 }
 
-/** Where everyone stood at the moment, for a match that is not being replayed. */
-function KeyPitch({ k }: { k: KeyMoment }) {
-  const { match, squads, playerName, teams } = useMatch();
+/** The moment played on the pitch, opened under it in the list; the main replay is left where it is. */
+function KeyClip({ k }: { k: KeyMoment }) {
+  const { match, events, playerName, teams, playback } = useMatch();
   const t = useT();
-  const { frame, missing } = useFrames(match.match_id, k.event.t);
-  const who = useMemo(() => whoFromSquads(squads), [squads]);
-  if (missing) return null;
-  const from = Math.max(0, Math.floor(k.event.t / 60) - 1);
+  const { clock } = useClock();
+  const people = usePeople();
+  const clip = useMemo(() => keyClip(k, events), [k, events]);
+  const what = keyWhat(k, t, playerName, (s) => teams[s].short_name);
+  const minute = k.event.clock_label.replace(/'$/, "′");
+  const span = clip.parts.map(([a, b]) => `${clock(a)}–${clock(b)}`).join(", ");
+  const show = () => {
+    if (!playback) return;
+    playback.setPlaying(false);
+    playback.seek(k.event.t);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const from = Math.max(0, Math.floor(clip.parts[0][0] / 60));
   return (
-    <figure className="km-pitch">
-      {frame
-        ? <Pitch frame={frame} actions={k.event.location ? [k.event] : []} selected={k.event.event_id} focus={null} who={who}
-            label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
-        : <div className="empty-box muted">{t("board.pitchLoading")}</div>}
-      <figcaption>
-        <b>{k.event.clock_label.replace(/'$/, "′")}</b> {keyWhat(k, t, playerName, (s) => teams[s].short_name)}
-        {" · "}<a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")} →</a>
-      </figcaption>
-    </figure>
+    <div className="km-clip">
+      <ClipPlayer clip={clip} label={t("keys.clipLabel", { minute, what })} intro={t("keys.clipIntro")}>
+        {clip.named && <p className="clip-chain"><b>{t(k.kind === "red" ? "keys.clipSentOff" : "keys.clipFoul")}</b> {people.tag(clip.named)}</p>}
+        {k.kind === "goal" && clip.involved.length > 0 && (
+          <p className="clip-chain"><b>{t("shots.involved")}</b> {clip.involved.map((id) => people.tag(id)).join(" → ")}</p>
+        )}
+        <p className="km-clip-ft">
+          <small className="muted">{t(`keys.clipHow.${k.kind}` as MessageKey, { span })}</small>
+          {playback
+            ? <button type="button" className="btn ghost" onClick={show}>{t("keys.inMain")}</button>
+            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")} →</a>}
+        </p>
+      </ClipPlayer>
+    </div>
   );
 }
 
@@ -88,13 +92,16 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick 
   pivots: Pivot[];
   windows: (p: Pivot) => Window | undefined;
   selected: string | null;
-  onPick: (id: string) => void;
+  /** The moment opened, or null to close it. */
+  onPick: (id: string | null) => void;
 }) {
-  const { teams, playerName, playback } = useMatch();
+  const { teams, playerName } = useMatch();
   const t = useT();
-  const [fixture] = useState(() => typeof window === "undefined" || fixtureMode());
   const linked = pivots.map((p) => ({ minute: p.minute, trigger_event_ids: p.trigger_event_ids, window: windows(p) }));
-  const open = moments.find((k) => keyId(k) === selected);
+  // Picked from the momentum line, the moment may be out of sight.
+  useEffect(() => {
+    if (selected) document.getElementById(`km-${selected}`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [selected]);
   return (
     <section className="keys" aria-labelledby="keys-hd">
       <div className="keys-hd">
@@ -111,9 +118,9 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick 
             const n = linkedPivot(k, linked);
             const big = k.situation && ["equaliser", "lateEqualiser", "stoppageEqualiser", "comeback", "winner"].includes(k.situation);
             return (
-              <li key={keyId(k)}>
-                <button type="button" className={`km ${k.kind} to-${k.side}`} aria-pressed={keyId(k) === selected}
-                  aria-label={t("keys.open", { minute, what })} onClick={() => onPick(keyId(k))}>
+              <li key={keyId(k)} id={`km-${keyId(k)}`}>
+                <button type="button" className={`km ${k.kind} to-${k.side}`} aria-expanded={keyId(k) === selected}
+                  aria-label={t("keys.open", { minute, what })} onClick={() => onPick(keyId(k) === selected ? null : keyId(k))}>
                   <b className="km-min num">{minute}′</b>
                   <Glyph kind={k.kind} side={k.side} />
                   <span className="km-team">{teams[k.side].short_name}</span>
@@ -125,12 +132,12 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick 
                     {n > 0 && <span className="km-pv" title={t("keys.toPivotLabel", { n: circled(n) })}>{t("keys.toPivot", { n: circled(n) })}</span>}
                   </span>
                 </button>
+                {keyId(k) === selected && <KeyClip key={keyId(k)} k={k} />}
               </li>
             );
           })}
         </ol>
       )}
-      {open && !playback && !fixture && <KeyPitch key={keyId(open)} k={open} />}
     </section>
   );
 }

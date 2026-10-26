@@ -102,9 +102,9 @@ describe("shot clips", () => {
   it("flies the ball to the shot's end point instead of the frames' reset after a goal", () => {
     const [clip] = shotClips([ev({ t: 20, possession_id: 1, type: "shot", location: [95, 34], end_location: [105, 34] })]);
     const fs = [frame(19, [], [95, 34]), frame(20, [], [52.5, 34])];
-    expect(clipBall(clip, fs, 18)).toBeNull();
-    expect(clipBall(clip, fs, 19.5)).toEqual({ x: 100, y: 34 });
-    expect(clipBall(clip, fs, 21)).toEqual({ x: 105, y: 34 });
+    expect(clipBall(clip.shot, fs, 18)).toBeNull();
+    expect(clipBall(clip.shot, fs, 19.5)).toEqual({ x: 100, y: 34 });
+    expect(clipBall(clip.shot, fs, 21)).toEqual({ x: 105, y: 34 });
   });
 });
 
