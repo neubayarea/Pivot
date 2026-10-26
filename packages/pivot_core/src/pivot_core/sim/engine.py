@@ -16,13 +16,15 @@ the end (`SimOutput.events_as_models`). Field meanings follow docs/data-definiti
 comment next to each rule names the definition it implements.
 
 Realism rules (game state, keepers, injuries, VAR, extra time and shootouts) are described in
-docs/sim-realism.md (B12). The context effects (B14) are not simulated yet.
+docs/sim-realism.md (B12). The context effects (B14, CTX-001) apply only with
+`Params.context_effects` (or `simulate(..., context_effects=True)`): each player's effects are
+summed at kick-off and act as small factors on rates the engine already has (see `_effects`).
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -31,6 +33,7 @@ from ..domain import (
     TrackingFrame, VarReview,
 )
 from ..domain.common import PERIOD_BASE_MINUTE, PERIOD_LENGTH_MINUTES, PITCH_LENGTH, PITCH_WIDTH, zone_of
+from .effects import context_effects as context_effects_of
 from .formations import DEFENDER_ROLES, FORMATIONS, MIDFIELD_ROLES
 from .movement import (
     ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, norm,
@@ -151,6 +154,9 @@ class Params:
     skill_pass: float = 0.6                      # pass accuracy x (1 + skill_pass * (passing - 0.75))
     skill_def: float = 1.0                       # lane cut-out x (1 + skill_def * (interceptions - 0.7))
     skill_gk: float = 0.827                      # goal chance x (1 - skill_gk * (keeper - 0.88))
+    # Off-pitch context (B14, CTX-001): play by match.context.effects. Off by default, so every seed
+    # plays exactly as before until the demo story is checked with it on.
+    context_effects: bool = False
 
 
 @dataclass
@@ -229,7 +235,14 @@ def _in_own_box(v: np.ndarray) -> bool:
 
 class Engine:
     def __init__(self, match: Match, seed: int | None = None, params: Params | None = None,
-                 plants: list[PlantSpec] | None = None):
+                 plants: list[PlantSpec] | None = None, context_effects: bool | None = None):
+        params = params or Params()
+        if context_effects is not None and context_effects != params.context_effects:
+            params = replace(params, context_effects=context_effects)
+        if params.context_effects:
+            # CTX-001: the effects are worked out before kick-off and recorded with the match
+            effects = match.context.effects or context_effects_of(match)
+            match = match.model_copy(update={"context": match.context.model_copy(update={"effects": effects})})
         self.match = match
         # Planted events (B04): forced at a given minute, e.g. the demo's 38' red card.
         self.plants = [{"spec": p, "done": False} for p in sorted(plants or [], key=lambda p: p.minute)]
@@ -238,7 +251,7 @@ class Engine:
         # changes the run of play of a seed.
         self.style_rng = np.random.default_rng([(match.seed if seed is None else seed) or 0, 2])
         self.touch: dict | None = None            # last reception: who, when, what kind of ball
-        self.p = params or Params()
+        self.p = params
         self.teams = [match.home, match.away]
         self.sheets = [match.home.sheet, match.away.sheet]
         self.tactics = [match.home.tactics, match.away.tactics]
@@ -253,10 +266,16 @@ class Engine:
         self.card_rate = (ref.card_tendency / 60) if ref else 1.0
         self.crowd = 0.0 if match.context.competition.neutral_venue else min(match.context.attendance / 50000, 1.0)
 
+        self.fx, self.chem = self._effects() if self.p.context_effects else ({}, {})
+
         self.pos = np.zeros((2, 11, 2))
         self.prev = np.zeros((2, 11, 2))
         self.speed = np.zeros((2, 11))
         self.fitness = np.ones((2, 11))
+        if self.fx:
+            for k in (0, 1):
+                for i, pid in enumerate(self.shapes[k].player_ids):
+                    self.fitness[k, i] = self._fit_at_start(pid)
         self._stamina_key: tuple | None = None
         self._stamina_cache = np.zeros((2, 11))
         self._physique_key: tuple | None = None
@@ -332,6 +351,42 @@ class Engine:
 
     def _pid(self, k: int, i: int) -> str | None:
         return self.shapes[k].player_ids[i]
+
+    # --- context effects (B14, CTX-001) ------------------------------------------------
+
+    def _effects(self) -> tuple[dict[str, dict[str, float]], dict[tuple[str, str], float]]:
+        """Each player's total per target (their own effects plus their side's), and the extra pass
+        chemistry between two players who played together before. Read once, at kick-off."""
+        ctx = self.match.context
+        side = {pl.player_id: pl.team for pl in self.players.values()}
+        pair = {r.relationship_id: (r.person_id, r.other_id) for r in ctx.relationships}
+        fx: dict[str, dict[str, float]] = {pid: {} for pid in side}
+        chem: dict[tuple[str, str], float] = {}
+        for e in ctx.effects:
+            if e.target == "chemistry" and e.subject_id in side:
+                a, b = pair.get(e.source_ref, (None, None))
+                partner = b if a == e.subject_id else a
+                if partner:
+                    chem[e.subject_id, partner] = chem.get((e.subject_id, partner), 0.0) + e.delta
+                continue
+            for pid, s in side.items():
+                if e.subject_id in (pid, s):
+                    fx[pid][e.target] = fx[pid].get(e.target, 0.0) + e.delta
+        return {pid: t for pid, t in fx.items() if t}, chem
+
+    def _fx(self, pid: str | None, target: str) -> float:
+        """The total effect on one player's target; 0.0 with the effects off."""
+        if not self.fx or pid is None:
+            return 0.0
+        return self.fx.get(pid, {}).get(target, 0.0)
+
+    def _times(self, p: float, pid: str | None, target: str) -> float:
+        """A rate scaled by (1 + the player's effect on `target`), CTX-001; `p` itself with none."""
+        d = self._fx(pid, target)
+        return p * (1 + d) if d else p
+
+    def _fit_at_start(self, pid: str | None) -> float:
+        return clip1(1.0 + self._fx(pid, "fitness"), 0.0, 1.0)
 
     def _kickoff_positions(self, kicking: int) -> None:
         for k in (0, 1):
@@ -606,7 +661,9 @@ class Engine:
         self._end_carry()
         aggression = self._a(opp, j, "aggression")
         careful = 0.25 if self.yellows.get(self._pid(opp, j), 0) else 1.0
-        if self.rng.random() < self.p.foul_rate * (0.6 + 0.8 * aggression) * self.strict * careful:
+        p_foul = self._times(self.p.foul_rate * (0.6 + 0.8 * aggression) * self.strict * careful,
+                             self._pid(opp, j), "aggression")                      # B14
+        if self.rng.random() < p_foul:
             return self._foul(opp, j, k, i, v)
         tackle = self._a(opp, j, "standing_tackle") * 0.6 + self._a(opp, j, "defensive_awareness") * 0.4
         keep = self._a(k, i, "dribbling") * 0.5 + self._a(k, i, "strength") * 0.2 + self._a(k, i, "ball_control") * 0.3
@@ -636,11 +693,12 @@ class Engine:
         card = None
         reason = None
         r = self.rng.random()
+        card_rate = self._times(self.card_rate, self._pid(k_def, j), "card_risk")    # B14
         if force_red:
             card, reason = "red", force_red
-        elif r < self.p.red_rate * self.card_rate:
+        elif r < self.p.red_rate * card_rate:
             card, reason = "red", "serious_foul_play"
-        elif r < (self.p.yellow_rate + (0.25 if penalty else 0.0)) * self.card_rate:
+        elif r < (self.p.yellow_rate + (0.25 if penalty else 0.0)) * card_rate:
             pid = self._pid(k_def, j)
             self.yellows[pid] = self.yellows.get(pid, 0) + 1
             card = "second_yellow" if self.yellows[pid] >= 2 else "yellow"
@@ -667,7 +725,8 @@ class Engine:
             self._set_restart("penalty", k_att, spot, wait=self.rng.integers(60, 90))
         else:
             self._set_restart("free_kick", k_att, spot, wait=self.rng.integers(12, 30) + (15 if card else 0))
-        if self.shapes[k_att].player_ids[i] is not None and self.rng.random() < self.p.injury_foul:
+        p_hurt = self._times(self.p.injury_foul, self._pid(k_att, i), "injury_risk")   # B14
+        if self.shapes[k_att].player_ids[i] is not None and self.rng.random() < p_hurt:
             self._injure(k_att, i, "contact")
 
     def _var_review(self, k: int, of: str, event: dict, decision: str, reason: str) -> dict:
@@ -711,7 +770,8 @@ class Engine:
         self._end_carry()
         att = self._a(k, i, "dribbling") * 0.6 + self._a(k, i, "agility") * 0.4
         dfn = self._a(opp, j, "standing_tackle") * 0.5 + self._a(opp, j, "defensive_awareness") * 0.5
-        p = self._success(k, 0.5 + 0.5 * (att - dfn))
+        base = self._times(0.5 + 0.5 * (att - dfn), self._pid(k, i), "composure")   # B14: always pressed
+        p = self._success(k, base)
         won = self.rng.random() < p
         d = self._emit("dribble", k, i, location=self.ball.copy(), outcome="success" if won else "fail",
                        success_prob=round(p, 3))
@@ -798,6 +858,12 @@ class Engine:
             acc *= 1 - 0.18 * (1 - mark_d / 2.0)
         if under:
             acc *= 0.88 + 0.1 * self._a(k, i, "composure")
+        if self.fx:                                                   # B14, CTX-001
+            pid = self._pid(k, i)
+            if under:
+                acc = self._times(acc, pid, "composure")
+            acc = 1 - (1 - acc) * (1 - self._fx(pid, "concentration"))
+            acc *= 1 + self._fx(pid, "chemistry") + self.chem.get((pid, shape.player_ids[r]), 0.0)
         if restart in ("throw_in", "kick_off", "free_kick") and dist < 25:
             acc = max(acc, 0.9)
         acc = self._success(k, acc)
@@ -1145,6 +1211,8 @@ class Engine:
         # xG is the chance itself; whether it goes in also depends on the keeper (B12)
         keeper = np.mean([self._a(opp, gk_slot, a) for a in ("diving", "reflexes", "positioning")])
         p_goal = float(clip1(xg * (1 - self.p.skill_gk * (keeper - 0.88)), 0.002, 0.97))
+        if under and self.fx:                                   # B14: composure when pressed, not the xG itself
+            p_goal = float(clip1(self._times(p_goal, self._pid(k, i), "composure"), 0.002, 0.97))
         r = self.rng.random()
         if r < p_goal:
             outcome = "goal"
@@ -1329,7 +1397,7 @@ class Engine:
         self.shapes[k] = TeamShape.from_sheet(k, new_sheet, self.tactics[k], pace)
         for idx in removed:
             self.shapes[k].player_ids[idx] = None
-        self.fitness[k, i] = 1.0
+        self.fitness[k, i] = self._fit_at_start(self._pid(k, i)) if self.fx else 1.0
         self.burst[k, i], self.recovering[k, i] = 0.0, False
         self.subs_used[k] += 1
         self.half_counts["subs"] += 1
@@ -1511,10 +1579,13 @@ class Engine:
         if carrier is not None:
             self.pos[carrier] = self.ball
         drain = (0.00003 + 0.000022 * self.speed + 0.00004 * (self.speed > 7)) * (1.45 - self._stamina())
+        if self.fx:
+            drain = drain * self._slot_factor("stamina_decay")     # B14: a late night, legs go sooner
         self.fitness = np.clip(self.fitness - drain, 0, 1)
         for n in np.flatnonzero(self.speed > 7):                   # sprinting: now and then a muscle goes
             k, i = divmod(int(n), 11)
-            if self.rng.random() < self.p.injury_sprint * (1.3 - self.fitness[k, i]):
+            p_pull = self._times(self.p.injury_sprint * (1.3 - self.fitness[k, i]), self._pid(k, i), "injury_risk")
+            if self.rng.random() < p_pull:
                 self._injure(k, i, "fatigue" if self.fitness[k, i] < 0.7 else "non_contact")
         self._limit_steps(start)
         self._settle()
@@ -1621,8 +1692,15 @@ class Engine:
             self._physique_key = key
             pace = np.array([[self._a(k, i, "pace") for i in range(11)] for k in (0, 1)])
             acc = np.array([[self._a(k, i, "acceleration") for i in range(11)] for k in (0, 1)])
-            self._physique_cache = (top_speed(pace), ACCEL_MS2[0] + ACCEL_MS2[1] * acc)
+            top = top_speed(pace)
+            if self.fx:
+                top = top * self._slot_factor("motivation")          # B14: run harder, sprint more
+            self._physique_cache = (top, ACCEL_MS2[0] + ACCEL_MS2[1] * acc)
         return self._physique_cache
+
+    def _slot_factor(self, target: str) -> np.ndarray:
+        """(2, 11) 1 + the effect on `target` of whoever is in each slot (B14)."""
+        return np.array([[1.0 + self._fx(self._pid(k, i), target) for i in range(11)] for k in (0, 1)])
 
     def _stamina(self) -> np.ndarray:
         """(2, 11) stamina of whoever is in each slot, rebuilt only when the players on the pitch change."""
@@ -1838,8 +1916,8 @@ class Engine:
 
 
 def simulate(match: Match, seed: int | None = None, params: Params | None = None,
-             plants: list[PlantSpec] | None = None) -> SimOutput:
-    return Engine(match, seed, params, plants).run()
+             plants: list[PlantSpec] | None = None, context_effects: bool | None = None) -> SimOutput:
+    return Engine(match, seed, params, plants, context_effects).run()
 
 
 __all__ = ["Engine", "Params", "SimOutput", "simulate", "xg_model", "threat_value", "zone_of"]
