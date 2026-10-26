@@ -1,7 +1,10 @@
 import { useId } from "react";
 import type { MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
+import type { KeyKind } from "../data/keyMoments";
+import type { Side } from "../data/view";
 import { useT } from "../i18n";
+import { KeyMark } from "./KeyMoments";
 
 type Props = {
   metrics: MinuteMetric[];
@@ -12,6 +15,10 @@ type Props = {
   numbered?: string[];
   selected?: string | null;
   onPick?: (pivotId: string) => void;
+  /** Key moments (goals, red cards, ...): small marks on the midline, apart from the numbered pivots. */
+  keys?: { id: string; t: number; kind: KeyKind; side: Side; label: string }[];
+  keySelected?: string | null;
+  onKey?: (id: string) => void;
 };
 
 // Geometry follows the S1 mock in docs/design/matchday-programme.html.
@@ -26,7 +33,7 @@ const TICKS = [0, 15, 30, 45, 60, 75, 90];
  * The axis runs on elapsed minutes, so stoppage time takes room, but reads the match clock:
  * each tick sits where the clock showed it, and the second half starts at its real kick-off.
  */
-export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick }: Props) {
+export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick, keys = [], keySelected, onKey }: Props) {
   const clip = useId().replace(/[^\w-]/g, "");
   const t = useT();
   const { periods, minute } = useClock();
@@ -113,6 +120,20 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
               fill={pending ? "var(--pv-red)" : "var(--pv-on-red)"}>
               {label}
             </text>
+          </g>
+        );
+      })}
+      {keys.map((k) => {
+        const kx = x(k.t / 60);
+        const on = k.id === keySelected;
+        const go = () => onKey?.(k.id);
+        return (
+          <g key={k.id} className={`mom-key${on ? " on" : ""}`} role={onKey ? "button" : undefined} tabIndex={onKey ? 0 : undefined}
+            aria-pressed={onKey ? on : undefined} aria-label={k.label} onClick={go}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go())}>
+            <circle className="hit" cx={kx} cy={MID} r={11} />
+            {on && <circle className="ring" cx={kx} cy={MID} r={9.5} />}
+            <KeyMark kind={k.kind} side={k.side} x={kx} y={MID} size={on ? 1.25 : 1} />
           </g>
         );
       })}

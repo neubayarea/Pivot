@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Card from "../components/Card";
 import EventFeed from "../components/EventFeed";
+import KeyMoments, { KeyLegend, keyId, keyWhat } from "../components/KeyMoments";
 import Kicker from "../components/Kicker";
 import MatchStats from "../components/MatchStats";
 import MomentumChart from "../components/MomentumChart";
@@ -9,14 +10,16 @@ import { MomentCards, OpenMoment } from "../components/Moments";
 import PitchBoard from "../components/PitchBoard";
 import StartDemoButton from "../components/StartDemoButton";
 import { useClock } from "../data/clock";
+import { keyMoments, matchPhase } from "../data/keyMoments";
 import { useMatch } from "../data/match";
 import { useT } from "../i18n";
 
 // S1 · Match board (Ax32). One line saying what the page is for, the momentum line with the
 // numbered moments, one card per moment, the picked one opened, everything else folded below.
-// Layout follows docs/design/redesign-mockup.html.
+// Layout follows docs/design/redesign-mockup.html. Ax38: the key moments (goals, red cards, ...)
+// sit under the pivots, and lead the page when a finished match never turned.
 export default function LiveBoard() {
-  const { match, teams, metrics, pivots, playback } = useMatch();
+  const { match, teams, metrics, pivots, playback, events, playerName, pivotDetail } = useMatch();
   const t = useT();
   const { at } = useClock();
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
@@ -28,9 +31,26 @@ export default function LiveBoard() {
   const scheduled = match.status === "scheduled";
   // On the live feed a finished match leaves nothing in progress; the fixture has its own Restart.
   const over = match.status === "finished" && !playback;
+  const finished = match.status === "finished";
+  const phase = matchPhase(match.status, events);
+  const score = { home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}` };
+  const keys = useMemo(() => keyMoments(events, finished), [events, finished]);
+  const [key, setKey] = useState<string | null>(null);
+  const pickKey = (id: string) => {
+    setKey(id);
+    const k = keys.find((k) => keyId(k) === id);
+    // The replay goes to that second and stops there, so the pitch (under More details) shows it.
+    if (k && playback) {
+      playback.setPlaying(false);
+      playback.seek(k.event.t);
+    }
+  };
 
   // Another match or another moment: the evidence picked for the last one no longer applies.
-  useEffect(() => setPicked(null), [match.match_id]);
+  useEffect(() => {
+    setPicked(null);
+    setKey(null);
+  }, [match.match_id]);
   useEffect(() => setEvidence(new Set()), [open?.pivot_id]);
 
   const pick = (id: string) => setPicked(id);
@@ -55,9 +75,15 @@ export default function LiveBoard() {
             <h1>{t(match.status === "finished" ? "moments.title" : "moments.titleLive", { n: moments.length })}</h1>
             <p className="lede">{t("moments.lede")}</p>
           </>
+        ) : finished ? (
+          <>
+            <Kicker>{t("board.phaseScore", { phase: t("status.finished"), ...score })}</Kicker>
+            <h1>{t("board.noSwing")}</h1>
+            <p className="lede">{t("board.noSwingLede")}</p>
+          </>
         ) : (
           <>
-            <Kicker>{t("board.kickoff")}</Kicker>
+            <Kicker>{t("board.phaseScore", { phase: t(phase === "halfTime" ? "board.halfTime" : "board.kickoff"), ...score })}</Kicker>
             <h1>{t("board.watching")}</h1>
           </>
         )}
@@ -86,14 +112,26 @@ export default function LiveBoard() {
               numbered={moments.map((p) => p.pivot_id)}
               selected={open?.pivot_id ?? null}
               onPick={pick}
+              keys={keys.map((k) => ({
+                id: keyId(k), t: k.event.t, kind: k.kind, side: k.side,
+                label: t("keys.open", { minute: k.event.clock_label.replace(/'$/, ""), what: keyWhat(k, t, playerName, (s) => teams[s].short_name) }),
+              }))}
+              keySelected={key}
+              onKey={pickKey}
             />
           ) : (
             <div className="empty-box muted">{t("board.momentumEmpty")}</div>
           )}
+          {!scheduled && metrics.length > 0 && keys.length > 0 && (
+            <KeyLegend kinds={new Set(keys.map((k) => k.kind))} pivots={moments.length > 0} />
+          )}
         </Card>
-        {!moments.length && <p className="muted">{t("pivots.empty")}</p>}
+        {!moments.length && !finished && <p className="muted">{t("pivots.empty")}</p>}
         {moments.length > 0 && <MomentCards pivots={moments} selected={open?.pivot_id ?? null} onPick={pick} />}
         {open && <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={toggle} />}
+        {!scheduled && (
+          <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={key} onPick={pickKey} />
+        )}
         <details className="more">
           <summary>
             {t("moments.more")} <small>{t("moments.moreNote")}</small>
