@@ -81,10 +81,32 @@ def test_fan_example_follows_the_fan_rules():
 @pytest.mark.parametrize("lang", ["en", "zh", "es"])
 def test_fan_template_sentences_have_at_most_one_number(events, stats, lang):
     prefs = ViewerPrefs(audience="fan", language=lang)
+    stats = FakeStats({**stats.values, ("shots_on_target", "home", (58, 63)): 0,
+                       ("shots_on_target", "home", (63, 68)): 3})
     narrative = template_explain(candidate(), events=events, stats=stats, team_names=TEAMS, prefs=prefs)
     assert any(s.claims for s in narrative.sentences)
     assert all(len(numbers_in(s.text, lang)) <= 1 for s in narrative.sentences)
     assert verify(narrative, pivot_minute=63, events=events, stats=stats).passed
+
+
+def test_fan_template_only_counts_what_a_fan_can_picture(events, stats):
+    # The conftest stats only move threat (an index): the fan card leaves the number out rather than
+    # write "danger created rose to 0.57" (#242). The analyst card still uses it.
+    fan = template_explain(candidate(), events=events, stats=stats, team_names=TEAMS,
+                           prefs=ViewerPrefs(audience="fan"))
+    analyst = template_explain(candidate(), events=events, stats=stats, team_names=TEAMS)
+    assert not any(s.claims for s in fan.sentences)
+    assert any(c.stat_ref.metric == "threat_total" for s in analyst.sentences for c in s.claims)
+    assert verify(fan, pivot_minute=63, events=events, stats=stats).passed
+
+
+def test_fan_template_says_how_much_of_the_ball_they_had(events):
+    stats = FakeStats({("possession_pct", "home", (58, 63)): 41.0, ("possession_pct", "home", (63, 68)): 67.0})
+    fan = template_explain(candidate(), events=events, stats=stats, team_names=TEAMS,
+                           prefs=ViewerPrefs(audience="fan"))
+    text = " ".join(s.text for s in fan.sentences)
+    assert "Rovers had the ball 67% of the time in the next five minutes." in text
+    assert verify(fan, pivot_minute=63, events=events, stats=stats).passed
 
 
 # 2. Fan jargon is caught when spelled out and in every language.

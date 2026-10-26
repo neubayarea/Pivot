@@ -19,6 +19,11 @@ through the repository, keyed by (pivot_id, prefs), so the next request for it d
 If not even the template passes, or any step raises (a bug in a stat source, say), the default
 version is returned, unstored, and `prefs` says so: the caller always gets a card, never an error.
 
+A timeout or 429 is asked once more after a short wait; if the model is still unavailable it rests
+for a minute (no calls), so a dead endpoint is not hammered. A template written because the model
+failed is a fallback, not the answer: it is served for a couple of minutes, then the next request
+gives the model another go (#242). Without a model (`PIVOT_PIPELINE=fake`) the template is the answer.
+
 The worker code is only called, not changed.
 """
 
@@ -48,6 +53,9 @@ log = logging.getLogger("pivot_api.personalize")
 
 MAX_CHECKS = 2                                # a viewer is waiting on this request: one draft plus one rewrite
 MAX_CONCURRENT = 4                            # versions written at once (a pivot list asks for several)
+MODEL_RETRY_S = 2.0                           # a timeout or 429: wait this long, then ask once more
+MODEL_REST_S = 60.0                           # still unavailable after that: no model calls for this long
+FALLBACK_RETRY_S = 120.0                      # a template fallback is served this long, then written again
 SWING_MINUTES = 5
 LANGUAGE_NAMES = {"zh": "Simplified Chinese (简体中文)", "es": "Spanish (español neutro)"}
 TRANSLATE_PROMPT = """You translate football match commentary cards from English into {language}.
@@ -84,6 +92,8 @@ class Personalizer:
         self.repo, self.models, self.stats_factory = repo, models, stats_factory
         self._locks: defaultdict[tuple[str, ViewerPrefs], asyncio.Lock] = defaultdict(asyncio.Lock)
         self._slots = asyncio.Semaphore(MAX_CONCURRENT)
+        self._fallback_at: dict[tuple[str, ViewerPrefs], float] = {}   # when a template fallback was written
+        self._rest_until = 0.0                # monotonic time until which the model is not asked
 
     async def personalize(self, pivot: Pivot, prefs: ViewerPrefs) -> Personalized:
         base = pivot.narrative
@@ -107,6 +117,10 @@ class Personalizer:
                                 pivot.pivot_id, prefs.model_dump())
                     return Personalized(pivot, base.prefs)
                 await self.repo.upsert_narrative(pivot.match_id, pivot.pivot_id, narrative)
+                if narrative.source == "llm":
+                    self._fallback_at.pop((pivot.pivot_id, prefs), None)
+                else:
+                    self._fallback_at[(pivot.pivot_id, prefs)] = time.monotonic()
         return Personalized(pivot.model_copy(update={"narrative": narrative}), narrative.prefs)
 
     async def prewarm(self, match_id: str, languages: Sequence[str], wait: float = 1800.0) -> int:
@@ -139,6 +153,11 @@ class Personalizer:
         # Written for an earlier run of this pivot (the worker wrote it again since): stale.
         if narrative is None or narrative.chain_id != pivot.chain_id:
             return None
+        # A template the model could still beat: served for a while, then the model gets another go (#242).
+        if narrative.source != "llm" and self.models is not None:
+            at = self._fallback_at.get((pivot.pivot_id, prefs))
+            if at is None or time.monotonic() - at >= FALLBACK_RETRY_S:
+                return None
         # Stored before the Verifier checked the language (#184): an English card kept as the Chinese one.
         texts = [narrative.headline, *(s.text for s in narrative.sentences)]
         return None if any(wrong_script(text, prefs.language) for text in texts) else narrative
@@ -201,7 +220,7 @@ class Personalizer:
         checks = 0
         for checks in range(1, MAX_CHECKS + 1):
             try:
-                reply = await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
+                reply = await self._complete(messages)
             except ModelUnavailable as e:
                 log.info("%s: translator unavailable (%s); using the template", pivot.pivot_id, e)
                 break
@@ -233,8 +252,23 @@ class Personalizer:
         _, messages = explainer.build_messages(
             candidate, events=view.events, stats=view.stats, team_names=view.team_names, prefs=prefs,
             player_names=view.player_names, context=view.context, feedback=feedback, previous=previous)
-        reply = await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
-        return reply.text
+        return (await self._complete(messages)).text
+
+    async def _complete(self, messages: list[dict[str, str]]):
+        """One model reply. A timeout or 429 is asked once more after MODEL_RETRY_S; if it fails again the
+        model rests for MODEL_REST_S, and calls in that time raise ModelUnavailable without asking."""
+        if time.monotonic() < self._rest_until:
+            raise ModelUnavailable("resting after the last failures")
+        try:
+            return await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
+        except ModelUnavailable as e:
+            log.info("model unavailable (%s); asking once more in %.0f s", e, MODEL_RETRY_S)
+        await asyncio.sleep(MODEL_RETRY_S)
+        try:
+            return await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
+        except ModelUnavailable:
+            self._rest_until = time.monotonic() + MODEL_REST_S
+            raise
 
     def _verify(self, narrative: Narrative, candidate: PivotCandidate, view: MatchView) -> Verdict:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
