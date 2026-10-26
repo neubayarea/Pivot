@@ -18,7 +18,7 @@ from .players import router as players_router
 from .realtime import router as realtime_router
 from .routes import router
 from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
-from .whatif import DEFAULT_WARM, WhatIf
+from .whatif import DEFAULT_WARM, WhatIf, load_precomputed, precomputed_path
 from .whatif import router as whatif_router
 
 log = logging.getLogger("uvicorn.error")   # shows up in the uvicorn startup log
@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # players.py: per-player numbers, worked out once per match on first use
     app.state.player_calcs, app.state.player_lines, app.state.player_calcs_lock = {}, {}, asyncio.Lock()
     replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
+    precomputed = {}                          # the recorded demo's what-ifs, run ahead of time (Bx11)
     demo_id = None
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
         log.info("seeded demo match %s", await seed_demo(app.state.adapters.matches, app.state.adapters.traces))
@@ -51,6 +52,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 if frames is not None:
                     app.state.fixture_frames[match_id] = frames
                 log.info("loaded recorded demo %s from %s", match_id, fixture)
+                if match_id in replays:
+                    path = precomputed_path(fixture)
+                    precomputed[match_id] = await asyncio.to_thread(load_precomputed, path, replays[match_id].version)
+                    log.info("%d what-ifs of %s run ahead of time, from %s", len(precomputed[match_id]), match_id,
+                             path.name)
             except (OSError, ValueError, KeyError):
                 log.exception("could not load the recorded demo from %s", fixture)
     # Simulated finished matches (Ax6), loaded in the background so /healthz answers straight away.
@@ -64,6 +70,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                                          name="sims"))
     # What-if replays (A09): one at a time in the background; the recorded demo's chips run first.
     app.state.whatif = WhatIf.from_env(app.state.adapters, replays, model_client_from_env())
+    app.state.whatif.precomputed.update(precomputed)
     app.state.whatif.start()
     # Chinese and Spanish versions of the demo's pivots (Ax35), written once the worker has the English ones,
     # and of its finished what-ifs (Ax39), once the warm-up has run.

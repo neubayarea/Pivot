@@ -29,13 +29,19 @@ restart; switching the page's language never replays the match. At startup the r
 scenarios are translated into `PIVOT_PREWARM_LANGS` once its warm-up has run.
 
 200 replays per arm take ~45 s from the 38' red card on a 10-core laptop and several minutes on a
-2-core VM, so the recorded demo's first `PIVOT_WHATIF_WARM` chips of each pivot are run in the
-background at startup, after anything a viewer asks for.
+2-core VM. So every chip of the recorded demo is run ahead of time on a bigger machine
+(scripts/make_whatif_fixture.py, Bx11) into `demo-1021.whatif.json` next to it, which is read at
+startup and used like the result store, by cache key; a file made for another version of the demo is
+ignored. A stored result is not replayed, only its comparison is asked of the model again, as for a
+template comparison in the store. At startup the warm-up asks for the comparison of each pivot's chips
+in that file, and runs the first `PIVOT_WHATIF_WARM` chips of each pivot that are not in it, in the
+background, after anything a viewer asks for.
 
 Environment:
 - `PIVOT_WHATIF_WORKERS`: replay processes; default one less than the cores, at least 1, so a core
   stays free for the API and the live replay. 0 plays them in a thread of the API process (tests).
-- `PIVOT_WHATIF_WARM`: chips per pivot of the recorded demo to run at startup (default 2, 0 off).
+- `PIVOT_WHATIF_WARM`: chips per pivot of the recorded demo, not in its file, to run at startup (default 2,
+  0 off, which also leaves the file's comparisons to the first viewer).
 - `PIVOT_WHATIF_MAX_QUEUED`: scenarios waiting at most; a POST beyond that is a 503 (default 20).
 """
 
@@ -55,6 +61,7 @@ from collections.abc import Callable
 from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -152,6 +159,34 @@ def with_params(option: ScenarioOption, params: dict[str, int | str], target_min
                           at_minute=min(target_minute, new), team=option.team, params={"new_minute": new})
 
 
+def precomputed_path(fixture: Path) -> Path:
+    """`demo-1021.json` -> `demo-1021.whatif.json`: the chips of a recorded match run ahead of time."""
+    return fixture.with_name(fixture.name.removesuffix(".json") + ".whatif.json")
+
+
+def load_precomputed(path: Path, version: str) -> dict[str, Scenario]:
+    """The scenarios in a file from scripts/make_whatif_fixture.py, by cache key; none when there is no
+    file or it was made for another version of the match."""
+    try:
+        data = json.loads(path.read_bytes())
+    except FileNotFoundError:
+        return {}
+    if data.get("version") != version:
+        log.warning("%s is for match version %s, not %s: not used", path.name, data.get("version"), version)
+        return {}
+    return {key: Scenario.model_validate(s) for key, s in data["scenarios"].items()}
+
+
+def write_precomputed(path: Path, match_id: str, version: str, scenarios: dict[str, Scenario]) -> None:
+    """One scenario a line, in key order, so a re-run only changes the lines that changed."""
+    lines = [f"{json.dumps(k)}: {s.model_dump_json()}" for k, s in sorted(scenarios.items())]
+    head = json.dumps({"match_id": match_id, "version": version, "made_by": "scripts/make_whatif_fixture.py"})
+    tmp = path.with_suffix(".tmp")
+    body = ",\n".join(lines)
+    tmp.write_text(f'{head[:-1]}, "scenarios": {{\n{body}\n}}}}\n', encoding="utf-8", newline="\n")
+    tmp.replace(path)
+
+
 @dataclass(order=True)
 class Job:
     priority: int
@@ -177,6 +212,7 @@ class WhatIf:
         self.max_queued = max_queued
         self.runs_override = runs_override        # tests: fewer replays than spec.n_runs
         self.scenarios: dict[str, Scenario] = {}
+        self.precomputed: dict[str, dict[str, Scenario]] = {}   # match id -> cache key -> scenario run ahead (Bx11)
         self._keys: dict[str, str] = {}           # cache key -> scenario id
         self._queue: asyncio.PriorityQueue[Job] = asyncio.PriorityQueue()
         self._order = itertools.count()
@@ -381,8 +417,10 @@ class WhatIf:
                              models=self.models, record=steps.record, prefs=prefs, chain_id=chain)
 
     def _stored(self, match_id: str) -> dict[str, Scenario]:
+        """Scenarios finished earlier: the result store's over the ones run ahead of time."""
         results = self.adapters.results
-        return results.scenarios(match_id) if results is not None else {}
+        stored = results.scenarios(match_id) if results is not None else {}
+        return {**ahead, **stored} if (ahead := self.precomputed.get(match_id)) else stored
 
     def _keep(self, key: str, scenario: Scenario) -> None:
         self.scenarios[scenario.scenario_id] = scenario
@@ -395,7 +433,8 @@ class WhatIf:
         return scenario
 
     async def warm(self, match_id: str, per_pivot: int, wait: float = 600.0) -> None:
-        """Queue the first `per_pivot` chips of every pivot of a match behind what viewers ask for.
+        """Queue the first `per_pivot` chips of every pivot of a match behind what viewers ask for, not
+        counting the chips run ahead of time: those are queued too, for their comparison only.
 
         Pivots come from the worker, so this waits (up to `wait` seconds) for the candidates to settle.
         """
@@ -405,19 +444,29 @@ class WhatIf:
             if pivots and all(p.status != "pending" for p in pivots):
                 break
             await asyncio.sleep(10)
-        queued = 0
+        ahead = {(s.spec.pivot_id, s.spec.type) for s in self.precomputed.get(match_id, {}).values()
+                 if s.spec.n_runs == DEFAULT_RUNS}
+        queued = replays = 0
         for pivot in await repo.list_pivots(match_id):
             if pivot.status == "rejected":
                 continue
             match = await repo.get_match(match_id)
             assert match is not None
-            for option in [o for o in await self.options(pivot, match) if o.enabled][:per_pivot]:
+            fresh = 0
+            for option in [o for o in await self.options(pivot, match) if o.enabled]:
+                if (pivot.pivot_id, option.type) not in ahead:
+                    if fresh >= per_pivot:
+                        continue
+                    fresh += 1
                 try:
-                    if (await self.submit(pivot.pivot_id, option.type, priority=WARM)).status != "completed":
-                        queued += 1
+                    scenario = await self.submit(pivot.pivot_id, option.type, priority=WARM)
                 except (LookupError, ValueError, OverflowError) as exc:
                     log.warning("what-if warm-up skipped %s %s: %s", pivot.pivot_id, option.type, exc)
-        log.info("what-if warm-up for %s: %d scenarios queued", match_id, queued)
+                    continue
+                if scenario.status != "completed":
+                    queued += 1
+                    replays += scenario.result is None
+        log.info("what-if warm-up for %s: %d scenarios queued, %d of them to replay", match_id, queued, replays)
 
     async def prewarm(self, match_id: str, languages: list[Language], wait: float = 3600.0) -> int:
         """Translate every finished scenario of a match into `languages` ahead of the viewers (Ax39).
@@ -608,4 +657,5 @@ async def get_scenario(request: Request, scenario_id: str, lang: Language = "en"
     return await whatif.in_language(scenario, lang)
 
 
-__all__ = ["WhatIf", "chip", "cache_key", "router", "seed_base", "with_params"]
+__all__ = ["WhatIf", "chip", "cache_key", "load_precomputed", "precomputed_path", "router", "seed_base",
+           "with_params", "write_precomputed"]
