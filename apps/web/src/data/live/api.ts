@@ -1,7 +1,7 @@
 // REST client for the endpoints in apps/api/src/pivot_api/routes.py. Paths are relative, so the
 // Vite dev server proxies them to the local API and a same-origin deploy needs nothing else.
 import type {
-  Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, Scenario, ScenarioSpec, TrackingFrame,
+  AgentTrace, Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, Scenario, ScenarioSpec, TrackingFrame,
   ViewerPrefs,
 } from "@pivot/contracts";
 
@@ -109,6 +109,10 @@ export const api = {
       body: JSON.stringify(body),
     }),
   getScenario: (scenarioId: string) => request<Scenario>(`/scenarios/${encodeURIComponent(scenarioId)}`),
+  /** Every agent step for one match, grouped by chain_id and in step order (Ax4). */
+  listMatchTraces: (id: string) => request<AgentTrace[]>(`${m(id)}/traces`),
+  /** The chains whose input_ref is this pivot id, a candidate the Judge turned down included; 404 when neither exists. */
+  listPivotTraces: (pivotId: string) => request<AgentTrace[]>(`/pivots/${encodeURIComponent(pivotId)}/traces`),
   /** The WebSocket URL for one match's feed. */
   negotiate: async (id: string) => {
     const { url } = await request<{ url: string }>(`/negotiate?match_id=${encodeURIComponent(id)}`, { method: "POST" });

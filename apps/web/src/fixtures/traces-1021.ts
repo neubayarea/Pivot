@@ -1,6 +1,7 @@
 // Agent traces for the demo-1021 pivots, in the shape the worker writes (AgentTrace, D06).
 // 38′ and 74′ pass the Verifier first time; 63′ is the demo moment: the Verifier rejects a
-// number, the Explainer rewrites with the feedback, and the second draft passes.
+// number, the Explainer rewrites with the feedback, and the second draft passes. At 51′ the Judge
+// looks at a candidate and turns it down, so it never becomes a pivot.
 import type { AgentTrace } from "@pivot/contracts";
 import { MATCH_ID } from "./demo-1021";
 
@@ -13,7 +14,7 @@ const EXPLAINER_PROMPT = "9c41e0d58a13";
 function chain(pivotId: string, steps: StepSpec[]): AgentTrace[] {
   const chainId = `chain-${pivotId}`;
   return steps.map((s, step) => ({
-    trace_id: `${chainId}:${step}`, chain_id: chainId, step, match_id: MATCH_ID, input_ref: `${MATCH_ID}:${pivotId}`,
+    trace_id: `${chainId}:${step}`, chain_id: chainId, step, match_id: MATCH_ID, input_ref: pivotId,
     model: null, tokens: 0, prompt_hash: null, verdict: null, ...s,
   }));
 }
@@ -35,6 +36,9 @@ export const DEMO_TRACES: AgentTrace[] = [
     judge("is_pivot=true severity=3: the red card left Northvale a man down for the rest of the match.", 880),
     explainer("Red card tilted control to Harbour City", 3610),
     pass(36),
+  ]),
+  ...chain(`${MATCH_ID}:p51`, [
+    { ...judge("is_pivot=false severity=1: one long ball, and the press was back within two minutes.", 760), status: "rejected" },
   ]),
   ...chain("pv-63", [
     judge("is_pivot=true severity=3: the substitution removed Harbour City's outlet on the left.", 910),

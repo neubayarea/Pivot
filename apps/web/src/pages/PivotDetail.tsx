@@ -111,7 +111,7 @@ export default function PivotDetail() {
         <h2>{pivotHeadline(pivot, teams, tr)}</h2>
         <span className="acts">
           <Link to={`/trace/${pivot.pivot_id}`} className="btn">
-            Agent trace
+            {tr("trace.kicker")}
           </Link>
           <Link to={`/whatif/${pivot.pivot_id}`} className="btn pri">
             {tr("detail.whatIf")}
