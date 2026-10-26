@@ -20,6 +20,7 @@ from pivot_core.domain import (
 from pivot_core.domain.context import Competition
 from pivot_worker import context as ctx
 from pivot_worker import explainer as ex
+from pivot_worker.template import context_text as ctx_text
 from pivot_worker.template import template_explain
 from pivot_worker.testing import event
 from pivot_worker.verifier import verify
@@ -116,8 +117,23 @@ def test_template_cites_context_about_the_trigger_player(events, stats):
     evs = sub_events(events)
     narrative = template_explain(candidate(), events=evs, stats=stats, team_names=TEAMS, context=items())
     cited = [s for s in narrative.sentences if s.context_ids]
-    assert cited and cited[0].context_ids == ["e1"] and len(narrative.sentences) == 3
+    # The reunion, as a sentence: effects ("first game back ...") are notes for the simulator (#219).
+    assert cited and cited[0].context_ids == ["h09-c1"] and len(narrative.sentences) == 3
+    assert cited[0].text == "R. Okafor played for Harbour before."
     assert verify(narrative, pivot_minute=63, events=evs, stats=stats, context=items()).passed
+
+
+def test_template_writes_each_kind_of_context_as_a_whole_sentence():
+    # Not "R. Okafor and L. Varga: feud" or "Off the pitch: X and Y: former teammate" (#219).
+    by_id = {i.context_id: i for i in items()}
+    assert ctx_text(by_id["r1"], {"h09"}) == "R. Okafor and L. Varga do not get on."
+    assert ctx_text(by_id["r1"], {"a-coach"}) == "L. Varga and R. Okafor do not get on."   # the one in the event first
+    assert ctx_text(by_id["n1"], {"a04"}) == "In the news before the match: Harbour defender seen out late."
+    assert ctx_text(by_id["h09-c1"], {"h09"}) == "R. Okafor played for Harbour before."
+    assert ctx_text(by_id["e1"], {"h09"}) is None
+    mates = ctx.ContextItem("r2", "relationship", ("a04", "h09"), "T. Brandt and R. Okafor: former teammate",
+                            ("T. Brandt", "R. Okafor"), "former_teammate")
+    assert ctx_text(mates, {"h09"}) == "R. Okafor and T. Brandt used to be teammates."
 
 
 def test_demo_fixture_gives_the_writers_off_field_stories():

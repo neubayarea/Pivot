@@ -380,6 +380,7 @@ PHRASES: dict[str, dict[str, str]] = {
         "injury": "{team} lost a player to injury at {at}.", "injury_h": "An injury changes the game",
         "stat": "{owner} {label} {verb} from {a} to {b} in the next five minutes.",
         "stat_fan": "{owner} {label} {verb} to {b} in the next five minutes.",
+        "stat_fan_possession_pct": "{team} had the ball {b} of the time in the next five minutes.",
         "rose": "rose", "fell": "fell",
         "momentum": "From there the momentum swung towards {team}.", "momentum_h": "Momentum swings to {team}",
         "momentum_lost": "From there {team} lost their grip on the game.", "momentum_lost_h": "{team} lose their grip",
@@ -422,9 +423,11 @@ LABELS = {
            "xg": "los goles esperados"},
 }
 FAN_LABELS = {
-    "zh": {"threat_total": "制造的威胁", "passes_final_third": "打到对方门前区域的传球", "shots": "射门次数"},
+    "zh": {"threat_total": "制造的威胁", "passes_final_third": "打到对方门前区域的传球", "shots": "射门次数",
+           "shots_on_target": "射正次数", "box_entries": "攻进禁区的次数", "possession_pct": "控球率"},
     "es": {"threat_total": "el peligro generado", "passes_final_third": "los pases cerca del área rival",
-           "shots": "los disparos"},
+           "shots": "los disparos", "shots_on_target": "los disparos a puerta", "box_entries": "las llegadas al área",
+           "possession_pct": "la posesión"},
 }
 
 # Fallback wording for what-if comparisons (comparator.template_comparison).

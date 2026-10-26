@@ -6,8 +6,8 @@ import pytest
 from pivot_core.domain import ExplanationSentence, Narrative, PivotCandidate, ViewerPrefs
 from pivot_worker import explainer as ex
 from pivot_worker.template import template_explain
-from pivot_worker.testing import event
-from pivot_worker.verifier import verify
+from pivot_worker.testing import FakeStats, event
+from pivot_worker.verifier import numbers_in, verify
 from pivot_worker.vocabulary import JARGON
 
 TEAMS = {"home": "Rovers", "away": "Harbour"}
@@ -56,12 +56,15 @@ def test_fan_versions_may_not_use_jargon(events, stats):
 
 @pytest.mark.parametrize("prefs", ex.DEFAULT_VERSIONS)
 def test_template_versions_pass_for_both_audiences(events, stats, prefs):
+    if prefs.audience == "fan":                   # something a fan can count changed too (#242)
+        stats = FakeStats({**stats.values, ("shots", "home", (58, 63)): 1, ("shots", "home", (63, 68)): 4})
     narrative = template_explain(candidate(), events=events, stats=stats, team_names=TEAMS, prefs=prefs)
     assert narrative.prefs == prefs
     assert verify(narrative, pivot_minute=63, events=events, stats=stats).passed
     text = " ".join(s.text for s in narrative.sentences)
     if prefs.audience == "fan":
-        assert "danger created" in text
+        assert "Rovers' shots rose to 4" in text and "threat" not in text and "danger" not in text
+        assert all(len(numbers_in(s.text, "en")) <= 1 for s in narrative.sentences)
         assert not any(re.search(rf"\b{re.escape(j.lower())}\b", text.lower()) for j in JARGON)
     else:
         assert "threat created" in text

@@ -28,6 +28,7 @@ class ContextItem:
     subject_ids: tuple[str, ...]              # people it is about
     text: str                                 # plain English, shown to the writer
     subject_names: tuple[str, ...] = ()       # how a sentence may name them, matched by the Verifier
+    relation: str = ""                        # relationships: the RelationshipKind ("former_teammate", ...)
 
 
 def context_items(
@@ -43,8 +44,8 @@ def context_items(
     def who(person_id: str) -> str:
         return names.get(person_id, person_id)
 
-    def item(context_id: str, kind: str, subjects: tuple[str, ...], text: str) -> ContextItem:
-        return ContextItem(context_id, kind, subjects, text, tuple(who(s) for s in subjects))
+    def item(context_id: str, kind: str, subjects: tuple[str, ...], text: str, relation: str = "") -> ContextItem:
+        return ContextItem(context_id, kind, subjects, text, tuple(who(s) for s in subjects), relation)
 
     def effects(story: bool) -> list[ContextItem]:
         return [item(e.effect_id, "effect", (e.subject_id,), f"{who(e.subject_id)}: {e.note}")
@@ -54,7 +55,7 @@ def context_items(
     items += [item(n.news_id, "news", (n.subject_id,), f"{who(n.subject_id)}: {n.headline}")
               for n in context.news if n.public]
     items += [item(r.relationship_id, "relationship", (r.person_id, r.other_id),
-                   f"{who(r.person_id)} and {who(r.other_id)}: {r.kind.replace('_', ' ')}")
+                   f"{who(r.person_id)} and {who(r.other_id)}: {r.kind.replace('_', ' ')}", r.kind)
               for r in context.relationships]
     for person_id, stint in reunions:
         role = "coached" if stint.as_coach else "played for"
