@@ -1,121 +1,126 @@
 1
-00:00:00,100 --> 00:00:05,402
+00:00:00,100 --> 00:00:05,289
 Match stats tell you what happened: 57%
 possession, 13 shots.
 
 2
-00:00:05,452 --> 00:00:07,507
+00:00:05,339 --> 00:00:07,350
 Not why the game turned.
 
 3
-00:00:08,100 --> 00:00:12,926
+00:00:07,600 --> 00:00:12,179
 Pivot finds the moments that turned a
 match, explains why,
 
 4
-00:00:12,976 --> 00:00:16,793
+00:00:12,229 --> 00:00:15,850
 and lets you replay it with one thing
 changed.
 
 5
-00:00:17,100 --> 00:00:21,162
+00:00:16,100 --> 00:00:20,162
 Here's a synthetic match. Harbour City 3,
 Northgate 1.
 
 6
-00:00:21,212 --> 00:00:24,588
+00:00:20,212 --> 00:00:23,588
 Pivot found three turning points. A red
 card.
 
 7
-00:00:24,638 --> 00:00:28,166
+00:00:23,638 --> 00:00:27,166
 A substitution that pulled Harbour City
 deeper.
 
 8
-00:00:28,216 --> 00:00:31,364
+00:00:27,216 --> 00:00:30,364
 And a second change that won control back.
 
 9
-00:00:32,100 --> 00:00:38,180
+00:00:31,100 --> 00:00:37,180
 Pick one. The AI explains why it mattered,
 and every number is checked.
 
 10
-00:00:38,230 --> 00:00:43,793
+00:00:37,230 --> 00:00:42,793
 Northgate's passes fell from 12 to 6.
 Hover it to see its source.
 
 11
-00:00:44,100 --> 00:00:46,836
+00:00:43,100 --> 00:00:45,713
 So did the red card decide it?
 
 12
-00:00:46,886 --> 00:00:53,336
+00:00:45,763 --> 00:00:51,926
 Remove it, and Pivot replays the rest of
 the match 200 times each way.
 
 13
-00:00:53,386 --> 00:00:59,650
-Harbour City's win chance drops from 80%
-to 52%. A clear difference.
+00:00:51,976 --> 00:00:58,850
+Northgate's shots double, and Harbour
+City's win chance drops from 80% to 52%.
 
 14
-00:01:00,100 --> 00:01:04,619
-Two minutes after the red card, Harbour
-City scored.
+00:00:59,100 --> 00:01:03,584
+Two minutes after the card, Harbour City
+scored from a corner.
 
 15
-00:01:04,669 --> 00:01:07,079
-Here it is at quarter speed.
+00:01:03,634 --> 00:01:08,850
+At quarter speed: four attackers, three
+defenders, nobody tight on them.
 
 16
-00:01:08,100 --> 00:01:13,793
-From a corner. Four attackers, three
-defenders, and nobody tight on them.
+00:01:09,100 --> 00:01:14,538
+And it's personal. Switch to Fan, pick
+Harbour City, follow Darbelnoez,
 
 17
-00:01:15,100 --> 00:01:19,507
-One click, and it's all in Chinese. Or
-Spanish.
+00:01:14,588 --> 00:01:19,254
+and the story is told from your side. In
+Chinese, or Spanish.
 
 18
-00:01:20,100 --> 00:01:24,412
+00:01:19,304 --> 00:01:21,650
+Every version is checked again.
+
+19
+00:01:22,100 --> 00:01:26,430
 Every card comes from a Microsoft Agent
 Framework workflow.
 
-19
-00:01:24,462 --> 00:01:28,256
-A Judge confirms the moment. An Explainer
-writes it.
-
 20
-00:01:28,306 --> 00:01:30,844
-A Verifier recomputes every number.
+00:01:26,480 --> 00:01:30,290
+A Judge confirms the moment, an Explainer
+writes it,
 
 21
-00:01:30,894 --> 00:01:36,536
-Here, it caught the model giving Harbour
-City the other team's pass accuracy,
+00:01:30,340 --> 00:01:32,889
+a Verifier recomputes every number.
 
 22
-00:01:36,586 --> 00:01:37,793
-and sent it back.
+00:01:32,939 --> 00:01:38,531
+Here it caught the model giving Harbour
+City the other team's pass accuracy,
 
 23
-00:01:38,100 --> 00:01:41,085
-The agents run on Azure AI Foundry.
+00:01:38,581 --> 00:01:39,793
+and sent it back.
 
 24
-00:01:41,135 --> 00:01:45,507
+00:01:40,100 --> 00:01:42,817
+The agents run on Azure AI Foundry.
+
+25
+00:01:42,867 --> 00:01:46,850
 Results live in Cosmos DB, matches in Blob
 Storage.
 
-25
-00:01:46,100 --> 00:01:50,407
+26
+00:01:47,100 --> 00:01:51,315
 Every match here is synthetic, as the
 rules require.
 
-26
-00:01:50,457 --> 00:01:53,507
+27
+00:01:51,365 --> 00:01:54,350
 Next: real match data. This is Pivot.
