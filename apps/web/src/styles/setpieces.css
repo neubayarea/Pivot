@@ -1,6 +1,8 @@
 /* Set pieces and shot clips (Ax37). */
-.set-shots .more-bd { grid-template-columns: minmax(0, 1fr); }
-.set-shots .seg { justify-self: start; flex-wrap: wrap; }
+/* This fold shares .more-bd with "More details" but none of its areas or fixed rows (Ax41), which
+   squeezed the tabs into a thin column; here it is one plain column. */
+.set-shots .more-bd { grid-template: none / minmax(0, 1fr); }
+.set-shots .seg { justify-self: start; flex-wrap: wrap; max-width: 100%; }
 .set-shots h4 { margin: 0; font-family: var(--pv-label); font-size: 15px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 
 .sp, .sh { display: grid; gap: 12px; }
@@ -10,10 +12,12 @@
 .sp-sum .away b { color: var(--pv-away); }
 .sp-all { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 
-.sp-split { display: grid; grid-template-columns: minmax(240px, 340px) 1fr; gap: 16px; align-items: start; }
-.sp-list { list-style: none; margin: 0; padding: 0; display: grid; border: 2px solid var(--pv-ink); max-height: 560px; overflow-y: auto; }
+/* List left, pitch right. The pitch keeps to 52% of the window's height so the list, the pitch and
+   the notes under it fit one 1440x900 screen; the list takes the rest of the width. */
+.sp-split { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, min(100% - 436px, 52vh * 105 / 68)); gap: 16px; align-items: start; }
+.sp-list { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; border: 2px solid var(--pv-ink); max-height: min(640px, 52vh + 190px); overflow-y: auto; overscroll-behavior: contain; container-type: inline-size; }
 .sp-list li + li { border-top: 1px solid var(--pv-hair); }
-.sp-list button { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 3.6em 3.2em 1fr auto; grid-template-areas: "m t k r" "m t n r";
+.sp-list button { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 3em 3em minmax(0, 1fr) auto; grid-template-areas: "m t k r" "m t n r";
   gap: 0 8px; align-items: baseline; padding: 6px 8px; font-family: var(--pv-label); font-size: 13px; cursor: pointer; }
 .sp-list button:hover, .sp-list button:focus-visible { background: var(--pv-gold-soft); }
 .sp-list button:focus-visible { outline: 2px solid var(--pv-ink); }
@@ -23,9 +27,14 @@
 .sp-list .home .tm { color: var(--pv-home); }
 .sp-list .away .tm { color: var(--pv-away); }
 .sp-list button[aria-pressed="true"] .tm { color: inherit; }
-.sp-list .kd { grid-area: k; font-weight: 700; }
+.sp-list .kd { grid-area: k; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-list .nm { grid-area: n; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-list .sp-res { grid-area: r; align-self: center; }
+.sp-list .sp-res { grid-area: r; align-self: center; justify-self: end; }
+/* A narrow list (phones, longer Spanish words) puts the result under the taker, lined up with the kind. */
+@container (max-width: 380px) {
+  .sp-list button { grid-template-columns: 3em 3em minmax(0, 1fr); grid-template-areas: "m t k" "m t n" "m t r"; }
+  .sp-list .sp-res { justify-self: start; margin-top: 3px; }
+}
 
 .sp-res, .sh-out { font-family: var(--pv-label); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border: 2px solid currentColor; white-space: nowrap; }
 .sp-res.shot { background: var(--pv-gold-soft); color: var(--pv-ink); border-color: var(--pv-gold); }
@@ -43,7 +52,7 @@
 .pitch .sp-wall { fill: none; stroke: var(--pv-ink); stroke-width: 9; stroke-opacity: .35; stroke-linecap: round; stroke-linejoin: round; }
 .pitch .ball-trail { stroke: var(--pv-ink); stroke-width: 2.5; stroke-dasharray: 2 5; stroke-linecap: round; stroke-linejoin: round; stroke-opacity: .7; }
 
-.sh-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; max-height: 620px; overflow-y: auto; padding: 0 6px 6px 0; }
+.sh-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; max-height: min(660px, 52vh + 210px); overscroll-behavior: contain; overflow-y: auto; padding: 0 6px 6px 0; }
 .sh-card { all: unset; box-sizing: border-box; display: grid; gap: 3px; padding: 8px 10px; border: 2px solid var(--pv-ink); border-left-width: 6px;
   background: var(--pv-sheet); font-family: var(--pv-label); font-size: 13px; cursor: pointer; }
 .sh-card.home { border-left-color: var(--pv-home); }
@@ -70,9 +79,12 @@
 .clip-ctl .play:disabled { opacity: .5; cursor: default; }
 .clip-chain { margin: 0; font-family: var(--pv-label); font-size: 13px; }
 
+@media (max-width: 960px) {
+  .sp-split { grid-template-columns: minmax(0, 1fr); }
+  .sp-split > * { min-width: 0; }
+}
 @media (max-width: 760px) {
-  .sp-split { grid-template-columns: 1fr; }
-  .sp-list { max-height: 260px; }
+  .sp-list { max-height: 300px; }
   .sh-cards { display: flex; overflow-x: auto; max-height: none; padding-bottom: 8px; }
   .sh-card { flex: 0 0 160px; }
   .set-shots .more-bd { padding: 0 10px 12px; }
