@@ -1,0 +1,636 @@
+<title>Pivot Match Page Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one question at the top, the momentum strip as the navigator, three moment cards, one open moment, everything else folded below.
+   Tokens are the live site's Matchday Programme tokens (apps/web/src/styles/tokens.css). */
+:root {
+  --pv-paper: #ECEEE8; --pv-sheet: #F8F8F3; --pv-ink: #121A3A; --pv-ink-2: #4A5272; --pv-hair: #C3C8BE;
+  --pv-dot: rgba(18, 26, 58, 0.09); --pv-bar: #121A3A; --pv-on-bar: #F8F8F3; --pv-bar-line: #3A4570;
+  --pv-gold: #FFC53A; --pv-on-gold: #121A3A; --pv-gold-soft: #FFE6A3; --pv-red: #D22B3C; --pv-on-red: #FFFFFF;
+  --pv-home: #1C2C6E; --pv-away: #D22B3C; --pv-draw: #B9BFB4; --pv-on-team: #FFFFFF;
+  --pv-ok-bg: #121A3A; --pv-ok-fg: #FFC53A; --pv-warn-bg: #FCEBC4; --pv-warn-fg: #7A4700;
+  --pv-pitch: #D9DFD5; --pv-pitch-line: #121A3A; --pv-ball: #FFFFFF;
+  --pv-display: "Alfa Slab One", "Rockwell", Georgia, "Noto Sans SC", serif;
+  --pv-body: "Archivo", "Noto Sans SC", system-ui, sans-serif;
+  --pv-label: "Archivo Narrow", "Archivo", "Noto Sans SC", sans-serif;
+  --pv-fs-xs: 11px; --pv-fs-sm: 13px; --pv-fs-md: 15px; --pv-fs-lg: 19px; --pv-fs-xl: 26px; --pv-fs-2xl: 38px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pv-paper: #0D1330; --pv-sheet: #161E42; --pv-ink: #F1EFE4; --pv-ink-2: #A9B0CC; --pv-hair: #2E3762;
+    --pv-dot: rgba(241, 239, 228, 0.06); --pv-bar: #060A1E; --pv-on-bar: #F1EFE4; --pv-bar-line: #2E3762;
+    --pv-gold-soft: #3B3418; --pv-red: #FF5A67; --pv-home: #8FA6FF; --pv-away: #FF6B76; --pv-draw: #4A5276; --pv-on-team: #0D1330;
+    --pv-ok-bg: #FFC53A; --pv-ok-fg: #121A3A; --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451;
+    --pv-pitch: #1B2A4A; --pv-pitch-line: #C9CDE0; --pv-ball: #FFFFFF;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --pv-paper: #0D1330; --pv-sheet: #161E42; --pv-ink: #F1EFE4; --pv-ink-2: #A9B0CC; --pv-hair: #2E3762;
+  --pv-dot: rgba(241, 239, 228, 0.06); --pv-bar: #060A1E; --pv-on-bar: #F1EFE4; --pv-bar-line: #2E3762;
+  --pv-gold-soft: #3B3418; --pv-red: #FF5A67; --pv-home: #8FA6FF; --pv-away: #FF6B76; --pv-draw: #4A5276; --pv-on-team: #0D1330;
+  --pv-ok-bg: #FFC53A; --pv-ok-fg: #121A3A; --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451;
+  --pv-pitch: #1B2A4A; --pv-pitch-line: #C9CDE0; --pv-ball: #FFFFFF;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: radial-gradient(circle, var(--pv-dot) 1.1px, transparent 1.4px) 0 0 / 7px 7px, var(--pv-paper);
+  color: var(--pv-ink); font-family: var(--pv-body); font-size: var(--pv-fs-md); line-height: 1.6;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--pv-gold); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1240px; margin: 0 auto; }
+
+/* prototype strip */
+.proto { background: var(--pv-gold); color: var(--pv-on-gold); font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .12em; text-transform: uppercase; }
+.proto .wrap { display: flex; gap: 12px; flex-wrap: wrap; padding-block: 4px; }
+
+/* ---------- Top bar ---------- */
+.top { background: var(--pv-bar); color: var(--pv-on-bar); }
+.top .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; flex-wrap: wrap; }
+.brand { font-family: var(--pv-display); font-size: 24px; line-height: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
+.brand::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--pv-gold); }
+.score { display: flex; align-items: center; gap: 8px; font-family: var(--pv-display); font-size: 20px; text-transform: uppercase; white-space: nowrap; }
+.score .sc { background: var(--pv-gold); color: var(--pv-on-gold); min-width: 34px; text-align: center; padding: 1px 6px; }
+.score .tm { font-size: 15px; letter-spacing: .02em; }
+.ft { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; border: 2px solid currentColor; padding: 0 6px; }
+.sp { flex: 1; }
+.pick { display: flex; align-items: center; gap: 6px; font-family: var(--pv-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.pick select { background: var(--pv-bar); color: var(--pv-on-bar); border: 2px solid var(--pv-bar-line); padding: 3px 6px; font-family: var(--pv-label); font-weight: 600; letter-spacing: .02em; text-transform: none; max-width: 230px; }
+.seg { display: inline-flex; border: 2px solid currentColor; }
+.seg button { font-family: var(--pv-label); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border: 0; background: transparent; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--pv-gold); color: var(--pv-on-gold); }
+.gear { position: relative; }
+.gear > button { display: inline-flex; align-items: center; gap: 6px; font-family: var(--pv-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 4px 10px; border: 2px solid var(--pv-on-bar); background: transparent; color: var(--pv-on-bar); cursor: pointer; }
+.gear > button svg { width: 14px; height: 14px; }
+.menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 300px; max-width: calc(100vw - 32px); background: var(--pv-sheet); color: var(--pv-ink); border: 3px solid var(--pv-ink); box-shadow: 6px 6px 0 var(--pv-ink); padding: 12px 14px; display: grid; gap: 12px; }
+.menu .row { display: grid; gap: 4px; }
+.menu .lbl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; color: var(--pv-ink-2); }
+.menu select { border: 2px solid var(--pv-ink); background: var(--pv-sheet); padding: 3px 6px; }
+.menu .links { display: flex; gap: 8px; flex-wrap: wrap; border-top: 2px solid var(--pv-ink); padding-top: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); letter-spacing: .1em; text-transform: uppercase; padding: 6px 12px; border: 2px solid var(--pv-ink); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--pv-gold-soft); }
+.btn.pri { background: var(--pv-gold); color: var(--pv-on-gold); box-shadow: 3px 3px 0 var(--pv-ink); }
+
+/* ---------- Lead ---------- */
+.lead { padding-block: 26px 10px; display: grid; gap: 8px; }
+.kicker { justify-self: start; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); letter-spacing: .14em; text-transform: uppercase; background: var(--pv-red); color: var(--pv-on-red); padding: 3px 10px; }
+.lead h1 { font-family: var(--pv-display); font-weight: 400; font-size: clamp(26px, 4vw, 44px); line-height: 1.08; text-transform: uppercase; max-width: 22em; }
+.lead h1 em { font-style: normal; background: var(--pv-gold); color: var(--pv-on-gold); padding: 0 .18em; }
+.lead p { color: var(--pv-ink-2); font-size: var(--pv-fs-lg); max-width: 46em; }
+
+/* ---------- Momentum strip ---------- */
+.card { background: var(--pv-sheet); border: 3px solid var(--pv-ink); padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.card h3, .h3 { font-family: var(--pv-label); font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; border-bottom: 3px solid var(--pv-ink); padding-bottom: 3px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.card h3 small, .h3 small { font-size: 11px; letter-spacing: .08em; color: var(--pv-ink-2); font-weight: 600; }
+.legend { display: flex; gap: 14px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .axis { stroke: var(--pv-ink); stroke-width: 1.5; }
+.chart .grid { stroke: var(--pv-hair); stroke-width: 1; }
+.chart text { fill: var(--pv-ink-2); font-family: var(--pv-label); font-weight: 600; font-size: 12px; }
+.chart .mk { cursor: pointer; }
+.chart .mk circle { fill: var(--pv-sheet); stroke: var(--pv-ink); stroke-width: 3; transition: fill .15s; }
+.chart .mk text { fill: var(--pv-ink); font-family: var(--pv-display); font-size: 20px; }
+.chart .mk line { stroke: var(--pv-ink); stroke-width: 2; stroke-dasharray: 4 3; }
+.chart .mk:hover circle { fill: var(--pv-gold-soft); }
+.chart .mk.on circle { fill: var(--pv-gold); }
+.chart .mk.on text { fill: var(--pv-on-gold); }
+.chart .mk.on line { stroke-dasharray: none; stroke-width: 3; }
+.chart .mk:focus-visible { outline: none; }
+.chart .mk:focus-visible circle { stroke: var(--pv-gold); stroke-width: 5; }
+.chart .gl { font-size: 11px; fill: var(--pv-ink); }
+
+/* ---------- Moment cards ---------- */
+.moments { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.mc { text-align: left; background: var(--pv-sheet); border: 3px solid var(--pv-ink); padding: 12px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; cursor: pointer; align-content: start; position: relative; }
+.mc:hover { background: var(--pv-gold-soft); }
+.mc[aria-pressed="true"] { background: var(--pv-gold-soft); box-shadow: 6px 6px 0 var(--pv-ink); transform: translate(-2px, -2px); }
+.mc[aria-pressed="true"]::after { content: ""; position: absolute; left: 50%; bottom: -17px; width: 22px; height: 22px; margin-left: -11px; background: var(--pv-ink); clip-path: polygon(0 0, 100% 0, 50% 60%); }
+.badge { grid-row: span 3; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--pv-ink); display: grid; place-items: center; font-family: var(--pv-display); font-size: 22px; background: var(--pv-sheet); color: var(--pv-ink); }
+.mc[aria-pressed="true"] .badge { background: var(--pv-gold); color: var(--pv-on-gold); }
+.mc .min { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.mc .min b { font-family: var(--pv-display); font-weight: 400; font-size: 28px; line-height: 1; }
+.tag { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .12em; text-transform: uppercase; padding: 1px 6px; border: 2px solid var(--pv-ink); }
+.mc .hd { font-weight: 700; font-size: 16px; line-height: 1.3; }
+.mc .sub { color: var(--pv-ink-2); font-size: var(--pv-fs-sm); line-height: 1.45; }
+.mc .ft2 { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--pv-hair); padding-top: 6px; margin-top: 4px; font-size: var(--pv-fs-xs); font-family: var(--pv-label); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.dir { display: inline-flex; align-items: center; gap: 5px; }
+.dir i { width: 10px; height: 10px; display: inline-block; }
+.stamp { display: inline-flex; align-items: center; gap: 4px; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .1em; text-transform: uppercase; padding: 1px 6px; border: 2px solid currentColor; line-height: 1.5; white-space: nowrap; }
+.stamp.ok { background: var(--pv-ok-bg); color: var(--pv-ok-fg); border-color: var(--pv-ok-bg); }
+.stamp.warn { background: var(--pv-warn-bg); color: var(--pv-warn-fg); border-color: var(--pv-warn-bg); }
+
+/* ---------- Open moment ---------- */
+.open { border: 3px solid var(--pv-ink); background: var(--pv-sheet); box-shadow: 6px 6px 0 var(--pv-ink); }
+.open-hd { background: var(--pv-bar); color: var(--pv-on-bar); display: flex; align-items: center; gap: 14px; padding: 10px 16px; flex-wrap: wrap; }
+.open-hd .badge { width: 40px; height: 40px; font-size: 19px; grid-row: auto; background: var(--pv-gold); color: var(--pv-on-gold); border-color: var(--pv-gold); }
+.open-hd h2 { font-family: var(--pv-display); font-weight: 400; font-size: clamp(20px, 2.4vw, 28px); line-height: 1.1; text-transform: uppercase; flex: 1 1 18em; min-width: 0; }
+.open-hd .at { font-family: var(--pv-label); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: var(--pv-fs-sm); white-space: nowrap; }
+.open-hd .at b { background: var(--pv-gold); color: var(--pv-on-gold); padding: 0 6px; margin-left: 4px; }
+.open-bd { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; padding: 16px; }
+.why { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.why ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: s; }
+.why li { counter-increment: s; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; font-size: 16.5px; line-height: 1.55; max-width: 42em; }
+.why li::before { content: counter(s); font-family: var(--pv-display); font-size: 18px; color: var(--pv-red); line-height: 1.4; }
+.claim { background: linear-gradient(transparent 58%, var(--pv-gold-soft) 58%); font-weight: 700; white-space: nowrap; cursor: help; }
+.claim::after { content: "✓"; font-size: 10px; vertical-align: super; color: var(--pv-ink-2); margin-left: 1px; }
+.ev { display: inline-flex; gap: 5px; flex-wrap: wrap; margin-left: 6px; vertical-align: 1px; }
+.ev button { font-family: var(--pv-label); font-weight: 700; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border: 1.5px solid var(--pv-ink-2); color: var(--pv-ink-2); background: transparent; padding: 0 5px; line-height: 1.6; cursor: pointer; }
+.ev button:hover, .ev button.on { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); }
+.prov { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); border-top: 1px solid var(--pv-hair); padding-top: 8px; }
+.prov a { color: var(--pv-ink); font-weight: 600; cursor: pointer; }
+.side { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.pitch { width: 100%; max-width: 100%; height: auto; display: block; border: 2px solid var(--pv-ink); background: var(--pv-pitch); }
+.pitch .ln { fill: none; stroke: var(--pv-pitch-line); stroke-width: .35; opacity: .7; }
+.pitch .h circle { fill: var(--pv-home); }
+.pitch .a circle { fill: var(--pv-away); }
+.pitch text { fill: var(--pv-on-team); font-family: var(--pv-label); font-weight: 700; font-size: 2.1px; text-anchor: middle; dominant-baseline: central; }
+.pitch .key circle { stroke: var(--pv-gold); stroke-width: .8; }
+.pitch .ball { fill: var(--pv-ball); stroke: var(--pv-ink); stroke-width: .35; }
+.cap { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cap b { color: var(--pv-ink); }
+
+/* what-if */
+.wi { grid-column: 1 / -1; border-top: 3px solid var(--pv-ink); padding-top: 14px; display: grid; gap: 12px; }
+.wi-hd { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wi-hd h3 { font-family: var(--pv-display); font-weight: 400; font-size: 22px; text-transform: uppercase; border: 0; padding: 0; }
+.wi-hd p { color: var(--pv-ink-2); font-size: var(--pv-fs-sm); }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { font-family: var(--pv-label); font-weight: 700; font-size: 14px; letter-spacing: .04em; padding: 7px 14px; border: 2px solid var(--pv-ink); background: var(--pv-sheet); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.chip:hover { background: var(--pv-gold-soft); }
+.chip[aria-pressed="true"] { background: var(--pv-gold); color: var(--pv-on-gold); box-shadow: 3px 3px 0 var(--pv-ink); }
+.chip small { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; opacity: .75; }
+.res { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 24px; align-items: start; background: var(--pv-paper); border: 2px solid var(--pv-ink); padding: 14px; }
+.res.idle { background: var(--pv-sheet); border-style: dashed; align-items: center; }
+.res.idle .src { color: var(--pv-ink-2); }
+.res.illu { background: repeating-linear-gradient(-45deg, var(--pv-paper) 0 10px, var(--pv-sheet) 10px 20px); }
+.bars { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 10px; align-items: center; }
+.bar-row > span { font-family: var(--pv-label); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.2; }
+.bar { display: flex; height: 28px; border: 2px solid var(--pv-ink); overflow: hidden; }
+.bar div { display: flex; align-items: center; justify-content: center; font-family: var(--pv-label); font-weight: 700; font-size: 12px; color: var(--pv-on-team); white-space: nowrap; overflow: hidden; transition: flex-basis .4s ease; min-width: 0; }
+.bar .w { background: var(--pv-home); }
+.bar .d { background: var(--pv-draw); color: var(--pv-ink); }
+.bar .l { background: var(--pv-away); }
+.bar-key { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--pv-fs-xs); font-family: var(--pv-label); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pv-ink-2); padding-left: calc(7.5em + 10px); }
+.bar-key i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; }
+.verdict { display: grid; gap: 8px; min-width: 0; }
+.verdict .big { font-size: 19px; font-weight: 700; line-height: 1.4; }
+.verdict .big .claim { white-space: normal; }
+.verdict .src { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+@media (prefers-reduced-motion: reduce) { .bar div { transition: none; } .mc[aria-pressed="true"] { transform: none; } }
+
+/* ---------- More details ---------- */
+details.more { border: 3px solid var(--pv-ink); background: var(--pv-sheet); }
+details.more > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-family: var(--pv-label); font-weight: 700; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; flex-wrap: wrap; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "+"; font-family: var(--pv-display); font-size: 22px; width: 28px; height: 28px; display: grid; place-items: center; border: 2px solid var(--pv-ink); line-height: 1; }
+details.more[open] > summary::before { content: "−"; }
+details.more > summary small { font-weight: 600; letter-spacing: .06em; text-transform: none; color: var(--pv-ink-2); font-size: var(--pv-fs-sm); }
+.more-bd { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 0 16px 16px; }
+.replay { display: grid; gap: 8px; }
+.replay .stage { display: grid; place-items: center; text-align: center; min-height: 150px; border: 2px dashed var(--pv-hair); color: var(--pv-ink-2); font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); letter-spacing: .1em; text-transform: uppercase; padding: 12px; }
+.scrub { position: relative; height: 22px; border-top: 3px solid var(--pv-ink); }
+.scrub span { position: absolute; top: -12px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: var(--pv-gold); color: var(--pv-on-gold); border: 2px solid var(--pv-ink); font-family: var(--pv-display); font-size: 11px; display: grid; place-items: center; }
+.evs { list-style: none; margin: 0; padding: 0; display: grid; max-height: 330px; overflow-y: auto; }
+.evs li { display: grid; grid-template-columns: 3.6em 5.6em minmax(0, 1fr); gap: 8px; padding: 5px 2px; border-top: 1px solid var(--pv-hair); font-size: var(--pv-fs-sm); align-items: baseline; }
+.evs li.hit { background: var(--pv-gold-soft); }
+.evs .m { font-family: var(--pv-label); font-weight: 700; font-variant-numeric: tabular-nums; }
+.evs .k { font-family: var(--pv-label); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.evs .k.h { color: var(--pv-home); } .evs .k.a { color: var(--pv-away); }
+.stats { display: grid; gap: 7px; }
+.st { display: grid; grid-template-columns: 3.5em minmax(0, 1fr) 3.5em; gap: 4px 8px; align-items: center; font-size: var(--pv-fs-sm); }
+.st .nm { grid-column: 1 / -1; text-align: center; font-family: var(--pv-label); font-weight: 700; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--pv-ink-2); }
+.st .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+.st .v:last-child { text-align: right; }
+.st .tr { display: flex; height: 8px; background: var(--pv-away); }
+.st .tr div { background: var(--pv-home); }
+.log { display: grid; gap: 10px; }
+.chain { display: grid; gap: 4px; }
+.chain .who { font-family: var(--pv-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.steps { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; }
+.steps span { border: 1.5px solid var(--pv-ink); padding: 0 6px; font-family: var(--pv-label); font-weight: 600; }
+.steps span.bad { border-color: var(--pv-warn-fg); color: var(--pv-warn-fg); background: var(--pv-warn-bg); }
+.steps i { font-style: normal; color: var(--pv-ink-2); }
+
+main { display: grid; gap: 18px; padding-block: 6px 40px; }
+.foot { color: var(--pv-ink-2); font-size: var(--pv-fs-xs); padding-bottom: 20px; }
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 960px) {
+  .open-bd { grid-template-columns: minmax(0, 1fr); }
+  .side { order: -1; }
+  .res { grid-template-columns: minmax(0, 1fr); }
+  .more-bd { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .moments { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .mc { padding: 8px 10px; }
+  .mc .sub { display: none; }
+  .mc .ft2 { display: none; }
+  .badge { width: 38px; height: 38px; font-size: 18px; grid-row: span 2; }
+  .mc .min b { font-size: 22px; }
+  .mc[aria-pressed="true"]::after { display: none; }
+  .mc[aria-pressed="true"] { transform: none; box-shadow: inset 6px 0 var(--pv-gold); }
+  .top .wrap { gap: 8px 10px; }
+  .pick .pl { display: none; }
+  .pick select { max-width: 150px; }
+  .score .tm { display: none; }
+  .open-bd { padding: 12px; }
+  .why li { font-size: 15.5px; }
+  .bar-row { grid-template-columns: 5.6em minmax(0, 1fr); }
+  .bar-key { padding-left: 0; }
+}
+</style>
+
+<div class="proto"><div class="wrap gut"><span id="t-proto"></span><span id="t-proto2" style="opacity:.75"></span></div></div>
+
+<header class="top">
+  <div class="wrap gut">
+    <span class="brand">Pivot</span>
+    <span class="score num"><span class="tm">Harbour City</span><span class="sc">3</span><span class="sc">1</span><span class="tm">Northgate Rovers</span></span>
+    <span class="ft" id="t-ft"></span>
+    <span class="sp"></span>
+    <label class="pick" for="match"><span class="pl" id="t-match"></span>
+      <select id="match"></select>
+    </label>
+    <span class="seg" role="group" aria-label="Language">
+      <button type="button" id="lang-en" data-lang="en">EN</button>
+      <button type="button" id="lang-zh" data-lang="zh">中文</button>
+    </span>
+    <span class="gear">
+      <button type="button" id="gear" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+        <span id="t-settings"></span>
+      </button>
+      <div class="menu" id="menu" hidden>
+        <div class="row"><span class="lbl" id="t-view"></span>
+          <span class="seg" role="group"><button type="button" id="aud-a" aria-pressed="true"></button><button type="button" id="aud-f" aria-pressed="false"></button></span></div>
+        <div class="row"><span class="lbl" id="t-myteam"></span>
+          <span class="seg" role="group"><button type="button" class="tm-b" id="tm-0" aria-pressed="true"></button><button type="button" class="tm-b" id="tm-1" aria-pressed="false">HBC</button><button type="button" class="tm-b" id="tm-2" aria-pressed="false">ROV</button></span></div>
+        <div class="row"><label class="lbl" for="player" id="t-player"></label>
+          <select id="player"><option id="t-noplayer"></option><option>H. Darbelnoez (HBC 10)</option><option>U. Anlitesov (ROV 11)</option><option>E. Lisais (ROV 4)</option></select></div>
+        <div class="row"><span class="lbl" id="t-theme"></span>
+          <span class="seg" role="group"><button type="button" class="th-b" data-th="" aria-pressed="true" id="th-auto"></button><button type="button" class="th-b" data-th="light" aria-pressed="false" id="th-light"></button><button type="button" class="th-b" data-th="dark" aria-pressed="false" id="th-dark"></button></span></div>
+        <div class="links"><button type="button" class="btn pri" id="t-demo"></button><button type="button" class="btn" id="t-tracelink"></button></div>
+      </div>
+    </span>
+  </div>
+</header>
+
+<section class="wrap gut lead">
+  <span class="kicker" id="t-kicker"></span>
+  <h1 id="t-h1"></h1>
+  <p id="t-lede"></p>
+</section>
+
+<main class="wrap gut">
+  <section class="card" aria-labelledby="t-mom">
+    <h3><span id="t-mom"></span><span class="legend"><small><i style="background:var(--pv-home)"></i>Harbour City</small><small><i style="background:var(--pv-away)"></i>Northgate Rovers</small></span></h3>
+    <div style="overflow-x:auto"><svg class="chart" id="chart" viewBox="0 0 1000 250" role="img"></svg></div>
+  </section>
+
+  <section class="moments" id="moments"></section>
+
+  <section class="open" id="open" aria-live="polite"></section>
+
+  <details class="more" id="more">
+    <summary><span id="t-more"></span><small id="t-more2"></small></summary>
+    <div class="more-bd">
+      <section class="card replay"><h3><span id="t-replay"></span><small id="t-replay2"></small></h3>
+        <div class="stage" id="t-replay3"></div>
+        <div class="scrub" id="scrub"></div></section>
+      <section class="card"><h3><span id="t-events"></span><small id="t-events2"></small></h3><ul class="evs" id="evs"></ul></section>
+      <section class="card"><h3><span id="t-stats"></span><small>HBC · ROV</small></h3><div class="stats" id="stats"></div></section>
+      <section class="card" id="logcard"><h3><span id="t-log"></span><small id="t-log2"></small></h3><div class="log" id="log"></div></section>
+    </div>
+  </details>
+  <p class="foot" id="t-foot"></p>
+</main>
+
+<script>
+/* ---------- Real data, read from https://pivot.in-stacks.com/api (M-seed-29) on 2026-10-26 ---------- */
+const TL = [[0,0.014],[1,0.121],[2,0.081],[3,0.124],[4,0.09],[5,-0.026],[6,-0.071],[7,-0.083],[8,0.033],[9,0.039],[10,0.772],[11,0.71],[12,0.428],[13,0.172],[14,0.172],[15,0.142],[16,0.276],[17,0.199],[18,0.174],[19,0.121],[20,0.103],[21,0.116],[22,0.211],[23,0.118],[24,0.369],[25,0.39],[26,0.321],[27,0.296],[28,0.12],[29,0.106],[30,0.099],[31,0.071],[32,-0.138],[33,-0.111],[34,-0.248],[35,-0.286],[36,-0.278],[37,-0.197],[38,-0.103],[39,0.671],[40,0.609],[41,0.511],[42,0.598],[43,0.536],[44,0.557],[45,0.498],[46,0.434],[47,0.24],[48,0.496],[49,0.377],[50,0.332],[51,-0.001],[52,0.389],[53,0.692],[54,0.614],[55,0.665],[56,0.603],[57,0.543],[58,0.492],[59,0.391],[60,0.571],[61,0.511],[62,0.449],[63,0.542],[64,0.64],[65,0.588],[66,0.563],[67,0.508],[68,0.448],[69,0.391],[70,0.365],[71,0.228],[72,-0.027],[73,-0.247],[74,-0.198],[75,-0.107],[76,-0.225],[77,-0.175],[78,-0.16],[79,0.005],[80,0.004],[81,0.002],[82,0.335],[83,0.5],[84,0.232],[85,0.277],[86,0.294],[87,0.289],[88,0.234],[89,-0.393],[90,-0.35],[91,-0.275],[92,-0.257],[93,0.226],[94,0.119],[95,0.203],[96,0.236],[97,0.206],[98,0.7],[99,0.637],[100,0.028],[101,-0.113],[102,-0.098]];
+const HALF2 = 2946; // second half kicked off at 2946 s elapsed (4 min first-half stoppage)
+const FRAMES = {
+  2390:{ball:[101.8,30.9],p:[["h",1,18.6,37.9],["h",2,68.7,65.6],["h",3,61.7,47.4],["h",4,66.4,26.5],["h",5,69.3,10.8],["h",6,93.8,44.8],["h",7,81.2,36.0],["h",8,90.3,25.1],["h",9,100.8,51.8],["h",10,101.8,30.9],["h",11,102.0,23.7],["a",1,101.8,33.9],["a",5,93.9,26.3],["a",3,94.0,38.2],["a",2,91.6,47.9],["a",6,91.5,61.5],["a",8,81.5,25.0],["a",7,83.2,37.6],["a",9,78.5,46.9],["a",10,80.3,58.4],["a",11,70.9,36.2]]},
+  4140:{ball:[99.5,31.8],p:[["h",1,12.9,33.6],["h",2,45.2,49.2],["h",3,42.5,39.5],["h",4,37.5,26.8],["h",5,43.0,13.9],["h",6,55.2,42.8],["h",7,48.6,33.4],["h",8,50.8,24.6],["h",15,58.9,52.3],["h",10,76.1,31.4],["h",17,57.8,14.2],["a",1,99.5,31.8],["a",5,77.9,3.7],["a",3,84.7,24.1],["a",2,86.6,44.8],["a",6,79.6,58.8],["a",18,54.8,8.9],["a",7,57.3,23.5],["a",9,52.3,42.2],["a",17,58.2,58.0],["a",11,37.4,27.1]]},
+  5393:{ball:[5.2,35.0],p:[["h",1,3.3,31.9],["h",2,8.0,36.2],["h",3,7.1,33.3],["h",13,12.0,22.5],["h",5,12.0,11.8],["h",16,22.7,38.2],["h",7,20.5,31.2],["h",8,21.2,19.1],["h",15,23.5,47.4],["h",10,38.2,29.7],["h",17,23.2,15.1],["a",1,86.8,31.9],["a",5,29.8,6.0],["a",3,43.6,22.5],["a",2,40.9,44.6],["a",6,36.4,58.9],["a",18,12.9,11.4],["a",16,20.4,23.9],["a",15,23.5,39.6],["a",17,16.6,50.6],["a",11,5.2,35.0]]}
+};
+// Goals (elapsed minute, team, score after)
+const GOALS = [[10,"h","1–0"],[39,"h","2–0"],[55,"h","3–0"],[89,"a","3–1"]];
+
+// Events the narratives cite, plus the key events list (clock labels exactly as the API gives them)
+const EV = {
+  "m037-s00678": {m:"38′", t:"a", en:"Red card · E. Lisais", zh:"红牌 · E. Lisais"},
+  "m037-s00679": {m:"38′", t:"a", en:"Rovers drop deeper", zh:"Rovers 后撤"},
+  "m039-s00714": {m:"40′", t:"h", en:"Goal · H. Darbelnoez", zh:"进球 · H. Darbelnoez"},
+  "m039-s00716": {m:"40′", t:"h", en:"VAR check", zh:"VAR 复核"},
+  "m066-s01107": {m:"63′", t:"h", en:"Sub · T. Miliez on", zh:"换人 · T. Miliez 上"},
+  "m066-s01108": {m:"63′", t:"h", en:"HBC shape change", zh:"HBC 阵型调整"},
+  "m068-s01146": {m:"65′", t:"a", en:"Sub · N. Halmisenini on", zh:"换人 · N. Halmisenini 上"},
+  "m086-s01499": {m:"83′", t:"a", en:"Sub · K. Tesnoo on", zh:"换人 · K. Tesnoo 上"},
+  "m089-s01553": {m:"86′", t:"a", en:"Goal · U. Anlitesov", zh:"进球 · U. Anlitesov"}
+};
+const EVLIST = [
+  ["11′","h","goal",null,"C. Dargorquina","1–0"],["27′","h","yel",null,"C. Dargorquina"],["34′","a","yel",null,"N. Quinsaberis"],
+  ["38′","a","red","m037-s00678","E. Lisais"],["40′","h","goal","m039-s00714","H. Darbelnoez","2–0"],["48′","h","yel",null,"R. Lafelsao"],
+  ["52′","h","goal",null,"H. Darbelnoez","3–0"],["54′","h","sub",null,"U. Tesanis ↔ C. Dargorquina"],["54′","a","sub",null,"H. Teskalason ↔ A. Halmiov"],
+  ["63′","h","sub","m066-s01107","T. Miliez ↔ C. Felbelroini"],["65′","a","sub","m068-s01146","N. Halmisenini ↔ I. Felmivelez"],
+  ["75′","h","sub",null,"E. Quinvika ↔ C. Tobela"],["75′","a","sub",null,"J. Renfellason ↔ C. Mitesson"],
+  ["83′","h","sub",null,"I. Tobellier ↔ R. Lafelsao"],["83′","a","sub","m086-s01499","K. Tesnoo ↔ X. Mikadoez"],
+  ["86′","a","goal","m089-s01553","U. Anlitesov","3–1"],["90+3′","a","yel",null,"W. Berlio"],["90+6′","h","sub",null,"U. Bervikis ↔ Z. Feltolaov"],["90+6′","a","sub",null,"R. Morfelo ↔ V. Nokanoa"]
+];
+
+/* Narrative sentences: {x: text with {0},{1} claim slots, c: claims [value text, metric label, team, window], e: evidence ids} */
+const PIVOTS = [
+  { id:"M-seed-29:p39", min:39, dir:"h", frame:2390, key:["h",10], llm:true,
+    tag:{en:"Red card", zh:"红牌"}, before:"1–0", after:"2–0",
+    hd:{en:"Red card shifts momentum to Harbour City", zh:"一张红牌让势头倒向 Harbour City"},
+    sub:{en:"Rovers go down to ten men at 38′; Harbour City score two minutes later.", zh:"Rovers 38′ 少一人，两分钟后 Harbour City 进球。"},
+    cap:{en:"40′ · Darbelnoez heads in from a corner. Rovers have 10.", zh:"40′ · Darbelnoez 角球头球破门，Rovers 只剩 10 人"},
+    s:[
+      {en:"Lisais' red card at 38′ forced Northgate Rovers to a mid defensive line and mid press.", zh:"Lisais 在 38′ 被红牌罚下，Northgate Rovers 只能把防线和逼抢都退到中间位置。", c:[], e:["m037-s00678","m037-s00679"]},
+      {en:"Harbour City's passes dropped from {0} to {1} but their pass accuracy stayed high at {2}, enabling control.", zh:"Harbour City 的传球从 {0} 次降到 {1} 次，但传球成功率仍有 {2}，局面一直在他们手里。",
+       c:[["32",{en:"HBC passes",zh:"HBC 传球"},[34,39]],["15",{en:"HBC passes",zh:"HBC 传球"},[39,44]],["80%",{en:"HBC pass accuracy",zh:"HBC 传球成功率"},[39,44]]], e:["m037-s00679","m039-s00714"]},
+      {en:"This control led to Darbelnoez's goal at 40′, extending Harbour City's lead and swinging momentum.", zh:"这种控制带来了 Darbelnoez 40′ 的进球，Harbour City 扩大领先，势头随之转向。", c:[], e:["m039-s00714","m039-s00716"]}
+    ],
+    chips:[
+      {en:"Remove 38′ red card", zh:"取消 38′ 红牌", real:true, b:[.82,.135,.045], f:[.46,.285,.255], runs:200,
+       v:{en:"Without Lisais' red card, Harbour City win {0} of the time instead of {1}. Rovers' chance goes from {2} to {3}.", zh:"如果 Lisais 没被罚下，Harbour City 的赢面从 {1} 降到 {0}，Rovers 从 {2} 升到 {3}。", c:["46%","82%","5%","26%"]}},
+      {en:"Disallow 40′ goal", zh:"40′ 进球不算", real:true, b:[.955,.035,.01], f:[.785,.17,.045], runs:200,
+       v:{en:"If the 40′ goal is ruled out, Harbour City's win chance drops from {1} to {0}, and a draw goes from {2} to {3}.", zh:"如果 40′ 这个进球不算，Harbour City 的赢面从 {1} 降到 {0}，平局从 {2} 升到 {3}。", c:["79%","96%","4%","17%"]}},
+      {en:"Press higher from 40′", zh:"Rovers 40′ 起压上逼抢", real:false, b:[.955,.035,.01], f:[.90,.07,.03],
+       v:{en:"If ten-man Rovers press higher, Harbour City still win about {0} of the time (was {1}).", zh:"10 人的 Rovers 就算压上逼抢，Harbour City 仍有约 {0} 的赢面（原来 {1}）。", c:["90%","96%"]}}
+    ]},
+  { id:"M-seed-29:p69", min:69, dir:"a", frame:4140, key:["h",15], llm:false,
+    tag:{en:"Substitution", zh:"换人"}, before:"3–0", after:"3–0",
+    hd:{en:"Harbour City change shifts the balance", zh:"Harbour City 换人后，场面倒向 Rovers"},
+    sub:{en:"Miliez comes on at 63′ and Rovers start getting into the final third.", zh:"63′ Miliez 替补上场，之后 Rovers 开始频繁打到前场。"},
+    cap:{en:"65′ · Miliez (15) now on the left; Rovers' new man Halmisenini (18) wide right.", zh:"65′ · 替补上场的 Miliez（15 号）在左路，Rovers 新换上的 Halmisenini（18 号）在右路"},
+    s:[
+      {en:"Harbour City made a substitution at 63′.", zh:"Harbour City 在 63′ 换人。", c:[], e:["m066-s01107"]},
+      {en:"Off the pitch: C. Felbelroini and E. Lisais: former teammate.", zh:"场外：C. Felbelroini 和 E. Lisais 曾是队友。", c:[], e:["m066-s01107"]},
+      {en:"Northgate Rovers' final-third passes rose from {0} to {1} in the next five minutes.", zh:"此后五分钟，Northgate Rovers 打进前场三区的传球从 {0} 次升到 {1} 次。",
+       c:[["2",{en:"ROV final-third passes",zh:"ROV 前场三区传球"},[64,69]],["9",{en:"ROV final-third passes",zh:"ROV 前场三区传球"},[69,74]]], e:["m066-s01107","m066-s01108","m068-s01146"]}
+    ],
+    chips:[
+      {en:"Cancel 63′ substitution", zh:"取消 63′ 换人", real:false, b:[.97,.025,.005], f:[.975,.02,.005],
+       v:{en:"Keeping Felbelroini on barely matters: Harbour City still win about {0} of the time.", zh:"不换下 Felbelroini 几乎没影响：Harbour City 仍有约 {0} 的赢面。", c:["97%"]}},
+      {en:"Move substitution to 75′", zh:"换人推迟到 75′", real:false, b:[.97,.025,.005], f:[.97,.025,.005],
+       v:{en:"Making the change later leaves the result where it was, about {0} for Harbour City.", zh:"晚一点换人，结果不变，Harbour City 赢面仍约 {0}。", c:["97%"]}},
+      {en:"Press higher from 65′", zh:"HBC 65′ 起压上逼抢", real:false, b:[.97,.025,.005], f:[.98,.017,.003],
+       v:{en:"Pressing higher nudges Harbour City from {1} to {0}.", zh:"压上逼抢让 Harbour City 的赢面从 {1} 略升到 {0}。", c:["98%","97%"]}}
+    ]},
+  { id:"M-seed-29:p89", min:89, dir:"a", frame:5393, key:["a",11], llm:true,
+    tag:{en:"Goal", zh:"进球"}, before:"3–0", after:"3–1",
+    hd:{en:"Northgate Rovers seize late momentum shift", zh:"Northgate Rovers 尾声抢回势头"},
+    sub:{en:"Rovers' 83′ change pays off: Anlitesov scores at 86′.", zh:"Rovers 83′ 换人见效，Anlitesov 86′ 进球。"},
+    cap:{en:"86′ · Anlitesov (11) scores from inside the six-yard box.", zh:"86′ · Anlitesov（11 号）在小禁区内破门"},
+    s:[
+      {en:"Northgate Rovers' substitution at 83′ refreshed their attack, leading to a goal by U. Anlitesov at 86′.", zh:"Northgate Rovers 在 83′ 换人，进攻有了新鲜血液，U. Anlitesov 在 86′ 进球。", c:[], e:["m086-s01499","m089-s01553"]},
+      {en:"Rovers' momentum swung from {2} to {3}, with their xG rising from {0} to {1} in the same period.", zh:"Rovers 的势头值从 {2} 升到 {3}，同一时段预期进球（xG）从 {0} 升到 {1}。",
+       c:[["0.011",{en:"ROV xG",zh:"ROV xG"},[84,89]],["0.542",{en:"ROV xG",zh:"ROV xG"},[89,94]],["−0.265",{en:"ROV momentum",zh:"ROV 势头均值"},[84,89]],["0.21",{en:"ROV momentum",zh:"ROV 势头均值"},[89,94]]], e:["m086-s01499","m089-s01553"]},
+      {en:"Harbour City's pressing dropped from {0} to {1}, allowing Rovers more space and threat in the final minutes.", zh:"Harbour City 的逼抢从 {0} 次降到 {1} 次，Rovers 在最后几分钟有了更多空间和威胁。",
+       c:[["10",{en:"HBC pressures",zh:"HBC 逼抢"},[84,89]],["2",{en:"HBC pressures",zh:"HBC 逼抢"},[89,94]]], e:["m086-s01499","m089-s01553"]}
+    ],
+    chips:[
+      {en:"Disallow 86′ goal", zh:"86′ 进球不算", real:false, b:[.995,.005,0], f:[.997,.003,0],
+       v:{en:"Harbour City win either way (about {0}). Only the score changes, from 3–1 to 3–0.", zh:"不管进不进，Harbour City 都赢（约 {0}），只是比分从 3–1 变成 3–0。", c:["99%"]}},
+      {en:"Cancel 83′ substitution", zh:"取消 HBC 83′ 换人", real:false, b:[.995,.005,0], f:[.995,.005,0],
+       v:{en:"Keeping Lafelsao on changes nothing that matters: Harbour City still win about {0}.", zh:"不换下 Lafelsao 也改变不了什么：Harbour City 仍约 {0} 赢。", c:["99%"]}},
+      {en:"Press higher from 85′", zh:"HBC 85′ 起压上逼抢", real:false, b:[.995,.005,0], f:[.996,.004,0],
+       v:{en:"More pressing keeps the result the same, about {0} for Harbour City.", zh:"多逼抢一点，结果照旧，Harbour City 约 {0}。", c:["99%"]}}
+    ]}
+];
+
+const TRACES = [
+  {who:{en:"① 40′ pivot",zh:"① 40′ 转折点"}, st:[["judge · mini","2.8s"],["explainer · standard","7.8s"],["verifier","pass"]]},
+  {who:{en:"② 65′ pivot",zh:"② 65′ 转折点"}, st:[["judge · mini","1.5s"],["explainer","timeout 18.6s",1],["template","fallback"]]},
+  {who:{en:"③ 85′ pivot",zh:"③ 85′ 转折点"}, st:[["judge · mini","1.5s"],["explainer · standard","7.2s"],["verifier","pass"]]},
+  {who:{en:"What-if: remove 38′ red card",zh:"假如：取消 38′ 红牌"}, st:[["executor","200 × 2 replays · 604s"],["comparator","2.9s"],["verifier","pass"]]},
+  {who:{en:"What-if: disallow 40′ goal",zh:"假如：40′ 进球不算"}, st:[["executor","200 × 2 replays · 583s"],["comparator","2.6s"],["verifier","rejected: number 40 not in stat sheet",1],["comparator","retry 3.1s"],["verifier","pass"]]}
+];
+
+const MATCHES = [["M-seed-29","HBC 3–1 ROV · seed 29"],["M-seed-606","HBC 2–0 ROV · seed 606"],["M-seed-404","HBC 2–2 ROV · seed 404"],["M-seed-303","HBC 2–1 ROV · seed 303"],["M-seed-212","HBC 2–1 ROV · seed 212"],["M-seed-505","HBC 5–1 ROV · seed 505"],["M-seed-101","HBC 0–3 ROV · seed 101"],["M-api-demo","HBC 1–2 ROV · live demo"]];
+
+const T = {
+  proto:{en:"Redesign prototype · not the live site", zh:"改版原型 · 不是线上页面"},
+  proto2:{en:"Real data from M-seed-29, read-only", zh:"数据取自线上 M-seed-29（只读）"},
+  ft:{en:"Full time", zh:"终场"}, match:{en:"Match", zh:"比赛"}, settings:{en:"Settings", zh:"设置"},
+  view:{en:"Explain it for", zh:"解说口吻"}, audA:{en:"Analyst", zh:"分析师"}, audF:{en:"Fan", zh:"球迷"},
+  myteam:{en:"I support", zh:"我支持"}, none:{en:"Neither", zh:"不选"}, player:{en:"Follow a player", zh:"关注球员"}, noplayer:{en:"Nobody", zh:"不关注"},
+  theme:{en:"Theme", zh:"主题"}, auto:{en:"Auto", zh:"跟随系统"}, light:{en:"Day", zh:"白天"}, dark:{en:"Night", zh:"夜场"},
+  demo:{en:"Replay as live", zh:"按直播重放"}, tracelink:{en:"AI work log", zh:"AI 工作记录"},
+  kicker:{en:"After the match · Harbour City 3–1 Northgate Rovers", zh:"赛后复盘 · Harbour City 3–1 Northgate Rovers"},
+  h1:{en:"The <em>3 moments</em> that changed the course of this match", zh:"改变这场比赛走向的 <em>3 个时刻</em>"},
+  lede:{en:"Pick one. The AI explains why it mattered, with every number checked, then lets you change one decision and see if the result would change.", zh:"点一个看看。AI 会讲清楚这一刻为什么重要，数字都核对过；你还可以改掉一个决定，看看结局会不会变。"},
+  mom:{en:"Who was on top, minute by minute", zh:"每分钟谁占上风"},
+  more:{en:"More details", zh:"更多细节"}, more2:{en:"Full replay · all events · match stats · AI work log", zh:"全场回放 · 全部事件 · 比赛数据 · AI 工作记录"},
+  replay:{en:"Pitch replay", zh:"球场回放"}, replay2:{en:"Whole match", zh:"整场"},
+  replay3:{en:"The current full-pitch replay goes here unchanged, with the three moments marked on its timeline.", zh:"现在的全场球场回放原样放在这里，时间轴上标出三个时刻"},
+  events:{en:"Events", zh:"事件"}, events2:{en:"Goals, cards, subs", zh:"进球、红黄牌、换人"},
+  stats:{en:"Match stats", zh:"比赛数据"}, log:{en:"AI work log", zh:"AI 工作记录"}, log2:{en:"What each model did", zh:"每一步是哪个模型做的"},
+  foot:{en:"Prototype for issue discussion. Narratives, frames, events and the two ① what-if results marked “200 replays” come from the live API. Results marked “illustrative” have not been run.", zh:"供讨论的原型。解说、球员站位、事件，以及 ① 里标着“200 次重放”的两个“假如”结果都来自线上接口；标着“示意”的数字还没真正跑过。"},
+  goal:{en:"Goal", zh:"进球"}, yel:{en:"Yellow", zh:"黄牌"}, red:{en:"Red", zh:"红牌"}, sub:{en:"Sub", zh:"换人"},
+  momTo:{en:"Momentum →", zh:"势头 →"}, verified:{en:"AI · checked", zh:"AI · 已核对"}, template:{en:"Auto summary", zh:"自动摘要"},
+  at:{en:"Score", zh:"比分"},
+  provLLM:{en:"Written by AI. Every highlighted number was checked against the match data; tags link to the events it used.", zh:"AI 撰写。标黄的数字都和比赛数据核对过；小标签是它引用的比赛事件。"},
+  provTpl:{en:"The AI writer timed out here, so this is the built-in summary. Numbers still come from the match data.", zh:"这一条 AI 写作超时了，显示的是内置模板摘要；数字仍来自比赛数据。"},
+  seeLog:{en:"How it was made", zh:"看它是怎么生成的"},
+  wiH:{en:"What if…", zh:"假如……"}, wiP:{en:"Change one thing at this moment. Pivot replays the rest of the match many times and compares.", zh:"改掉这一刻的一件事，Pivot 把剩下的比赛重放很多次，再对比结局。"},
+  actual:{en:"As it happened", zh:"实际"}, hw:{en:"HBC win", zh:"HBC 胜"}, dr:{en:"Draw", zh:"平"}, aw:{en:"ROV win", zh:"ROV 胜"},
+  real:{en:"200 replays each way · cached result · AI comparison checked", zh:"两边各重放 200 次 · 已缓存的真实结果 · AI 对比已核对"},
+  illu:{en:"Illustrative numbers · this one has not been run yet (a real run takes about 10 minutes)", zh:"示意数字 · 这一项还没真正跑过（真跑一次约 10 分钟）"},
+  illuTag:{en:"illustrative", zh:"示意"},
+  checked:{en:"checked", zh:"已核对"},
+  pickChip:{en:"Pick one change above. Nothing runs until you press Start.", zh:"先在上面选一个改动。不按「开始推演」就不会跑。"},
+  willChange:{en:"Change:", zh:"要改的："},
+  howRun:{en:"Pivot replays the rest of the match from {m}, 200 times as it happened and 200 times with the change, then compares.", zh:"Pivot 会从 {m} 起把剩下的比赛照原样重放 200 次、改了之后再重放 200 次，然后对比结局。"},
+  hasCache:{en:"This one has already been run, so the result shows at once.", zh:"这一项之前跑过，按下去马上出结果。"},
+  noCache:{en:"Not run yet: a real run takes about 10 minutes (the prototype shows illustrative numbers).", zh:"这一项还没跑过，真跑约 10 分钟（原型里显示示意数字）。"},
+  run:{en:"Start", zh:"开始推演"},
+  pickOther:{en:"The prototype only has this match.", zh:"原型里只有这一场。"}
+};
+
+/* ---------- helpers ---------- */
+let lang = "zh", sel = 0, chip = [-1, -1, -1], evOn = null;
+const ran = new Set();
+try { const l = localStorage.getItem("pv-proto-lang"); if (l === "en" || l === "zh") lang = l; } catch (e) {}
+const L = (o) => (o && typeof o === "object" ? (o[lang] ?? o.en) : o);
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+function clockLabel(min) { // elapsed minute -> the clock a viewer reads
+  const t = min * 60;
+  if (t < HALF2) { const m = Math.floor(t / 60); return m < 45 ? `${m + 1}` : `45+${m - 44}`; }
+  const m = Math.floor((t - HALF2) / 60); return m < 45 ? `${46 + m}` : `90+${m - 44}`;
+}
+const span = (w) => `${clockLabel(w[0])}′–${clockLabel(w[1] - 1)}′`;
+const elapsedOf = (clock) => clock <= 45 ? clock - 1 : HALF2 / 60 + (clock - 46);
+const pct = (v) => `${Math.round(v * 100)}%`;
+function fill(tpl, claims, asClaim) {
+  return tpl.replace(/\{(\d)\}/g, (_, i) => {
+    const c = claims[+i];
+    if (!asClaim) return `<span class="claim">${esc(c)}</span>`;
+    const tip = `${L(T.checked)}: ${L(c[1])}, ${span(c[2])} = ${c[0]}`;
+    return `<span class="claim" title="${esc(tip)}">${esc(c[0])}</span>`;
+  });
+}
+
+/* ---------- momentum chart ---------- */
+const X0 = 30, X1 = 985, YC = 150, YS = 78, MAXM = 102;
+const xOf = (m) => X0 + (m / MAXM) * (X1 - X0);
+const yOf = (v) => YC - v * YS;
+function drawChart() {
+  const pts = TL.map(([m, v]) => `${xOf(m).toFixed(1)},${yOf(v).toFixed(1)}`);
+  const area = `M${xOf(0)},${YC} L${pts.join(" L")} L${xOf(MAXM)},${YC} Z`;
+  let s = `<defs><clipPath id="up"><rect x="0" y="0" width="1000" height="${YC}"/></clipPath><clipPath id="dn"><rect x="0" y="${YC}" width="1000" height="100"/></clipPath></defs>`;
+  s += `<line class="grid" x1="${X0}" x2="${X1}" y1="${yOf(.5)}" y2="${yOf(.5)}"/><line class="grid" x1="${X0}" x2="${X1}" y1="${yOf(-.5)}" y2="${yOf(-.5)}"/>`;
+  const ht = HALF2 / 60;
+  s += `<line class="grid" x1="${xOf(ht)}" x2="${xOf(ht)}" y1="${yOf(.95)}" y2="${yOf(-.6)}" stroke-dasharray="3 3"/><text x="${xOf(ht) + 4}" y="${yOf(-.55)}">${lang === "zh" ? "半场" : "HT"}</text>`;
+  s += `<path d="${area}" fill="var(--pv-home)" clip-path="url(#up)" opacity=".9"/><path d="${area}" fill="var(--pv-away)" clip-path="url(#dn)" opacity=".9"/>`;
+  s += `<line class="axis" x1="${X0}" x2="${X1}" y1="${YC}" y2="${YC}"/>`;
+  [1, 15, 30, 45, 60, 75, 90].forEach((c) => { const x = xOf(elapsedOf(c)); s += `<text x="${x}" y="${YC + 72}" text-anchor="middle">${c}′</text>`; });
+  GOALS.forEach(([m, t, sc]) => {
+    const x = xOf(m), y = t === "h" ? YC + 16 : YC - 16;
+    s += `<g><circle cx="${x}" cy="${y}" r="9" fill="var(--pv-sheet)" stroke="var(--pv-ink)" stroke-width="2"/><circle cx="${x}" cy="${y}" r="3.2" fill="var(--pv-ink)"/></g>`;
+  });
+  PIVOTS.forEach((p, i) => {
+    const x = xOf(p.min), v = TL[p.min][1];
+    s += `<g class="mk${i === sel ? " on" : ""}" tabindex="0" role="button" data-i="${i}" aria-label="${i + 1}: ${clockLabel(p.min)}′ ${esc(L(p.hd))}">
+      <line x1="${x}" x2="${x}" y1="42" y2="${yOf(v)}"/><circle cx="${x}" cy="24" r="21"/><text x="${x}" y="31" text-anchor="middle">${i + 1}</text>
+      <text class="gl" x="${x + 26}" y="22" style="font-family:var(--pv-label);font-weight:700;font-size:13px;fill:var(--pv-ink)">${clockLabel(p.min)}′</text></g>`;
+  });
+  $("chart").innerHTML = s;
+  $("chart").setAttribute("aria-label", L(T.mom));
+  $("chart").querySelectorAll(".mk").forEach((g) => {
+    g.addEventListener("click", () => pick(+g.dataset.i));
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(+g.dataset.i); } });
+  });
+}
+
+/* ---------- moment cards ---------- */
+function drawCards() {
+  $("moments").innerHTML = PIVOTS.map((p, i) => `
+    <button type="button" class="mc" aria-pressed="${i === sel}" data-i="${i}">
+      <span class="badge">${i + 1}</span>
+      <span class="min"><b>${clockLabel(p.min)}′</b><span class="tag">${esc(L(p.tag))}</span></span>
+      <span class="hd">${esc(L(p.hd))}</span>
+      <span class="sub">${esc(L(p.sub))}</span>
+      <span class="ft2"><span class="dir">${L(T.momTo)} <i style="background:var(--pv-${p.dir === "h" ? "home" : "away"})"></i>${p.dir === "h" ? "Harbour City" : "Northgate Rovers"}</span>
+        <span class="stamp ${p.llm ? "ok" : "warn"}">${esc(L(p.llm ? T.verified : T.template))}</span></span>
+    </button>`).join("");
+  $("moments").querySelectorAll(".mc").forEach((b) => b.addEventListener("click", () => pick(+b.dataset.i)));
+}
+
+/* ---------- mini pitch ---------- */
+function pitchSVG(p) {
+  const f = FRAMES[p.frame];
+  let s = `<svg class="pitch" viewBox="-2 -2 109 72" role="img" aria-label="${esc(L(p.cap))}">
+    <rect class="ln" x="0" y="0" width="105" height="68"/><line class="ln" x1="52.5" y1="0" x2="52.5" y2="68"/><circle class="ln" cx="52.5" cy="34" r="9.15"/>
+    <rect class="ln" x="0" y="13.84" width="16.5" height="40.32"/><rect class="ln" x="88.5" y="13.84" width="16.5" height="40.32"/>
+    <rect class="ln" x="0" y="24.84" width="5.5" height="18.32"/><rect class="ln" x="99.5" y="24.84" width="5.5" height="18.32"/>
+    <rect class="ln" x="-1.5" y="30.34" width="1.5" height="7.32"/><rect class="ln" x="105" y="30.34" width="1.5" height="7.32"/>`;
+  f.p.forEach(([t, n, x, y]) => {
+    const key = t === p.key[0] && n === p.key[1];
+    s += `<g class="${t}${key ? " key" : ""}"><circle cx="${x}" cy="${y}" r="1.9"/><text x="${x}" y="${y}">${n}</text></g>`;
+  });
+  s += `<circle class="ball" cx="${f.ball[0]}" cy="${f.ball[1] - 2.4}" r="1"/></svg>`;
+  return s;
+}
+
+/* ---------- open moment ---------- */
+function bar(v) {
+  return `<div class="bar">${[["w", v[0]], ["d", v[1]], ["l", v[2]]].map(([k, x]) => `<div class="${k}" style="flex:0 0 ${(x * 100).toFixed(1)}%">${x >= .08 ? pct(x) : ""}</div>`).join("")}</div>`;
+}
+function drawOpen() {
+  const p = PIVOTS[sel], c = chip[sel] < 0 ? null : p.chips[chip[sel]];
+  const sents = p.s.map((x) => `<li><span>${fill(L(x), x.c, true)}<span class="ev">${x.e.map((id) => `<button type="button" data-ev="${id}" class="${evOn === id ? "on" : ""}" title="${esc(L(EV[id]))}">${EV[id].m} ${esc(L(EV[id]).split(" · ")[0])}</button>`).join("")}</span></span></li>`).join("");
+  $("open").innerHTML = `
+    <div class="open-hd"><span class="badge">${sel + 1}</span><h2>${clockLabel(p.min)}′ · ${esc(L(p.hd))}</h2>
+      <span class="at">${L(T.at)}<b>${p.before}</b>${p.before !== p.after ? ` → <b>${p.after}</b>` : ""}</span></div>
+    <div class="open-bd">
+      <div class="why">
+        <ol>${sents}</ol>
+        <div class="prov"><span class="stamp ${p.llm ? "ok" : "warn"}">${esc(L(p.llm ? T.verified : T.template))}</span><span>${esc(L(p.llm ? T.provLLM : T.provTpl))}</span><a id="seelog" tabindex="0">${esc(L(T.seeLog))} →</a></div>
+      </div>
+      <div class="side">${pitchSVG(p)}<div class="cap"><span><b>${esc(L(p.cap))}</b></span></div></div>
+      <div class="wi">
+        <div class="wi-hd"><h3>${esc(L(T.wiH))}</h3><p>${esc(L(T.wiP))}</p></div>
+        <div class="chips" role="group">${p.chips.map((x, i) => `<button type="button" class="chip" aria-pressed="${i === chip[sel]}" data-c="${i}">${esc(L(x))}${x.real ? "" : ` <small>${esc(L(T.illuTag))}</small>`}</button>`).join("")}</div>
+        ${!c ? `<div class="res idle"><p class="src">${esc(L(T.pickChip))}</p></div>`
+        : !ran.has(`${sel}:${chip[sel]}`) ? `<div class="res idle"><div class="verdict"><p class="big">${esc(L(T.willChange))} ${esc(L(c))}</p>
+            <p class="src">${esc(L(T.howRun).replace("{m}", clockLabel(p.min) + "′"))} ${esc(L(c.real ? T.hasCache : T.noCache))}</p></div>
+            <div><button type="button" class="btn pri" id="run">${esc(L(T.run))}</button></div></div>`
+        : `<div class="res${c.real ? "" : " illu"}">
+          <div class="bars">
+            <div class="bar-row"><span>${esc(L(T.actual))}</span>${bar(c.b)}</div>
+            <div class="bar-row"><span>${esc(L(c))}</span>${bar(c.f)}</div>
+            <div class="bar-key"><span><i style="background:var(--pv-home)"></i>${L(T.hw)}</span><span><i style="background:var(--pv-draw)"></i>${L(T.dr)}</span><span><i style="background:var(--pv-away)"></i>${L(T.aw)}</span></div>
+          </div>
+          <div class="verdict"><p class="big">${fill(L(c.v), c.v.c, false)}</p><p class="src">${esc(L(c.real ? T.real : T.illu))}</p></div>
+        </div>`}
+      </div>
+    </div>`;
+  $("open").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { chip[sel] = +b.dataset.c; drawOpen(); }));
+  if ($("run")) $("run").addEventListener("click", () => { ran.add(`${sel}:${chip[sel]}`); drawOpen(); });
+  $("open").querySelectorAll(".ev button").forEach((b) => b.addEventListener("click", () => showEvent(b.dataset.ev)));
+  const go = () => { $("more").open = true; $("logcard").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  $("seelog").addEventListener("click", go);
+  $("seelog").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+}
+function showEvent(id) {
+  evOn = evOn === id ? null : id;
+  drawOpen(); drawEvents();
+  if (evOn) { $("more").open = true; const li = document.querySelector(".evs li.hit"); if (li) li.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+
+/* ---------- more details ---------- */
+function drawEvents() {
+  $("evs").innerHTML = EVLIST.map(([m, t, k, id, who, sc]) => `<li class="${id && id === evOn ? "hit" : ""}"><span class="m">${m}</span><span class="k ${t}">${esc(L(T[k]))}</span><span>${esc(who)}${sc ? ` <b class="num">${sc}</b>` : ""}</span></li>`).join("");
+  $("scrub").innerHTML = PIVOTS.map((p, i) => `<span style="left:${(p.min / MAXM) * 100}%">${i + 1}</span>`).join("");
+}
+function drawStats() {
+  const rows = [[{en:"Possession (by passes)",zh:"控球（按传球）"},"57%","43%",.57],[{en:"Shots",zh:"射门"},13,6,13/19],[{en:"On target",zh:"射正"},5,1,5/6],[{en:"xG",zh:"预期进球 xG"},"2.25","0.77",2.25/3.02],[{en:"Passes",zh:"传球"},482,363,482/845],[{en:"Yellow / red",zh:"黄牌 / 红牌"},"2 / 0","2 / 1",.4],[{en:"Pressures",zh:"逼抢"},85,141,85/226]];
+  $("stats").innerHTML = rows.map(([n, a, b, r]) => `<div class="st"><span class="nm">${esc(L(n))}</span><span class="v">${a}</span><span class="tr"><div style="width:${r * 100}%"></div></span><span class="v">${b}</span></div>`).join("");
+}
+function drawLog() {
+  $("log").innerHTML = TRACES.map((c) => `<div class="chain"><span class="who">${esc(L(c.who))}</span><div class="steps">${c.st.map(([a, b, bad], i) => `${i ? "<i>→</i>" : ""}<span class="${bad ? "bad" : ""}">${esc(a)} · ${esc(b)}</span>`).join("")}</div></div>`).join("");
+}
+
+/* ---------- text + controls ---------- */
+function drawText() {
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  const map = { proto:"proto", proto2:"proto2", ft:"ft", match:"match", settings:"settings", view:"view", myteam:"myteam", player:"player", noplayer:"noplayer", theme:"theme", demo:"demo", tracelink:"tracelink", kicker:"kicker", lede:"lede", mom:"mom", more:"more", more2:"more2", replay:"replay", replay2:"replay2", replay3:"replay3", events:"events", events2:"events2", stats:"stats", log:"log", log2:"log2", foot:"foot" };
+  Object.entries(map).forEach(([id, k]) => { const el = $("t-" + id); if (el) el.textContent = L(T[k]); });
+  $("t-h1").innerHTML = L(T.h1);
+  $("aud-a").textContent = L(T.audA); $("aud-f").textContent = L(T.audF); $("tm-0").textContent = L(T.none);
+  $("th-auto").textContent = L(T.auto); $("th-light").textContent = L(T.light); $("th-dark").textContent = L(T.dark);
+  $("lang-en").setAttribute("aria-pressed", lang === "en"); $("lang-zh").setAttribute("aria-pressed", lang === "zh");
+}
+function pick(i) { sel = i; evOn = null; drawChart(); drawCards(); drawOpen(); drawEvents(); }
+function render() { drawText(); drawChart(); drawCards(); drawOpen(); drawEvents(); drawStats(); drawLog(); }
+
+$("match").innerHTML = MATCHES.map(([id, n]) => `<option value="${id}">${n}</option>`).join("");
+$("match").addEventListener("change", (e) => { if (e.target.value !== "M-seed-29") { e.target.value = "M-seed-29"; const k = $("t-kicker"); k.textContent = L(T.pickOther); setTimeout(() => (k.textContent = L(T.kicker)), 2200); } });
+document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { lang = b.dataset.lang; try { localStorage.setItem("pv-proto-lang", lang); } catch (e) {} render(); }));
+$("gear").addEventListener("click", () => { const m = $("menu"); m.hidden = !m.hidden; $("gear").setAttribute("aria-expanded", !m.hidden); });
+document.addEventListener("click", (e) => { if (!e.target.closest(".gear")) { $("menu").hidden = true; $("gear").setAttribute("aria-expanded", "false"); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("menu").hidden = true; $("gear").setAttribute("aria-expanded", "false"); } });
+const segPress = (sel1) => document.querySelectorAll(sel1).forEach((b) => b.addEventListener("click", () => { b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }));
+segPress("#aud-a, #aud-f"); segPress(".tm-b"); segPress(".th-b");
+document.querySelectorAll(".th-b").forEach((b) => b.addEventListener("click", () => { if (b.dataset.th) document.documentElement.dataset.theme = b.dataset.th; else delete document.documentElement.dataset.theme; }));
+$("t-tracelink").addEventListener("click", () => { $("menu").hidden = true; $("more").open = true; $("logcard").scrollIntoView({ behavior: "smooth", block: "start" }); });
+render();
+</script>
