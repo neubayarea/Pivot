@@ -144,6 +144,14 @@ describe("live board states", () => {
     expect(render(<LiveBoard />, matchView({}, "scheduled"))).not.toContain("On the pitch");
   });
 
+  it("gives each part of More details its own grid cell, the line-ups apart from the pitch", () => {
+    const html = render(<LiveBoard />, matchView());
+    // styles/base.css places these cells by name: pitch and stats on top, events and line-ups under, the AI's work below.
+    const cells = [...html.matchAll(/class="card [^"]*\bmore-(\w+)/g)].map((m) => m[1]);
+    expect(cells.sort()).toEqual(["events", "pitch", "roster", "stats", "trace"]);
+    expect(html).toContain("Line-ups");
+  });
+
   it("puts one timeline over the whole replay, and none on the live feed", () => {
     const playback = { playing: true, setPlaying: () => {}, setSpeed: () => {}, restart: () => {}, seek: () => {}, end: 5700 };
     const html = render(<Playback />, matchView({ playback, pivots: [pivot(63, "confirmed")] }));

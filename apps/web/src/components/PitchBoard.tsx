@@ -29,7 +29,8 @@ const LINE_ORDER = ["GK", "DF", "MF", "AM", "FW"];
  * dragging that bar moves the players too; on a match that is not being replayed it shows
  * where everyone stood at the current clock. Ax36: tap a dot or a name in the line-ups to see
  * who it is; the team-shape layer draws each team's lines with its back line, width and depth,
- * and can set them against the five minutes before the last pivot.
+ * and can set them against the five minutes before the last pivot. Ax41: the line-ups are a card
+ * of their own next to the pitch card, so "More details" can put them in their own cell.
  */
 export default function PitchBoard() {
   const { match, playback, squads, sheets, teams, events, pivots, playerName, eventById } = useMatch();
@@ -63,11 +64,22 @@ export default function PitchBoard() {
     : t("board.beforeNow", { from: minuteAt(periods, Math.max(0, from)), to: minuteAt(periods, to + 1) });
 
   const note = t("board.pitchNote", { team: teams.home.short_name });
+
+  const names = { home: teams.home.short_name, away: teams.away.short_name };
+  const roster = (marked: ReadonlySet<string>) => (
+    <Card title={t("board.roster")} className="more-roster">
+      <Roster squads={squads} frame={frame} now={now} events={events} roleOf={roleOf} picked={picked} marked={marked}
+        onPick={setPicked} names={names} />
+    </Card>
+  );
   if (missing) {
     return (
-      <Card title={t("board.pitch")} note={note}>
-        <div className="empty-box muted">{t("board.pitchNone")}</div>
-      </Card>
+      <>
+        <Card title={t("board.pitch")} note={note} className="more-pitch">
+          <div className="empty-box muted">{t("board.pitchNone")}</div>
+        </Card>
+        {roster(new Set())}
+      </>
     );
   }
 
@@ -84,45 +96,47 @@ export default function PitchBoard() {
   // One frame per second of play: at 1× that is a second between frames, faster replays less.
   const stepMs = Math.max(MIN_STEP_MS, 1000 / (playback?.playing ? match.speed : 1));
   const isHome = (id: string) => who(id).home;
-  const names = { home: teams.home.short_name, away: teams.away.short_name };
   return (
-    <Card title={t("board.pitch")} note={note} className="pitch-board">
-      {lineup && (
-        <div className="pb-tools">
-          <span className="seg" role="group" aria-label={t("board.layers")}>
-            <button type="button" aria-pressed={shapeOn} onClick={() => setShapeOn(!shapeOn)}>
-              {t("board.layerShape")}
-            </button>
-            <button type="button" aria-pressed={compare && shapeOn} onClick={() => setCompare(!compare)} disabled={!shapeOn || minute === 0}>
-              {t("board.layerCompare")}
-            </button>
-          </span>
-          <small className="muted">{t("board.legend")}</small>
-        </div>
-      )}
-      {frame ? (
-        <Pitch frame={frame} actions={shots} selected={null} who={who} stepMs={stepMs}
-          label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })}
-          picked={picked} onPick={setPicked} marked={marked} tag={tag}
-          under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />} />
-      ) : (
-        <div className="empty-box muted">{t("board.pitchLoading")}</div>
-      )}
-      <p className="pitch-cap">
-        {latest && (
-          <>
-            <b>{latest.clock_label} · {teams[latest.team].short_name}</b> {describe(latest, playerName, t)}
-          </>
+    <>
+      <Card title={t("board.pitch")} note={note} className="pitch-board more-pitch">
+        {lineup && (
+          <div className="pb-tools">
+            <span className="seg" role="group" aria-label={t("board.layers")}>
+              <button type="button" aria-pressed={shapeOn} onClick={() => setShapeOn(!shapeOn)}>
+                {t("board.layerShape")}
+              </button>
+              <button type="button" aria-pressed={compare && shapeOn} onClick={() => setCompare(!compare)} disabled={!shapeOn || minute === 0}>
+                {t("board.layerCompare")}
+              </button>
+            </span>
+            <small className="muted">{t("board.legend")}</small>
+          </div>
         )}
-        {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
-      </p>
-      {shapeOn && lineup && frame && (
-        <ShapeTable frame={frame} lineup={lineup} before={compare ? before : undefined} beforeLabel={beforeLabel}
-          isHome={isHome} names={names} />
-      )}
-      <Roster squads={squads} frame={frame} now={now} events={events} roleOf={roleOf} picked={picked} marked={marked}
-        onPick={setPicked} names={names} />
-    </Card>
+        <div className="pb-main">
+          {frame ? (
+            <Pitch frame={frame} actions={shots} selected={null} who={who} stepMs={stepMs}
+              label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })}
+              picked={picked} onPick={setPicked} marked={marked} tag={tag}
+              under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />} />
+          ) : (
+            <div className="empty-box muted">{t("board.pitchLoading")}</div>
+          )}
+          <p className="pitch-cap">
+            {latest && (
+              <>
+                <b>{latest.clock_label} · {teams[latest.team].short_name}</b> {describe(latest, playerName, t)}
+              </>
+            )}
+            {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
+          </p>
+          {shapeOn && lineup && frame && (
+            <ShapeTable frame={frame} lineup={lineup} before={compare ? before : undefined} beforeLabel={beforeLabel}
+              isHome={isHome} names={names} />
+          )}
+        </div>
+      </Card>
+      {roster(marked)}
+    </>
   );
 }
 

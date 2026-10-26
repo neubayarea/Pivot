@@ -99,14 +99,15 @@ export default function LiveBoard() {
             {t("moments.more")} <small>{t("moments.moreNote")}</small>
           </summary>
           <div className="more-bd">
+            {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them, the AI's work on its own row. */}
             {!scheduled && <PitchBoard key={match.match_id} />}
-            <Card title={t("board.events")} note={t("board.autoScroll")}>
-              <EventFeed highlight={evidence} />
-            </Card>
-            <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`}>
+            <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`} className="more-stats">
               <MatchStats />
             </Card>
-            <Card title={t("trace.kicker")}>
+            <Card title={t("board.events")} note={t("board.autoScroll")} className="more-events">
+              <EventFeed highlight={evidence} />
+            </Card>
+            <Card title={t("trace.kicker")} className="more-trace">
               <p className="muted">{t("moments.traceNote")}</p>
               <Link to="/trace" className="btn">{t("top.trace", { n: pivots.length })}</Link>
             </Card>

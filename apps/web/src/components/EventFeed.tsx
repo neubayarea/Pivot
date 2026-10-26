@@ -1,8 +1,10 @@
+import { useEffect, useRef } from "react";
 import type { MatchEvent } from "@pivot/contracts";
 import { involves, isRedCard, useMatch } from "../data/match";
 import { isMessageKey, usePrefs, type T } from "../i18n";
 
-const ROWS = 8;
+// Enough to scroll back through a good stretch of the match without drawing every pass of it.
+const ROWS = 200;
 const TICK = { success: " ✓", fail: " ✗" } as const;
 
 export function describe(e: MatchEvent, name: (id: string | null) => string, t: T): string {
@@ -48,9 +50,16 @@ const KEY_TYPES = new Set<MatchEvent["type"]>(["card", "substitution", "tactical
 export default function EventFeed({ highlight }: { highlight: ReadonlySet<string> }) {
   const { events, teams, playerName } = useMatch();
   const { prefs, t } = usePrefs();
+  // Newest first, so following the replay means staying at the top; scrolling down to read stops that until scrolled back.
+  const box = useRef<HTMLDivElement>(null);
+  const follow = useRef(true);
+  const newest = events[0]?.event_id;
+  useEffect(() => {
+    if (follow.current && box.current) box.current.scrollTop = 0;
+  }, [newest]);
   if (!events.length) return <p className="muted">{t("feed.empty")}</p>;
   return (
-    <div className="feed" aria-live="polite">
+    <div className="feed" aria-live="polite" ref={box} onScroll={(e) => (follow.current = e.currentTarget.scrollTop < 24)}>
       {/* The newest rows, plus any older event picked as evidence in "Why it turned". */}
       {events.filter((e, i) => i < ROWS || highlight.has(e.event_id)).map((e) => {
         const key = KEY_TYPES.has(e.type) || e.shot_outcome === "goal" || e.shot_outcome === "disallowed";
