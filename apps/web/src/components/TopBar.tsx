@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import { useMatch } from "../data/match";
@@ -51,6 +51,21 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
     if (!known) onPrefsChange({ ...prefs, focus_player_id: null });
   }, [known]);
 
+  // The settings menu closes on a click elsewhere or Escape, like the player picker.
+  const menu = useRef<HTMLDetailsElement>(null);
+  const close = () => menu.current?.removeAttribute("open");
+  useEffect(() => {
+    const away = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !menu.current?.contains(e.target as Node)) close();
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", away);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", away);
+    };
+  }, []);
+
   return (
     <header className="top">
       <Link to="/" className="brand">
@@ -67,23 +82,31 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
       <MatchPicker />
       <span className="sp" />
       <Segmented
-        label={t("top.audience")}
-        options={audiences(t)}
-        value={prefs.audience}
-        onChange={(audience) => onPrefsChange({ ...prefs, audience })}
-      />
-      {/* Labels hide on mid-width screens, leaving ♥ ▾ and ★ ▾. */}
-      <TeamPicker prefs={prefs} onPrefsChange={onPrefsChange} />
-      <PlayerPicker prefs={prefs} onPrefsChange={onPrefsChange} />
-      <Segmented
         label={t("top.language")}
         options={LANGUAGES}
         value={prefs.language}
         onChange={(language) => onPrefsChange({ ...prefs, language })}
       />
-      <Link to="/trace" className="btn">
-        {t("top.trace", { n: pivots.length })}
-      </Link>
+      {/* Everything else a viewer can set lives behind one button, so the bar keeps to the match. */}
+      <details className="settings" ref={menu}>
+        <summary className="btn">{t("top.settings")}{(fav || player) && <span className="dot" aria-label={t("top.settingsSet")} />}</summary>
+        <div className="settings-pop">
+          <span className="lbl">{t("top.audience")}</span>
+          <Segmented
+            label={t("top.audience")}
+            options={audiences(t)}
+            value={prefs.audience}
+            onChange={(audience) => onPrefsChange({ ...prefs, audience })}
+          />
+          <span className="lbl">{t("top.team.label")}</span>
+          <TeamPicker prefs={prefs} onPrefsChange={onPrefsChange} />
+          <span className="lbl">{t("top.player.label")}</span>
+          <PlayerPicker prefs={prefs} onPrefsChange={onPrefsChange} />
+          <Link to="/trace" className="btn" onClick={close}>
+            {t("top.trace", { n: pivots.length })}
+          </Link>
+        </div>
+      </details>
     </header>
   );
 }

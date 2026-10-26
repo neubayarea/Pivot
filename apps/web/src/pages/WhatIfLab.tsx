@@ -28,14 +28,19 @@ const defaultMoveTo = (options: ScenarioOption[]) => {
 // API (A09), or to the mock when the page runs on the fixture (`?fixture=1`).
 export default function WhatIfLab() {
   const { id = "" } = useParams();
+  const source = useScenarioSource();
+  return <Lab key={id} pivotId={id} source={source} />;
+}
+
+/** Where runs go: the API, or the mock on the fixture. Also used by the board's inline what-if. */
+export function useScenarioSource(): ScenarioApi {
   const view = useMatch();
   const { prefs } = usePrefs();
   const fixture = useFixture();
   // The mock reads the match and language as they are when asked, so the replay ticking on keeps the same one.
   const read = useRef({ view, lang: prefs.language });
   read.current = { view, lang: prefs.language };
-  const source = useMemo(() => (fixture ? mockScenarioApi(() => read.current) : liveScenarioApi), [fixture]);
-  return <Lab key={id} pivotId={id} source={source} />;
+  return useMemo(() => (fixture ? mockScenarioApi(() => read.current) : liveScenarioApi), [fixture]);
 }
 
 export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi }) {
