@@ -1,7 +1,7 @@
 // The pieces of S3 (What-if Lab), kept apart from the page so the tests can render each state.
 // Layout follows "07 S3" in docs/design/matchday-programme.html.
 import { useId } from "react";
-import type { OutcomeDist, Scenario, SimResult } from "@pivot/contracts";
+import type { ArmStats, OutcomeDist, Scenario, ScoreShare, SimResult, Spread } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { ApiError } from "../data/live/api";
 import type { MatchView } from "../data/match";
@@ -9,7 +9,7 @@ import {
   OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, useComparisonIn, useOptionMinute,
   type Outcome, type RunState, type ScenarioApi, type ScenarioOption,
 } from "../data/scenarios";
-import { narrativeLang, usePrefs, useT, type T } from "../i18n";
+import { narrativeLang, usePrefs, useT, type MessageKey, type T } from "../i18n";
 import Button from "./Button";
 import LangTag from "./LangTag";
 import Stamp from "./Stamp";
@@ -26,9 +26,49 @@ const SEG_CLASS: Record<Outcome, string> = { home_win: "h", draw: "d", away_win:
 const outcomeShort = (k: Outcome, teams: Teams, t: T) =>
   k === "draw" ? t("whatif.draw") : teams[k === "home_win" ? "home" : "away"].short_name;
 
-/** "a Harbour City win", "a draw": for the verdict sentence. */
-const outcomeLong = (k: Outcome, teams: Teams, t: T) =>
-  k === "draw" ? t("whatif.outcome.draw") : t("whatif.outcome.win", { team: teams[k === "home_win" ? "home" : "away"].name });
+/** "3–1": a final score, home first. */
+const scoreText = (s: ScoreShare) => `${s.home}–${s.away}`;
+
+/** What the verdict sentence needs, all of it read off the result (no model writes these numbers). */
+export type StoryInput = {
+  result: Pick<SimResult, "baseline" | "counterfactual" | "significant" | "baseline_stats" | "counterfactual_stats">;
+  /** The scenario type, the option's minute and its label, for the "If …" clause. */
+  type: string;
+  minute: string | null;
+  change: string;
+  pressLower?: boolean;
+  teams: Teams;
+};
+
+/** The "If …" clause: what was changed, in words. Types without one read "With the change (…)". */
+function ifClause({ type, minute, change, pressLower }: StoryInput, t: T): string {
+  const known = ["cancel_substitution", "remove_red_card", "remove_goal", "move_substitution"];
+  if (minute !== null && known.includes(type)) return t(`whatif.if.${type}` as MessageKey, { minute });
+  if (minute !== null && type === "change_press") return t(pressLower ? "whatif.if.change_press.lower" : "whatif.if.change_press.higher", { minute });
+  return t("whatif.if.other", { change });
+}
+
+/**
+ * The result as one sentence: "Without the 38′ red card, Harbour City's chance of winning falls
+ * from 82% to 46%, and the most likely score goes from 3–1 to 1–1". The outcome is the one the big
+ * number shows; the score clause needs both arms' stats (results stored before Bx10 have none).
+ */
+export function storyLine(input: StoryInput, t: T): string {
+  const { result: r, teams } = input;
+  const { outcome } = biggestShift(r);
+  const [before, after] = [pct(r.baseline[outcome]), pct(r.counterfactual[outcome])];
+  const way = after > before ? "up" : after < before ? "down" : "same";
+  const chance = outcome === "draw"
+    ? t(`whatif.story.draw.${way}`, { before, after })
+    : t(`whatif.story.win.${way}`, { team: teams[outcome === "home_win" ? "home" : "away"].name, before, after });
+  const [was, now] = [r.baseline_stats?.top_scores[0], r.counterfactual_stats?.top_scores[0]];
+  const vars = { if: ifClause(input, t), chance };
+  if (!was || !now) return t("whatif.storyShort", vars);
+  const score = scoreText(was) === scoreText(now)
+    ? t("whatif.story.scoreSame", { before: scoreText(was) })
+    : t("whatif.story.score", { before: scoreText(was), after: scoreText(now) });
+  return t("whatif.story", { ...vars, score });
+}
 
 type ChipsProps = {
   options: ScenarioOption[];
@@ -189,6 +229,57 @@ export function Ranges({ result, teams }: { result: Pick<SimResult, "baseline" |
   );
 }
 
+const ROWS: { key: MessageKey; of: (s: ArmStats["home"]) => Spread; digits: number }[] = [
+  { key: "whatif.arms.shots", of: (s) => s.shots, digits: 1 },
+  { key: "whatif.arms.onTarget", of: (s) => s.shots_on_target, digits: 1 },
+  { key: "whatif.arms.xg", of: (s) => s.xg, digits: 2 },
+  { key: "whatif.arms.red", of: (s) => s.red_cards, digits: 2 },
+];
+
+/** The two arms next to each other (Bx10): their likeliest final scores, then each side's numbers from the replay start. */
+export function ArmCompare({ was, now, teams, from }: { was: ArmStats; now: ArmStats; teams: Teams; from: string }) {
+  const t = useT();
+  const scores = (a: ArmStats) => (
+    <ul className="scores">
+      {a.top_scores.slice(0, 3).map((s) => (
+        <li key={scoreText(s)} aria-label={t("whatif.arms.scoreShare", { score: scoreText(s), share: pct(s.share) })}>
+          <b>{scoreText(s)}</b> <small>{pct(s.share)}%</small>
+        </li>
+      ))}
+    </ul>
+  );
+  const pair = (a: ArmStats, row: (typeof ROWS)[number]) =>
+    `${row.of(a.home).mean.toFixed(row.digits)} – ${row.of(a.away).mean.toFixed(row.digits)}`;
+  return (
+    <div className="arms">
+      <span className="label muted">{t("whatif.arms.title")} <small>{t("whatif.arms.note", { minute: from })}</small></span>
+      <table className="ba">
+        <thead>
+          <tr>
+            <th>{t("whatif.arms.teams", { home: teams.home.short_name, away: teams.away.short_name })}</th>
+            <th>{t("whatif.arms.asPlayed")}</th>
+            <th>{t("whatif.arms.changed")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{t("whatif.arms.scores")}</td>
+            <td>{scores(was)}</td>
+            <td>{scores(now)}</td>
+          </tr>
+          {ROWS.map((row) => (
+            <tr key={row.key}>
+              <td>{t(row.key)}</td>
+              <td>{pair(was, row)}</td>
+              <td>{pair(now, row)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 type ResultProps = {
   state: Extract<RunState, { phase: "done" }>;
   /** The chip that was run, for its label. */
@@ -220,9 +311,12 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
         {cached && <Stamp tone="line">{t("whatif.cached")}</Stamp>}
       </div>
       <div className={`verdict${shift.significant ? "" : " flat"}`}>
-        <span className="big num">{shift.points > 0 ? "+" : shift.points < 0 ? "−" : "±"}{Math.abs(shift.points)}</span>
+        <span className="big num">
+          {shift.points > 0 ? "+" : shift.points < 0 ? "−" : "±"}{Math.abs(shift.points)}<small>{t("whatif.pts")}</small>
+        </span>
         <span className="t">
-          {t(shift.points < 0 ? "whatif.verdict.less" : "whatif.verdict.more", { outcome: outcomeLong(shift.outcome, teams, t) })}
+          {storyLine({ result: r, type: scenario.spec.type, minute: option ? minuteOf(option) : from, change,
+            pressLower: !!option && /lower/i.test(option.label), teams }, t)}
           <br />
           <Stamp tone={shift.significant ? "ok" : "line"}>{t(shift.significant ? "whatif.significant" : "whatif.notSignificant")}</Stamp>
         </span>
@@ -231,6 +325,9 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
         <Distribution label={t("whatif.asPlayed", { minute: from })} dist={r.baseline} teams={teams} />
         <Distribution label={t("whatif.changed", { change })} dist={r.counterfactual} teams={teams} significant={r.significant} />
       </div>
+      {r.baseline_stats && r.counterfactual_stats && (
+        <ArmCompare was={r.baseline_stats} now={r.counterfactual_stats} teams={teams} from={from} />
+      )}
       <Ranges result={r} teams={teams} />
       <div className="why">
         <span className="label muted">{t("whatif.comparison")}</span>
