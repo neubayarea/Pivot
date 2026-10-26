@@ -96,7 +96,7 @@ def test_parse_rejects_bad_shapes():
         judge.parse_verdict('{"is_pivot": "maybe"}', candidate(), set())
 
 
-@pytest.mark.parametrize("swing,severity", [(0.1, 1), (-0.35, 2), (0.6, 3)])
+@pytest.mark.parametrize("swing,severity", [(0.1, 1), (-0.25, 2), (0.4, 3)])
 def test_fallback_severity_follows_the_swing(swing, severity):
     v = judge.fallback_verdict(candidate(swing=swing))
     assert v.is_pivot and v.severity == severity and v.trigger_event_ids == ["m063-s01042"]

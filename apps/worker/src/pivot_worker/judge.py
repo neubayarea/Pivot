@@ -194,7 +194,7 @@ def parse_verdict(raw: str | dict, candidate: PivotCandidate, known_ids: Collect
 def fallback_verdict(candidate: PivotCandidate) -> JudgeVerdict:
     """Detector-only verdict for when the Judge is unavailable."""
     swing = abs(candidate.swing)
-    severity = 3 if swing >= 0.5 else 2 if swing >= 0.3 else 1
+    severity = 3 if swing >= 0.33 else 2 if swing >= 0.2 else 1    # Opta-style momentum (MET-024): 0.65 x the old cut-offs
     return JudgeVerdict(is_pivot=True, severity=severity, trigger_event_ids=candidate.key_event_ids[:3],
                         reason="Judge unavailable; marked from the momentum detector alone.")
 

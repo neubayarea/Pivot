@@ -22,15 +22,15 @@ No sign-in is needed. The link opens the demo match, Harbour City 3–1 Northgat
 |---|---|---|
 | 1 | Open the link | The match board: score, momentum chart, the list of **Pivots**, the pitch and match stats. The red lines on the momentum chart are the pivots. |
 | 2 | Click **Start demo**, then **60×** | The match replays from 0′. Momentum is drawn live, players move on the pitch, and each pivot card appears at the minute it was detected. |
-| 3 | Click the **85′** pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1553`. |
+| 3 | Click the **62′** pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1107`. |
 | 4 | Click an evidence number | The mini pitch shows that event (a shot gets an arrow) and the timeline jumps to that second. |
 | 5 | Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar | The explanation is rewritten for that audience and language. It goes through the same checks, so the evidence numbers stay. |
-| 6 | Go back, open the **40′** pivot (the red card), click **What if…** | The What-if Lab, with five scenarios for this moment. |
+| 6 | Go back, open the **38′** pivot (the red card), click **What if…** | The What-if Lab, with five scenarios for this moment. |
 | 7 | Pick **Remove 38′ red card**, keep **200** runs, click **Run simulation** | This scenario was computed in advance, so the result is instant: win/draw/loss "as played" vs "with the change", 95 % ranges, and a short "Why it differs". |
 
 The live server has only 2 CPU cores. Scenarios not computed in advance take a few minutes there and queue behind each other, so please stay with the one in step 7. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
 
-To see what the AI agents did for a pivot, open the raw agent trace: https://pivot.in-stacks.com/api/pivots/M-seed-29:p89/traces. It lists each step (Judge, Explainer, Verifier), the model used, latency, tokens and the verdict.
+To see what the AI agents did for a pivot, open the raw agent trace: https://pivot.in-stacks.com/api/pivots/M-seed-29:p66/traces. It lists each step (Judge, Explainer, Verifier), the model used, latency, tokens and the verdict.
 
 | Pivot detail with evidence | What-if result |
 |---|---|
@@ -73,7 +73,7 @@ flowchart LR
 ```
 
 1. **Simulator.** A possession-chain engine plays a full match with 22 rated players: events (passes, shots with xG, fouls, cards, substitutions, VAR) plus player positions every second. Each match is reproducible from its seed and can be saved at any minute and played on.
-2. **Momentum meter.** Per-minute momentum is `tanh(α · EWMA(threat_home − threat_away))` with a 5-minute half-life. A two-sided CUSUM change-point alarm flags the minutes where it swings and stays swung. These are *candidates*; on simulated matches the alarm raises about 2.5 per match.
+2. **Momentum meter.** Per-minute momentum is built the way Opta builds the Premier League's match momentum: each team's most dangerous moment of the minute (the threat value of where an action starts or successfully ends, capped at 0.1), weighted towards the last 3–4 minutes (1.5-minute half-life), home minus away. A two-sided CUSUM change-point alarm flags the minutes where it swings and stays swung. These are *candidates*: about 2.5 per simulated match, and 1.4 per real match when run on the 64 matches of the 2022 World Cup (StatsBomb open data).
 3. **Detect workflow** (Microsoft Agent Framework `WorkflowBuilder`):
    - **Judge** (LLM) decides whether a candidate really is a turning point and how severe it is.
    - **Explainer** (LLM) writes a headline and up to three sentences. Each sentence cites event ids, and each number cites a stat reference.

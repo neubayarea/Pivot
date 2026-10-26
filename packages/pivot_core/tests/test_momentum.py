@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from pivot_core.analytics import detect_candidates, momentum_series
+from pivot_core.analytics import detect_candidates, momentum_series, severity
 from pivot_core.analytics.momentum import CAP, HALF_LIFE_MIN, possession_value
 from pivot_core.domain import MatchEvent
 from pivot_core.domain.common import PITCH_LENGTH, PITCH_WIDTH
@@ -117,3 +117,8 @@ def test_b06_demo_red_card_and_planted_substitution_are_turning_points(demo):
     # ... and Harbour City sit deeper after their substitution: it turns towards Rovers
     assert any(c["direction"] == "away" and sub.minute - 2 <= c["minute"] <= sub.minute + 6
                and sub.event_id in c["key_event_ids"] for c in cands)
+
+
+@pytest.mark.parametrize("swing,expected", [(0.2, 1), (-0.32, 2), (0.42, 3)])
+def test_b06_severity_cut_offs_are_on_the_opta_scale(swing, expected):
+    assert severity(swing, [], {}) == expected

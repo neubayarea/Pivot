@@ -189,7 +189,8 @@ def test_met_014_turnovers_only_open_play_losses():
 
 
 def test_met_015_momentum_is_seen_from_each_side():
-    es = [ev(1, 60 * m, "pass", outcome="success", threat=0.05) for m in range(1, 10)]
+    es = [ev(m, 60 * m, "pass", location=(80, 34), end_location=(95, 34), outcome="success", threat=0.05)
+          for m in range(1, 10)]                         # MET-024: momentum comes from where the ball gets to
     c = calc(es)
     assert ask(c, "momentum_avg") > 0
     assert ask(c, "momentum_avg", team="away") == -ask(c, "momentum_avg")

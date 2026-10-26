@@ -48,7 +48,7 @@ class FakePipeline:
 
     async def run(self, candidate: PivotCandidate, chain_id: str, record: StepRecorder) -> Pivot:
         swing = abs(candidate.swing)
-        severity = 3 if swing >= 0.5 else 2 if swing >= 0.25 else 1
+        severity = 3 if swing >= 0.33 else 2 if swing >= 0.16 else 1    # MET-024 swings: 0.65 x the old cut-offs
         await record(Step("judge", f"is_pivot=true severity={severity}", model="fake"))
         evidence = candidate.key_event_ids[:4] or [f"{candidate.match_id}:m{candidate.minute}"]
         narrative = Narrative(

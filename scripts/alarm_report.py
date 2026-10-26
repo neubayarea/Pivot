@@ -2,8 +2,9 @@
 """How the momentum alarm (B06) behaves over N simulated matches, plus a picture of a few curves.
 
 Usage: uv run --with matplotlib scripts/alarm_report.py [--matches 30] [--plot alarms.png]
-Reports candidates per match, how many sit near a goal / red card / substitution, and how
-many goals were followed by an alarm within 8 minutes.
+Matches are the demo preset with its two planted events (38' red card, 63' substitution), as
+in scripts/momentum_tune.py (B06-opta). Reports candidates per match, how many sit near a goal /
+red card / substitution, and how many goals were followed by an alarm within 8 minutes.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ import sys
 import numpy as np
 
 from pivot_core.analytics import detect_candidates, momentum_series
-from pivot_core.sim import build_demo_match, simulate
+from pivot_core.sim import DEMO_1021, simulate
 
 
 def main() -> None:
@@ -24,7 +25,7 @@ def main() -> None:
     args = ap.parse_args()
     counts, with_key, goals, goals_hit, kept = [], 0, 0, 0, []
     for n in range(args.matches):
-        out = simulate(build_demo_match(900 + n))
+        out = simulate(DEMO_1021.build(900 + n), plants=list(DEMO_1021.plants))
         ev = out.events_as_models()
         ms = momentum_series(out.match.match_id, ev)
         cands = detect_candidates(out.match.match_id, ms, ev)

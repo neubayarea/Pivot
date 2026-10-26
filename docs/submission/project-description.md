@@ -16,7 +16,7 @@ Pivot spots the turning points of a football match, has AI agents explain why ea
 
 **What Pivot does.** Pivot watches a match minute by minute and does three things:
 
-1. **Finds the pivots.** A momentum meter (an exponentially weighted threat difference) feeds a CUSUM change-point alarm. The alarm flags the minutes where the game swung and stayed swung.
+1. **Finds the pivots.** A momentum meter, built the way Opta builds the Premier League's match momentum (each team's most dangerous moment per minute, weighted towards the last few minutes), feeds a CUSUM change-point alarm. The alarm flags the minutes where the game swung and stayed swung.
 2. **Explains them.** A Judge agent decides whether a candidate is a real turning point. An Explainer agent writes a short explanation in which every sentence cites match events and every number cites a statistic. A deterministic Verifier recomputes each number from the event log and checks the score, the direction of momentum and the cited events. Failed drafts go back with the problems listed. After three failures a correct template is shown instead, so fans never see a wrong number or an error. Explanations come in Analyst or Fan style, in English, Chinese and Spanish.
 3. **Tests them.** In the What-if Lab a fan asks "what if the red card had not been given?". Pivot saves the match at that minute and plays it on hundreds of times with and without the change, using paired random seeds. It shows the win/draw/loss shift with 95 % Wilson intervals, and a Comparator agent explains the difference. The Verifier blocks any wording the numbers do not support.
 
@@ -36,10 +36,10 @@ Pivot spots the turning points of a football match, has AI agents explain why ea
 Live site: https://pivot.in-stacks.com/?match=M-seed-29 (no sign-in; a private window is best).
 
 1. The link opens the demo match, Harbour City 3–1 Northgate Rovers. Click **Start demo**, then **60×**, to watch momentum and the pivots appear live.
-2. Click the **85′** pivot. Read "Why it turned" and click an evidence number (for example `#1553`) to see the event on the pitch.
+2. Click the **62′** pivot. Read "Why it turned" and click an evidence number (for example `#1107`) to see the event on the pitch.
 3. Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar.
-4. Open the **40′** pivot (the red card), click **What if…**, choose **Remove 38′ red card** with **200** runs, and click **Run simulation**. This result was computed in advance and appears instantly. Please avoid other scenarios on the live server: it has 2 CPU cores and new scenarios take several minutes.
-5. Optional: the raw agent trace for a pivot is at https://pivot.in-stacks.com/api/pivots/M-seed-29:p89/traces.
+4. Open the **38′** pivot (the red card), click **What if…**, choose **Remove 38′ red card** with **200** runs, and click **Run simulation**. This result was computed in advance and appears instantly. Please avoid other scenarios on the live server: it has 2 CPU cores and new scenarios take several minutes.
+5. Optional: the raw agent trace for a pivot is at https://pivot.in-stacks.com/api/pivots/M-seed-29:p66/traces.
 
 To run locally without any keys, follow "Run it locally" in the README (`PIVOT_PIPELINE=fake`). Everything works, including every what-if scenario. Explanations are template text in that mode.
 

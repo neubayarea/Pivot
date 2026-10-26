@@ -94,10 +94,10 @@ def demo():
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
-def test_the_demo_69_judge_request_shows_the_drop_deep_and_the_extra_man(demo):
+def test_the_demo_66_judge_request_shows_the_drop_deep_and_the_extra_man(demo):
     events = {e["event_id"]: MatchEvent.model_validate(e) for e in demo["events"]}
     metrics = [MinuteMetric.model_validate(m) for m in demo["metrics"]]
-    candidate = PivotCandidate.model_validate(next(c for c in demo["candidates"] if c["minute"] == 69))
+    candidate = PivotCandidate.model_validate(next(c for c in demo["candidates"] if c["minute"] == 66))
     teams = {"home": demo["match"]["home"]["name"], "away": demo["match"]["away"]["name"]}
     _, messages = judge.build_messages(candidate, events=events, metrics=metrics, stats=FakeStats({}),
                                        team_names=teams)
