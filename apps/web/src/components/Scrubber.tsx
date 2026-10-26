@@ -1,4 +1,4 @@
-import { clockLabel } from "../fixtures/demo-1021";
+import { useClock } from "../data/clock";
 import { useT } from "../i18n";
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
 /** Timeline: drag or play through a window of the match (around a pivot, or all of it), one second a step. */
 export default function Scrubber({ window: [from, to], t, onChange, playing, onPlayingChange, pivotMinutes, marks }: Props) {
   const tr = useT();
+  const { minute, at, clock } = useClock();
   const pct = (s: number) => `${((s - from) / Math.max(1, to - from)) * 100}%`;
   // Anything outside the window would sit past the ends of the track, so it is not drawn.
   const inside = (s: number) => s >= from && s <= to;
@@ -30,12 +31,12 @@ export default function Scrubber({ window: [from, to], t, onChange, playing, onP
         ))}
         {pivotMinutes.filter((m) => inside(m * 60)).map((m) => <i key={m} className="pv-mk" style={{ left: pct(m * 60) }} />)}
         <input type="range" min={from} max={to} step={1} value={t} aria-label={tr("scrub.time")}
-          aria-valuetext={clockLabel(t)} onChange={(e) => onChange(Number(e.target.value))} />
-        <span style={{ left: 0 }}>{Math.floor(from / 60)}′</span>
-        {pivotMinutes.filter((m) => inside(m * 60)).map((m) => <span key={m} className="pv-lbl" style={{ left: pct(m * 60) }}>{m}′</span>)}
-        <span style={{ right: 0 }}>{Math.ceil(to / 60)}′</span>
+          aria-valuetext={clock(t)} onChange={(e) => onChange(Number(e.target.value))} />
+        <span style={{ left: 0 }}>{at(from)}′</span>
+        {pivotMinutes.filter((m) => inside(m * 60)).map((m) => <span key={m} className="pv-lbl" style={{ left: pct(m * 60) }}>{minute(m)}′</span>)}
+        <span style={{ right: 0 }}>{at(Math.max(from, to - 1))}′</span>
       </div>
-      <span className="now num">{clockLabel(t)}</span>
+      <span className="now num">{clock(t)}</span>
     </div>
   );
 }

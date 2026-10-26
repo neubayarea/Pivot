@@ -2,11 +2,12 @@
 // Layout follows "07 S3" in docs/design/matchday-programme.html.
 import { useId } from "react";
 import type { OutcomeDist, Scenario, SimResult } from "@pivot/contracts";
+import { useClock } from "../data/clock";
 import { ApiError } from "../data/live/api";
 import type { MatchView } from "../data/match";
 import {
-  OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, type Outcome, type RunState,
-  type ScenarioOption,
+  OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, useOptionMinute, type Outcome,
+  type RunState, type ScenarioOption,
 } from "../data/scenarios";
 import { useT, type T } from "../i18n";
 import Button from "./Button";
@@ -40,6 +41,7 @@ type ChipsProps = {
 /** One button per scenario; unavailable ones stay focusable and say why, rather than vanishing. */
 export function ScenarioChips({ options, selected, onSelect, teams, moveTo }: ChipsProps) {
   const t = useT();
+  const minuteOf = useOptionMinute();
   const id = useId();
   return (
     <div className="scn" role="group" aria-label={t("whatif.pickLabel")}>
@@ -55,7 +57,7 @@ export function ScenarioChips({ options, selected, onSelect, teams, moveTo }: Ch
             className={o.enabled ? undefined : "off"}
             onClick={() => o.enabled && onSelect(o.type)}
           >
-            <span>{optionLabel(o, t, o.type === "move_substitution" ? moveTo : undefined)}</span>
+            <span>{optionLabel(o, t, o.type === "move_substitution" ? moveTo : undefined, minuteOf(o))}</span>
             {o.team && <small>{teams[o.team].short_name}</small>}
             {reason && <span className="off-why" id={`${id}-${o.type}`}>{reason}</span>}
           </button>
@@ -196,13 +198,15 @@ type ResultProps = {
 
 export function ScenarioResult({ state, option, teams, onReset }: ResultProps) {
   const t = useT();
+  const minuteOf = useOptionMinute();
+  const { minute } = useClock();
   const { scenario, cached } = state;
   const r = scenario.result;
   const n = scenario.spec.n_runs;
   const shift = biggestShift(r);
-  const from = scenario.spec.at_minute + 1;
+  const from = minute(scenario.spec.at_minute);
   const moveTo = typeof scenario.spec.params.new_minute === "number" ? scenario.spec.params.new_minute + 1 : undefined;
-  const change = option ? optionLabel(option, t, moveTo) : scenario.spec.type;
+  const change = option ? optionLabel(option, t, moveTo, minuteOf(option)) : scenario.spec.type;
   const sentences = r.narrative?.sentences ?? [];
   return (
     <div className="result">

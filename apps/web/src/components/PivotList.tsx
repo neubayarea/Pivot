@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
+import { useClock } from "../data/clock";
 import { useMatch, type MatchView } from "../data/match";
 import { useT, type T } from "../i18n";
 import Stamp from "./Stamp";
@@ -30,6 +31,7 @@ export function Severity({ level }: { level: Pivot["severity"] }) {
 export default function PivotList({ activeId }: { activeId: string | null }) {
   const { teams, pivots: all } = useMatch();
   const t = useT();
+  const { minute } = useClock();
   // The checker ruled these out; the live feed already drops them, the fixture never has any.
   const pivots = all.filter((p) => p.status !== "rejected");
   if (!pivots.length) return <p className="muted">{t("pivots.empty")}</p>;
@@ -38,7 +40,7 @@ export default function PivotList({ activeId }: { activeId: string | null }) {
       {pivots.map((p) =>
         p.status === "pending" ? (
           <div key={p.pivot_id} className="pv wait">
-            <span className="m">{p.minute}′</span>
+            <span className="m">{minute(p.minute)}′</span>
             <span className="tt">{t("pivots.checking")}</span>
             <span className="meta">
               <PivotStamp status="pending" />
@@ -46,7 +48,7 @@ export default function PivotList({ activeId }: { activeId: string | null }) {
           </div>
         ) : (
           <Link key={p.pivot_id} to={`/pivot/${p.pivot_id}`} className={`pv to-${p.direction}${p.pivot_id === activeId ? " active" : ""}`}>
-            <span className="m">{p.minute}′</span>
+            <span className="m">{minute(p.minute)}′</span>
             <span className="tt">{pivotHeadline(p, teams, t)}</span>
             <span className="meta">
               <Severity level={p.severity} />

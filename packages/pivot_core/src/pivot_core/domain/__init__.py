@@ -4,7 +4,7 @@ the JSON Schema and TypeScript types in packages/contracts are generated from it
 
 from .common import (
     GRID_COLS, GRID_ROWS, PITCH_LENGTH, PITCH_WIDTH, Area, Lane, Period, Point, Side, Third,
-    area_of, attacking_view, clock_label, lane_of, third_of, zone_of,
+    area_of, attacking_view, clock_label, label_at, lane_of, third_of, zone_of,
 )
 from .context import (
     Competition, ContextEffect, HeadToHead, MatchContext, OffFieldEvent, PastMeeting,
@@ -12,7 +12,7 @@ from .context import (
 )
 from .events import (
     BodyPart, EventType, MatchEvent, PassHeight, PassTechnique, PassType, PlayPattern,
-    ShotOutcome, ShotTechnique,
+    ShotOutcome, ShotTechnique, period_starts,
 )
 from .lineup import (
     LineupSlot, PlayerInstruction, SetPieceTactics, Substitution, TeamSheet, TeamTactics,
@@ -60,7 +60,7 @@ CONTRACT_MODELS = (
 __all__ = [
     "CONTRACT_MODELS", "FRAME_RATE_HZ", "OVERLAY_CARD_SECONDS", "GRID_COLS", "GRID_ROWS", "PITCH_LENGTH", "PITCH_WIDTH",
     "ROLE_POSITION", "STAT_UNITS",
-    "area_of", "attacking_view", "clock_label", "lane_of", "third_of", "zone_of",
+    "area_of", "attacking_view", "clock_label", "label_at", "lane_of", "period_starts", "third_of", "zone_of",
     "AgentTrace", "Area", "AttackingAttributes", "AttributeSummary", "Audience", "BallPosition",
     "BodyPart", "CareerStint", "Claim", "Coach", "CoachAttributes", "Competition",
     "ContextEffect", "DefendingAttributes", "FoulDetail", "HeadToHead", "InjuryInfo", "Envelope", "EventType", "ExplanationSentence",

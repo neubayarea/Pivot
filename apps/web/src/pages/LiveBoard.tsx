@@ -9,6 +9,7 @@ import PitchBoard from "../components/PitchBoard";
 import PivotList, { pivotHeadline } from "../components/PivotList";
 import StartDemoButton from "../components/StartDemoButton";
 import WhyItTurned from "../components/WhyItTurned";
+import { useClock } from "../data/clock";
 import { useMatch } from "../data/match";
 import { useT } from "../i18n";
 
@@ -18,7 +19,7 @@ export default function LiveBoard() {
   const t = useT();
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   const latest = pivots.find((p) => p.status === "confirmed" || p.status === "degraded") ?? null;
-  const minute = Math.floor(match.clock / 60);
+  const { minute, at } = useClock();
   const scheduled = match.status === "scheduled";
   // On the live feed a finished match leaves nothing in progress; the fixture has its own Restart.
   const over = match.status === "finished" && !playback;
@@ -40,7 +41,7 @@ export default function LiveBoard() {
       <div className="headline">
         {latest ? (
           <div className="latest" key={latest.pivot_id}>
-            <Kicker>{t("board.latest", { minute: latest.minute })}</Kicker>
+            <Kicker>{t("board.latest", { minute: minute(latest.minute) })}</Kicker>
             <span className="x">{pivotHeadline(latest, teams, t)}</span>
           </div>
         ) : scheduled ? (
@@ -56,7 +57,7 @@ export default function LiveBoard() {
         )}
         <span className="sp" />
         {latest && (
-          <Link to={`/whatif/${latest.pivot_id}`} className="btn" aria-label={`${t("detail.whatIf")} ${t("board.latest", { minute: latest.minute })}`}>
+          <Link to={`/whatif/${latest.pivot_id}`} className="btn" aria-label={`${t("detail.whatIf")} ${t("board.latest", { minute: minute(latest.minute) })}`}>
             {t("detail.whatIf")}
           </Link>
         )}
@@ -100,7 +101,7 @@ export default function LiveBoard() {
           <Card title={t("board.pivots")} note={t("board.pivotsNote", { n: pivots.length })}>
             <PivotList activeId={latest?.pivot_id ?? null} />
           </Card>
-          <Card title={t("board.stats")} note={`0′–${minute}′`}>
+          <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`}>
             <MatchStats />
           </Card>
         </div>

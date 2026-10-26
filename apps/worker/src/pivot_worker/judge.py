@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from pivot_core.domain import MatchEvent, MinuteMetric, Pivot, PivotCandidate, StatRef
+from pivot_core.domain import MatchEvent, MinuteMetric, Pivot, PivotCandidate, StatRef, label_at, period_starts
 from pivot_core.domain.common import Model
 from pivot_core.domain.pivots import PivotStatus
 from pivot_core.domain.stats import STAT_UNITS, Claim
@@ -153,7 +153,7 @@ def build_messages(
 ) -> tuple[Prompt, list[dict[str, str]]]:
     lo, hi = candidate.minute - JUDGE_WINDOW, candidate.minute + JUDGE_WINDOW
     request = {
-        "alarm": {"minute": candidate.minute, "clock": f"{candidate.minute + 1}'",
+        "alarm": {"minute": candidate.minute, "clock": label_at(period_starts(events.values()), candidate.minute * 60),
                   "towards": team_names[candidate.direction], "cusum": round(candidate.cusum_stat, 3),
                   "swing": round(candidate.swing, 3), "key_event_ids": candidate.key_event_ids},
         "teams": dict(team_names),

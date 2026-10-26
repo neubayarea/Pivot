@@ -8,6 +8,7 @@ tracking frame with the same `t` (see tracking.py).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Annotated, Literal
 
 from pydantic import Field, computed_field
@@ -152,3 +153,13 @@ class MatchEvent(Model):
     def area(self) -> Area | None:
         """Penalty or six-yard box `location` falls in, if any, from the acting team's view."""
         return area_of(self.location, self.team) if self.location else None
+
+
+def period_starts(events: Iterable[MatchEvent]) -> dict[int, int]:
+    """When each period started on the elapsed clock (period -> t), read off the events, for label_at."""
+    starts: dict[int, int] = {}
+    for e in events:
+        start = e.t - e.period_t
+        if start < starts.get(e.period, start + 1):
+            starts[e.period] = start
+    return starts

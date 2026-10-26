@@ -266,7 +266,7 @@ describe("mock mode (?fixture=1)", () => {
     );
     const html = page("/whatif/p63");
     expect(html).toContain('href="/pivot/p63"');
-    expect(html).toContain("Pivot 63′ · Substitution flipped the left flank");
+    expect(html).toContain("Pivot 64′ · Substitution flipped the left flank");   // elapsed minute 63
     expect(html).toContain("Simulated, not a prediction");
     expect(html).toContain("Loading the scenarios…");
     expect(html).toContain("Pick a scenario to set up the replay.");

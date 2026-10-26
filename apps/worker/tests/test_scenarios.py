@@ -124,7 +124,9 @@ def test_demo_69_substitution_chips_target_the_planted_tactical_change(demo, tri
         sub = events[o[type_].target_event_id]
         assert sub.minute == 66 and sub.substitution.reason == "tactical"   # 63' on the clock
         assert (sub.substitution.player_off_id, sub.substitution.player_on_id) == ("h09", "h15")
-    assert o["cancel_substitution"].label == "Cancel 67′ substitution"
+    # The chip reads the substitution's minute exactly as the event list does (G2, Ax27).
+    assert sub.clock_label == "63'" and o["cancel_substitution"].label == "Cancel 63′ substitution"
+    assert o["change_press"].label == "Press higher from 65′"     # pivot minute 69 on the clock
 
 
 def test_move_minute_range():

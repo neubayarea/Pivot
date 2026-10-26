@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
+import { useClock } from "../data/clock";
 import { useT } from "../i18n";
 
 type Props = {
@@ -13,19 +14,27 @@ type Props = {
 const W = 780, H = 220, L = 34, R = 12, T = 18, B = 26;
 const MID = T + (H - T - B) / 2;
 const AMP = (H - T - B) / 2;
-const x = (minute: number) => L + ((W - L - R) * minute) / 90;
 const y = (v: number) => MID - v * AMP;
 const TICKS = [0, 15, 30, 45, 60, 75, 90];
 
-/** Momentum per half: home above the midline, away below; the second half restarts from zero. */
+/**
+ * Momentum per half: home above the midline, away below; the second half restarts from zero.
+ * The axis runs on elapsed minutes, so stoppage time takes room, but reads the match clock:
+ * each tick sits where the clock showed it, and the second half starts at its real kick-off.
+ */
 export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }: Props) {
   const clip = useId().replace(/[^\w-]/g, "");
   const t = useT();
+  const { periods, minute } = useClock();
+  const ht = (periods.find((p) => p.period === 2)?.start_t ?? 45 * 60) / 60;
+  const end = Math.max(ht + 45, ...metrics.map((m) => m.minute + 1), ...pivots.map((p) => p.minute + 1));
+  const x = (m: number) => L + ((W - L - R) * m) / end;
+  const tickAt = (c: number) => (c <= 45 ? c : ht + c - 45);
   const halves = [
-    metrics.filter((m) => m.minute <= 45).map((m) => [m.minute, m.momentum] as const),
-    metrics.filter((m) => m.minute > 45).map((m) => [m.minute, m.momentum] as const),
+    metrics.filter((m) => m.minute < ht).map((m) => [m.minute, m.momentum] as const),
+    metrics.filter((m) => m.minute >= ht).map((m) => [m.minute, m.momentum] as const),
   ];
-  if (halves[1].length) halves[1].unshift([45, 0]);
+  if (halves[1].length) halves[1].unshift([ht, 0]);
   const last = metrics.at(-1);
   const area = halves
     .filter((h) => h.length > 1)
@@ -37,7 +46,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }:
     .join(" ");
   const summary = pivots
     .filter((p) => p.status === "confirmed")
-    .map((p) => t("chart.towards", { minute: p.minute, team: p.direction === "home" ? homeLabel : awayLabel }))
+    .map((p) => t("chart.towards", { minute: minute(p.minute), team: p.direction === "home" ? homeLabel : awayLabel }))
     .join(", ");
 
   return (
@@ -50,13 +59,13 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }:
           <rect x={0} y={MID} width={W} height={H} />
         </clipPath>
       </defs>
-      <rect x={x(45)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
-      <text x={x(45) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
+      <rect x={x(ht)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
+      <text x={x(ht) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
         {t("chart.ht")}
       </text>
       <line x1={L} x2={W - R} y1={MID} y2={MID} stroke="var(--pv-ink)" strokeWidth={2} />
       {TICKS.map((t) => (
-        <text key={t} x={x(t)} y={H - 8} fontSize={11} textAnchor="middle" fill="var(--pv-ink-2)">
+        <text key={t} x={x(tickAt(t))} y={H - 8} fontSize={11} textAnchor="middle" fill="var(--pv-ink-2)">
           {t}′
         </text>
       ))}
@@ -71,17 +80,19 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel }:
       <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
       {pivots.map((p) => {
         const pending = p.status === "pending";
+        const label = `${minute(p.minute)}′`;
+        const w = Math.max(34, 7 * label.length + 6);     // 45+2′ needs more room than 64′
         return (
           <g key={p.pivot_id} className={pending ? "mom-pending" : undefined}>
             <line
               x1={x(p.minute)} x2={x(p.minute)} y1={T} y2={H - B}
               stroke="var(--pv-red)" strokeWidth={pending ? 2 : 3} strokeDasharray={pending ? "4 4" : undefined}
             />
-            <rect x={x(p.minute) - 17} y={T - 16} width={34} height={17} fill={pending ? "var(--pv-sheet)" : "var(--pv-red)"}
+            <rect x={x(p.minute) - w / 2} y={T - 16} width={w} height={17} fill={pending ? "var(--pv-sheet)" : "var(--pv-red)"}
               stroke="var(--pv-red)" strokeWidth={pending ? 2 : 0} />
             <text x={x(p.minute)} y={T - 3} fontSize={12} fontWeight={700} textAnchor="middle"
               fill={pending ? "var(--pv-red)" : "var(--pv-on-red)"}>
-              {p.minute}′
+              {label}
             </text>
           </g>
         );

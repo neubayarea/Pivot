@@ -58,7 +58,7 @@ describe("pivot detail timeline window", () => {
     const at = ticks(html);
     expect(at).toHaveLength(3);                     // two evidence ticks and the pivot
     expect(at.every((left) => left >= 0 && left <= 100)).toBe(true);
-    expect(html).toContain("59′–65′");
+    expect(html).toContain("60′–65′");             // elapsed [59:00, 65:00) on the match clock (Ax27)
     expect(html).not.toContain("outside the timeline");
   });
 

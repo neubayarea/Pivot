@@ -10,6 +10,7 @@ import Scrubber from "../components/Scrubber";
 import Sourced, { formatValue } from "../components/Sourced";
 import Stamp from "../components/Stamp";
 import WhyItTurned from "../components/WhyItTurned";
+import { useClock } from "../data/clock";
 import { type Frames, useFrames } from "../data/live/frames";
 import { fixtureMode, involves, useMatch } from "../data/match";
 import { inWindow } from "../data/window";
@@ -37,6 +38,7 @@ export function detailFrame(own: TrackingFrame[], from: number, t: number, fetch
 export default function PivotDetail() {
   const { id = "" } = useParams();
   const { match, squads, pivotDetail, eventById, teams, playerName } = useMatch();
+  const { minute, at, span } = useClock();
   const { prefs, t: tr } = usePrefs();
   const focus = prefs.focus_player_id;
   const detail = pivotDetail(id);
@@ -105,7 +107,7 @@ export default function PivotDetail() {
         <Link to="/">{tr("detail.back")}</Link>
       </div>
       <div className="s2-head">
-        <span className="min">{pivot.minute}′</span>
+        <span className="min">{minute(pivot.minute)}′</span>
         <h2>{pivotHeadline(pivot, teams, tr)}</h2>
         <span className="acts">
           <Link to={`/whatif/${pivot.pivot_id}`} className="btn pri">
@@ -129,7 +131,7 @@ export default function PivotDetail() {
       <div className="grid2">
         <Card title={tr("detail.pitch")} note={
           <>
-            {tr("detail.pitchNote", { from: from / 60, to: to / 60, team: teams.home.short_name })}
+            {tr("detail.pitchNote", { from: at(from), to: at(Math.max(from, to - 1)), team: teams.home.short_name })}
             {focus && <> · <span className="focus-key">{tr("detail.focusNote", { player: playerName(focus) })}</span></>}
           </>
         }>
@@ -162,8 +164,8 @@ export default function PivotDetail() {
                 <thead>
                   <tr>
                     <th>{tr("detail.baMetric")}</th>
-                    <th>{beforeWin[0]}–{beforeWin[1]}′</th>
-                    <th>{afterWin[0]}–{afterWin[1]}′</th>
+                    <th>{span(beforeWin)}</th>
+                    <th>{span(afterWin)}</th>
                   </tr>
                 </thead>
                 <tbody>

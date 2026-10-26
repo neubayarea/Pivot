@@ -149,7 +149,7 @@ describe("live board states", () => {
     const html = render(<Playback />, matchView({ playback, pivots: [pivot(63, "confirmed")] }));
     expect(html).toContain('type="range"');
     expect(html).toContain('max="5700"');
-    expect(html).toContain("63′");
+    expect(html).toContain("64′");                 // elapsed minute 63 is the 64th minute on the clock
     expect(html).toContain("Restart");
     expect(render(<Playback />, matchView())).toBe("");
   });

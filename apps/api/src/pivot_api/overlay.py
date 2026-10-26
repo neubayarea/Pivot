@@ -16,6 +16,7 @@ from pivot_core.domain import (
     Score,
     clock_label,
 )
+from pivot_core.domain import label_at as _label_at
 
 MAX_CLOCK = 3 * 3600
 _MM_SS = re.compile(r"^(\d{1,3}):([0-5]\d)$")
@@ -44,7 +45,7 @@ def _period_at(match: Match, t: int) -> tuple[int, int]:
 
 
 def label_at(match: Match, t: int) -> str:
-    return clock_label(*_period_at(match, t))
+    return _label_at({p.period: p.start_t for p in match.periods}, t)
 
 
 def score_at(match: Match, events: list[MatchEvent], t: int) -> Score:

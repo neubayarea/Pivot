@@ -4,7 +4,7 @@ import re
 import pytest
 from pydantic import ValidationError
 
-from pivot_core.domain import STAT_UNITS, PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
+from pivot_core.domain import STAT_UNITS, MatchEvent, PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
 from pivot_worker import explainer as ex
 from pivot_worker.prompts import render
 from pivot_worker.testing import FakeStats, event
@@ -49,6 +49,21 @@ def test_request_carries_window_events_and_a_stat_sheet(events, stats):
     sheet = {(c["stat_ref"]["metric"], c["stat_ref"]["team"], tuple(c["stat_ref"]["window"])): c["value"]
              for c in request["stat_sheet"]}
     assert sheet[("threat_total", "home", (58, 63))] == 0.21
+
+
+def test_pivot_clock_is_the_match_clock_not_elapsed_minutes(stats):
+    # The second half kicked off 48 minutes in (three minutes of first-half stoppage), so the
+    # pivot at elapsed minute 69 is 67' on the clock, the same clock the events are written in.
+    kick = MatchEvent(match_id="M-test", seq=1, event_id="m063-s00001", t=2880, period=2, period_t=0,
+                      type="kickoff", team="home")
+    sub = MatchEvent(match_id="M-test", seq=2, event_id="m063-s00002", t=2880 + 1030, period=2, period_t=1030,
+                     type="pass", team="home")
+    c = PivotCandidate(match_id="M-test", minute=69, direction="home", cusum_stat=4.2, swing=0.3,
+                       key_event_ids=[sub.event_id], window=(64, 74))
+    _, messages = ex.build_messages(c, events={e.event_id: e for e in (kick, sub)}, stats=stats, team_names=TEAMS)
+    request = json.loads(messages[1]["content"])
+    assert request["pivot"]["clock"] == "67'"
+    assert [e["clock"] for e in request["events"]] == ["63'"]
 
 
 def test_window_events_are_capped_and_key_events_kept():
