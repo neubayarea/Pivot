@@ -5,6 +5,7 @@ import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import { MatchProvider } from "./data/match";
 import { usePrefs } from "./i18n";
+import AgentTraces from "./pages/AgentTraces";
 import LiveBoard from "./pages/LiveBoard";
 import NotFound from "./pages/NotFound";
 import PivotDetail from "./pages/PivotDetail";
@@ -37,6 +38,8 @@ export default function App() {
           <Route path="/" element={<LiveBoard />} />
           <Route path="/pivot/:id" element={<PivotDetail />} />
           <Route path="/whatif/:id" element={<WhatIfLab />} />
+          <Route path="/trace" element={<AgentTraces />} />
+          <Route path="/trace/:id" element={<AgentTraces />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

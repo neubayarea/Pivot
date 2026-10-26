@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import { useMatch } from "../data/match";
 import { useT, type T } from "../i18n";
-import Button from "./Button";
 import MatchPicker from "./MatchPicker";
 import { PlayerPicker, TeamPicker } from "./FocusPickers";
 import Segmented from "./Segmented";
@@ -82,7 +81,9 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
         value={prefs.language}
         onChange={(language) => onPrefsChange({ ...prefs, language })}
       />
-      <Button>{t("top.trace", { n: pivots.length })}</Button>
+      <Link to="/trace" className="btn">
+        {t("top.trace", { n: pivots.length })}
+      </Link>
     </header>
   );
 }

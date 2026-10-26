@@ -110,6 +110,9 @@ export default function PivotDetail() {
         <span className="min">{minute(pivot.minute)}′</span>
         <h2>{pivotHeadline(pivot, teams, tr)}</h2>
         <span className="acts">
+          <Link to={`/trace/${pivot.pivot_id}`} className="btn">
+            {tr("trace.kicker")}
+          </Link>
           <Link to={`/whatif/${pivot.pivot_id}`} className="btn pri">
             {tr("detail.whatIf")}
           </Link>
