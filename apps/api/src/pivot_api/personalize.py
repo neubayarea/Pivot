@@ -5,6 +5,15 @@ set of `ViewerPrefs` is written here on first request, with the D line's own par
 
     explainer (D11/D12) ⇄ verifier, up to MAX_CHECKS ──fail / no model──> template ──> verifier
 
+A Chinese or Spanish version is a translation (Ax35, #220): the verified English version for the
+same audience and focus is written (or read) first, and the model only translates its headline and
+sentence texts. Evidence ids, claims and context ids are copied over, so the numbers cannot drift; the
+Verifier still checks the result (numbers against the claims, `wrong_script`, players on the pitch).
+
+    English llm version ──> translate ⇄ verifier, up to MAX_CHECKS ──fail──> template ──> verifier
+    English template version ──> template in the target language ──> verifier
+    no English version ──> the explainer path above
+
 Every version passes the same Verifier as the default one. A version that passes is stored
 through the repository, keyed by (pivot_id, prefs), so the next request for it does no model call.
 If not even the template passes, or any step raises (a bug in a stat source, say), the default
@@ -16,9 +25,12 @@ The worker code is only called, not changed.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+import time
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from pydantic import ValidationError
@@ -27,7 +39,7 @@ from pivot_core.domain import Narrative, Pivot, PivotCandidate, Verdict, Verifie
 from pivot_core.ports import MatchRepository
 from pivot_worker import explainer
 from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, match_stats, with_computed
-from pivot_worker.languages import wrong_script
+from pivot_worker.languages import INSTRUCTIONS, MAX_HEADLINE, wrong_script
 from pivot_worker.models import ModelClient, ModelUnavailable, model_client_from_env
 from pivot_worker.template import template_explain
 from pivot_worker.verifier import verify
@@ -37,6 +49,13 @@ log = logging.getLogger("pivot_api.personalize")
 MAX_CHECKS = 2                                # a viewer is waiting on this request: one draft plus one rewrite
 MAX_CONCURRENT = 4                            # versions written at once (a pivot list asks for several)
 SWING_MINUTES = 5
+LANGUAGE_NAMES = {"zh": "Simplified Chinese (简体中文)", "es": "Spanish (español neutro)"}
+TRANSLATE_PROMPT = """You translate football match commentary cards from English into {language}.
+Return JSON only: {{"headline": "...", "sentences": ["...", ...]}}, one translated text per input sentence,
+in the same order. Translate the meaning faithfully and naturally for a {audience}; add nothing and drop nothing.
+Keep every number exactly as written, with the same digits (no number words), and minutes as 61'.
+Keep team and player names exactly as given, in their original Latin spelling.
+The headline has no digits and at most {headline} {unit}. {instruction}"""
 
 
 @dataclass(frozen=True)
@@ -75,9 +94,10 @@ class Personalizer:
         async with self._locks[(pivot.pivot_id, prefs)]:   # two viewers asking at once: write it once
             narrative = await self._stored(pivot, prefs)
             if narrative is None:
+                source = await self._english(pivot, prefs) if prefs.language != "en" else None
                 async with self._slots:
                     try:
-                        narrative = await self._write(pivot, prefs)
+                        narrative = await self._write(pivot, prefs, source)
                     except Exception:
                         log.warning("%s: writing the version for %s failed; serving the default",
                                     pivot.pivot_id, prefs.model_dump(), exc_info=True)
@@ -89,6 +109,31 @@ class Personalizer:
                 await self.repo.upsert_narrative(pivot.match_id, pivot.pivot_id, narrative)
         return Personalized(pivot.model_copy(update={"narrative": narrative}), narrative.prefs)
 
+    async def prewarm(self, match_id: str, languages: Sequence[str], wait: float = 1800.0) -> int:
+        """Write every pivot of a match in `languages` for both audiences ahead of the viewers (Ax35).
+
+        One version at a time (a 2-core VM, a rate-limited model). Pivots come from the worker, so this
+        waits (up to `wait` seconds) for them to be written first. Returns how many versions are stored.
+        """
+        deadline = time.monotonic() + wait
+        while time.monotonic() < deadline:
+            pivots = await self.repo.list_pivots(match_id)
+            if pivots and all(p.status == "rejected" or p.narrative is not None for p in pivots):
+                break
+            await asyncio.sleep(10)
+        written = 0
+        for pivot in await self.repo.list_pivots(match_id):
+            if pivot.status == "rejected" or pivot.narrative is None:
+                continue
+            for language in languages:
+                for audience in ("analyst", "fan"):
+                    prefs = ViewerPrefs(audience=audience, language=language)
+                    try:
+                        written += (await self.personalize(pivot, prefs)).prefs == prefs
+                    except Exception:
+                        log.warning("%s: prewarm of %s failed", pivot.pivot_id, prefs.model_dump(), exc_info=True)
+        return written
+
     async def _stored(self, pivot: Pivot, prefs: ViewerPrefs) -> Narrative | None:
         narrative = await self.repo.get_narrative(pivot.match_id, pivot.pivot_id, prefs)
         # Written for an earlier run of this pivot (the worker wrote it again since): stale.
@@ -98,11 +143,27 @@ class Personalizer:
         texts = [narrative.headline, *(s.text for s in narrative.sentences)]
         return None if any(wrong_script(text, prefs.language) for text in texts) else narrative
 
-    async def _write(self, pivot: Pivot, prefs: ViewerPrefs) -> Narrative | None:
+    async def _english(self, pivot: Pivot, prefs: ViewerPrefs) -> Narrative | None:
+        """The verified English version a translation starts from, or None if there is none."""
+        english = prefs.model_copy(update={"language": "en"})
+        try:
+            result = await self.personalize(pivot, english)
+        except Exception:
+            log.warning("%s: no English version to translate", pivot.pivot_id, exc_info=True)
+            return None
+        return result.pivot.narrative if result.prefs == english else None
+
+    async def _write(self, pivot: Pivot, prefs: ViewerPrefs, source: Narrative | None = None) -> Narrative | None:
         view = await load_view(self.repo, pivot.match_id, self.stats_factory)
         candidate = candidate_of(pivot, view)
         checks = 0
-        if self.models is not None:
+        if source is not None:
+            if source.source == "llm" and self.models is not None:
+                translated, checks = await self._translate(pivot, source, prefs, candidate, view)
+                if translated is not None:
+                    return translated
+            # An English template, or a translation that never passed: the template in this language.
+        elif self.models is not None:
             feedback, previous = None, None
             for checks in range(1, MAX_CHECKS + 1):
                 try:
@@ -132,6 +193,45 @@ class Personalizer:
                                 context=explainer.shown_context(candidate, view.events, view.context))
         return card if self._verify(card, candidate, view).passed else None
 
+    async def _translate(self, pivot: Pivot, source: Narrative, prefs: ViewerPrefs, candidate: PivotCandidate,
+                         view: MatchView) -> tuple[Narrative | None, int]:
+        """`source` translated into `prefs.language`, checked; (None, checks) if no attempt passed."""
+        lang = prefs.language
+        system = TRANSLATE_PROMPT.format(
+            language=LANGUAGE_NAMES[lang], audience="football fan" if prefs.audience == "fan" else "match analyst",
+            headline=MAX_HEADLINE[lang], unit="characters" if lang == "zh" else "words", instruction=INSTRUCTIONS[lang])
+        user = json.dumps({"headline": source.headline, "sentences": [s.text for s in source.sentences]},
+                          ensure_ascii=False)
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        checks = 0
+        for checks in range(1, MAX_CHECKS + 1):
+            try:
+                reply = await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
+            except ModelUnavailable as e:
+                log.info("%s: translator unavailable (%s); using the template", pivot.pivot_id, e)
+                break
+            except Exception:
+                log.warning("%s: translator failed; using the template", pivot.pivot_id, exc_info=True)
+                break
+            messages = messages[:2] + [{"role": "assistant", "content": reply.text}]
+            try:
+                draft = translated_narrative(source, reply.text, prefs, checks, pivot.chain_id)
+            except (ValueError, TypeError, KeyError) as e:
+                messages.append({"role": "user", "content": f"That reply was not usable ({e}). Try again."})
+                continue
+            try:
+                verdict = self._verify(draft, candidate, view)
+            except Exception:
+                log.warning("%s: verifier failed on the translation", pivot.pivot_id, exc_info=True)
+                break
+            if verdict.passed:
+                return with_computed(draft, view.stats), checks
+            log.info("%s: %s translation rejected: %s", pivot.pivot_id, lang, [i.code for i in verdict.issues])
+            fixes = "\n".join(f"- {i.code}: {i.message}" for i in verdict.issues)
+            messages.append({"role": "user", "content": f"The Verifier rejected that translation:\n{fixes}\n"
+                                                        "Fix it and return the whole card again."})
+        return None, checks
+
     async def _ask(self, candidate: PivotCandidate, view: MatchView, prefs: ViewerPrefs,
                    feedback: Verdict | None, previous: str | None) -> str:
         """The explainer's raw reply; on a rewrite it sees the Verifier's verdict and its own last reply."""
@@ -145,6 +245,21 @@ class Personalizer:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
                       context=explainer.shown_context(candidate, view.events, view.context),
                       team_names=view.team_names)
+
+
+def translated_narrative(source: Narrative, raw: str, prefs: ViewerPrefs, checks: int,
+                         chain_id: str | None = None) -> Narrative:
+    """`source` with the translated texts from the model's reply; everything else is copied unchanged."""
+    reply = json.loads(raw)
+    texts = reply["sentences"]
+    if not isinstance(reply["headline"], str) or not reply["headline"].strip():
+        raise ValueError("headline missing")
+    if len(texts) != len(source.sentences) or not all(isinstance(t, str) and t.strip() for t in texts):
+        raise ValueError(f"expected {len(source.sentences)} sentence texts")
+    return source.model_copy(update={
+        "prefs": prefs, "headline": reply["headline"].strip(), "verifier_attempts": checks,
+        "chain_id": chain_id or source.chain_id,
+        "sentences": [s.model_copy(update={"text": t.strip()}) for s, t in zip(source.sentences, texts)]})
 
 
 def personalizer_from_env(repo: MatchRepository) -> Personalizer:

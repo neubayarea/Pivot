@@ -33,6 +33,9 @@ class AnsweringModel:
     async def complete_json(self, tier, messages, *, timeout):
         self.calls += 1
         request, _ = json.JSONDecoder().raw_decode(messages[-1]["content"])
+        if "events" not in request:                                   # the translator (Ax35): texts only
+            reply = {"headline": "比赛在这里转向", "sentences": ["这一刻之后比赛势头转向。"] * len(request["sentences"])}
+            return ModelReply(text=json.dumps(reply), model=f"answering-{tier}", tokens=10)
         shown = [e["id"] for e in request["events"]]
         key = request.get("alarm", request.get("pivot"))["key_event_ids"]
         evidence = [i for i in key if i in shown][:1] or shown[:1]

@@ -57,7 +57,17 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from pivot_adapters import Adapters
-from pivot_core.domain import AgentTrace, Envelope, Match, Narrative, Pivot, Scenario, ScenarioSpec, SimResult, ViewerPrefs
+from pivot_core.domain import (
+    AgentTrace,
+    Envelope,
+    Match,
+    Narrative,
+    Pivot,
+    Scenario,
+    ScenarioSpec,
+    SimResult,
+    ViewerPrefs,
+)
 from pivot_core.domain.narrative import Language
 from pivot_core.domain.scenarios import ScenarioType
 from pivot_core.sim.whatif import run_whatif

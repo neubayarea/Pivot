@@ -16,9 +16,9 @@ from .demo import seed_demo
 from .personalize import personalizer_from_env
 from .realtime import router as realtime_router
 from .routes import router
+from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
 from .whatif import DEFAULT_WARM, WhatIf
 from .whatif import router as whatif_router
-from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
 
 log = logging.getLogger("uvicorn.error")   # shows up in the uvicorn startup log
 
@@ -62,6 +62,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.whatif.start()
     if demo_id is not None and (warm := int(os.getenv("PIVOT_WHATIF_WARM") or DEFAULT_WARM)) > 0:
         tasks.append(asyncio.create_task(app.state.whatif.warm(demo_id, warm), name="whatif-warm"))
+    # Chinese and Spanish versions of the demo's pivots (Ax35), written once the worker has the English ones.
+    langs = [x.strip() for x in (os.getenv("PIVOT_PREWARM_LANGS") or "zh,es").split(",")
+             if x.strip() in ("zh", "es")]
+    prewarm = [m.strip() for m in (os.getenv("PIVOT_PREWARM_MATCHES") or demo_id or "").split(",") if m.strip()]
+    if langs and prewarm:
+        tasks.append(asyncio.create_task(_prewarm(app.state.personalizer, prewarm, langs), name="prewarm"))
     try:
         yield
     finally:
@@ -72,6 +78,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.whatif.stop()
         if app.state.adapters.results is not None:
             await app.state.adapters.results.close()
+
+
+async def _prewarm(personalizer, match_ids: list[str], langs: list[str]) -> None:
+    for match_id in match_ids:
+        try:
+            log.info("prewarmed %s in %s: %d versions stored", match_id, ",".join(langs),
+                     await personalizer.prewarm(match_id, langs))
+        except Exception:
+            log.exception("prewarm of %s failed", match_id)
 
 
 app = FastAPI(title="Pivot API", lifespan=lifespan)
