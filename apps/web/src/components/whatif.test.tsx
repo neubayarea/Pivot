@@ -123,7 +123,7 @@ describe("a run from queued to result", () => {
     const body = { pivot_id: "p63", type: "cancel_substitution" as const, n_runs: 1000 as const };
     const scenario = await runScenario(source, body, { signal: new AbortController().signal, pollMs: 1, onUpdate: () => {} });
     const state = { phase: "done", body, scenario, cached: false } as Extract<RunState, { phase: "done" }>;
-    const html = render(<ScenarioResult state={state} option={mockOptions(view, "p63")[0]} teams={view.teams} onReset={() => {}} />);
+    const html = render(<ScenarioResult state={state} option={mockOptions(view, "p63")[0]} teams={view.teams} onReset={() => {}} source={source} />);
     expect(html).toContain("Simulated · 1,000 replays");
     expect(html).toContain("As played (from 63′)");
     expect(html).toContain("With the change: Cancel 63′ substitution");
@@ -133,7 +133,7 @@ describe("a run from queued to result", () => {
     expect(html).toMatch(/<b>Harbour City&#x27;s win chance up \d+ points<\/b>/);
     expect(html).toContain("Try another");
     expect(html).not.toContain("simulated before");
-    const cached = render(<ScenarioResult state={{ ...state, cached: true }} option={undefined} teams={view.teams} onReset={() => {}} />);
+    const cached = render(<ScenarioResult state={{ ...state, cached: true }} option={undefined} teams={view.teams} onReset={() => {}} source={source} />);
     expect(cached).toContain("Instant · simulated before");
   });
 

@@ -16,7 +16,7 @@ from pivot_api.sims import Replay
 from pivot_api.whatif import NOT_REPLAYABLE, WhatIf, cache_key, seed_base
 from pivot_core.domain import OutcomeDist, Pivot, Scenario, ScenarioSpec, SimResult
 from pivot_core.sim.whatif import run_whatif
-from pivot_worker.models import OfflineModelClient
+from pivot_worker.models import OfflineModelClient, ScriptedModelClient
 
 PIVOT_ID = f"{DEMO_MATCH_ID}:p61"
 CHIP_FIELDS = {"type", "label", "enabled", "disabled_reason", "target_event_id", "at_minute", "team", "params"}
@@ -128,6 +128,54 @@ def test_the_comparison_comes_in_the_asked_language_without_a_new_run(client, ru
     assert len(runner.calls) == 1                                  # no replay for another language
     again = client.get(f"/api/scenarios/{sid}?lang=zh").json()["result"]["narrative"]
     assert again == chinese["narrative"]                           # written once, then kept
+
+
+def model_written(client, sid: str) -> dict:
+    """The finished scenario with its English comparison marked as the model's (the offline run wrote the template)."""
+    whatif: WhatIf = app.state.whatif
+    scenario = whatif.scenarios[sid]
+    narrative = scenario.result.narrative.model_copy(update={"source": "llm", "chain_id": "whatif:en-llm"})
+    whatif.scenarios[sid] = scenario.model_copy(update={"result": scenario.result.model_copy(
+        update={"narrative": narrative})})
+    return narrative.model_dump(mode="json")
+
+
+def texts(narrative: dict) -> str:
+    """A translator reply carrying these texts."""
+    return json.dumps({"headline": narrative["headline"], "sentences": [s["text"] for s in narrative["sentences"]]},
+                      ensure_ascii=False)
+
+
+def test_a_model_written_comparison_is_translated_keeping_its_evidence(client, runner):
+    """Ax39: Chinese is a checked translation of the English comparison, not a new one; asked twice, written once."""
+    sid = client.post("/api/scenarios", json={"pivot_id": PIVOT_ID, "type": "cancel_substitution"}).json()["scenario_id"]
+    wait_done(client, sid)
+    zh_words = client.get(f"/api/scenarios/{sid}?lang=zh").json()["result"]["narrative"]   # template: no model
+    english = model_written(client, sid)
+    models = app.state.whatif.models = ScriptedModelClient(standard=[texts(zh_words)])
+
+    chinese = client.get(f"/api/scenarios/{sid}?lang=zh").json()["result"]["narrative"]
+    assert chinese["source"] == "llm" and chinese["prefs"]["language"] == "zh"
+    assert chinese["headline"] == zh_words["headline"]
+    assert [s["evidence_ids"] for s in chinese["sentences"]] == [s["evidence_ids"] for s in english["sentences"]]
+    assert json.loads(models.calls[0][1][1]["content"]) == json.loads(texts(english))
+    assert client.get(f"/api/scenarios/{sid}?lang=zh").json()["result"]["narrative"] == chinese
+    assert len(models.calls) == 1 and len(runner.calls) == 1
+    agents = [t["agent"] for t in client.get(f"/api/matches/{DEMO_MATCH_ID}/traces").json()
+              if t["input_ref"] == sid and t["chain_id"] == chinese["chain_id"]]
+    assert agents == ["translator", "verifier"]
+
+
+def test_spanish_left_in_english_is_sent_back_then_the_template_is_served(client):
+    sid = client.post("/api/scenarios", json={"pivot_id": PIVOT_ID, "type": "cancel_substitution"}).json()["scenario_id"]
+    wait_done(client, sid)
+    english = model_written(client, sid)
+    models = app.state.whatif.models = ScriptedModelClient(standard=[texts(english), texts(english)])
+
+    spanish = client.get(f"/api/scenarios/{sid}?lang=es").json()["result"]["narrative"]
+    assert len(models.calls) == 2 and "left in English" in models.calls[1][1][-1]["content"]
+    assert spanish["source"] == "template" and spanish["prefs"]["language"] == "es"
+    assert spanish["headline"] != english["headline"]
 
 
 def test_progress_and_end_are_pushed_on_the_match_channel(client):
@@ -267,3 +315,55 @@ def test_recorded_demo_replays_for_real_and_is_read_back_after_a_restart(tmp_pat
     whatif, traces = asyncio.run(after_restart())
     assert whatif.get(scenario.scenario_id).result == result
     assert [t.agent for t in traces] == ["executor", "comparator", "template"]
+
+
+def test_a_translation_is_stored_and_read_back_after_a_restart(tmp_path, monkeypatch):
+    """Ax39: a passed translation goes into the result store next to its scenario, and prewarm reuses it."""
+    monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("PIVOT_RESULTS_BACKEND", raising=False)
+
+    async def start():
+        adapters = build_adapters("local")
+        replays: dict[str, Replay] = {}
+        match_id, _ = await sims.load_fixture(adapters, sims.FIXTURE, replays)
+        return adapters, replays, match_id
+
+    async def first_run():
+        adapters, replays, match_id = await start()
+        events = await adapters.matches.list_events(match_id)
+        sub = next(e for e in events if e.type == "substitution" and e.minute >= 60)
+        pivot = Pivot(pivot_id=f"{match_id}:p{sub.minute}", match_id=match_id, minute=sub.minute, direction="away",
+                      severity=2, status="confirmed", trigger_event_ids=[sub.event_id], chain_id="test")
+        await adapters.matches.upsert_pivot(pivot)
+        whatif = WhatIf(adapters, replays, OfflineModelClient(), runner=FakeRunner(), workers=0)
+        whatif.start()
+        try:
+            scenario = await whatif.submit(pivot.pivot_id, "cancel_substitution")
+            while (scenario := whatif.get(scenario.scenario_id)).status not in ("completed", "failed"):
+                await asyncio.sleep(0.05)
+        finally:
+            await whatif.stop()
+        es_words = (await whatif.in_language(scenario, "es")).result.narrative       # the template, offline
+        # As if the model had written the English one: stored that way, then translated.
+        english = scenario.result.narrative.model_copy(update={"source": "llm", "chain_id": "whatif:en-llm"})
+        scenario = scenario.model_copy(update={"result": scenario.result.model_copy(update={"narrative": english})})
+        key = whatif._key_of(scenario.scenario_id)
+        whatif._keep(key, scenario)
+        await adapters.results.store_scenario(match_id, key, scenario)
+        whatif.models = ScriptedModelClient(standard=[texts(es_words.model_dump())])
+        spanish = (await whatif.in_language(scenario, "es")).result.narrative
+        return match_id, scenario, spanish
+
+    match_id, scenario, spanish = asyncio.run(first_run())
+    assert spanish.source == "llm" and spanish.prefs.language == "es"
+
+    async def after_restart():
+        adapters, replays, _ = await start()
+        models = ScriptedModelClient()                       # no reply: any model call would fall back
+        whatif = WhatIf(adapters, replays, models, runner=FakeRunner(), workers=0)
+        assert whatif.get(scenario.scenario_id).result.narrative.prefs.language == "en"   # not the translation
+        read = (await whatif.in_language(whatif.get(scenario.scenario_id), "es")).result.narrative
+        return whatif, models, read, await whatif.prewarm(match_id, ["es"])
+
+    whatif, models, read, prewarmed = asyncio.run(after_restart())
+    assert read == spanish and models.calls == [] and prewarmed == 1
