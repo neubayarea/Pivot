@@ -26,7 +26,7 @@ from pydantic import ValidationError
 from pivot_core.domain import Narrative, Pivot, PivotCandidate, Verdict, VerifierIssue, ViewerPrefs
 from pivot_core.ports import MatchRepository
 from pivot_worker import explainer
-from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, with_computed
+from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, match_stats, with_computed
 from pivot_worker.models import ModelClient, ModelUnavailable, model_client_from_env
 from pivot_worker.template import template_explain
 from pivot_worker.verifier import verify
@@ -145,4 +145,4 @@ class Personalizer:
 def personalizer_from_env(repo: MatchRepository) -> Personalizer:
     """Same model choice as the worker: the explainer only with `PIVOT_PIPELINE=detect`, else the template."""
     models = model_client_from_env() if os.getenv("PIVOT_PIPELINE", "fake") == "detect" else None
-    return Personalizer(repo, models)
+    return Personalizer(repo, models, stats_factory=match_stats)

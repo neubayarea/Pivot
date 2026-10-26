@@ -26,6 +26,7 @@ from dataclasses import dataclass, field, replace
 from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
 from pydantic import ValidationError
 
+from pivot_core.analytics import StatCalculator
 from pivot_core.domain import (
     Match,
     MatchEvent,
@@ -61,6 +62,16 @@ class NoStats:
 
 
 StatsFactory = Callable[[Match | None, list[MatchEvent], list[MinuteMetric]], StatSource]
+
+
+def match_stats(match: Match | None, events: list[MatchEvent], metrics: list[MinuteMetric]) -> StatSource:
+    """B05's StatCalculator over what the repository stores: the stat sheet and the Verifier's recompute.
+
+    The repository keeps no tracking frames, so the frame-based stats (possession, line height,
+    width, press distance, distance covered) raise NoData and stay off the sheet. Momentum comes
+    from the stored minutes, the ones the chart shows, or from the events if none are stored.
+    """
+    return StatCalculator(match, events, [], metrics=metrics or None)
 
 
 @dataclass

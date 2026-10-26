@@ -20,7 +20,7 @@ from pivot_adapters import build_adapters
 from pivot_core.domain import PivotCandidate
 from pivot_core.ports import PIVOT_CANDIDATES
 
-from .detect import DetectWorkflow
+from .detect import DetectWorkflow, match_stats
 from .models import model_client_from_env
 from .pipeline import FakePipeline, Pipeline
 from .worker import Worker
@@ -61,7 +61,7 @@ async def serve(worker: Worker) -> None:
 
 def build_pipeline(adapters) -> Pipeline:
     if os.getenv("PIVOT_PIPELINE", "fake") == "detect":
-        return DetectWorkflow(adapters.matches, model_client_from_env())
+        return DetectWorkflow(adapters.matches, model_client_from_env(), stats_factory=match_stats)
     return FakePipeline()
 
 
