@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
-import { involves } from "../data/view";
+import { involves, type Side, type SquadPlayer } from "../data/view";
 import { PITCH } from "../fixtures/pivot-detail";
 
 // 105 x 68 m at 5 px per metre, same drawing as "06 S2" in the design spec. Home attacks to the right.
@@ -25,6 +25,15 @@ type Props = {
 
 // The fixture's ids are "<club>-<shirt>", Harbour City's club code "hcy".
 const fromId = (id: string) => ({ home: id.startsWith("hcy"), shirt: id.slice(id.lastIndexOf("-") + 1) });
+/** `who` for tracking frames, whose ids (sim ids like "h01") are looked up in the squads. */
+export function whoFromSquads(squads: Record<Side, SquadPlayer[]>): (id: string) => { home: boolean; shirt: string } {
+  const map = new Map<string, { home: boolean; shirt: string }>();
+  for (const side of ["home", "away"] as const) {
+    for (const p of squads[side]) map.set(p.player_id, { home: side === "home", shirt: p.shirt === null ? "" : String(p.shirt) });
+  }
+  return (id) => map.get(id) ?? { home: id.startsWith("h"), shirt: "" };
+}
+
 const px = ([x, y]: [number, number]) => [x * S, y * S] as const;
 
 function Markings() {
