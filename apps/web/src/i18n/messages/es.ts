@@ -458,6 +458,8 @@ export const es: Messages = {
   "sp.wallNone": "Sin barrera: menos de dos defensores entre el balón y la portería",
   "sp.then": "Qué pasó",
   "sp.how": "Detenido un segundo antes del saque (las posiciones se registran una vez por segundo). Sombreada: el área atacada. Las líneas discontinuas unen a cada atacante con su marcador. El resultado mira los 15 segundos siguientes. Al hombre: al menos 3 de cada 5 atacantes en el área tenían un defensor a 2,5 m o menos; zonal: 1 de cada 3 o menos. Toca un punto para ver quién es.",
+  "sp.howPlain": "Detenido un segundo antes del saque (las posiciones se registran una vez por segundo). Sombreada: el área atacada. El resultado mira los 15 segundos siguientes. Toca un punto para ver quién es.",
+  "sp.simNote": "Las posiciones vienen del simulador, que aún no coloca a los jugadores en las jugadas a balón parado, así que no se muestran el marcaje ni la barrera.",
   "shots.none": "Todavía no hay tiros.",
   "shots.noneHere": "No hay tiros de este tipo.",
   "shots.filter": "De dónde vino el tiro",
