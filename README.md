@@ -129,6 +129,25 @@ Below is a run of 60 simulated matches with the demo pairing (`uv run scripts/re
 
 Effects matter as much as averages, because Pivot explains *changes*. With an away red card at 38′ (30 paired seeds), the 11-man side's share of shots rises from 0.61 to 0.77; in Premier League 2015/16 matches with a red card it was 0.72. The leading side's back line drops late in the game (−1.8 m against a real range of −1 to −8 m) and the trailing side's moves up (+2.2 m against +1 to +8 m). The simulator rules behind these numbers are in [docs/sim-realism.md](docs/sim-realism.md) (Chinese).
 
+## From synthetic matches to real ones
+
+The hackathon rules require synthetic data, so every match here comes from the simulator, streamed minute by minute as if it were live. The momentum meter, the alarm, the AI agents, the Verifier and the What-if Lab all run on that live stream.
+
+Everything after the simulator reads one thing: a list of match events (`MatchEvent`: time, team, player, location, type, outcome). Connecting a real match means writing an adapter that turns a data provider's feed into these events. That adapter does not exist yet; the rest of the pipeline would stay as it is. The simulator stays too: What-if replays would start from the real match state at that minute.
+
+| Source | What it gives | Live? | Notes |
+| --- | --- | --- | --- |
+| StatsBomb open data | Full event data for past matches, some with player positions | No | Free. The first step: check whether the pivots Pivot finds in real matches are the ones analysts would pick, and learn a real expected-threat grid to replace the distance-based placeholder |
+| Commercial event feeds (e.g. Stats Perform/Opta, Sportradar, StatsBomb) | Every pass, shot and foul, seconds after it happens | Yes | Licensed per competition and use |
+| Optical tracking data | 10–25 position frames per second for all players and the ball | Yes | Usually sold to clubs and broadcasters |
+| Broadcast video | Everything, in principle | Yes | Hard computer vision, and it needs the rights holder's permission. Not something we would do without a licence |
+
+Where it could go next:
+
+- **Broadcasters and streaming platforms**: a feed of turning points with checked explanations, shown beside the live picture, with a "What if" for viewers. The read-only API and the broadcast overlay page already exist.
+- **Clubs and analysts**: post-match review of turning points, team shape and set pieces.
+- **A fan app**: turning points and explanations for everyone, What-if replays and share cards on top, once data licensing costs are clear.
+
 ## Run it locally
 
 You need [uv](https://docs.astral.sh/uv/) (Python 3.12) and [pnpm](https://pnpm.io/) (Node 20.19+). `PIVOT_PIPELINE=fake` uses the template explainer instead of Azure, so **no keys or Azure account are needed**.
@@ -193,7 +212,6 @@ Contributors: [@Carry3](https://github.com/Carry3), [@momomojun](https://github.
 ## How we used AI tools
 
 - **Claude Code** (Anthropic) was the main coding assistant. Team members worked with it on issues from the project board, one issue per branch and pull request, and reviewed and merged the results. Commits it helped write carry a `Co-Authored-By: Claude` line, which is the case for most commits in this repository. The rules agents follow in this repo are in [AGENTS.md](AGENTS.md).
-- **GitHub Copilot**: <!-- TODO: describe how the team used Copilot, or remove this line if it was not used -->
 - **Inside the product**, the language model only writes words. Detection is done by the momentum meter and change-point alarm, numbers are computed by code, and the Verifier checks every draft (see [Why you can trust the numbers](#why-you-can-trust-the-numbers)).
 
 ## License

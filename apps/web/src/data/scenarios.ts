@@ -228,13 +228,13 @@ export const ci = (d: OutcomeDist, k: Outcome): [number, number] => d.ci95[k] ??
  * language never replays the match. Until that arrives (or if it fails) the run's own one shows,
  * with `writing` true while it is on its way.
  */
-export function useComparisonIn(source: ScenarioApi | undefined, scenario: Scenario, lang: Lang) {
+export function useComparisonIn(source: ScenarioApi, scenario: Scenario, lang: Lang) {
   const own: Narrative | null = scenario.result?.narrative ?? null;
-  const needed = !!source && !!own && own.prefs.language !== lang;
+  const needed = !!own && own.prefs.language !== lang;
   const key = `${scenario.scenario_id}|${lang}`;
   const [got, setGot] = useState<{ key: string; narrative: Narrative | null } | null>(null);
   useEffect(() => {
-    if (!needed || !source) return;
+    if (!needed) return;
     let alive = true;
     source.get(scenario.scenario_id, lang).then(
       (s) => alive && setGot({ key, narrative: s.result?.narrative ?? null }),

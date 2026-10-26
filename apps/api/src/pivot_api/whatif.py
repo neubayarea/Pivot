@@ -20,9 +20,13 @@ A finished scenario is cached by (match version, pivot, type, target event, para
 The cache goes through the result store (files or Cosmos DB, Ax10/Ax11), so it survives a restart; a
 comparison that came from the template is written again on the first request after one.
 
-Runs write the comparison in English. A GET with `?lang=` for another language writes that version
-from the same result on first request (Comparator ⇄ Verifier, template without a model) and keeps it
-in memory, so switching the page's language never replays the match.
+Runs write the comparison in English. A GET with `?lang=` for another language gets a translation of
+that English comparison (Ax39, as Ax35 does for pivot cards): the model translates only the headline and
+sentence texts, evidence ids and claims are copied over, and the Verifier checks it; one rewrite, then
+the template in that language. An English template comparison gets the template in that language. A
+translation that passed is stored with the scenario (under `{cache key}.{lang}`), so it survives a
+restart; switching the page's language never replays the match. At startup the recorded demo's finished
+scenarios are translated into `PIVOT_PREWARM_LANGS` once its warm-up has run.
 
 200 replays per arm take ~45 s from the 38' red card on a 10-core laptop and several minutes on a
 2-core VM, so the recorded demo's first `PIVOT_WHATIF_WARM` chips of each pivot are run in the
@@ -66,16 +70,22 @@ from pivot_core.domain import (
     Scenario,
     ScenarioSpec,
     SimResult,
+    Verdict,
+    VerifierIssue,
     ViewerPrefs,
 )
 from pivot_core.domain.narrative import Language
 from pivot_core.domain.scenarios import ScenarioType
 from pivot_core.sim.whatif import run_whatif
-from pivot_worker.comparator import compare
-from pivot_worker.models import ModelClient
+from pivot_worker.comparator import compare, template_comparison, verify_comparison
+from pivot_worker.detect import EXPLAINER_TIMEOUT
+from pivot_worker.languages import wrong_script
+from pivot_worker.models import ModelClient, ModelUnavailable
 from pivot_worker.pipeline import Step
 from pivot_worker.scenarios import CATALOG, PRIME, ScenarioOption, move_minute_valid, options_for
 
+from .personalize import MAX_CHECKS as MAX_TRANSLATIONS
+from .personalize import translated_narrative, translation_messages
 from .sims import Replay
 
 log = logging.getLogger("uvicorn.error")
@@ -88,6 +98,7 @@ DEFAULT_WARM = 2
 DEFAULT_MAX_QUEUED = 20
 NOT_REPLAYABLE = "This match cannot be replayed"
 USER, WARM = 0, 1                             # queue priority: what a viewer asked for goes first
+LANG_SEP = "."                                # "{cache key}.zh": a stored translation of that scenario
 
 Runner = Callable[..., SimResult]             # `run_whatif`'s signature; tests pass a fake
 
@@ -172,8 +183,9 @@ class WhatIf:
         self._pool: Executor | None = None
         self._task: asyncio.Task | None = None
         self._pushes: set[asyncio.Future] = set()  # progress pushes in flight
-        self._written: dict[tuple[str, Language], Narrative] = {}   # (scenario id, language) -> comparison
-        self._writing: defaultdict[tuple[str, Language], asyncio.Lock] = defaultdict(asyncio.Lock)
+        # (scenario id, language, chain of the English comparison) -> comparison in that language
+        self._written: dict[tuple[str, Language, str | None], Narrative] = {}
+        self._writing: defaultdict[tuple[str, Language, str | None], asyncio.Lock] = defaultdict(asyncio.Lock)
 
     @classmethod
     def from_env(cls, adapters: Adapters, replays: dict[str, Replay], models: ModelClient) -> WhatIf:
@@ -250,26 +262,103 @@ class WhatIf:
             return scenario
         match_id, sep, _ = scenario_id.rpartition(":s")       # finished before a restart: read back
         for key, stored in self._stored(match_id).items() if sep else ():
-            if stored.scenario_id == scenario_id:
+            if stored.scenario_id == scenario_id and LANG_SEP not in key:     # not one of its translations
                 self._keep(key, stored)
                 return stored
         return None
 
     async def in_language(self, scenario: Scenario, lang: Language) -> Scenario:
-        """The scenario with its comparison in `lang`: written from the same result on first request, then kept."""
+        """The scenario with its comparison in `lang`: read back, or translated on first request, then kept."""
         result = scenario.result
         if scenario.status != "completed" or result is None or result.narrative is None \
                 or result.narrative.prefs.language == lang:
             return scenario
-        key = (scenario.scenario_id, lang)
+        english = result.narrative
+        key = (scenario.scenario_id, lang, english.chain_id)   # the English one rewritten: translate it again
         async with self._writing[key]:       # two polls at once: write it once
             if (narrative := self._written.get(key)) is None:
-                spec = scenario.spec
-                chain = f"whatif:{scenario.scenario_id}:{lang}-{uuid.uuid4().hex[:6]}"
-                narrative = self._written[key] = await self._compare(
-                    scenario, result, await self._label(spec), _ChainTraces(self, chain, scenario), chain,
-                    ViewerPrefs(language=lang))
+                narrative = self._read_back(scenario, lang)
+                if narrative is None:
+                    narrative = await self._translate(scenario, result, lang)
+                    if narrative.source == "llm":
+                        await self._store_translation(scenario, lang, narrative)
+                self._written[key] = narrative
         return scenario.model_copy(update={"result": result.model_copy(update={"narrative": narrative})})
+
+    def _read_back(self, scenario: Scenario, lang: Language) -> Narrative | None:
+        """A stored translation of the scenario's model-written comparison, if it is in `lang`'s script."""
+        key = self._key_of(scenario.scenario_id)
+        if key is None or scenario.result is None or scenario.result.narrative is None \
+                or scenario.result.narrative.source != "llm":
+            return None
+        stored = self._stored(scenario.match_id).get(f"{key}{LANG_SEP}{lang}")
+        narrative = stored.result.narrative if stored is not None and stored.result is not None else None
+        if narrative is None or narrative.prefs.language != lang \
+                or any(wrong_script(t, lang) for t in [narrative.headline, *(s.text for s in narrative.sentences)]):
+            return None
+        return narrative
+
+    async def _store_translation(self, scenario: Scenario, lang: Language, narrative: Narrative) -> None:
+        key, results = self._key_of(scenario.scenario_id), self.adapters.results
+        if key is None or results is None or scenario.result is None:
+            return
+        translated = scenario.model_copy(update={"result": scenario.result.model_copy(update={"narrative": narrative})})
+        await results.store_scenario(scenario.match_id, f"{key}{LANG_SEP}{lang}", translated)
+
+    def _key_of(self, scenario_id: str) -> str | None:
+        return next((k for k, v in self._keys.items() if v == scenario_id), None)
+
+    async def _translate(self, scenario: Scenario, result: SimResult, lang: Language) -> Narrative:
+        """The English comparison translated into `lang` and checked; else the template in `lang`. Never raises."""
+        english = result.narrative
+        assert english is not None
+        spec, prefs = scenario.spec, english.prefs.model_copy(update={"language": lang})
+        chain = f"whatif:{scenario.scenario_id}:{lang}-{uuid.uuid4().hex[:6]}"
+        steps = _ChainTraces(self, chain, scenario)
+        match = await self.adapters.matches.get_match(scenario.match_id)
+        events = {e.event_id: e for e in await self.adapters.matches.list_events(scenario.match_id)}
+        team_names = _team_names(match)
+        messages, checks = translation_messages(english, prefs), 0
+        while english.source == "llm" and checks < MAX_TRANSLATIONS:
+            try:
+                reply = await self.models.complete_json("standard", messages, timeout=EXPLAINER_TIMEOUT)
+            except ModelUnavailable as e:
+                await steps.record(Step("translator", f"unavailable: {e}"[:200], "error"))
+                break
+            except Exception as e:            # a viewer is waiting: the template, not a 500
+                log.warning("what-if %s: translator failed", scenario.scenario_id, exc_info=True)
+                await steps.record(Step("translator", f"error: {e!r}"[:200], "error"))
+                break
+            checks += 1
+            messages = messages[:2] + [{"role": "assistant", "content": reply.text}]
+            try:
+                draft = translated_narrative(english, reply.text, prefs, checks, chain)
+            except (ValueError, TypeError, KeyError) as e:
+                await steps.record(Step("translator", "invalid output", "retried" if checks > 1 else "ok",
+                                        reply.model, tokens=reply.tokens))
+                messages.append({"role": "user", "content": f"That reply was not usable ({e}). Try again."})
+                continue
+            verdict = verify_comparison(draft, result, at_minute=spec.at_minute, events=events,
+                                        team_names=team_names, target_event_id=spec.target_event_id)
+            # Spanish left in English passes the script check (both Latin), so an unchanged sentence is sent back.
+            if untranslated := [i for i, (s, d) in enumerate(zip(english.sentences, draft.sentences)) if s.text == d.text]:
+                verdict = Verdict(passed=False, issues=[*verdict.issues, VerifierIssue(
+                    code="schema_invalid", sentence_index=untranslated[0],
+                    message=f"Sentence {untranslated[0] + 1} was left in English; translate it.")])
+            await steps.record(Step("translator", draft.headline, "retried" if checks > 1 else "ok", reply.model,
+                                    tokens=reply.tokens))
+            await steps.record(Step("verifier", "pass" if verdict.passed else "; ".join(i.code for i in verdict.issues),
+                                    "ok" if verdict.passed else "rejected", verdict=verdict))
+            if verdict.passed:
+                return draft
+            fixes = "\n".join(f"- {i.code}: {i.message}" for i in verdict.issues)
+            messages.append({"role": "user", "content": f"The Verifier rejected that translation:\n{fixes}\n"
+                                                        "Fix it and return the whole card again."})
+        evidence = next((i for s in english.sentences for i in s.evidence_ids), None) or spec.target_event_id or "none"
+        narrative = template_comparison(result, evidence_id=evidence, team_names=team_names, prefs=prefs,
+                                        chain_id=chain, verifier_attempts=checks)
+        await steps.record(Step("template", narrative.headline, "degraded"))
+        return narrative
 
     async def _label(self, spec: ScenarioSpec) -> str:
         """The chip's English label, as the run was given it (the Comparator names the change with it)."""
@@ -329,6 +418,33 @@ class WhatIf:
                 except (LookupError, ValueError, OverflowError) as exc:
                     log.warning("what-if warm-up skipped %s %s: %s", pivot.pivot_id, option.type, exc)
         log.info("what-if warm-up for %s: %d scenarios queued", match_id, queued)
+
+    async def prewarm(self, match_id: str, languages: list[Language], wait: float = 3600.0) -> int:
+        """Translate every finished scenario of a match into `languages` ahead of the viewers (Ax39).
+
+        Waits (up to `wait` seconds) for the match's queued and running scenarios to finish first, so it
+        goes after the warm-up. Never replays anything. Returns how many translations the model wrote.
+        """
+        deadline = time.monotonic() + wait
+        while time.monotonic() < deadline and any(
+                s.match_id == match_id and s.status in ("queued", "running") for s in self.scenarios.values()):
+            await asyncio.sleep(10)
+        ids = {s.scenario_id for k, s in self._stored(match_id).items() if LANG_SEP not in k}
+        ids |= {s.scenario_id for s in self.scenarios.values() if s.match_id == match_id}
+        written = 0
+        for scenario_id in sorted(ids):
+            scenario = self.get(scenario_id)
+            if scenario is None or scenario.status != "completed":
+                continue
+            for lang in languages:
+                try:
+                    translated = await self.in_language(scenario, lang)
+                except Exception:
+                    log.warning("what-if %s: prewarm in %s failed", scenario_id, lang, exc_info=True)
+                    continue
+                narrative = translated.result.narrative if translated.result else None
+                written += narrative is not None and narrative.source == "llm" and narrative.prefs.language == lang
+        return written
 
     # --- running -----------------------------------------------------------------------
 

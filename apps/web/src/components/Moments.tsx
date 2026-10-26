@@ -149,7 +149,7 @@ function WhatIfInline({ pivot }: { pivot: Pivot }) {
         )}
         {busy && <RunProgress scenario={state.phase === "running" ? state.scenario : null} />}
         {state.phase === "failed" && <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={reset} />}
-        {state.phase === "done" && <ScenarioResult state={state} option={option} teams={teams} onReset={() => { reset(); setChosen(null); }} />}
+        {state.phase === "done" && <ScenarioResult state={state} option={option} teams={teams} onReset={() => { reset(); setChosen(null); }} source={source} />}
       </div>
       <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")} →</Link>
     </section>
