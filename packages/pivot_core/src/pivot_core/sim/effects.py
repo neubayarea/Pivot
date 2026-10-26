@@ -24,7 +24,7 @@ Rules from CTX-001 and QA-012: one effect stays within +/-0.15, the effects on o
 target add up to at most +/-0.25 (team-wide effects count for every player of that side), and
 every effect names the news item, career stint or relationship it comes from where there is one.
 
-Applying the effects while the match is played is the second half of B14 and waits for B12.
+The engine plays by these effects only with `Params.context_effects` on (B14 second half, CTX-007).
 """
 
 from __future__ import annotations

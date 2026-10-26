@@ -12,7 +12,7 @@ context from that file:
   `_demo_news`): the 38' red card, the 63' substitution and the 85' substitution.
 
 None of this changes how the match is played. `sim/effects.py` (B14) turns this context into the
-match's context effects; the simulator does not apply them yet.
+match's context effects; the engine plays by them only with the B14 switch on (CTX-007).
 """
 
 from __future__ import annotations

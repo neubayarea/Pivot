@@ -1,8 +1,9 @@
 import pytest
 
 from pivot_core.domain import ExplanationSentence, Narrative, StatRef, ViewerPrefs
+from pivot_core.domain.officials import FoulDetail
 from pivot_core.domain.stats import Claim
-from pivot_worker.testing import FakeStats, claim
+from pivot_worker.testing import FakeStats, claim, event
 from pivot_worker.verifier import numbers_in, verify
 
 PIVOT = 63
@@ -214,3 +215,45 @@ def test_digits_in_a_team_name_are_not_numbers(events, stats):
 def test_likelihood_words_are_not_direction_words_on_pivot_cards(events, stats):
     text = s("After Okafor came on at 61', Harbour City looked more likely to score.")
     assert check(card(text), events, stats).passed
+
+
+# Ax28: the Explainer is shown the players on the pitch, so "ten men" after a red card is a fact, not
+# an unclaimed number. It must fit the red cards up to the events the sentence cites.
+SENT_OFF = event("m063-s01030", 60, "card", team="away",
+                 foul=FoulDetail(foul_type="tackle", card="red", card_reason="professional_foul"))
+
+
+@pytest.mark.parametrize("lang,text,ok", [
+    ("en", "Harbour were down to ten men after the red card at 60'.", True),
+    ("en", "Rovers pressed the 10-man Harbour side after 60'.", True),
+    ("en", "Harbour, with 10 players, sat deep after 60'.", True),
+    ("en", "Rovers' eleven men pinned Harbour back after 60'.", True),
+    ("en", "Harbour were down to nine men after the red card at 60'.", False),
+    ("en", "Harbour dropped to ten men after the red card at 60'.", True),
+    ("en", "Harbour fell to just 10 players after 60'.", True),
+    ("en", "Harbour dropped to nine men after the red card at 60'.", False),
+    ("es", "Harbour se redujo a diez jugadores tras la roja del 60'.", True),
+    ("zh", "第60分钟红牌后，Harbour降至十人。", True),
+    ("es", "Harbour se quedó con diez jugadores tras la roja del 60'.", True),
+    ("es", "Harbour se quedó con nueve jugadores tras la roja del 60'.", False),
+    ("zh", "第60分钟红牌后，Harbour只剩10人。", True),
+    ("zh", "第60分钟红牌后，Harbour只剩9名球员。", False),
+])
+def test_players_on_the_pitch_must_fit_the_red_cards(events, stats, lang, text, ok):
+    evs = {**events, SENT_OFF.event_id: SENT_OFF}
+    narrative = Narrative(prefs=ViewerPrefs(language=lang), headline="Harbour lose a man",
+                          sentences=[s(text, evidence=[SENT_OFF.event_id])], source="llm")
+    verdict = check(narrative, evs, stats, team_names={"home": "Rovers", "away": "Harbour"})
+    assert codes(verdict) == ([] if ok else ["number_mismatch"]), verdict.issues
+
+
+def test_ten_men_before_the_red_card_is_wrong(events, stats):
+    late = SENT_OFF.model_copy(update={"t": 64 * 60 + 10, "period_t": 64 * 60 + 10 - 2700})
+    early = card(s("Harbour already had ten men at 61'.", evidence=["m063-s01042"]))
+    assert codes(check(early, {**events, late.event_id: late}, stats)) == ["number_mismatch"]
+
+
+def test_a_direction_word_about_a_stat_still_needs_its_claims(events, stats):
+    evs = {**events, SENT_OFF.event_id: SENT_OFF}
+    text = s("With ten men after 60', Harbour's passing dropped.", evidence=[SENT_OFF.event_id])
+    assert codes(check(card(text), evs, stats)) == ["direction_mismatch"]

@@ -1,16 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { TrackingFrame } from "@pivot/contracts";
 import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import { describe } from "../components/EventFeed";
-import Pitch from "../components/Pitch";
+import Pitch, { whoFromSquads } from "../components/Pitch";
 import { PivotStamp, Severity, pivotHeadline } from "../components/PivotList";
 import Scrubber from "../components/Scrubber";
 import Sourced, { formatValue } from "../components/Sourced";
 import Stamp from "../components/Stamp";
 import WhyItTurned from "../components/WhyItTurned";
 import { useClock } from "../data/clock";
-import { involves, useMatch } from "../data/match";
+import { type Frames, useFrames } from "../data/live/frames";
+import { fixtureMode, involves, useMatch } from "../data/match";
 import { inWindow } from "../data/window";
 import { usePrefs } from "../i18n";
 import NotFound from "./NotFound";
@@ -19,10 +21,23 @@ import NotFound from "./NotFound";
 const SHOW_FOR = 4;
 const PLAY_MS = 250;
 
+/**
+ * The frame S2 draws at second `t`, and what the caption should say about it. The fixture brings
+ * its own frames; on live data the detail has one empty frame and the players come from the
+ * API's tracking frames (the same fetch as the pitch board), or stay off when it has none.
+ */
+export function detailFrame(own: TrackingFrame[], from: number, t: number, fetched: Frames):
+  { frame: TrackingFrame; note: "loading" | "none" | null } {
+  const mine = own[Math.min(own.length - 1, Math.max(0, t - from))];
+  if (mine.players.length) return { frame: mine, note: null };
+  if (fetched.frame) return { frame: fetched.frame, note: null };
+  return { frame: { ...mine, t }, note: fetched.missing ? "none" : "loading" };
+}
+
 // S2 · Pivot detail. Layout follows "06 S2" in docs/design/matchday-programme.html.
 export default function PivotDetail() {
   const { id = "" } = useParams();
-  const { pivotDetail, eventById, teams, playerName } = useMatch();
+  const { match, squads, pivotDetail, eventById, teams, playerName } = useMatch();
   const { minute, at, span } = useClock();
   const { prefs, t: tr } = usePrefs();
   const focus = prefs.focus_player_id;
@@ -39,6 +54,10 @@ export default function PivotDetail() {
   const [t, setT] = useState(start);
   const [playing, setPlaying] = useState(false);
   const [disputed, setDisputed] = useState(false);
+  // The fixture's details carry their own frames; a page rendered with no browser (the tests) fetches none.
+  const [fixture] = useState(() => typeof window === "undefined" || fixtureMode());
+  const fetched = useFrames(fixture ? null : match.match_id, t);
+  const who = useMemo(() => (fixture ? undefined : whoFromSquads(squads)), [fixture, squads]);
 
   // A new pivot id resets the selection and the clock.
   useEffect(() => {
@@ -62,7 +81,7 @@ export default function PivotDetail() {
     );
   }
 
-  const frame = detail.frames[Math.min(detail.frames.length - 1, Math.max(0, t - from))];
+  const { frame, note } = detailFrame(detail.frames, from, t, fetched);
   const actions = evidence.filter((e) => e.location && Math.abs(e.t - t) <= SHOW_FOR);
   const picked = selected ? eventById(selected) : undefined;
   // Evidence the timeline cannot reach gets no tick; its chip and the caption say so instead.
@@ -116,7 +135,7 @@ export default function PivotDetail() {
             {focus && <> · <span className="focus-key">{tr("detail.focusNote", { player: playerName(focus) })}</span></>}
           </>
         }>
-          <Pitch frame={frame} actions={actions} selected={selected} focus={focus}
+          <Pitch frame={frame} actions={actions} selected={selected} focus={focus} who={who}
             label={picked
               ? tr("detail.pitchLabelPicked", { t: frame.t, n: frame.players.length, seq: picked.seq })
               : tr("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
@@ -133,6 +152,7 @@ export default function PivotDetail() {
             ) : (
               <span className="muted">{tr("detail.pickHint")}</span>
             )}
+            {note && <span className="muted"> · {tr(note === "none" ? "board.pitchNone" : "board.pitchLoading")}</span>}
           </p>
         </Card>
         <div className="stack">

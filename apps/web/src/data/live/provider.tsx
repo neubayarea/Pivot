@@ -205,9 +205,9 @@ const squadPlayer = ({ player_id, name, shirt_number }: Match["home"]["squad"][n
 const teamInfo = ({ name, short_name, side, color }: Match["home"]) => ({ name, short_name, side, color });
 
 /**
- * The API serves no tracking frames or before/after table yet, so S2 gets an empty pitch over
- * the two minutes either side of the pivot, widened to cover its evidence (Cx3); evidence events
- * still draw where they happened.
+ * The API serves no before/after table yet, and S2 fetches the tracking frames itself (Ax25), so
+ * the detail carries one empty frame over the two minutes either side of the pivot, widened to
+ * cover its evidence (Cx3); evidence events still draw where they happened.
  */
 function detailWithoutTracking(match: Match, pivot: Pivot, byId: Map<string, MatchEvent>): PivotDetail {
   const ids = pivot.narrative?.sentences.flatMap((s) => s.evidence_ids) ?? [];

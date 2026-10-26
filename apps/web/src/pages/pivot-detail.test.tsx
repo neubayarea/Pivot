@@ -3,12 +3,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import type { Match, MatchEvent, Pivot1 as Pivot } from "@pivot/contracts";
+import type { Match, MatchEvent, Pivot1 as Pivot, TrackingFrame } from "@pivot/contracts";
+import Pitch, { whoFromSquads } from "../components/Pitch";
 import Scrubber from "../components/Scrubber";
 import { toView } from "../data/live/provider";
 import { MatchContext } from "../data/match";
 import { evidenceWindow } from "../data/window";
-import PivotDetail from "./PivotDetail";
+import PivotDetail, { detailFrame } from "./PivotDetail";
 
 const ev = (id: string, t: number, type: MatchEvent["type"] = "shot") =>
   ({ event_id: id, seq: Math.round(t / 10), t, minute: Math.floor(t / 60), period: 2, team: "home", type, meta: {},
@@ -57,7 +58,7 @@ describe("pivot detail timeline window", () => {
     const at = ticks(html);
     expect(at).toHaveLength(3);                     // two evidence ticks and the pivot
     expect(at.every((left) => left >= 0 && left <= 100)).toBe(true);
-    expect(html).toContain("59′–65′");
+    expect(html).toContain("60′–65′");             // elapsed [59:00, 65:00) on the match clock (Ax27)
     expect(html).not.toContain("outside the timeline");
   });
 
@@ -85,5 +86,51 @@ describe("pivot detail timeline window", () => {
         pivotMinutes={[5]} marks={[{ t: 50, on: false }, { t: 150, on: true }, { t: 260, on: false }]} />,
     );
     expect(ticks(html)).toEqual([50]);
+  });
+});
+
+// Ax25: on live data the S2 pitch draws the API's tracking frames, like the pitch board.
+describe("pivot detail pitch", () => {
+  const empty = { match_id: "m1", period: 2, t: 59 * 60, possession: null, players: [], ball: { owner_id: null, x: 52.5, y: 34, z: 0 } } as TrackingFrame;
+  const tracked = (t: number) => ({
+    ...empty, t, ball: { owner_id: "h09", x: 70, y: 30, z: 0 },
+    players: [{ player_id: "h09", x: 70, y: 30 }, { player_id: "a04", x: 72, y: 31 }],
+  }) as unknown as TrackingFrame;
+
+  it("draws the fetched frame when the detail has no players of its own", () => {
+    const got = detailFrame([empty], 59 * 60, 61 * 60, { frame: tracked(61 * 60), missing: false });
+    expect(got.note).toBeNull();
+    expect(got.frame.players).toHaveLength(2);
+    expect(got.frame.t).toBe(61 * 60);
+  });
+
+  it("keeps the fixture's own frames", () => {
+    const own = [tracked(100), tracked(101)];
+    const got = detailFrame(own, 100, 101, { frame: tracked(999), missing: false });
+    expect(got.frame).toBe(own[1]);
+  });
+
+  it("says when the positions are loading or the match has none, and keeps the clock", () => {
+    expect(detailFrame([empty], 59 * 60, 3700, { frame: null, missing: false })).toMatchObject({ note: "loading", frame: { t: 3700, players: [] } });
+    expect(detailFrame([empty], 59 * 60, 3700, { frame: null, missing: true }).note).toBe("none");
+  });
+
+  it("shows an empty-state note, not an error, on a match with no tracking", () => {
+    const { html } = detailPage([ev("shot", 61 * 60 + 20)]);
+    expect(html).toContain("No player positions for this match.");
+    expect(html).toContain('class="pitch"');
+  });
+
+  it("colours and numbers sim players from the squads", () => {
+    const who = whoFromSquads({
+      home: [{ player_id: "h09", name: "Nine", shirt: 9 }],
+      away: [{ player_id: "a04", name: "Four", shirt: 4 }],
+    });
+    expect(who("h09")).toEqual({ home: true, shirt: "9" });
+    expect(who("a04")).toEqual({ home: false, shirt: "4" });
+    const html = renderToStaticMarkup(<Pitch frame={tracked(61)} actions={[]} selected={null} label="x" who={who} />);
+    expect(html.match(/class="pl"/g)).toHaveLength(3);            // two players and the ball
+    expect(html).toContain("var(--pv-home)");
+    expect(html).toContain("var(--pv-away)");
   });
 });

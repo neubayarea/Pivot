@@ -338,6 +338,21 @@ def mask_multiples(text: str, lang: str) -> str:
     return pattern.sub(lambda m: " " * len(m[0]), text) if pattern else text
 
 
+# Players on the pitch ("ten men", "10-man Rovers", "diez jugadores", "只剩10人") in spelled-out text: a
+# count of players after red cards, checked against the cards rather than a claim.
+PLAYER_COUNT = {
+    "en": re.compile(r"(?<![A-Za-z\d.])(?P<n>\d+)(?=\s*-?\s*(?:men|man|players)\b)", re.IGNORECASE),
+    "es": re.compile(r"(?<![A-Za-z\d.])(?P<n>\d+)(?=\s+(?:hombres|jugadores|futbolistas)\b)", re.IGNORECASE),
+    "zh": re.compile(r"(?<![\d.])(?P<n>\d+)(?=\s*(?:人|名球员|名队员|名场上球员))"),
+}
+
+
+def player_counts(text: str, lang: str) -> dict[int, int]:
+    """Where each player count starts in spelled-out text, and the count."""
+    pattern = PLAYER_COUNT.get(lang)
+    return {m.start(): int(m["n"]) for m in pattern.finditer(text)} if pattern else {}
+
+
 # "from A to B" in each language; A must be the earlier window's value.
 _N = r"(-?\d+(?:\.\d+)?)"
 FROM_TO = {"en": re.compile(rf"\bfrom\s+{_N}[^\d]{{0,15}}?\bto\s+{_N}", re.IGNORECASE),
