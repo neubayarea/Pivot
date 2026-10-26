@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { Claim, Pivot1 as Pivot } from "@pivot/contracts";
+import { useClock } from "../data/clock";
 import { involves, useMatch } from "../data/match";
 import { narrativeLang, usePrefs } from "../i18n";
 import Card from "./Card";
@@ -64,6 +65,7 @@ type Props = {
 export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outside }: Props) {
   const { eventById, playerName } = useMatch();
   const { prefs, t } = usePrefs();
+  const { minute } = useClock();
   const focus = prefs.focus_player_id;
   const name = nameMatcher(playerName(focus));
   const narrative = pivot?.narrative;
@@ -81,7 +83,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   const served = narrativeLang(narrative);
   const fellBack = served !== null && served !== prefs.language;
   return (
-    <Card title={t("why.title")} note={`${pivot.minute}′ · ${t(auto ? "why.noteAuto" : "why.noteVerified")}`} className="why drop">
+    <Card title={t("why.title")} note={`${minute(pivot.minute)}′ · ${t(auto ? "why.noteAuto" : "why.noteVerified")}`} className="why drop">
       {fellBack && (
         // A div, not a p: the drop cap goes on the first paragraph of the explanation.
         <div className="lang-note" role="note">

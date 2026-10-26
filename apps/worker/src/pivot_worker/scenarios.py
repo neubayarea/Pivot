@@ -12,11 +12,11 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pivot_core.domain import MatchEvent, Pivot, ScenarioSpec, TeamTactics
+from pivot_core.domain import MatchEvent, Pivot, ScenarioSpec, TeamTactics, label_at, period_starts
 
 PRIME = "′"
 MOVE_MIN, MOVE_MAX = 46, 85                   # a moved substitution must land in this range
-DEFAULT_MOVE_TO = 74                          # elapsed minute, shown as 75′
+DEFAULT_MOVE_TO = 74                          # new_minute, shown as 75′ (the sim plants it at 75′ on the clock)
 LEAD_UP = 15                                  # minutes before a pivot in which an event can have caused it
 PRESS_LEVELS = ("low", "mid", "high")
 
@@ -91,7 +91,13 @@ def is_goal(e: MatchEvent) -> bool:
 
 
 def _minute(m: int) -> str:
-    return f"{m + 1}{PRIME}"                   # event minutes are 0-based, the clock is 1-based
+    """A move's new minute: the sim plants it when the clock shows new_minute + 1 (whatif._apply)."""
+    return f"{m + 1}{PRIME}"
+
+
+def _clock(label: str) -> str:
+    """A clock label ("63'", "45+2'") with the prime the chips use, so a chip reads like the event list."""
+    return label.rstrip("'") + PRIME
 
 
 def _closest(events: list[MatchEvent], pivot: Pivot) -> MatchEvent | None:
@@ -136,7 +142,7 @@ def options_for(pivot: Pivot, events: Iterable[MatchEvent],
             return ScenarioOption(type_, entry.label.format(new_minute=_minute(new)), True,
                                   target_event_id=target.event_id, at_minute=min(target.minute, new),
                                   team=target.team, params={"new_minute": new})
-        return ScenarioOption(type_, entry.label.format(minute=_minute(target.minute)), True,
+        return ScenarioOption(type_, entry.label.format(minute=_clock(target.clock_label)), True,
                               target_event_id=target.event_id, at_minute=target.minute, team=target.team)
 
     options.append(target_option("cancel_substitution", subs))
@@ -150,7 +156,7 @@ def options_for(pivot: Pivot, events: Iterable[MatchEvent],
     higher = level < len(PRESS_LEVELS) - 1
     press = PRESS_LEVELS[level + 1 if higher else level - 1]
     label = CATALOG["change_press"].label.format(direction="higher" if higher else "lower",
-                                                 minute=_minute(pivot.minute))
+                                                 minute=_clock(label_at(period_starts(played), pivot.minute * 60)))
     options.append(ScenarioOption("change_press", label, True, at_minute=pivot.minute, team=losing,
                                   tactics=current.model_copy(update={"press": press})))
     # Chips for the pivot's own trigger come first, then the rest in catalog order.

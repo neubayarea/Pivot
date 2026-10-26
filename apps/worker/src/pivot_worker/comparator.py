@@ -27,6 +27,8 @@ from pivot_core.domain import (
     Verdict,
     VerifierIssue,
     ViewerPrefs,
+    label_at,
+    period_starts,
 )
 
 from .explainer import KEY_TYPES, ExplainerDraft, audience_brief, parse_draft
@@ -157,8 +159,9 @@ def build_messages(result: SimResult, *, scenario_label: str, target_event_id: s
                    team_names: Mapping[str, str], events: Mapping[str, MatchEvent] | None = None,
                    prefs: ViewerPrefs | None = None,
                    feedback: Verdict | None = None) -> tuple[Prompt, list[dict[str, str]]]:
+    from_clock = label_at(period_starts((events or {}).values()), at_minute * 60)
     request = {
-        "scenario": scenario_label, "changed_event_id": target_event_id, "from_clock": f"{at_minute + 1}'",
+        "scenario": scenario_label, "changed_event_id": target_event_id, "from_clock": from_clock,
         "evidence_ids": citable_events(target_event_id, at_minute, events or {}),
         "teams": dict(team_names),
         "baseline": result.baseline.model_dump(), "with_change": result.counterfactual.model_dump(),

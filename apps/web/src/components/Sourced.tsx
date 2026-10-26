@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Claim, StatRef } from "@pivot/contracts";
+import { useClock } from "../data/clock";
 import { useMatch } from "../data/match";
 import { isMessageKey, useT, type T } from "../i18n";
 
@@ -18,6 +19,7 @@ export function formatValue(c: Claim): string {
 export default function Sourced({ claim, className = "", children }: { claim: Claim; className?: string; children: ReactNode }) {
   const { teams, playerName } = useMatch();
   const t = useT();
+  const { span } = useClock();
   const { metric, team, player_id, window } = claim.stat_ref;
   return (
     <span className={`src ${className}`.trim()} tabIndex={0}>
@@ -26,7 +28,7 @@ export default function Sourced({ claim, className = "", children }: { claim: Cl
         <b>{metricLabel(metric, t)}</b>
         <span>{teams[team].name}{player_id ? ` · ${playerName(player_id)}` : ""}</span>
         <span>
-          {window[0]}′–{window[1]}′ · {formatValue(claim)}
+          {span(window)} · {formatValue(claim)}
         </span>
         <code>stat_ref.{metric}</code>
       </span>

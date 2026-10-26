@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, Pivot1 as Pivot, TrackingFrame, ViewerPrefs } from "@pivot/contracts";
 import { needsLocalised, usePrefs } from "../../i18n";
-import { clockLabel } from "../../fixtures/demo-1021";
 import {
   ConnectionContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
 import { isRecordedDemo, type MatchChoice } from "../choice";
+import { clockAt } from "../clock";
 import { evidenceWindow } from "../window";
 import { ApiError, api } from "./api";
 import { isScenarioEnvelope, publishScenario } from "./scenarioFeed";
@@ -178,7 +178,7 @@ export function toView({ match, events, metrics, pivots }: LiveState): MatchView
   return {
     match: {
       match_id: match.match_id, clock: match.clock, period: match.period, status: match.status,
-      speed: match.speed, score: match.score, clockLabel: clockLabel(match.clock),
+      speed: match.speed, score: match.score, clockLabel: clockAt(match.periods ?? [], match.clock), periods: match.periods,
     },
     teams: { home: teamInfo(match.home), away: teamInfo(match.away) },
     events: events.slice().reverse(),

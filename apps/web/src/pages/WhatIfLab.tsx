@@ -7,10 +7,11 @@ import { pivotHeadline } from "../components/PivotList";
 import Segmented from "../components/Segmented";
 import Stamp from "../components/Stamp";
 import { RunFailed, RunProgress, ScenarioChips, ScenarioResult } from "../components/WhatIf";
+import { useClock } from "../data/clock";
 import { useFixture, useMatch } from "../data/match";
 import { mockScenarioApi } from "../data/scenarioMock";
 import {
-  DEFAULT_RUNS, MOVE_RANGE, RUN_COUNTS, clockMinute, liveScenarioApi, optionLabel, useScenarioRun, type RunCount,
+  DEFAULT_RUNS, MOVE_RANGE, RUN_COUNTS, clockMinute, liveScenarioApi, optionLabel, useOptionMinute, useScenarioRun, type RunCount,
   type ScenarioApi, type ScenarioOption, type StartScenario,
 } from "../data/scenarios";
 import { usePrefs } from "../i18n";
@@ -40,6 +41,8 @@ export default function WhatIfLab() {
 export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi }) {
   const { pivotDetail, teams, eventById } = useMatch();
   const { t } = usePrefs();
+  const { minute } = useClock();
+  const minuteOf = useOptionMinute();
   const pivot = pivotDetail(pivotId)?.pivot;
   const [opts, setOpts] = useState<Options>({ kind: "loading" });
   const [reload, setReload] = useState(0);
@@ -108,14 +111,14 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
   // The replay starts at the earlier of the substitution and its new minute.
   const fromMinute = (o: ScenarioOption) => {
     const target = o.target_event_id ? eventById(o.target_event_id) : undefined;
-    if (o.type === "move_substitution" && target) return clockMinute(Math.min(target.minute, moveTo - 1));
-    return o.at_minute === null ? null : clockMinute(o.at_minute);
+    if (o.type === "move_substitution" && target) return minute(Math.min(target.minute, moveTo - 1));
+    return o.at_minute === null ? null : minute(o.at_minute);
   };
 
   return (
     <>
       <div className="back">
-        <Link to={`/pivot/${pivotId}`}>{t("whatif.back", { minute: pivot.minute, headline: pivotHeadline(pivot, teams, t) })}</Link>
+        <Link to={`/pivot/${pivotId}`}>{t("whatif.back", { minute: minute(pivot.minute), headline: pivotHeadline(pivot, teams, t) })}</Link>
       </div>
       <div className="headline">
         <Kicker>{t("whatif.kicker")}</Kicker>
@@ -153,7 +156,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
               <>
                 <dl className="conf">
                   <dt>{t("whatif.confirm.change")}</dt>
-                  <dd>{optionLabel(option, t, moveTo)}</dd>
+                  <dd>{optionLabel(option, t, moveTo, minuteOf(option))}</dd>
                   {option.team && (
                     <>
                       <dt>{t("whatif.confirm.team")}</dt>

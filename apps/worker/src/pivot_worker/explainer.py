@@ -22,6 +22,8 @@ from pivot_core.domain import (
     TeamTactics,
     Verdict,
     ViewerPrefs,
+    label_at,
+    period_starts,
 )
 from pivot_core.domain.common import Model
 from pivot_core.domain.stats import STAT_UNITS, Claim
@@ -231,7 +233,7 @@ def build_request(
     focus = (prefs or ViewerPrefs()).focus_player_id
     shown = window_events(candidate, events)
     request = {
-        "pivot": {"minute": candidate.minute, "clock": f"{candidate.minute + 1}'",
+        "pivot": {"minute": candidate.minute, "clock": label_at(period_starts(events.values()), candidate.minute * 60),
                   "towards": team_names[candidate.direction], "swing": round(candidate.swing, 3),
                   "key_event_ids": candidate.key_event_ids},
         "teams": dict(team_names),

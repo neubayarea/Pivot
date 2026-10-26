@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,6 +37,17 @@ def clock_label(period: int, period_t: int) -> str:
     if m < length:
         return f"{base + m + 1}'"
     return f"{base + length}+{m - length + 1}'"
+
+
+def label_at(period_starts: Mapping[int, int], t: int) -> str:
+    """clock_label for elapsed second `t`, from when each period started on the elapsed clock
+    (period -> start_t: Match.periods, or period_starts of the events). This is how every elapsed
+    minute in the data is shown to people: a pivot at minute m reads label_at(starts, m * 60)."""
+    started = [(start, period) for period, start in period_starts.items() if start <= t]
+    if not started:
+        return clock_label(1, t)
+    start, period = max(started)
+    return clock_label(period, t - start)
 
 # Pitch coordinates in metres on a 105 x 68 pitch (the SPADL convention).
 # Origin is the bottom-left corner seen from the main stand; the home team always

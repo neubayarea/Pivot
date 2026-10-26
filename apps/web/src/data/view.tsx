@@ -3,6 +3,7 @@ import { createContext, useContext } from "react";
 import type { Match, MatchEvent, MinuteMetric, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import type { TeamInfo } from "../fixtures/demo-1021";
 import type { PivotDetailData } from "../fixtures/pivot-detail";
+import type { PeriodStart } from "./clock";
 import type { ConnectionStatus } from "./live/socket";
 
 export type Side = "home" | "away";
@@ -14,7 +15,12 @@ export type SquadPlayer = { player_id: string; name: string; shirt: number | nul
 export type TeamStats = { possession: number; shots: number; xg: number; pressures: number; finalThirdPasses: number };
 
 export type MatchView = {
-  match: Pick<Match, "match_id" | "clock" | "period" | "status" | "speed"> & { score: Score; clockLabel: string };
+  match: Pick<Match, "match_id" | "clock" | "period" | "status" | "speed"> & {
+    score: Score;
+    clockLabel: string;
+    /** When each period started on the elapsed clock, for the minutes shown (data/clock.ts); plain when left out. */
+    periods?: PeriodStart[];
+  };
   teams: Record<Side, TeamInfo>;
   /** Visible events, newest first. */
   events: MatchEvent[];

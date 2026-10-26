@@ -47,7 +47,9 @@ from pivot_core.domain import (
     ViewerPrefs,
     area_of,
     clock_label,
+    label_at,
     lane_of,
+    period_starts,
     third_of,
     zone_of,
 )
@@ -324,6 +326,20 @@ def test_stoppage_time_keeps_the_elapsed_clock_unique():
                         type="pass", team="home")
     assert (first.clock_label, second.clock_label) == ("45+3'", "47'")
     assert first.minute < second.minute
+
+
+def test_elapsed_time_is_labelled_on_the_clock_of_its_period():
+    # Three minutes of first-half stoppage: the second half kicks off 48 minutes in, so elapsed
+    # minute 69 reads 67', and anything before the kick-off is still first-half added time (Ax27).
+    events = [MatchEvent(match_id="M", seq=1, event_id="a", t=2700 + 150, period=1, period_t=2700 + 150,
+                         type="pass", team="home"),
+              MatchEvent(match_id="M", seq=2, event_id="b", t=2880 + 1250, period=2, period_t=1250,
+                         type="pass", team="home")]
+    starts = period_starts(events)
+    assert starts == {1: 0, 2: 2880}
+    assert [label_at(starts, m * 60) for m in (0, 39, 46, 47, 48, 69, 101)] == \
+        ["1'", "40'", "45+2'", "45+3'", "46'", "67'", "90+9'"]
+    assert label_at({}, 125) == "3'"                       # no periods known: the first half
 
 
 def test_shootout_kick_and_final_score_on_penalties():

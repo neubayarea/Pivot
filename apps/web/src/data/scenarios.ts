@@ -2,11 +2,13 @@
 // the mock in data/scenarioMock with `?fixture=1`. runScenario starts a run, polls it about once a
 // second (a pushed "scenario" envelope wakes it sooner) and resolves with the settled Scenario.
 // Finished runs are kept for the session, so asking the same thing again answers at once.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { OutcomeDist, Scenario, SimResult } from "@pivot/contracts";
 import type { T } from "../i18n";
+import { eventMinute, useClock } from "./clock";
 import { api, type RunCount, type ScenarioOption, type StartScenario } from "./live/api";
 import { subscribeScenario } from "./live/scenarioFeed";
+import { MatchContext } from "./view";
 
 export type { RunCount, ScenarioOption, StartScenario };
 
@@ -149,26 +151,45 @@ export function useScenarioRun(source: ScenarioApi) {
   return { state, run, reset };
 }
 
-/** Elapsed minute (0-based, as in the contract) to the clock minute the viewer reads: 63 → 64′. */
+/**
+ * A moved substitution's `new_minute` to the clock minute it is made at: the simulator plants it
+ * when the clock shows new_minute + 1 (whatif._apply), so 74 → 75′. Other elapsed minutes go
+ * through the match clock instead (data/clock.ts), since stoppage time shifts them.
+ */
 export const clockMinute = (elapsed: number) => elapsed + 1;
+
+/**
+ * The minute a chip names, as the rest of the page reads it (G2): the target event's own minute,
+ * exactly as the event list shows it, else `at_minute` on the match clock (change_press: the pivot's).
+ */
+export function useOptionMinute(): (o: ScenarioOption) => string | null {
+  const view = useContext(MatchContext);
+  const { minute } = useClock();
+  return (o) => {
+    const target = o.target_event_id ? view?.eventById(o.target_event_id) : undefined;
+    if (target?.clock_label) return eventMinute(target);
+    return o.at_minute === null ? null : minute(o.at_minute);
+  };
+}
 
 /**
  * The chip's label in the viewer's language. The API sends English with the minute filled in; the
  * minute comes from the option itself, so every language (and a picked new minute) reads the same.
+ * `at` is the option's minute from useOptionMinute; without it, at_minute + 1.
  */
-export function optionLabel(o: ScenarioOption, t: T, newMinute?: number): string {
-  const at = o.at_minute;
+export function optionLabel(o: ScenarioOption, t: T, newMinute?: number, at?: string | null): string {
+  const minute = at !== undefined ? at : o.at_minute === null ? null : String(clockMinute(o.at_minute));
   switch (o.type) {
     case "cancel_substitution":
     case "remove_red_card":
     case "remove_goal":
-      return o.enabled && at !== null ? t(`whatif.type.${o.type}`, { minute: clockMinute(at) }) : t(`whatif.type.${o.type}.any`);
+      return o.enabled && minute !== null ? t(`whatif.type.${o.type}`, { minute }) : t(`whatif.type.${o.type}.any`);
     case "move_substitution": {
       const to = newMinute ?? (typeof o.params.new_minute === "number" ? clockMinute(o.params.new_minute) : null);
       return to === null ? o.label : t("whatif.type.move_substitution", { minute: to });
     }
     case "change_press":
-      return at === null ? o.label : t(/lower/i.test(o.label) ? "whatif.type.change_press.lower" : "whatif.type.change_press.higher", { minute: clockMinute(at) });
+      return minute === null ? o.label : t(/lower/i.test(o.label) ? "whatif.type.change_press.lower" : "whatif.type.change_press.higher", { minute });
     default:
       return o.label;
   }
