@@ -20,8 +20,8 @@ are left out, so the API can load the files back as they are):
 The match's careers, form, table, head-to-head and news come from the fictional season in
 eval/fixtures/season-2026.json (scripts/make_season.py, B13). They are added after the match is
 simulated, so they cannot change how it is played. The context effects they give (B14,
-sim/effects.py) are written into `context.effects` the same way; the simulator does not apply
-them yet.
+sim/effects.py) are written into `context.effects` the same way. With `DEMO_1021.context_effects`
+on (off for now, CTX-007) the stories are filled in before kick-off and the match is played by them.
 """
 from __future__ import annotations
 
@@ -45,7 +45,10 @@ OUT = ROOT / "eval" / "fixtures"
 
 def run(seed: int):
     match = DEMO_1021.build(seed)
-    out = simulate(match, plants=list(DEMO_1021.plants))
+    on = DEMO_1021.context_effects
+    if on and seed == DEMO_1021.seed:
+        match = with_season(match, load_season(OUT))        # the effects need the stories before kick-off
+    out = simulate(match, plants=list(DEMO_1021.plants), context_effects=on)
     events = out.events_as_models()
     metrics = momentum_series(match.match_id, events)
     cands = detect_candidates(match.match_id, metrics, events)
@@ -100,7 +103,10 @@ def export(seed: int) -> None:
     out, events, metrics, cands = run(seed)
     calc = StatCalculator(out.match, events, out.frames_as_models())
     # The season's squads are those of the demo seed; another seed gives other players, so no stories.
-    match = with_effects(with_season(out.match, load_season(OUT)) if seed == DEMO_1021.seed else out.match)
+    if DEMO_1021.context_effects:
+        match = out.match                                   # played with its stories and effects already
+    else:
+        match = with_effects(with_season(out.match, load_season(OUT)) if seed == DEMO_1021.seed else out.match)
     data = {
         "preset": {"name": DEMO_1021.name, "seed": seed, "plants": [p.model_dump(mode="json") for p in DEMO_1021.plants]},
         "match": match.model_dump(mode="json", round_trip=True),

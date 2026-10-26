@@ -27,6 +27,7 @@ class Preset:
     home_formation: str = "4-3-3"
     away_formation: str = "4-2-3-1"
     plants: tuple[PlantSpec, ...] = field(default_factory=tuple)
+    context_effects: bool = False             # play by the off-pitch context (B14); off until the story is checked
 
     def build(self, seed: int | None = None) -> Match:
         m = build_demo_match(self.seed if seed is None else seed, self.home_strength, self.away_strength,
