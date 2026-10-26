@@ -1,5 +1,7 @@
 import asyncio
+import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 
 import pytest
 from fastapi.testclient import TestClient
@@ -89,27 +91,34 @@ def test_api_lists_simulated_matches_with_the_demo(tmp_path, monkeypatch, calls)
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     with TestClient(app) as client:
         assert client.get("/healthz").status_code == 200
-        for _ in range(500):
-            if not client.get("/api/sims").json()["generating"]:
-                break
-            client.portal.call(asyncio.sleep, 0.02)
-        assert client.get("/api/sims").json()["ready"] == 1
+        assert _wait_for_sims(client)["ready"] == 1
         ids = [m["match_id"] for m in client.get("/api/matches").json()]
         assert sorted(ids) == ["M-api-demo", "M-seed-101"]
         assert len(client.get("/api/matches/M-seed-101/timeline").json()) > 90
 
 
+def _wait_for_sims(client: TestClient, limit_s: float = 120) -> dict:
+    """Until the background load has stored (or given up on) every simulated match. Polls the status
+    rather than sleeping a fixed time: on a busy CI runner writing one match takes 15 s or more (#161)."""
+    deadline = time.monotonic() + limit_s
+    while True:
+        status = client.get("/api/sims").json()
+        if status["total"] and status["ready"] + status["failed"] == status["total"]:
+            return status
+        assert time.monotonic() < deadline, f"simulated matches not loaded after {limit_s:.0f} s: {status}"
+        client.portal.call(asyncio.sleep, 0.05)
+
+
+@contextmanager
 def _client_with_frames(tmp_path, monkeypatch):
+    # Start the app once: entering a TestClient again runs startup again, with a new, empty store
+    # that a second background load fills while the test is already asking for frames (#161).
     monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
-    client = TestClient(app)
-    client.__enter__()
-    for _ in range(500):
-        if not client.get("/api/sims").json()["generating"]:
-            break
-        client.portal.call(asyncio.sleep, 0.02)
-    return client
+    with TestClient(app) as client:
+        _wait_for_sims(client)
+        yield client
 
 
 def test_frames_of_a_simulated_match_by_window(tmp_path, monkeypatch, calls, sim_output):
