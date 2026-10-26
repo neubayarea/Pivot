@@ -1,6 +1,6 @@
 // What S1 and S2 read, whichever source fills it: the live API (data/live) or the fixture replay.
 import { createContext, useContext } from "react";
-import type { Match, MatchEvent, MinuteMetric, Pivot1 as Pivot, Score } from "@pivot/contracts";
+import type { Match, MatchEvent, MinuteMetric, Pivot1 as Pivot, Score, TeamSheet } from "@pivot/contracts";
 import type { TeamInfo } from "../fixtures/demo-1021";
 import type { PivotDetailData } from "../fixtures/pivot-detail";
 import type { PeriodStart } from "./clock";
@@ -11,7 +11,7 @@ export type Speed = Match["speed"];
 /** Everything S2 needs for one pivot. The pivot is the confirmed version even before the replay reaches it. */
 export type PivotDetail = PivotDetailData & { pivot: Pivot };
 /** One player in the focus-player picker. */
-export type SquadPlayer = { player_id: string; name: string; shirt: number | null };
+export type SquadPlayer = { player_id: string; name: string; shirt: number | null; role?: TeamSheet["starters"][number]["role"] };
 export type TeamStats = { possession: number; shots: number; xg: number; pressures: number; finalThirdPasses: number };
 
 export type MatchView = {
@@ -30,6 +30,8 @@ export type MatchView = {
   stats: Record<Side, TeamStats>;
   /** Both squads, for the focus-player picker; ordered by shirt number. */
   squads: Record<Side, SquadPlayer[]>;
+  /** Starting team sheets (formation and roles), for the pitch board's names and shape; the fixture has none. */
+  sheets?: Record<Side, TeamSheet>;
   playerName: (id: string | null) => string;
   eventById: (id: string) => MatchEvent | undefined;
   pivotDetail: (id: string) => PivotDetail | undefined;

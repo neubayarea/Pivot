@@ -1,0 +1,40 @@
+/* Pitch board (Ax36): names on the dots, line-ups, team-shape layer. */
+.pitch .pl.pick { cursor: pointer; }
+.pitch .pl.pick:hover circle:not([fill="transparent"]) { stroke-width: 3; }
+.pb-tools { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.pb-tools small { font-size: 12px; }
+
+.shape-table { display: grid; gap: 4px; overflow-x: auto; }
+.shape-table table { border-collapse: collapse; font-family: var(--pv-label); font-size: 13px; width: 100%; }
+.shape-table th, .shape-table td { padding: 3px 6px; border-bottom: 1px solid var(--pv-ink); text-align: right; white-space: nowrap; }
+.shape-table th:first-child { text-align: left; font-weight: 600; white-space: normal; }
+.shape-table thead th { font-weight: 700; border-bottom-width: 2px; }
+.shape-table thead th.home { color: var(--pv-home); }
+.shape-table thead th.away { color: var(--pv-away); }
+.shape-table td { font-weight: 700; font-variant-numeric: tabular-nums; }
+.shape-table td small { font-weight: 500; color: var(--pv-ink-2); }
+.shape-table > small { font-size: 12px; }
+
+.roster { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+.roster h4 { font-family: var(--pv-label); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; border-bottom: 2px solid var(--pv-ink); margin: 0 0 2px; }
+.roster-team.home h4 { color: var(--pv-home); }
+.roster-team.away h4 { color: var(--pv-away); }
+.roster ol { list-style: none; margin: 0; padding: 0; display: grid; }
+.roster button { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 2.1em 1fr auto; gap: 0 6px;
+  align-items: baseline; padding: 3px 4px; font-family: var(--pv-label); font-size: 13px; cursor: pointer; min-height: 28px; }
+.roster button:hover, .roster button:focus-visible { background: var(--pv-gold-soft); }
+.roster button:focus-visible { outline: 2px solid var(--pv-ink); }
+.roster button[aria-pressed="true"] { background: var(--pv-ink); color: var(--pv-sheet); }
+.roster button.marked .nm { text-decoration: underline dashed var(--pv-gold) 2px; text-underline-offset: 3px; }
+.roster button b { text-align: right; }
+.roster .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roster .rl { font-size: 11px; font-weight: 700; opacity: .75; }
+.roster .st { grid-column: 2 / 4; font-size: 11px; }
+.roster .st.cameOn { color: var(--pv-home); }
+.roster .st.sentOff { color: var(--pv-red); font-weight: 700; }
+.roster button:disabled { cursor: default; opacity: .45; }
+.roster button:disabled .nm { text-decoration: line-through; }
+.roster-hint { grid-column: 1 / -1; font-size: 12px; }
+@media (max-width: 480px) {
+  .roster { grid-template-columns: 1fr; }
+}

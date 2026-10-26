@@ -65,3 +65,21 @@ export function useFrames(matchId: string | null, t: number): Frames {
   if (here) shown.current = here;
   return { frame: here ?? shown.current, missing };
 }
+
+/** Every frame in [from, to], fetched once per window (Ax36's "before" shape); null while loading. */
+export function useFrameWindow(matchId: string | null, from: number, to: number): TrackingFrame[] | null {
+  const [got, setGot] = useState<{ key: string; frames: TrackingFrame[] } | null>(null);
+  const key = `${matchId}:${from}:${to}`;
+  useEffect(() => {
+    if (matchId === null || to < 0) return;
+    let live = true;
+    api.listFrames(matchId, Math.max(0, from), to).then(
+      (frames) => live && setGot({ key, frames }),
+      () => live && setGot({ key, frames: [] }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [matchId, from, to, key]);
+  return got?.key === key ? got.frames : null;
+}
