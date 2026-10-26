@@ -132,7 +132,6 @@ class Personalizer:
                         written += (await self.personalize(pivot, prefs)).prefs == prefs
                     except Exception:
                         log.warning("%s: prewarm of %s failed", pivot.pivot_id, prefs.model_dump(), exc_info=True)
-        log.info("prewarmed %s: %d versions in %s", match_id, written, ",".join(languages))
         return written
 
     async def _stored(self, pivot: Pivot, prefs: ViewerPrefs) -> Narrative | None:

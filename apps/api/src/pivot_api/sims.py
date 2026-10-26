@@ -35,8 +35,8 @@ import os
 import re
 import time
 from bisect import bisect_left, bisect_right
-from concurrent.futures import Executor, ProcessPoolExecutor
 from collections.abc import Callable
+from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass, field
 from functools import lru_cache, partial
 from pathlib import Path
