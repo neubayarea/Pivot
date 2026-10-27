@@ -4,8 +4,9 @@ from .changepoint import DetectorParams, PivotDetector, detect_candidates, key_e
 from .momentum import momentum_series
 from .ratings import player_match_stats
 from .stats import StatCalculator
+from .team_stats import MET_IDS, team_stats
 
 __all__ = [
-    "DetectorParams", "PivotDetector", "StatCalculator", "detect_candidates", "key_events",
-    "momentum_series", "player_match_stats", "severity",
+    "MET_IDS", "DetectorParams", "PivotDetector", "StatCalculator", "detect_candidates", "key_events",
+    "momentum_series", "player_match_stats", "severity", "team_stats",
 ]

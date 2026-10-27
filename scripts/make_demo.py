@@ -32,8 +32,8 @@ import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-from pivot_core.analytics import StatCalculator, detect_candidates, momentum_series, player_match_stats
-from pivot_core.domain import STAT_UNITS, StatRef
+from pivot_core.analytics import StatCalculator, detect_candidates, momentum_series, player_match_stats, team_stats
+from pivot_core.domain import STAT_UNITS
 from pivot_core.sim import simulate
 from pivot_core.sim.presets import DEMO_1021
 from pivot_core.sim.effects import with_effects
@@ -75,28 +75,6 @@ def check(seed: int) -> tuple[int, bool, str]:
     desc = (f"seed {seed}: candidates {[(c.minute, c.direction[0]) for c in cands]}, {h}-{a} at {sub_min}', "
             f"final {s.home}-{s.away}, shots {shots[0]}-{shots[1]}")
     return seed, ok, desc
-
-
-def team_stats(calc: StatCalculator) -> list[dict]:
-    """MET-001 to MET-023 for both teams: whole match, then each half cut at the whistle.
-    A value the definitions leave empty (nothing to divide by) is null."""
-    periods = [p for p in calc.match.periods if p.period != 5]
-    scopes = [("match", None, (0, periods[-1].end_t // 60 + 1))]
-    scopes += [({1: "first_half", 2: "second_half", 3: "extra_time_1", 4: "extra_time_2"}[p.period], p.period,
-                (p.start_t // 60, p.end_t // 60 + 1)) for p in periods]
-    out = []
-    for scope, period, window in scopes:
-        row = {"scope": scope, "period": period, "window": list(window)}
-        for team in ("home", "away"):
-            values = {}
-            for metric in STAT_UNITS:
-                try:
-                    values[metric] = calc.compute(StatRef(metric=metric, team=team, window=window), period=period)
-                except LookupError:                 # no data for it (no frames, nothing to divide by)
-                    values[metric] = None
-            row[team] = values
-        out.append(row)
-    return out
 
 
 def export(seed: int) -> None:

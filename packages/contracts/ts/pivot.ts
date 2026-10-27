@@ -1328,6 +1328,79 @@ export interface SetPieceTactics1 {
   players_forward_on_corners: number;
 }
 /**
+ * How the page labels one stat, so it hard-codes nothing (the D02 vocabulary, MET-001 to MET-023).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "StatMetricInfo".
+ */
+export interface StatMetricInfo {
+  decimals: number;
+  definition_id: string;
+  description: string;
+  fan_label: string;
+  group: "attack" | "possession" | "defence" | "shape" | "physical";
+  higher_means: string;
+  label: string;
+  metric:
+    | "possession_pct"
+    | "passes"
+    | "pass_accuracy_pct"
+    | "passes_final_third"
+    | "box_entries"
+    | "shots"
+    | "shots_on_target"
+    | "xg"
+    | "threat_total"
+    | "pressures"
+    | "tackles_won"
+    | "interceptions"
+    | "duels_won"
+    | "turnovers"
+    | "momentum_avg"
+    | "line_height_m"
+    | "team_width_m"
+    | "press_distance_m"
+    | "distance_covered_km"
+    | "progressive_passes"
+    | "ppda"
+    | "xa"
+    | "field_tilt_pct";
+  unit: "count" | "pct" | "xg" | "index" | "m" | "km" | "ratio";
+}
+/**
+ * GET /api/matches/{id}/stats: the 23 team stats per part of the match, with their labels.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamStatsReport".
+ */
+export interface TeamStatsReport {
+  match_id: string;
+  metrics: StatMetricInfo[];
+  scopes: TeamStatsScope[];
+  up_to_t: number;
+}
+/**
+ * Both teams' stats for one part of the match. A stat with no answer is null, never 0.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamStatsScope".
+ */
+export interface TeamStatsScope {
+  away: {
+    [k: string]: number | null;
+  };
+  home: {
+    [k: string]: number | null;
+  };
+  period: (1 | 2 | 3 | 4 | 5) | null;
+  scope: "match" | "first_half" | "second_half" | "extra_time_1" | "extra_time_2" | "window";
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  window: [number, number];
+}
+/**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "TrackingFrame".
  */

@@ -4304,6 +4304,95 @@
       "title": "Spread",
       "type": "object"
     },
+    "StatMetricInfo": {
+      "additionalProperties": false,
+      "description": "How the page labels one stat, so it hard-codes nothing (the D02 vocabulary, MET-001 to MET-023).",
+      "properties": {
+        "decimals": {
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "definition_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fan_label": {
+          "type": "string"
+        },
+        "group": {
+          "enum": [
+            "attack",
+            "possession",
+            "defence",
+            "shape",
+            "physical"
+          ],
+          "type": "string"
+        },
+        "higher_means": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "metric": {
+          "enum": [
+            "possession_pct",
+            "passes",
+            "pass_accuracy_pct",
+            "passes_final_third",
+            "box_entries",
+            "shots",
+            "shots_on_target",
+            "xg",
+            "threat_total",
+            "pressures",
+            "tackles_won",
+            "interceptions",
+            "duels_won",
+            "turnovers",
+            "momentum_avg",
+            "line_height_m",
+            "team_width_m",
+            "press_distance_m",
+            "distance_covered_km",
+            "progressive_passes",
+            "ppda",
+            "xa",
+            "field_tilt_pct"
+          ],
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "count",
+            "pct",
+            "xg",
+            "index",
+            "m",
+            "km",
+            "ratio"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "definition_id",
+        "unit",
+        "decimals",
+        "group",
+        "label",
+        "fan_label",
+        "description",
+        "higher_means"
+      ],
+      "title": "StatMetricInfo",
+      "type": "object"
+    },
     "StatRef": {
       "additionalProperties": false,
       "properties": {
@@ -4633,6 +4722,182 @@
         "corner_taker_right_id"
       ],
       "title": "TeamSheet",
+      "type": "object"
+    },
+    "TeamStatsReport": {
+      "additionalProperties": false,
+      "description": "GET /api/matches/{id}/stats: the 23 team stats per part of the match, with their labels.",
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/StatMetricInfo"
+          },
+          "type": "array"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/TeamStatsScope"
+          },
+          "type": "array"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "metrics",
+        "scopes"
+      ],
+      "title": "TeamStatsReport",
+      "type": "object"
+    },
+    "TeamStatsScope": {
+      "additionalProperties": false,
+      "description": "Both teams' stats for one part of the match. A stat with no answer is null, never 0.",
+      "properties": {
+        "away": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "propertyNames": {
+            "enum": [
+              "possession_pct",
+              "passes",
+              "pass_accuracy_pct",
+              "passes_final_third",
+              "box_entries",
+              "shots",
+              "shots_on_target",
+              "xg",
+              "threat_total",
+              "pressures",
+              "tackles_won",
+              "interceptions",
+              "duels_won",
+              "turnovers",
+              "momentum_avg",
+              "line_height_m",
+              "team_width_m",
+              "press_distance_m",
+              "distance_covered_km",
+              "progressive_passes",
+              "ppda",
+              "xa",
+              "field_tilt_pct"
+            ]
+          },
+          "type": "object"
+        },
+        "home": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "propertyNames": {
+            "enum": [
+              "possession_pct",
+              "passes",
+              "pass_accuracy_pct",
+              "passes_final_third",
+              "box_entries",
+              "shots",
+              "shots_on_target",
+              "xg",
+              "threat_total",
+              "pressures",
+              "tackles_won",
+              "interceptions",
+              "duels_won",
+              "turnovers",
+              "momentum_avg",
+              "line_height_m",
+              "team_width_m",
+              "press_distance_m",
+              "distance_covered_km",
+              "progressive_passes",
+              "ppda",
+              "xa",
+              "field_tilt_pct"
+            ]
+          },
+          "type": "object"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scope": {
+          "enum": [
+            "match",
+            "first_half",
+            "second_half",
+            "extra_time_1",
+            "extra_time_2",
+            "window"
+          ],
+          "type": "string"
+        },
+        "window": {
+          "additionalItems": false,
+          "items": [
+            {
+              "maximum": 180,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "maximum": 180,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "scope",
+        "period",
+        "window",
+        "home",
+        "away"
+      ],
+      "title": "TeamStatsScope",
       "type": "object"
     },
     "TeamTactics": {
