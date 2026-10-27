@@ -5,8 +5,9 @@ The cases are the ones the issues report from the live site, rebuilt as small ma
 
 import pytest
 
-from pivot_core.domain import ExplanationSentence, Narrative, Substitution, ViewerPrefs
+from pivot_core.domain import ExplanationSentence, Narrative, PivotCandidate, Substitution, ViewerPrefs
 from pivot_worker import explainer as ex
+from pivot_worker.template import PHRASES, template_explain
 from pivot_worker.testing import FakeStats, claim, event
 from pivot_worker.verifier import verify
 
@@ -240,3 +241,127 @@ def test_208_the_explainer_prompt_keeps_threat_and_momentum_apart():
     prompt = ex.system_prompt(ViewerPrefs(), TEAMS_505)
     text = prompt.text if hasattr(prompt, "text") else str(prompt)
     assert "`threat_total` (threat created) and `momentum_avg` (momentum) are different stats" in text
+
+
+# --- #333 (#311 item 15): M-seed-101 p74 swung the momentum to Northgate Rovers (away), but the live card's
+# headline credited Harbour City with a revival. Recorded card, as served at /api/pivots/M-seed-101:p74.
+
+P74_HEADLINE = "Miquingorini's goal sparks Harbour City revival"
+P74_FIRST = "Miquingorini scored at 65' to level the score, triggering a momentum shift to Northgate Rovers."
+
+
+@pytest.fixture
+def p74():
+    # Elapsed minute 66, but 65' on the clock: the second half kicked off at 47:00 after first-half stoppage.
+    g = event("m066-s01196", 66, "shot", shot_outcome="goal", team="away")
+    g = g.model_copy(update={"period_t": g.t - 47 * 60})
+    assert (g.minute, g.clock_label) == (66, "65'")
+    return {g.event_id: g}
+
+
+def test_333_the_live_p74_headline_is_sent_back(p74):
+    narrative = card(P74_FIRST, evidence=["m066-s01196"], headline=P74_HEADLINE)
+    found = issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away")
+    assert [c for c, _ in found] == ["direction_mismatch"]
+    assert found[0][1].startswith("The headline says") and "the momentum went to Northgate Rovers" in found[0][1]
+    # The same headline is right when the pivot did swing to Harbour City.
+    assert [c for c, _ in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")] == \
+        ["direction_mismatch"]        # ... where the first sentence (momentum to Rovers) is now the wrong one
+    assert issues(card("Harbour City pressed after the goal at 65'.", evidence=["m066-s01196"], headline=P74_HEADLINE),
+                  p74, minute=74, team_names=TEAMS_505, direction="home") == []
+
+
+@pytest.mark.parametrize("lang,headline", [
+    ("en", "Miquingorini's goal sparks Harbour City revival"),
+    ("en", "Harbour City take control after the goal"),
+    ("en", "Harbour City seize control late on"),
+    ("en", "Harbour City's resurgence after the goal"),
+    ("en", "Northgate Rovers lose their grip"),
+    ("en", "Northgate Rovers lose control after the goal"),
+    ("zh", "Harbour City随后掌控比赛"),
+    ("zh", "Harbour City复苏"),
+    ("zh", "Harbour City占据上风"),
+    ("es", "Harbour City toma el control"),
+    ("es", "Northgate Rovers pierde el control"),
+])
+def test_333_a_headline_crediting_the_other_team_is_sent_back(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    found = issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away")
+    assert [c for c, _ in found] == ["direction_mismatch"] and found[0][1].startswith("The headline")
+    assert issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home") == []
+
+
+@pytest.mark.parametrize("lang,headline", [
+    # What a goal did is not who has the momentum: a side can score and still lose the game's flow.
+    ("en", "Harbour City hit back through Miquingorini"),
+    ("en", "Harbour City answer through Miquingorini"),
+    ("en", "Harbour City goal swings the match"),
+    ("zh", "Harbour City扳回一球"),
+    ("es", "Harbour City responde con un gol"),
+    # The template's own headlines, for the side it swung to and for a focus team that lost it.
+    ("en", "Momentum swings to Northgate Rovers"),
+    ("en", "Harbour City lose their grip"),
+    ("zh", "势头倒向Northgate Rovers"),
+    ("zh", "Harbour City失去势头"),
+    ("es", "El impulso pasa a Northgate Rovers"),
+    ("es", "Harbour City pierde el impulso"),
+])
+def test_333_goal_words_and_the_template_headlines_still_pass(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    assert issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away") == []
+
+
+@pytest.mark.parametrize("lang,headline", [
+    # A negation or "until" means the side did not have it at the pivot (#339): not a claim.
+    ("en", "Harbour City cannot take control"),      # ("never" is a banned word anyway)
+    ("en", "Harbour City failed to take control"),
+    ("en", "Harbour City were on top until the goal"),
+    ("en", "Harbour City took control before the goal"),
+    ("en", "Northgate Rovers did not lose their grip"),
+    ("en", "Northgate Rovers barely lose control"),
+    ("zh", "Harbour City没能掌控比赛"),
+    ("zh", "Harbour City无法占据上风"),
+    ("zh", "Harbour City占据上风之前"),
+    ("es", "Harbour City no toma el control"),
+    ("es", "Harbour City toma el control hasta el gol"),
+])
+def test_339_a_negated_or_earlier_state_is_not_a_claim(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    assert issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away") == []
+
+
+@pytest.mark.parametrize("lang", ["en", "zh", "es"])
+@pytest.mark.parametrize("audience", ["analyst", "fan"])
+@pytest.mark.parametrize("focus", [None, "home", "away"])
+@pytest.mark.parametrize("direction", ["home", "away"])
+def test_339_every_template_card_passes_the_momentum_check(p74, lang, audience, focus, direction):
+    # The p74 shape: an away goal is the trigger, whichever way the pivot swung.
+    candidate = PivotCandidate(match_id="M-test", minute=74, direction=direction, cusum_stat=4.2, swing=0.3,
+                               key_event_ids=["m066-s01196"], window=(69, 79))
+    narrative = template_explain(candidate, events=p74, stats=FakeStats({}), team_names=TEAMS_505,
+                                 prefs=ViewerPrefs(language=lang, audience=audience, focus_team=focus))
+    found = issues(narrative, p74, minute=74, team_names=TEAMS_505, direction=direction)
+    assert [m for c, m in found if c == "direction_mismatch"] == [], narrative
+
+
+@pytest.mark.parametrize("lang", ["en", "zh", "es"])
+def test_339_every_template_headline_fits_its_own_side(p74, lang):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    for key, text in PHRASES[lang].items():
+        if not key.endswith("_h"):
+            continue
+        for side, team in TEAMS_505.items():
+            other = "away" if side == "home" else "home"
+            fits = {"momentum_h": [side], "momentum_lost_h": [other]}.get(key, ["home", "away"])
+            for direction in fits:
+                narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=text.format(team=team))
+                found = issues(narrative, p74, minute=74, team_names=TEAMS_505, direction=direction)
+                assert [m for c, m in found if c == "direction_mismatch"] == [], (key, team, direction)
+
+
+def test_333_the_explainer_is_told_the_headline_follows_the_momentum():
+    text = ex.system_prompt(ViewerPrefs(), TEAMS_505).text
+    assert "The headline is about `pivot.towards`" in text

@@ -290,25 +290,53 @@ GLOSSARY = {
            "momentum": "el impulso", "threat created": "la amenaza creada (never el impulso)", "PPDA": "PPDA"},
 }
 
+# The one word allowed between a team and the claim may not be a negation ("Harbour City never take
+# control"), and "on top until ..." is the state before the pivot, not a claim about it (#339).
+_GAP_EN = r"(?:(?!(?:not|never|cannot|failed|fail|fails|unable|no|nor|barely|hardly)\b)\w+\s+){0,1}?"
+_GAP_ES = r"(?:(?!(?:no|nunca|jam[áa]s|sin|tampoco)\b)\w+\s+){0,1}?"
+_NOT_UNTIL_EN = r"(?!\s+(?:until|till|before|up to)\b)"
+_NOT_UNTIL_ES = r"(?!\s+(?:hasta|antes)\b)"
+_NOT_NEGATED_ZH = r"(?<!没)(?<!未)(?<!没能)(?<!未能)(?<!无法)(?<!不再)(?<!没有)(?<!不能)"
+_NOT_UNTIL_ZH = r"(?!之前|以前|直到|为止)"
+
 # Momentum said to go to a team (#187). `{T}` is the team-name alternation; `gain` patterns name the side
 # that took it, `lose` patterns the side that lost it (so the other side took it).
 MOMENTUM_GAIN = {
     "en": (r"\bmomentum\b[^.;!?]{0,60}?\b(?:to|towards|toward|in favour of|in favor of)\s+(?:the\s+)?(?P<t>{T})",
            r"(?P<t>{T})(?:'s?)?\s+(?:\w+\s+){0,3}?(?:seiz\w*|t[ao]k\w*|took|grab\w*|gain\w*|w[io]n\w*|regain\w*|"
-           r"claim\w*|stole|steal\w*|wrest\w*|snatch\w*)\s+(?:back\s+)?(?:the\s+)?(?:\w+\s+)?momentum\b"),
+           r"claim\w*|stole|steal\w*|wrest\w*|snatch\w*)\s+(?:back\s+)?(?:the\s+)?(?:\w+\s+)?momentum\b",
+           # Without the word momentum (#333): "sparks Harbour City revival", "Harbour City take control".
+           # Kept small and next to the name; goal and score words (hit back, comeback) are not here.
+           r"(?P<t>{T})(?:'s?)?\s+" + _GAP_EN + r"(?:revival|resurgence|renaissance|reawakening)\b",
+           r"\b(?:revival|resurgence)\s+(?:of|for|by)\s+(?:the\s+)?(?P<t>{T})",
+           r"(?P<t>{T})\s+" + _GAP_EN + r"(?:take|takes|took|taking|seize|seizes|seized|seizing|wrest|wrests|wrested|"
+           r"grab|grabs|grabbed|regain|regains|regained)\s+(?:back\s+)?(?:the\s+)?(?:control|command|charge|initiative)\b"
+           + _NOT_UNTIL_EN,
+           r"(?P<t>{T})\s+(?:are\s+|were\s+|is\s+|was\s+)?(?:back\s+)?(?:in control|in command|on top|take over|"
+           r"takes over|took over|taking over)\b" + _NOT_UNTIL_EN),
     "zh": (r"势头[^。；！？]{0,12}?(?:倒向|转向|偏向|转到|转移到|移向|归于|站在)\s*(?P<t>{T})",
-           r"(?P<t>{T})[^。；！？]{0,10}?(?:掌握|占据|夺回|抢回|抢到|赢得|拿到|获得|取得)(?:了)?[^。；！？]{0,4}?势头"),
+           r"(?P<t>{T})[^。；！？]{0,10}?(?:掌握|占据|夺回|抢回|抢到|赢得|拿到|获得|取得)(?:了)?[^。；！？]{0,4}?势头",
+           r"(?P<t>{T})[^。；！？，,]{0,6}?" + _NOT_NEGATED_ZH + r"(?:复苏|复兴|掌控(?:了)?(?:比赛|局面|节奏)|"
+           r"控制(?:了)?(?:比赛|局面)|占据(?:了)?(?:主动|上风)|夺回(?:了)?(?:主动|控制权)|重新掌控)" + _NOT_UNTIL_ZH),
     "es": (r"(?:impulso|inercia)[^.;!?]{0,60}?\b(?:a favor de|hacia|pas[óo] a|pasa a|para|del lado de)\s+"
            r"(?:el\s+|los\s+)?(?P<t>{T})",
            r"(?P<t>{T})\s+(?:\w+\s+){0,3}?(?:tom[óoa]\w*|gan[óoa]\w*|recuper[óoa]\w*|se adueñ[óo] de|se hizo con|"
-           r"se llev[óo])\s+(?:el\s+|la\s+)?(?:impulso|inercia)"),
+           r"se llev[óo])\s+(?:el\s+|la\s+)?(?:impulso|inercia)",
+           r"(?P<t>{T})\s+" + _GAP_ES + r"(?:toma|tomó|toman|tomaron|recupera|recuperó|asume|asumió)\s+el\s+"
+           r"(?:control|mando)\b" + _NOT_UNTIL_ES,
+           r"(?P<t>{T})\s+(?:se hace|se hizo|se hacen|se hicieron)\s+con\s+el\s+(?:control|mando)\b" + _NOT_UNTIL_ES,
+           r"\b(?:resurgir|resurgimiento)\s+(?:de|del)\s+(?P<t>{T})"),
 }
 MOMENTUM_LOSE = {
     "en": (r"\bmomentum\b[^.;!?]{0,40}?\baway from\s+(?:the\s+)?(?P<t>{T})",
            r"(?P<t>{T})\s+(?:\w+\s+){0,2}?(?:lost|lose|loses|losing|surrender\w*|ced\w*|gave up|give up)\s+"
-           r"(?:the\s+)?momentum\b"),
-    "zh": (r"(?P<t>{T})[^。；！？]{0,8}?(?:失去|丢掉|丧失|交出)(?:了)?[^。；！？]{0,4}?势头",),
-    "es": (r"(?P<t>{T})\s+(?:\w+\s+){0,2}?(?:perdi[óo]|pierde|cedi[óo]|cede)\s+(?:el\s+|la\s+)?(?:impulso|inercia)",),
+           r"(?:the\s+)?momentum\b",
+           r"(?P<t>{T})\s+" + _GAP_EN + r"(?:lost|lose|loses|losing)\s+(?:their\s+|its\s+|the\s+)?(?:grip|control|"
+           r"command|hold)\b"),
+    "zh": (r"(?P<t>{T})[^。；！？]{0,8}?(?:失去|丢掉|丧失|交出)(?:了)?[^。；！？]{0,4}?势头",
+           r"(?P<t>{T})[^。；！？，,]{0,6}?" + _NOT_NEGATED_ZH + r"(?:失去|丢掉|丧失)(?:了)?(?:对比赛的)?(?:控制|掌控|主动)"),
+    "es": (r"(?P<t>{T})\s+(?:\w+\s+){0,2}?(?:perdi[óo]|pierde|cedi[óo]|cede)\s+(?:el\s+|la\s+)?(?:impulso|inercia)",
+           r"(?P<t>{T})\s+" + _GAP_ES + r"(?:perdi[óo]|pierde|pierden|perdieron)\s+el\s+(?:control|mando)\b"),
 }
 # Words for the two sides that stand for a team name.
 SIDE_WORDS = {
