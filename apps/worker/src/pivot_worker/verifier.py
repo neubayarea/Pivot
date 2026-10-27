@@ -27,6 +27,7 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 10. momentum: with the pivot's `direction`, no sentence or headline gives the momentum to the other side (#187)
 11. stat meaning: a pressing stat whose fall means a harder press (PPDA, press distance) is not read the
    other way round (#254)
+12. names: in Chinese and Spanish cards a club's name is not translated or transliterated (#333: 海港城)
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -844,6 +845,17 @@ def verify(
         if score_check:
             for problem in _score_problems(s.text, lang, goals, s.evidence_ids, (lo, hi), sides):
                 issue("number_mismatch", f"Sentence {i + 1}: {problem}", i)
+
+    # Club names stay as written (#333): a translated or transliterated club name ("海港城") is sent back.
+    if lang != "en" and names:
+        keep = ", ".join(names.values())
+        for i, text in [(None, narrative.headline), *enumerate(s.text for s in narrative.sentences)]:
+            for name in names.values():
+                form = next((f for f in lang_rules.club_name_forms(name, lang) if f in text), None)
+                if form:
+                    where = "The headline" if i is None else f"Sentence {i + 1}"
+                    issue("schema_invalid", f"{where} writes '{form}' for {name}; keep club names as written: {keep}.", i)
+                    break
 
     # 10. Momentum (#187): the card must not give the momentum to the side the pivot swung away from.
     if direction in ("home", "away") and momentum_phrases:

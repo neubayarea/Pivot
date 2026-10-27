@@ -62,7 +62,8 @@ TRANSLATE_PROMPT = """You translate football match commentary cards from English
 Return JSON only: {{"headline": "...", "sentences": ["...", ...]}}, one translated text per input sentence,
 in the same order. Translate the meaning faithfully and naturally for a {audience}; add nothing and drop nothing.
 Keep every number exactly as written, with the same digits (no number words), and minutes as 61'.
-Keep team and player names exactly as given, in their original Latin spelling.
+Keep team and player names exactly as given, in their original Latin spelling: never translate or
+transliterate a club or player name (Harbour City stays Harbour City, never 海港城 or Ciudad Puerto).
 The headline has no digits and at most {headline} {unit}. {instruction}
 Stat names have fixed translations; use these and never swap one stat for another:
 {glossary}"""

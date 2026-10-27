@@ -362,6 +362,85 @@ def test_339_every_template_headline_fits_its_own_side(p74, lang):
                 assert [m for c, m in found if c == "direction_mismatch"] == [], (key, team, direction)
 
 
+@pytest.mark.parametrize("lang,headline", [
+    # On the live site (fan, following Harbour City), and in the demo video script: both credit Harbour City.
+    ("en", "Harbour City fights back with Miquingorini's goal"),
+    ("en", "Miquingorini's goal lifts Harbour City"),
+    ("en", "Harbour City fought back after the goal"),
+    ("en", "Harbour City's fightback after the goal"),
+    ("en", "Harbour City lifted by Miquingorini's goal"),
+    ("zh", "Miquingorini进球后Harbour City振作起来"),
+    ("zh", "Miquingorini的进球提振了Harbour City"),
+    ("es", "Harbour City se rehace con el gol"),
+    ("es", "El gol de Miquingorini levanta a Harbour City"),
+])
+def test_333_fighting_back_and_being_lifted_are_credit_too(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    # Only rule 10 here: "fightback" is also a score word, which the score check judges on its own.
+    wrong = [m for c, m in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away")
+             if c == "direction_mismatch"]
+    assert len(wrong) == 1 and wrong[0].startswith("The headline")
+    assert not [c for c, _ in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")
+                if c == "direction_mismatch"]
+
+
+@pytest.mark.parametrize("lang,headline", [
+    ("en", "Harbour City pull one back through Miquingorini"),
+    ("en", "Harbour City failed to fight back"),
+    ("en", "Miquingorini's goal fails to lift Harbour City"),
+    ("en", "Miquingorini lifts the ball over the keeper"),
+    ("zh", "Harbour City打出反击"),
+    ("zh", "Harbour City没能振作"),
+    ("es", "Harbour City no reacciona"),
+])
+def test_333_goal_words_negations_and_other_lifts_still_pass(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    assert issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away") == []
+
+
+def test_333_the_live_spanish_remontada_is_credit_too(p74):
+    # Live p74 in Spanish (#330 QA): "... impulsa la remontada de Harbour City", while it swung to Northgate Rovers.
+    narrative = card("El gol de Miquingorini en el 65' impulsa la remontada de Harbour City.", lang="es",
+                     evidence=["m066-s01196"])
+    wrong = [m for c, m in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away")
+             if c == "direction_mismatch"]
+    assert len(wrong) == 1 and "remontada de Harbour City" in wrong[0]
+    assert not [c for c, _ in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")
+                if c == "direction_mismatch"]
+
+
+def test_333_a_translated_club_name_is_sent_back(p74):
+    # Live p74 in Chinese: "激活海港城" (海港城 is Harbour City translated).
+    narrative = card("Miquingorini在65'的进球激活海港城。", lang="zh", evidence=["m066-s01196"])
+    found = issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")
+    assert [c for c, _ in found] == ["schema_invalid"]
+    assert "'海港城' for Harbour City; keep club names as written: Harbour City, Northgate Rovers" in found[0][1]
+    # Written as the data has it, the same words are the momentum claim and are checked as one.
+    latin = card("Miquingorini在65'的进球激活Harbour City。", lang="zh", evidence=["m066-s01196"])
+    assert issues(latin, p74, minute=74, team_names=TEAMS_505, direction="home") == []
+    assert [c for c, _ in issues(latin, p74, minute=74, team_names=TEAMS_505, direction="away")] == \
+        ["direction_mismatch"]
+
+
+@pytest.mark.parametrize("lang,text,form", [
+    ("zh", "Harbour City输给了北门流浪者。", "北门流浪者"),
+    ("zh", "哈伯城在65'扳平比分。", "哈伯城"),
+    ("zh", "北门在65'之后压了上来。", "北门"),
+    ("es", "Ciudad Puerto empató en el 65'.", "Ciudad Puerto"),
+])
+def test_333_other_translated_club_names_are_sent_back(p74, lang, text, form):
+    found = issues(card(text, lang=lang, evidence=["m066-s01196"]), p74, minute=74, team_names=TEAMS_505)
+    assert any(c == "schema_invalid" and f"'{form}'" in m for c, m in found), found
+
+
+def test_333_the_writers_are_told_to_keep_club_names(p74):
+    from pivot_api.personalize import TRANSLATE_PROMPT
+    from pivot_worker.languages import INSTRUCTIONS
+    assert "not 海港城" in INSTRUCTIONS["zh"] and "never 海港城" in TRANSLATE_PROMPT
+
+
 def test_333_the_explainer_is_told_the_headline_follows_the_momentum():
     text = ex.system_prompt(ViewerPrefs(), TEAMS_505).text
     assert "The headline is about `pivot.towards`" in text

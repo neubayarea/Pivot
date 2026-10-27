@@ -24,9 +24,11 @@ from .vocabulary import (
 
 INSTRUCTIONS = {
     "en": "Write in English.",
-    "zh": ("Write in Simplified Chinese (简体中文). Keep team and player names exactly as given. Write numbers "
+    "zh": ("Write in Simplified Chinese (简体中文). Keep team and player names exactly as given, in Latin letters; "
+           "never translate or transliterate them (Harbour City, not 海港城). Write numbers "
            "with Arabic digits exactly as in the claims, and match minutes as 61'."),
-    "es": ("Write in Spanish (español neutro). Keep team and player names exactly as given. Write numbers "
+    "es": ("Write in Spanish (español neutro). Keep team and player names exactly as given; never translate "
+           "them (Harbour City, not Ciudad Puerto). Write numbers "
            "with a decimal point exactly as in the claims, and match minutes as 61'."),
 }
 
@@ -307,17 +309,27 @@ MOMENTUM_GAIN = {
            r"claim\w*|stole|steal\w*|wrest\w*|snatch\w*)\s+(?:back\s+)?(?:the\s+)?(?:\w+\s+)?momentum\b",
            # Without the word momentum (#333): "sparks Harbour City revival", "Harbour City take control".
            # Kept small and next to the name; goal and score words (hit back, comeback) are not here.
-           r"(?P<t>{T})(?:'s?)?\s+" + _GAP_EN + r"(?:revival|resurgence|renaissance|reawakening)\b",
+           r"(?P<t>{T})(?:'s?)?\s+" + _GAP_EN + r"(?:revival|resurgence|renaissance|reawakening|fightback|fight-back)\b",
            r"\b(?:revival|resurgence)\s+(?:of|for|by)\s+(?:the\s+)?(?P<t>{T})",
            r"(?P<t>{T})\s+" + _GAP_EN + r"(?:take|takes|took|taking|seize|seizes|seized|seizing|wrest|wrests|wrested|"
            r"grab|grabs|grabbed|regain|regains|regained)\s+(?:back\s+)?(?:the\s+)?(?:control|command|charge|initiative)\b"
            + _NOT_UNTIL_EN,
            r"(?P<t>{T})\s+(?:are\s+|were\s+|is\s+|was\s+)?(?:back\s+)?(?:in control|in command|on top|take over|"
-           r"takes over|took over|taking over)\b" + _NOT_UNTIL_EN),
+           r"takes over|took over|taking over)\b" + _NOT_UNTIL_EN,
+           # Fighting back and being lifted (#333 follow-up: "Harbour City fights back with Miquingorini's goal",
+           # "Miquingorini's goal lifts Harbour City"). Goal words ("hit back", "pull one back") stay out.
+           r"(?P<t>{T})\s+" + _GAP_EN + r"(?:fight|fights|fought|fighting)\s+back\b" + _NOT_UNTIL_EN,
+           r"(?<!to )(?<!not )(?<!n't )\b(?:lift|lifts|lifted|lifting)\s+(?:the\s+)?(?P<t>{T})(?!['’]s)\b",
+           r"(?P<t>{T})\s+(?:are\s+|were\s+|is\s+|was\s+)?lifted\b",
+           r"(?P<t>{T})\s+" + _GAP_EN + r"(?:lift|lifts|lifted|lifting)\s+(?:their|its)\s+(?:game|level|tempo|intensity)\b"),
     "zh": (r"势头[^。；！？]{0,12}?(?:倒向|转向|偏向|转到|转移到|移向|归于|站在)\s*(?P<t>{T})",
            r"(?P<t>{T})[^。；！？]{0,10}?(?:掌握|占据|夺回|抢回|抢到|赢得|拿到|获得|取得)(?:了)?[^。；！？]{0,4}?势头",
            r"(?P<t>{T})[^。；！？，,]{0,6}?" + _NOT_NEGATED_ZH + r"(?:复苏|复兴|掌控(?:了)?(?:比赛|局面|节奏)|"
-           r"控制(?:了)?(?:比赛|局面)|占据(?:了)?(?:主动|上风)|夺回(?:了)?(?:主动|控制权)|重新掌控)" + _NOT_UNTIL_ZH),
+           r"控制(?:了)?(?:比赛|局面)|占据(?:了)?(?:主动|上风)|夺回(?:了)?(?:主动|控制权)|重新掌控)" + _NOT_UNTIL_ZH,
+           # 反击 is left out: it is also a counter-attack, a way of playing.
+           r"(?P<t>{T})[^。；！？，,]{0,6}?" + _NOT_NEGATED_ZH + r"(?:振作|重振|反扑)",
+           r"(?<!没有)(?<!没)(?<!未)提振(?:了)?\s*(?P<t>{T})",
+           r"(?<!没有)(?<!没)(?<!未)激活(?:了)?\s*(?P<t>{T})"),
     "es": (r"(?:impulso|inercia)[^.;!?]{0,60}?\b(?:a favor de|hacia|pas[óo] a|pasa a|para|del lado de)\s+"
            r"(?:el\s+|los\s+)?(?P<t>{T})",
            r"(?P<t>{T})\s+(?:\w+\s+){0,3}?(?:tom[óoa]\w*|gan[óoa]\w*|recuper[óoa]\w*|se adueñ[óo] de|se hizo con|"
@@ -325,7 +337,11 @@ MOMENTUM_GAIN = {
            r"(?P<t>{T})\s+" + _GAP_ES + r"(?:toma|tomó|toman|tomaron|recupera|recuperó|asume|asumió)\s+el\s+"
            r"(?:control|mando)\b" + _NOT_UNTIL_ES,
            r"(?P<t>{T})\s+(?:se hace|se hizo|se hacen|se hicieron)\s+con\s+el\s+(?:control|mando)\b" + _NOT_UNTIL_ES,
-           r"\b(?:resurgir|resurgimiento)\s+(?:de|del)\s+(?P<t>{T})"),
+           r"\b(?:resurgir|resurgimiento)\s+(?:de|del)\s+(?P<t>{T})",
+           r"(?P<t>{T})\s+" + _GAP_ES + r"(?:se rehace|se rehizo|se rehízo|reacciona|reaccionó)\b",
+           r"(?<!no )\blevant(?:a|ó|an|aron)\s+a\s+(?:los\s+)?(?P<t>{T})",
+           # "impulsa la remontada de Harbour City" (#333, live p74 in Spanish)
+           r"(?<!sin )(?<!sin la )\bremontada\s+(?:de|del)\s+(?:los\s+)?(?P<t>{T})"),
 }
 MOMENTUM_LOSE = {
     "en": (r"\bmomentum\b[^.;!?]{0,40}?\baway from\s+(?:the\s+)?(?P<t>{T})",
@@ -338,6 +354,46 @@ MOMENTUM_LOSE = {
     "es": (r"(?P<t>{T})\s+(?:\w+\s+){0,2}?(?:perdi[óo]|pierde|cedi[óo]|cede)\s+(?:el\s+|la\s+)?(?:impulso|inercia)",
            r"(?P<t>{T})\s+" + _GAP_ES + r"(?:perdi[óo]|pierde|pierden|perdieron)\s+el\s+(?:control|mando)\b"),
 }
+# How a club name gets translated or transliterated by mistake, word by word (#333: 激活海港城, and #186's
+# 哈伯城). Club names stay as written in every language, so any of these forms is wrong.
+CLUB_WORDS = {
+    "zh": {"Harbour": ("海港", "港湾", "哈伯", "哈勃", "哈珀"), "City": ("城", "市"), "Northgate": ("北门", "诺斯盖特"),
+           "Rovers": ("流浪者", "漫游者", "罗孚斯", "罗弗斯"), "United": ("联", "联队"), "Athletic": ("竞技",),
+           "Town": ("镇",), "Wanderers": ("流浪者",), "Rangers": ("流浪者",), "Albion": ("阿尔比恩",), "Vale": ("谷",),
+           "Bay": ("湾",), "Park": ("公园",), "Sporting": ("体育", "竞技")},
+    "es": {"Harbour": ("Puerto", "Portuaria", "del Puerto"), "City": ("Ciudad",), "Northgate": ("Puerta Norte",),
+           "Rovers": ("Errantes", "Vagabundos"), "United": ("Unido",), "Wanderers": ("Errantes",),
+           "Rangers": ("Guardabosques",), "Bay": ("Bahía",)},
+}
+
+
+def club_name_forms(name: str, lang: str) -> list[str]:
+    """Translated or transliterated forms of a club name in `lang`: the whole name with at least one word
+    translated, and its first word translated (海港城, 北门流浪者, 哈伯城, 北门). A generic word alone (城) is never one."""
+    words = CLUB_WORDS.get(lang, {})
+    if not words:
+        return []
+    parts = name.split()
+    options = [list(words.get(w, ())) + [w] for w in parts]
+    forms: set[str] = set()
+
+    def combos(i: int, chosen: list[str]) -> None:
+        if i == len(options):
+            if chosen != parts:
+                if lang == "zh":
+                    forms.add("".join(chosen))
+                else:
+                    forms.update({" ".join(chosen), " ".join(reversed(chosen)), " de ".join(reversed(chosen))})
+            return
+        for o in options[i]:
+            combos(i + 1, chosen + [o])
+
+    combos(0, [])
+    if len(parts) > 1 and (first := words.get(parts[0])):
+        forms.update(f for f in first if len(f) >= 2)
+    return sorted(forms, key=len, reverse=True)
+
+
 # Words for the two sides that stand for a team name.
 SIDE_WORDS = {
     "en": {"home": ("home side", "home team", "hosts"), "away": ("away side", "away team", "visitors")},
