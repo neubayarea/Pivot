@@ -69,6 +69,7 @@ export const zh: Messages = {
   "top.player.none": "不关注球员",
   "top.player.search": "搜索球员",
   "top.player.empty": "没有匹配的球员",
+  "top.view": "观看",
 
   "picker.label": "比赛",
   "picker.seed": "种子 {seed}",
@@ -839,7 +840,7 @@ export const zh: Messages = {
   "header.pen": "（点球）",
   // Ax66: the header folds to a slim bar
   "header.expand": "展开",
-  "header.expand.label": "展开比分栏和观看方式",
+  "header.expand.label": "展开比分栏",
   "header.collapse.label": "收起比分栏",
 
   // Ax59 · match tabs

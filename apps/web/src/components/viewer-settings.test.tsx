@@ -14,6 +14,7 @@ import { DEFAULT_PREFS, PrefsProvider, initialView, readSavedView, saveView, use
 import LiveBoard from "../pages/LiveBoard";
 import PivotDetail from "../pages/PivotDetail";
 import ScoreHeader from "./ScoreHeader";
+import TopBar from "./TopBar";
 import WhyItTurned, { nameMatcher } from "./WhyItTurned";
 
 type FakeStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -164,14 +165,14 @@ describe("what the page shows", () => {
 
   it("marks the viewer's team in the match header and the stats", () => {
     withWindow("?from=80&team=away");
-    const html = render(<><ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} onPrefsChange={() => {}} /><LiveBoard /></>);
+    const html = render(<><ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} /><LiveBoard /></>);
     expect(html).toMatch(/class="mh-team away fav"/);
     expect(html).toContain('class="r fav"');
   });
 
   it("puts the followed player in the picker", () => {
     withWindow("");
-    const html = render(<ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_player_id: "hcy-11" }} onPrefsChange={() => {}} />);
+    const html = render(<TopBar prefs={{ ...DEFAULT_PREFS, focus_player_id: "hcy-11" }} onPrefsChange={() => {}} />);
     expect(html).toContain("Moreau");
     expect(html).toContain("Player: A. Moreau");
   });
