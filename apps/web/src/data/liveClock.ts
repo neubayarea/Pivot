@@ -11,6 +11,12 @@ export function liveClock(length: number, nowMs = Date.now()): number {
   return Math.floor((((nowMs / 1000 - LIVE_ANCHOR) % cycle) + cycle) % cycle);
 }
 
+/** During the break after full time, the milliseconds to the next kick-off; null while the match is on. */
+export function msToKickoff(length: number, nowMs = Date.now()): number | null {
+  const clock = liveClock(length, nowMs);
+  return clock >= length ? (length + LIVE_BREAK_S - clock) * 1000 : null;
+}
+
 /** `?live=1`: the match in the link is played as the simulated live match. */
 export const isLiveLink = (search: string) => new URLSearchParams(search).get("live") === "1";
 

@@ -3,7 +3,7 @@
 // and latest turning point worked out in the browser every second from the wall clock.
 import { useEffect, useState } from "react";
 import type { Score } from "@pivot/contracts";
-import { minuteAt, type PeriodStart } from "./clock";
+import { minuteAt, minuteLabel, type PeriodStart } from "./clock";
 import { api } from "./live/api";
 import { liveClock } from "./liveClock";
 
@@ -45,9 +45,17 @@ export type HubPrediction = {
 
 export type HubFixture = { match_id: string; home: HubTeam; away: HubTeam; venue: string; prediction: HubPrediction | null };
 
-export type HubNext = { matchday: number; fixtures: HubFixture[] };
+/** A round still to come (C15): its date (`2026-10-28`, the fictional calendar) and its fixtures. */
+export type HubNext = { matchday: number; date?: string; fixtures: HubFixture[] };
 
-export type HubData = { matches: HubLine[]; live: HubLive | null; generating: boolean; next: HubNext | null };
+export type HubData = {
+  matches: HubLine[]; live: HubLive | null; generating: boolean; next: HubNext | null; schedule?: HubNext[];
+};
+
+/** The viewer's club's games over the whole schedule, one line per round. */
+export const clubGames = (rounds: HubNext[], club: string) =>
+  rounds.flatMap((r) => r.fixtures.filter((f) => [f.home.short_name, f.away.short_name].includes(club))
+    .map((f) => ({ round: r, fixture: f })));
 
 /** The viewer's club's games first, the rest in the round's order. */
 export const pinned = <T extends { home: HubTeam; away: HubTeam }>(items: T[], fav: string | null) =>
@@ -79,7 +87,11 @@ export function useHub(): HubState {
 }
 
 /** The live match right now: its clock, score, minute label and the latest turning point it has reached. */
-export type LiveNow = { clock: number; over: boolean; score: { home: number; away: number }; minute: string; lastPivot: number | null };
+/** `lastPivotLabel`: the clock minute the pivot card shows ("75", "45+2"), not the elapsed one. */
+export type LiveNow = {
+  clock: number; over: boolean; score: { home: number; away: number }; minute: string; lastPivot: number | null;
+  lastPivotLabel: string | null;
+};
 
 export function liveNow(live: HubLive, nowMs = Date.now()): LiveNow {
   const clock = liveClock(live.length_s, nowMs);
@@ -89,7 +101,11 @@ export function liveNow(live: HubLive, nowMs = Date.now()): LiveNow {
   for (const g of live.goals) if (g.t <= t) score[g.team]++;
   // A turning point shows once its minute is over, as on the replay (data/live/replay.tsx).
   const reached = live.pivot_minutes.filter((m) => t >= (m + 1) * 60);
-  return { clock, over, score, minute: minuteAt(live.periods, t), lastPivot: reached.at(-1) ?? null };
+  const last = reached.at(-1) ?? null;
+  return {
+    clock, over, score, minute: minuteAt(live.periods, t), lastPivot: last,
+    lastPivotLabel: last === null ? null : minuteLabel(live.periods, last),
+  };
 }
 
 /** Ticks once a second, so the live card's clock moves. */
@@ -107,4 +123,15 @@ export function byMatchday(lines: HubLine[]): [number | null, HubLine[]][] {
   const groups = new Map<number | null, HubLine[]>();
   for (const l of lines) groups.set(l.matchday, [...(groups.get(l.matchday) ?? []), l]);
   return [...groups].sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : b - a));
+}
+
+/** A matchday's results with the same fixture played more than once (seed matches drawn onto the same
+ * matchday, QA round 4) kept together, in the order they came. */
+export function byFixture(lines: HubLine[]): HubLine[][] {
+  const groups = new Map<string, HubLine[]>();
+  for (const l of lines) {
+    const key = `${l.home.short_name}-${l.away.short_name}`;
+    groups.set(key, [...(groups.get(key) ?? []), l]);
+  }
+  return [...groups.values()];
 }

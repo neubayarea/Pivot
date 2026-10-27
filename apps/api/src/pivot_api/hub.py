@@ -9,6 +9,8 @@ GET /api/hub
   nothing is simulated on the server. `PIVOT_LIVE_MATCH` picks the match, else the second listed
   (the first is the one the site has always opened, the demo video's).
 - `next`: the next round's fixtures (nextround.py), each with its prediction when one was worked out.
+- `schedule` (C15): every round still to come, matchdays 31-38, with its date; a fixture's
+  prediction is there only when its round was worked out ahead of time.
 - `matches`: every stored match in the /api/matches order, with its matchday, score, how many
   turning points it has and its best-rated player. The live one is in the list, marked.
 
@@ -92,12 +94,16 @@ async def hub(request: Request) -> dict:
     by_id = {m.match_id: m for i in (nxt["order"] if nxt else [])
              if (m := await request.app.state.adapters.matches.get_match(i)) is not None}
     out = {"matches": [{**line, "live": line["match_id"] == live} for line in lines], "live": None,
-           "generating": bool(status and status.as_dict()["generating"]), "next": None}
+           "generating": bool(status and status.as_dict()["generating"]), "next": None, "schedule": []}
     if nxt:
-        out["next"] = {"matchday": nxt["matchday"], "fixtures": [
-            {"match_id": i, "home": _team(by_id[i].home), "away": _team(by_id[i].away),
-             "venue": by_id[i].context.venue, "prediction": nxt["predictions"].get(i)}
-            for i in nxt["order"] if i in by_id]}
+        def fixture(i: str) -> dict:
+            return {"match_id": i, "home": _team(by_id[i].home), "away": _team(by_id[i].away),
+                    "venue": by_id[i].context.venue, "prediction": nxt["predictions"].get(i)}
+
+        rounds = [{"matchday": r["matchday"], "date": r["date"], "fixtures": [fixture(i) for i in r["ids"] if i in by_id]}
+                  for r in nxt["rounds"]]
+        out["next"] = rounds[0] if rounds else None
+        out["schedule"] = rounds
     if live is not None:
         match = next(m for m in matches if m.match_id == live)
         events = await request.app.state.adapters.matches.list_events(live)

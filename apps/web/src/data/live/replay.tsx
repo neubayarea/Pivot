@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import { needsLocalised, usePrefs } from "../../i18n";
-import { liveClock } from "../liveClock";
+import { liveClock, msToKickoff } from "../liveClock";
 import { useReplayClock } from "../replayClock";
 import { ConnectionContext, LocalisingContext, MatchContext, type Connection, type MatchView } from "../view";
 import type { MatchChoice } from "../choice";
@@ -126,6 +126,16 @@ export default function ReplayProvider({ children, fallback, choice, from, live 
     setPlaying(true);
   } : undefined), [live, full, end, seek, setSpeed, setPlaying]);
   useEffect(() => goLive?.(), [goLive]);
+  // QA round 4: left open, the live match kicks off again after full time and the break. A viewer who
+  // dragged to the end while the match is still on gets "Back to live" instead.
+  const over = clock >= end;
+  useEffect(() => {
+    if (!goLive || !over) return;
+    const wait = msToKickoff(end);
+    if (wait === null) return;
+    const timer = setTimeout(goLive, wait + 500);
+    return () => clearTimeout(timer);
+  }, [goLive, over, end]);
 
   // Like the fixture: events and pivots only change on whole seconds.
   const second = Math.floor(clock);

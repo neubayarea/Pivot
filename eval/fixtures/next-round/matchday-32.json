@@ -1,0 +1,517 @@
+{
+ "sim_version": "11765b0f5196",
+ "matchday": 32,
+ "n_runs": 100,
+ "fixtures": [
+  {
+   "match_id": "S2026-32-HBC-GRE",
+   "home": "club-hbc",
+   "away": "club-gre",
+   "seed": 20263200,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.54,
+    "draw": 0.28,
+    "away_win": 0.18,
+    "ci95": {
+     "home_win": [
+      0.44264860323368227,
+      0.6343919169097589
+     ],
+     "draw": [
+      0.20139685211186212,
+      0.3748802870992116
+     ],
+     "away_win": [
+      0.1170022549894635,
+      0.2666735838630073
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 2,
+      "away": 2,
+      "share": 0.11
+     },
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.08
+     },
+     {
+      "home": 1,
+      "away": 0,
+      "share": 0.08
+     }
+    ],
+    "xg": {
+     "home": 2.02,
+     "away": 1.33
+    },
+    "goals": {
+     "home": 2.19,
+     "away": 1.33
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-ROV-WES",
+   "home": "club-rov",
+   "away": "club-wes",
+   "seed": 20263202,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.35,
+    "draw": 0.26,
+    "away_win": 0.39,
+    "ci95": {
+     "home_win": [
+      0.26364248243097527,
+      0.44745556703112027
+     ],
+     "draw": [
+      0.18404698464748132,
+      0.3537098944918718
+     ],
+     "away_win": [
+      0.3001687400639441,
+      0.4879698295415926
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.12
+     },
+     {
+      "home": 2,
+      "away": 2,
+      "share": 0.11
+     },
+     {
+      "home": 1,
+      "away": 2,
+      "share": 0.11
+     }
+    ],
+    "xg": {
+     "home": 1.86,
+     "away": 1.61
+    },
+    "goals": {
+     "home": 1.76,
+     "away": 1.69
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-THO-LUN",
+   "home": "club-tho",
+   "away": "club-lun",
+   "seed": 20263201,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.17,
+    "draw": 0.25,
+    "away_win": 0.58,
+    "ci95": {
+     "home_win": [
+      0.10893566114059931,
+      0.25548004767601123
+     ],
+     "draw": [
+      0.17545211362287672,
+      0.34304463548061603
+     ],
+     "away_win": [
+      0.4820648670304296,
+      0.6720161732564526
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 2,
+      "share": 0.19
+     },
+     {
+      "home": 0,
+      "away": 1,
+      "share": 0.13
+     },
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.12
+     }
+    ],
+    "xg": {
+     "home": 0.96,
+     "away": 1.56
+    },
+    "goals": {
+     "home": 0.87,
+     "away": 1.62
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-HOL-COR",
+   "home": "club-hol",
+   "away": "club-cor",
+   "seed": 20263203,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.12,
+    "draw": 0.25,
+    "away_win": 0.63,
+    "ci95": {
+     "home_win": [
+      0.06999406437019488,
+      0.19812099426711421
+     ],
+     "draw": [
+      0.17545211362287672,
+      0.34304463548061603
+     ],
+     "away_win": [
+      0.5322052958094291,
+      0.7181763946567546
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 2,
+      "share": 0.15
+     },
+     {
+      "home": 0,
+      "away": 2,
+      "share": 0.13
+     },
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.12
+     }
+    ],
+    "xg": {
+     "home": 1.06,
+     "away": 1.92
+    },
+    "goals": {
+     "home": 1.02,
+     "away": 1.98
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-TES-BRI",
+   "home": "club-tes",
+   "away": "club-bri",
+   "seed": 20263204,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.55,
+    "draw": 0.27,
+    "away_win": 0.18,
+    "ci95": {
+     "home_win": [
+      0.45244602997442135,
+      0.6438546202048803
+     ],
+     "draw": [
+      0.1926958414957634,
+      0.36432116767944994
+     ],
+     "away_win": [
+      0.1170022549894635,
+      0.2666735838630073
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.12
+     },
+     {
+      "home": 2,
+      "away": 2,
+      "share": 0.09
+     },
+     {
+      "home": 2,
+      "away": 1,
+      "share": 0.09
+     }
+    ],
+    "xg": {
+     "home": 2.12,
+     "away": 1.31
+    },
+    "goals": {
+     "home": 2.21,
+     "away": 1.41
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-QUA-ELM",
+   "home": "club-qua",
+   "away": "club-elm",
+   "seed": 20263205,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.13,
+    "draw": 0.21,
+    "away_win": 0.66,
+    "ci95": {
+     "home_win": [
+      0.07757167427240512,
+      0.20980351440076428
+     ],
+     "draw": [
+      0.141656540619153,
+      0.29979968834089865
+     ],
+     "away_win": [
+      0.5627772885472462,
+      0.7453847920265184
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 2,
+      "share": 0.13
+     },
+     {
+      "home": 0,
+      "away": 1,
+      "share": 0.13
+     },
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.12
+     }
+    ],
+    "xg": {
+     "home": 0.79,
+     "away": 2.29
+    },
+    "goals": {
+     "home": 0.8,
+     "away": 2.0
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-VAN-PEL",
+   "home": "club-van",
+   "away": "club-pel",
+   "seed": 20263206,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.45,
+    "draw": 0.29,
+    "away_win": 0.26,
+    "ci95": {
+     "home_win": [
+      0.3561453797951198,
+      0.5475539700255787
+     ],
+     "draw": [
+      0.2101483574912227,
+      0.3853889117557111
+     ],
+     "away_win": [
+      0.18404698464748132,
+      0.3537098944918718
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.19
+     },
+     {
+      "home": 1,
+      "away": 2,
+      "share": 0.1
+     },
+     {
+      "home": 2,
+      "away": 1,
+      "share": 0.09
+     }
+    ],
+    "xg": {
+     "home": 1.62,
+     "away": 1.27
+    },
+    "goals": {
+     "home": 1.71,
+     "away": 1.34
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-SAL-DUN",
+   "home": "club-sal",
+   "away": "club-dun",
+   "seed": 20263207,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.3,
+    "draw": 0.29,
+    "away_win": 0.41,
+    "ci95": {
+     "home_win": [
+      0.2189488529493276,
+      0.3958485463334666
+     ],
+     "draw": [
+      0.2101483574912227,
+      0.3853889117557111
+     ],
+     "away_win": [
+      0.3186731302113651,
+      0.5079856994658921
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.14
+     },
+     {
+      "home": 0,
+      "away": 1,
+      "share": 0.14
+     },
+     {
+      "home": 2,
+      "away": 1,
+      "share": 0.09
+     }
+    ],
+    "xg": {
+     "home": 1.52,
+     "away": 1.44
+    },
+    "goals": {
+     "home": 1.29,
+     "away": 1.42
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-KEL-MAR",
+   "home": "club-kel",
+   "away": "club-mar",
+   "seed": 20263208,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.44,
+    "draw": 0.2,
+    "away_win": 0.36,
+    "ci95": {
+     "home_win": [
+      0.34672026630160796,
+      0.5377189534832302
+     ],
+     "draw": [
+      0.1333669333310325,
+      0.2888291655931589
+     ],
+     "away_win": [
+      0.2727122040140433,
+      0.4576459754839126
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 0,
+      "away": 1,
+      "share": 0.1
+     },
+     {
+      "home": 2,
+      "away": 2,
+      "share": 0.1
+     },
+     {
+      "home": 2,
+      "away": 1,
+      "share": 0.09
+     }
+    ],
+    "xg": {
+     "home": 1.83,
+     "away": 1.62
+    },
+    "goals": {
+     "home": 1.81,
+     "away": 1.57
+    }
+   }
+  },
+  {
+   "match_id": "S2026-32-FAL-OST",
+   "home": "club-fal",
+   "away": "club-ost",
+   "seed": 20263209,
+   "prediction": {
+    "n_runs": 100,
+    "home_win": 0.51,
+    "draw": 0.18,
+    "away_win": 0.31,
+    "ci95": {
+     "home_win": [
+      0.4134801193402717,
+      0.6057800106955886
+     ],
+     "draw": [
+      0.1170022549894635,
+      0.2666735838630073
+     ],
+     "away_win": [
+      0.22779697212376038,
+      0.40626055719489407
+     ]
+    },
+    "scorelines": [
+     {
+      "home": 3,
+      "away": 2,
+      "share": 0.1
+     },
+     {
+      "home": 0,
+      "away": 1,
+      "share": 0.09
+     },
+     {
+      "home": 1,
+      "away": 1,
+      "share": 0.08
+     }
+    ],
+    "xg": {
+     "home": 1.79,
+     "away": 1.42
+    },
+    "goals": {
+     "home": 2.06,
+     "away": 1.48
+    }
+   }
+  }
+ ]
+}

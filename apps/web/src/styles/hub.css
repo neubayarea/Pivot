@@ -74,3 +74,28 @@
 /* A match before kick-off (MatchTabs): the tabs with nothing to show yet are greyed out. */
 .tabs [role="tab"].tab-off { opacity: .45; cursor: not-allowed; }
 .tabs [role="tab"].tab-off:hover { color: var(--pv-ink-2); border-bottom-color: transparent; }
+
+/* The schedule (C15): matchdays 31-38, a round at a time. */
+.hub-sched { display: grid; gap: var(--pv-s4); }
+.hub-sched-pick { display: flex; align-items: center; gap: var(--pv-s3); flex-wrap: wrap; }
+.hub-sched-runs { padding: 0 var(--pv-s2); }
+.hub-sched-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 16px minmax(0, 1fr) 170px minmax(200px, 1fr); align-items: center;
+  gap: var(--pv-s3); padding: var(--pv-s3) var(--pv-s2); text-decoration: none; color: inherit; border-radius: var(--pv-r-ctl); }
+.hub-sched-row > .hub-team:nth-child(2) { justify-content: flex-end; }
+.hub-v { color: var(--pv-ink-2); text-align: center; font-size: var(--pv-fs-sm); }
+.hub-sched li + li { border-top: 1px solid var(--pv-hair); }
+.hub-sched-row:hover { background: var(--pv-sunk); }
+@media (prefers-reduced-motion: no-preference) {
+  .hub-sched-row { transition: background-color 150ms; }
+}
+@media (max-width: 960px) {
+  .hub-sched-row { grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr); }
+  .hub-sched-row > .hub-meta { grid-column: 1 / -1; }
+}
+/* A round's own list has no per-row label (the round and date are its heading). */
+.hub-sched-row:has(> .hub-meta:first-child:empty) { grid-template-columns: 0 minmax(0, 1fr) 16px minmax(0, 1fr) 170px minmax(200px, 1fr); column-gap: var(--pv-s3); }
+
+/* The same fixture simulated more than once on one matchday (QA round 4). */
+.hub-alt > .hub-note { padding: var(--pv-s3) var(--pv-s2) 0; }
+.hub-alt > ul { list-style: none; margin: 0; padding: 0 0 0 var(--pv-s4); border-left: 3px solid var(--pv-hair); }
+.hub-alt > ul > li + li { border-top: 1px solid var(--pv-hair); }
