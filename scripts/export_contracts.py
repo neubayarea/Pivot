@@ -16,7 +16,11 @@ from pathlib import Path
 
 from pydantic.json_schema import models_json_schema
 
-from pivot_core.domain import CONTRACT_MODELS
+from pivot_api.prematch import CONTRACT_MODELS as PREMATCH_MODELS
+from pivot_core.domain import CONTRACT_MODELS as DOMAIN_MODELS
+
+# The domain models, then the API's own responses that are not domain models (the pre-match page, Bx15).
+CONTRACT_MODELS = (*DOMAIN_MODELS, *PREMATCH_MODELS)
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "packages" / "contracts" / "schema" / "pivot.schema.json"
@@ -51,7 +55,8 @@ def build() -> str:
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "https://github.com/neubayarea/Pivot/packages/contracts/schema/pivot.schema.json",
         "title": "Pivot",
-        "description": "Generated from packages/pivot_core/src/pivot_core/domain. Do not edit by hand.",
+        "description": "Generated from packages/pivot_core/src/pivot_core/domain and apps/api/src/pivot_api/prematch.py. "
+                       "Do not edit by hand.",
         **tidy(schema),
     }
     return json.dumps(schema, indent=2, ensure_ascii=False, sort_keys=True) + "\n"

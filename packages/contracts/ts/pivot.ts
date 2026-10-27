@@ -1,7 +1,7 @@
 /* Generated from packages/contracts/schema/pivot.schema.json by pnpm gen:types. Do not edit by hand. */
 
 /**
- * Generated from packages/pivot_core/src/pivot_core/domain. Do not edit by hand.
+ * Generated from packages/pivot_core/src/pivot_core/domain and apps/api/src/pivot_api/prematch.py. Do not edit by hand.
  */
 export interface Pivot {
   [k: string]: unknown;
@@ -1360,6 +1360,219 @@ export interface PlayerStatsReport {
   players: PlayerReport[];
   source: "stored" | "computed";
   up_to_t: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchFixture".
+ */
+export interface PrematchFixture {
+  competition: string;
+  days_until: number;
+  fictional: boolean;
+  importance: "low" | "medium" | "high";
+  matchday: number | null;
+  opponent: string;
+  opponent_id: string;
+  rotation_note: string;
+  rotation_note_key: string;
+  rotation_params: {
+    [k: string]: string | number;
+  };
+  rotation_risk: "low" | "medium" | "high";
+  stage: string | null;
+  venue: "H" | "A";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchFormStats".
+ */
+export interface PrematchFormStats {
+  avg_rating: number | null;
+  btts: number;
+  clean_sheets: number;
+  conceded_by_period: {
+    [k: string]: number;
+  };
+  failed_to_score: number;
+  ga_avg: number;
+  games: number;
+  gf_avg: number;
+  goals_by_period: {
+    [k: string]: number;
+  };
+  ht_lead_dropped: number;
+  ht_lead_won: number;
+  over_2_5: number;
+  reds: number;
+  scored_first: number;
+}
+/**
+ * One recent league game, seen from the team: `ft` and `ht` are [this team, opponent].
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchGame".
+ */
+export interface PrematchGame {
+  came_from_behind: boolean;
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  ft: [number, number];
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  ht: [number, number];
+  matchday: number;
+  opponent: string;
+  opponent_id: string;
+  result: "W" | "D" | "L";
+  scored_first: boolean;
+  season: number;
+  venue: "H" | "A";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchH2HCount".
+ */
+export interface PrematchH2HCount {
+  away_w: number;
+  d: number;
+  home_w: number;
+  played: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchHeadToHead".
+ */
+export interface PrematchHeadToHead {
+  all: PrematchH2HCount;
+  at_this_ground: PrematchH2HCount;
+  meetings: PrematchMeeting[];
+}
+/**
+ * `ft` and `ht` are [home, away] of that meeting.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchMeeting".
+ */
+export interface PrematchMeeting {
+  away_club: string;
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  ft: [number, number];
+  home_club: string;
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  ht: [number, number];
+  matchday: number;
+  season: number;
+  venue_club: string;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchLine".
+ */
+export interface PrematchLine {
+  away: string[];
+  away_players: string[];
+  home: string[];
+  home_players: string[];
+  note: string;
+  note_key: string;
+  params: {
+    [k: string]: string | number;
+  };
+  zone: "home_wide_left" | "home_wide_right" | "midfield" | "home_attack" | "away_attack";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchMatchup".
+ */
+export interface PrematchMatchup {
+  away_formation: string;
+  home_formation: string;
+  lines: PrematchLine[];
+  perspective: "home" | "away";
+  tactics_diff: PrematchTacticsDiff[];
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchTacticsDiff".
+ */
+export interface PrematchTacticsDiff {
+  away: string;
+  field: string;
+  home: string;
+  note: string;
+  note_key: string;
+  params: {
+    [k: string]: string | number;
+  };
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchRecord".
+ */
+export interface PrematchRecord {
+  d: number;
+  ga: number;
+  gf: number;
+  l: number;
+  played: number;
+  position: number | null;
+  ppg: number;
+  pts: number;
+  w: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchReport".
+ */
+export interface PrematchReport {
+  about: string;
+  about_key: string;
+  head_to_head: PrematchHeadToHead;
+  match_id: string;
+  matchday: number;
+  matchup: PrematchMatchup;
+  season: number;
+  teams: {
+    [k: string]: PrematchTeam;
+  };
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchTeam".
+ */
+export interface PrematchTeam {
+  away_only: PrematchRecord;
+  club_id: string;
+  home_only: PrematchRecord;
+  last5: PrematchGame[];
+  last5_stats: PrematchFormStats;
+  name: string;
+  next_fixture: PrematchFixture | null;
+  next_league: PrematchFixture | null;
+  overall: PrematchRecord;
+  usual_xi_today: PrematchUsualXi;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchUsualXi".
+ */
+export interface PrematchUsualXi {
+  games: number;
+  newcomers: string[];
+  regulars: string[];
+  regulars_benched: string[];
+  regulars_starting: number;
+  usual_xi_named: boolean;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
