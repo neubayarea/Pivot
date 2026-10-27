@@ -277,6 +277,7 @@ export const en = {
   "whatif.notHere": "Not possible here: {list}",
   "pics.player": "Which player",
   "pics.wholeTeam": "Whole team",
+  "pics.countPasses": "Numbers: passes made, up to the minute on the clock.",
   "ts.title": "Team stats",
   "ts.note": "The same numbers the AI cites and the checker verifies.",
   "ts.scope": "Part of the match",
