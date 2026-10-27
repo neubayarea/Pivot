@@ -43,6 +43,8 @@ export const zh: Messages = {
   "banner.failed": "实时数据不可用：{reason}。",
   "banner.reconnecting": "实时连接断开，正在重连…（第 {n} 次）",
   "banner.degraded": "AI 解释有延迟，先显示自动摘要。",
+  "banner.missing": "已经没有名为“{id}”的比赛了，现在显示的是第一场比赛。",
+  "banner.dismiss": "知道了",
 
   "error.title": "页面出错了",
   "error.reload": "重新加载页面",

@@ -1,6 +1,6 @@
 """Finished simulated matches for the local profile, generated once and cached on disk (Ax6).
 
-At startup the API puts `PIVOT_SIM_MATCHES` (default 6, 0 turns it off) matches from `SPECS` into
+At startup the API puts `PIVOT_SIM_MATCHES` (default 20, 0 turns it off) matches from `SPECS` into
 the store, without holding up startup. Each one is simulated in a worker process the first time,
 then written to `PIVOT_DATA_DIR/sims/` (default `./.pivot-data/sims/`):
 
@@ -16,8 +16,12 @@ worker writes the pivots; its message ids are "{match_id}:{minute}", so a second
 Before that, `adapters.results` reads back the pivots the worker wrote for this SIM_VERSION in an
 earlier run (Ax10), so the worker skips them instead of calling the model again.
 
+`GET /api/matches` lists them in `SPECS` order, and the site opens the first one (Ax55): a fixed rule,
+not a match picked for how it went.
+
 The recorded demo (B02) is stored the same way, from the files committed in `eval/fixtures/`
 (`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`. Its results are keyed by the fixture file's content hash.
+It is test data now and only loaded when `PIVOT_DEMO_FIXTURE` asks for it (Ax55).
 
 Each stored match also gets a `Replay`: how it was simulated (match, seed, plants) and the version its
 results belong to, so a what-if (A09, `whatif.py`) replays the very same match.
@@ -52,7 +56,11 @@ from pivot_core.sim import PRESETS, build_demo_match, simulate
 
 log = logging.getLogger("uvicorn.error")
 
-DEFAULT_MATCHES = 6
+# 20 matches: on the 2-core server the first start after a simulator change simulates them in about
+# 1.5 minutes (6 took ~25 s), the site listing each one as it is ready; later starts read them back
+# from PIVOT_DATA_DIR (or Blob) in seconds. To skip that wait, make them on a many-core machine first:
+# `uv run scripts/sims_blob.py generate-upload --count 20` (docs/match-data.md).
+DEFAULT_MATCHES = 20
 
 
 @dataclass(frozen=True)
@@ -224,6 +232,7 @@ class SimStatus:
     """What `GET /api/sims` reports while the matches load."""
 
     total: int = 0
+    order: list[str] = field(default_factory=list)     # every match id in SPECS order, ready or not
     ready: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
     done: bool = True
@@ -254,16 +263,17 @@ async def store_data(adapters: Adapters, data: dict, version: str) -> str:
     return match.match_id
 
 
-# The recorded demo (B02): committed to the repo, so every machine and the server show the same match.
+# The recorded demo (B02): committed to the repo, so every machine shows the same match. Tests read it.
 FIXTURE = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "demo-1021.json"
 
 
 def fixture_from_env() -> Path | None:
-    """`PIVOT_DEMO_FIXTURE` names another file; "0" turns the recorded demo off."""
+    """The recorded demo is off unless asked for (Ax55): `PIVOT_DEMO_FIXTURE=1` loads the committed
+    file, a path loads that file; unset or "0" loads none."""
     raw = os.getenv("PIVOT_DEMO_FIXTURE", "")
-    if raw == "0":
+    if raw in ("", "0"):
         return None
-    return Path(raw) if raw else FIXTURE
+    return FIXTURE if raw == "1" else Path(raw)
 
 
 async def load_fixture(adapters: Adapters, path: Path,

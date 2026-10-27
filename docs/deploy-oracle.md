@@ -234,13 +234,14 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | 变量 | 说明 |
 | --- | --- |
 | `PIVOT_DOMAIN` | 公网域名，Caddy 用它申请证书，网页的 WebSocket 地址也由它拼出来 |
-| `PIVOT_DEMO` | `1` 启动时放入演示比赛，`0` 空着启动 |
+| `PIVOT_DEMO` | `1` 启动时放入手写样例比赛 `M-api-demo`，`0` 不放（线上用 `0`） |
+| `PIVOT_DEMO_FIXTURE` | 默认不设：网站不放测试用的固定比赛 demo-1021（Ax55）；`1` 放入它，也可以写别的文件路径 |
 | `PIVOT_WORKER` / `PIVOT_SIMULATOR` | `1` 在同一个进程里运行 AI 小组 / 模拟器，`0` 关掉（模拟器的实时入口还没做，做好后自动启用） |
 | `PIVOT_PIPELINE` | `fake` 用固定解释，`detect` 用真正的判定、写稿、核对流程（D06） |
 | `PIVOT_FOUNDRY_ENDPOINT`、`PIVOT_FOUNDRY_API_VERSION`、`PIVOT_MODEL_STANDARD`、`PIVOT_MODEL_MINI` | Foundry 模型的地址和部署名，D 线提供 |
 | `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供。三个要一起填；填了密钥就只用这个服务主体登录 |
 | `PIVOT_WEB_DIST` | 网页文件的位置，镜像里已经设好，不用填 |
-| `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 6，`0` 不生成 |
+| `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 20，`0` 不生成。网站按种子顺序列出，默认打开第一场 |
 | `PIVOT_DATA_DIR` | 生成的比赛和 AI 写的结果存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
 | `PIVOT_RESULTS` | `1`（默认）把 AI 写的结果存到 `PIVOT_DATA_DIR/results/`，重启后读回来不再调模型；`0` 只放在内存里 |
 | `PIVOT_RESULTS_TAG` | 默认空。改成一个新值再部署，就丢掉存下的结果、让 AI 全部重写，见 [比赛数据放在哪](match-data.md) |

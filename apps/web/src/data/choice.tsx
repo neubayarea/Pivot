@@ -1,5 +1,6 @@
 // Which match S1, S2 and the overlay show (Ax6). `?match=` wins, then the viewer's last pick
-// (localStorage), else the API's choice (the recorded demo, else its live match, else its latest).
+// (localStorage), else the default: the first match the API lists, i.e. the first seed (Ax55).
+// A linked match that is gone (an old link) falls back to the default, with a line saying so.
 // The picker in the top bar lists the API's matches and polls while the server is still generating
 // its simulated ones.
 import { createContext, useContext, useEffect, useState } from "react";
@@ -10,13 +11,13 @@ import { api, type SimsStatus } from "./live/api";
 const STORAGE_KEY = "pivot.match";
 /** The hand-made sample match the API seeds for frontend work (apps/api demo.py). */
 export const DEMO_MATCH_ID = "M-api-demo";
-/** The recorded demo (B02): simulated, committed as eval/fixtures/demo-1021, the same on every machine. */
+/** The recorded demo (B02): test data, only on a server started with PIVOT_DEMO_FIXTURE (Ax55). */
 export const DEMO_PRESET = "demo-1021";
 
 export const isRecordedDemo = (m: Match) => m.preset === DEMO_PRESET;
 const POLL_MS = 2000;
 
-/** `fromUrl`: a match named in the link is shown as "not found" if missing; a saved one is just dropped. */
+/** `fromUrl`: a match named in the link that is missing is reported (`missing`); a saved one is just dropped. */
 export type MatchChoice = { id: string | null; fromUrl: boolean };
 
 export function readSavedMatch(): string | null {
@@ -51,7 +52,8 @@ export function matchLabel(m: Match, t: T): string {
   return `${m.home.short_name} ${m.score.home}–${m.score.away} ${m.away.short_name} · ${tag}${status}`;
 }
 
-type ChoiceValue = { choice: MatchChoice; choose: (id: string) => void };
+/** `missing`: the match the link asked for, when it was gone and the default is shown instead. */
+type ChoiceValue = { choice: MatchChoice; choose: (id: string) => void; missing: string | null; dismiss: () => void };
 
 /** Only set while following the API; the fixture replay has one match and no picker. */
 export const MatchChoiceContext = createContext<ChoiceValue | null>(null);

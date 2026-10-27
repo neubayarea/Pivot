@@ -42,6 +42,8 @@ export const en = {
   "banner.failed": "Live feed unavailable: {reason}.",
   "banner.reconnecting": "Live connection lost. Reconnecting… (attempt {n})",
   "banner.degraded": "AI explanations delayed. Showing automatic summaries.",
+  "banner.missing": "There is no match called “{id}” any more, so the first match is shown instead.",
+  "banner.dismiss": "OK",
 
   "error.title": "Something went wrong",
   "error.reload": "Reload the page",

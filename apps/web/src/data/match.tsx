@@ -107,19 +107,23 @@ function ChosenLiveProvider({ children, fallback }: ProviderProps) {
   const choose = useCallback((id: string) => {
     saveMatch(id);
     setChoice({ id, fromUrl: true });
+    setMissing(null);
     setFrom(null);
     const search = new URLSearchParams(window.location.search);
     search.set("match", id);
     search.delete("from");
     navigate({ pathname: "/", search: `?${search}` });
   }, [navigate]);
-  const value = useMemo(() => ({ choice, choose }), [choice, choose]);
+  // An old link's match was gone and the default is shown: say so until the viewer picks one (Ax55).
+  const [missing, setMissing] = useState<string | null>(null);
+  const dismiss = useCallback(() => setMissing(null), []);
+  const value = useMemo(() => ({ choice, choose, missing, dismiss }), [choice, choose, missing, dismiss]);
   const key = `${choice.id ?? ""}|${from ?? "live"}`;
   return (
     <MatchChoiceContext.Provider value={value}>
       {from === null
-        ? <LiveProvider key={key} choice={choice} fallback={fallback}>{children}</LiveProvider>
-        : <ReplayProvider key={key} choice={choice} from={from} fallback={fallback}>{children}</ReplayProvider>}
+        ? <LiveProvider key={key} choice={choice} onMissing={setMissing} fallback={fallback}>{children}</LiveProvider>
+        : <ReplayProvider key={key} choice={choice} from={from} onMissing={setMissing} fallback={fallback}>{children}</ReplayProvider>}
     </MatchChoiceContext.Provider>
   );
 }

@@ -6,7 +6,7 @@ import { DEFAULT_PREFS, needsLocalised, usePrefs } from "../../i18n";
 import {
   ConnectionContext, LocalisingContext, MatchContext, byShirt, computeStats, type Connection, type LoadProblem, type MatchView, type PivotDetail,
 } from "../view";
-import { isRecordedDemo, type MatchChoice } from "../choice";
+import type { MatchChoice } from "../choice";
 import { clockAt } from "../clock";
 import { evidenceWindow } from "../window";
 import { ApiError, api } from "./api";
@@ -16,23 +16,28 @@ import { applyEnvelope, applyPivot, applyPivots, applySnapshot, lastEventSeq, ty
 
 class NoMatches extends Error {}
 
+/** The match to show, and the one the link asked for when that one is gone (null otherwise). */
+export type Picked = { id: string; missing: string | null };
+
 /**
- * The chosen match if the API has it, else the recorded demo, else its most recent live match, else its
- * most recent match.
- * A match named in the URL that is gone is an error; a saved one (from an older server run) is skipped.
+ * The chosen match if the API has it, else the default: the first match the API lists, which is the
+ * first seed of its simulated matches (Ax55), a fixed rule rather than a match picked for how it went.
+ * A match named in the URL that is gone (an old link) also falls back to the default, reported as
+ * `missing`; a saved one (from an older server run) is dropped quietly.
  */
-export async function pickMatch(choice: MatchChoice = { id: null, fromUrl: false }): Promise<string> {
+export async function pickMatch(choice: MatchChoice = { id: null, fromUrl: false }): Promise<Picked> {
+  let missing: string | null = null;
   if (choice.id) {
     try {
-      return (await api.getMatch(choice.id)).match_id;
+      return { id: (await api.getMatch(choice.id)).match_id, missing };
     } catch (err) {
-      if (choice.fromUrl || !(err instanceof ApiError && err.status === 404)) throw err;
+      if (!(err instanceof ApiError && err.status === 404)) throw err;
+      if (choice.fromUrl) missing = choice.id;
     }
   }
-  const matches = await api.listMatches();
-  const pick = matches.find(isRecordedDemo) ?? matches.find((m) => m.status === "live") ?? matches[0];
-  if (!pick) throw new NoMatches();
-  return pick.match_id;
+  const [first] = await api.listMatches();
+  if (!first) throw new NoMatches();
+  return { id: first.match_id, missing };
 }
 
 /** What went wrong before the first load. Anything but a network or 5xx failure needs the viewer, not a retry. */
@@ -72,10 +77,10 @@ export async function listPivotsFor(id: string, prefs: ViewerPrefs): Promise<Piv
 
 const prefsKey = (p: ViewerPrefs) => `${p.language}|${p.audience}|${p.focus_team}|${p.focus_player_id}`;
 
-type Props = { children: ReactNode; fallback: ReactNode; choice?: MatchChoice };
+type Props = { children: ReactNode; fallback: ReactNode; choice?: MatchChoice; onMissing?: (id: string) => void };
 
 /** Follows one match for its lifetime; MatchProvider remounts it (key) when the viewer picks another. */
-export default function LiveProvider({ children, fallback, choice }: Props) {
+export default function LiveProvider({ children, fallback, choice, onMissing }: Props) {
   const [state, setState] = useState<LiveState | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>({ state: "connecting", attempt: 0 });
   const [problem, setProblem] = useState<LoadProblem | null>(null);
@@ -109,7 +114,12 @@ export default function LiveProvider({ children, fallback, choice }: Props) {
     const socket = new LiveSocket({
       negotiate: async () => {
         try {
-          const url = await api.negotiate((matchIdRef.current ??= await pickMatch(choice)));
+          if (!matchIdRef.current) {
+            const picked = await pickMatch(choice);
+            matchIdRef.current = picked.id;
+            if (picked.missing && alive()) onMissing?.(picked.missing);
+          }
+          const url = await api.negotiate(matchIdRef.current);
           if (alive()) setProblem(null);
           return url;
         } catch (err) {
