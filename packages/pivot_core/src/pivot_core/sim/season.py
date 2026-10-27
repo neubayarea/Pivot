@@ -11,6 +11,11 @@ context from that file:
 - three stories are placed by hand on the demo's turning points (see `_DEMO_CAREERS` and
   `_demo_news`): the 38' red card, the 63' substitution and the 85' substitution.
 
+`with_seed_season(match, season)` does the same for the site's seed matches (Bx13): each one is
+played as a matchday drawn from its seed, so form, table and head-to-head differ from match to
+match, and three stories are drawn instead of placed: an away starter who once played for Harbour
+City, a home player one game short of a round number of appearances, and one more headline.
+
 None of this changes how the match is played. `sim/effects.py` (B14) turns this context into the
 match's context effects; the engine plays by them only with the B14 switch on (CTX-007).
 """
@@ -29,7 +34,7 @@ from ..domain import (
     CareerStint, HeadToHead, Match, OffFieldEvent, PastMeeting, PreMatchCondition, Relationship, Team, TeamForm,
 )
 from ..domain.common import PITCH_LENGTH, PITCH_WIDTH
-from .effects import can_combine
+from .effects import can_combine, with_effects
 from .engine import simulate
 from .world import BY_ID, CLUB_NAMES, DEMO_MATCHDAY, HBC, ROV, SEASON, Fixture, fixture_match, with_careers
 
@@ -195,14 +200,15 @@ _DEMO_CAREERS: dict[str, list[CareerStint]] = {
 _HUNDREDTH = "h15"                            # his appearances are set to 99, whatever the season gave
 
 
-def _story_team(team: Team, stats: dict, played: int) -> Team:
+def _story_team(team: Team, stats: dict, played: int, careers: dict[str, list[CareerStint]] = _DEMO_CAREERS,
+                hundredth: str | None = _HUNDREDTH) -> Team:
     team = with_careers(team)
     squad = []
     for p in team.squad:
-        career = list(_DEMO_CAREERS.get(p.player_id, p.career))
+        career = list(careers.get(p.player_id, p.career))
         s = stats.get((team.club_id, p.shirt_number), {"apps": 0, "goals": 0})
         now = career[-1]
-        apps = 99 if p.player_id == _HUNDREDTH else now.appearances + s["apps"]
+        apps = 99 if p.player_id == hundredth else now.appearances + s["apps"]
         career[-1] = now.model_copy(update={"appearances": apps, "goals": now.goals + s["goals"]})
         squad.append(p.model_copy(update={"career": career}))
     coach = team.coach.career[-1]
@@ -298,7 +304,7 @@ def derived_news(teams: list[Team], results: list[dict], stats: dict) -> list[Of
             out.append(OffFieldEvent(news_id=f"news-{coach.coach_id}-form", subject_id=coach.coach_id,
                                      kind="public_criticism", hours_before_kickoff=36, severity=2, sentiment="negative",
                                      headline=f"{coach.name} under pressure after {losses} defeats in "
-                                              f"{team.name}'s last five league games"))
+                                              f"{team.name}{"'" if team.name.endswith("s") else "'s"} last five league games"))
         elif games >= 3:
             out.append(OffFieldEvent(news_id=f"news-{coach.coach_id}-leads", subject_id=coach.coach_id,
                                      kind="public_criticism", hours_before_kickoff=36, sentiment="negative",
@@ -320,23 +326,124 @@ def derived_news(teams: list[Team], results: list[dict], stats: dict) -> list[Of
     return out
 
 
-def with_season(match: Match, season: dict) -> Match:
-    """The demo match with its careers and pre-match context filled from the season so far."""
-    assert (match.home.club_id, match.away.club_id) == (HBC.club_id, ROV.club_id), "only the demo fixture"
-    results = [r for r in season["results"] if r["season"] == SEASON and r["matchday"] < DEMO_MATCHDAY]
-    stats = season_stats(results)
-    played = DEMO_MATCHDAY - 1
-    home, away = _story_team(match.home, stats, played), _story_team(match.away, stats, played)
+def _before(season: dict, matchday: int) -> list[dict]:
+    return [r for r in season["results"] if r["season"] == SEASON and r["matchday"] < matchday]
+
+
+def _with_context(match: Match, season: dict, results: list[dict], stats: dict, home: Team, away: Team,
+                  stories: list[OffFieldEvent]) -> Match:
+    """The match with these squads and the context counted from the results before it."""
     standings = table(results)
-    clubs = (HBC.club_id, ROV.club_id)
+    clubs = (home.club_id, away.club_id)
     meetings = [r for r in [*season["past_meetings"], *results] if {r["home"], r["away"]} == set(clubs)]
-    news = (_demo_news(home, away) + derived_news([home, away], results, stats))[:5]
+    news = (stories + derived_news([home, away], results, stats))[:5]
     context = match.context.model_copy(update={
         "stakes": stakes(standings, clubs),
-        "form": [form(results, HBC.club_id, "home", standings), form(results, ROV.club_id, "away", standings)],
-        "head_to_head": head_to_head(meetings, HBC.club_id),
+        "form": [form(results, home.club_id, "home", standings), form(results, away.club_id, "away", standings)],
+        "head_to_head": head_to_head(meetings, home.club_id),
         "news": news,
         "relationships": ties(home, away) + teammates(home) + teammates(away),
         "conditions": recent_form(home, results) + recent_form(away, results),
     })
     return match.model_copy(update={"home": home, "away": away, "context": context})
+
+
+def with_season(match: Match, season: dict) -> Match:
+    """The demo match with its careers and pre-match context filled from the season so far."""
+    assert (match.home.club_id, match.away.club_id) == (HBC.club_id, ROV.club_id), "only the demo fixture"
+    results = _before(season, DEMO_MATCHDAY)
+    stats = season_stats(results)
+    played = DEMO_MATCHDAY - 1
+    home, away = _story_team(match.home, stats, played), _story_team(match.away, stats, played)
+    return _with_context(match, season, results, stats, home, away, _demo_news(home, away))
+
+
+# --- the site's seed matches (Bx13) -------------------------------------------------------------------
+
+FIRST_SEED_MATCHDAY = 8                       # five games of form, and a table that means something
+MILESTONE_STEP = 50                           # appearances: 50, 100, 150, ...
+_RETURN_MOODS = (("acrimonious", "neutral", "amicable"), (0.4, 0.3, 0.3))
+
+
+def with_seed_season(match: Match, season: dict) -> Match:
+    """A seed match (Harbour City v Northgate Rovers with the seed's squads) with careers, pre-match
+    context and context effects, as a matchday of the season drawn from the seed. The same seed gives
+    the same context every time; nothing here changes how the match is played."""
+    assert (match.home.club_id, match.away.club_id) == (HBC.club_id, ROV.club_id), "a seed match"
+    rng = np.random.default_rng([match.seed or 0, 14])
+    matchday = int(rng.integers(FIRST_SEED_MATCHDAY, DEMO_MATCHDAY))
+    results = _before(season, matchday)
+    stats = season_stats(results)
+    home, away = (_story_team(t, stats, matchday - 1, {}, None) for t in (match.home, match.away))
+    away, back = _returner(rng, away, home)
+    home, milestone = _milestone(home)
+    stories = [n for n in (back, milestone, _headline(rng, home, away)) if n is not None]
+    return with_effects(_with_context(match, season, results, stats, home, away, stories))
+
+
+def _returner(rng: np.random.Generator, team: Team, opponent: Team) -> tuple[Team, OffFieldEvent | None]:
+    """An outfield starter who played for the opponent before: the club before this one becomes theirs."""
+    starters = {s.player_id for s in team.sheet.starters if s.role != "GK"}
+    pool = [p for p in team.squad if p.player_id in starters and len(p.career) > 1]
+    if not pool:
+        return team, None
+    p = pool[int(rng.integers(len(pool)))]
+    moods, odds = _RETURN_MOODS
+    mood = str(rng.choice(moods, p=odds))
+    last = p.career[-2]
+    stint = last.model_copy(update={"club_id": opponent.club_id, "club_name": CLUB_NAMES[opponent.club_id],
+                                    "loan": False, "departure_mood": mood,
+                                    "departure": "transfer" if last.loan else last.departure})
+    player = p.model_copy(update={"career": [*p.career[:-2], stint, p.career[-1]]})
+    team = team.model_copy(update={"squad": [player if q.player_id == p.player_id else q for q in team.squad]})
+    if mood == "acrimonious":
+        news = OffFieldEvent(news_id=f"news-{p.player_id}-return", subject_id=p.player_id, kind="fan_conflict",
+                             hours_before_kickoff=20, severity=2, sentiment="negative",
+                             headline=f"{opponent.name} fans plan a hostile welcome for {p.name}, "
+                                      f"who left the club on bad terms in {stint.to_year}")
+    else:
+        news = OffFieldEvent(news_id=f"news-{p.player_id}-return", subject_id=p.player_id, kind="milestone",
+                             hours_before_kickoff=30, sentiment="neutral",
+                             headline=f"{p.name} faces {opponent.name} for the first time since leaving "
+                                      f"the club in {stint.to_year}")
+    return team, news
+
+
+def _milestone(team: Team) -> tuple[Team, OffFieldEvent | None]:
+    """The player nearest a round number of appearances for the club is one game short of it."""
+    def target(p) -> int:
+        return (p.career[-1].appearances // MILESTONE_STEP + 1) * MILESTONE_STEP
+
+    pool = [p for p in team.squad if p.career[-1].appearances >= MILESTONE_STEP - 10]
+    if not pool:
+        return team, None
+    p = min(pool, key=lambda q: (target(q) - q.career[-1].appearances, q.shirt_number))
+    goal = target(p)
+    now = p.career[-1].model_copy(update={"appearances": goal - 1})
+    player = p.model_copy(update={"career": [*p.career[:-1], now]})
+    team = team.model_copy(update={"squad": [player if q.player_id == p.player_id else q for q in team.squad]})
+    return team, OffFieldEvent(news_id=f"news-{p.player_id}-{goal}", subject_id=p.player_id, kind="milestone",
+                               hours_before_kickoff=48, sentiment="positive",
+                               headline=f"{p.name} is one game away from {goal} appearances for {team.name}")
+
+
+# kind, sentiment, severity, headline ({name}, {team}, {year})
+_HEADLINES = (
+    ("contract_dispute", "negative", 1, "{name} and {team} are still apart on a new contract"),
+    ("transfer_rumour", "neutral", 1, "{name} is linked with a move away from {team} in the winter window"),
+    ("new_contract", "positive", 1, "{name} signs a new contract with {team} until {year}"),
+    ("nightlife", "negative", 1, "{name} of {team} was seen at a nightclub two nights before the game"),
+)
+
+
+def _headline(rng: np.random.Generator, home: Team, away: Team) -> OffFieldEvent | None:
+    """One more headline about a starter of either side, in about two matches out of three."""
+    if rng.random() >= 0.65:
+        return None
+    team = (home, away)[int(rng.integers(2))]
+    slot = team.sheet.starters[int(rng.integers(len(team.sheet.starters)))]
+    p = next(q for q in team.squad if q.player_id == slot.player_id)
+    kind, sentiment, severity, text = _HEADLINES[int(rng.integers(len(_HEADLINES)))]
+    return OffFieldEvent(news_id=f"news-{p.player_id}-{kind}", subject_id=p.player_id, kind=kind,
+                         hours_before_kickoff=int(rng.integers(30, 61)), severity=severity, sentiment=sentiment,
+                         headline=text.format(name=p.name, team=team.name, year=SEASON + 3))

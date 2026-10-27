@@ -222,3 +222,10 @@ def test_ax55_api_lists_simulated_matches_in_seed_list_order_then_the_rest():
         app.state.sims.order = order
         ids = [m["match_id"] for m in client.get("/api/matches").json()]
         assert ids == [*order, "M-api-demo"]                           # the first is the site's default
+
+
+def test_bx13_seed_matches_are_built_with_tactics_and_context_and_replay_the_same():
+    m = sims.seed_match(SPEC.seed, SPEC.home_strength, SPEC.away_strength, SPEC.home_formation, SPEC.away_formation)
+    assert m.context.form and m.context.head_to_head and m.context.news and m.context.effects
+    assert m.home.tactics != m.away.tactics
+    assert SPEC.replay().build() == m
