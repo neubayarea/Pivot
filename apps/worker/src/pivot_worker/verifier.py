@@ -852,7 +852,9 @@ def verify(
             wrong = next((words for side, words in _momentum_sides(text, lang, momentum_phrases) if side != direction), None)
             if wrong:
                 where = "The headline" if i is None else f"Sentence {i + 1}"
+                away_side = names.get("home" if direction == "away" else "away", "the other side")
                 issue("direction_mismatch", f"{where} says '{wrong}', but at this pivot the momentum went to "
-                      f"{towards}; write that it swung towards {towards}.", i)
+                      f"{towards}; write that it swung towards {towards}, or that {away_side} lost it"
+                      + (". The headline must be about that swing too." if i is None else "."), i)
 
     return Verdict(passed=not issues, issues=issues)

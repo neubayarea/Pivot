@@ -10,6 +10,7 @@ import { useMatch, type Side, type TeamPlan } from "../data/match";
 import { usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import LangTag from "./LangTag";
+import { numberLocale } from "../data/motion";
 import "../styles/prematch.css";
 
 const SIDES: Side[] = ["home", "away"];
@@ -24,7 +25,7 @@ const MAX_TIES = 6;
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th"));
 
 /** A small square in the team's kit colour, before a team or person's name. */
-const Kit = ({ side }: { side: Side | undefined }) => (side ? <i className={`pre-kit ${side}`} aria-hidden="true" /> : null);
+export const Kit = ({ side }: { side: Side | undefined }) => (side ? <i className={`pre-kit ${side}`} aria-hidden="true" /> : null);
 
 function usePre() {
   const { preMatch, teams, squads, playerName } = useMatch();
@@ -143,9 +144,10 @@ function Form({ form, t, title, name }: Part & { form: TeamForm[]; name: (s: Sid
             {f.last_results.length > 0 && (
               <>
                 <ol className="pre-wdl" aria-label={t("pre.lastN", { n: f.last_results.length })}>
-                  {f.last_results.map((r, i) => (
-                    <li key={i} className={`r-${r}`} title={t(`pre.result.${r}`)}>
+                  {f.last_results.map((r, i, all) => (
+                    <li key={i} className={`r-${r}${i === all.length - 1 ? " latest" : ""}`} title={t(`pre.result.${r}`)}>
                       {t(`pre.res.${r}`)}
+                      {i === all.length - 1 && <small className="pre-latest">{t("pre.latest")}</small>}
                     </li>
                   ))}
                 </ol>
@@ -157,7 +159,6 @@ function Form({ form, t, title, name }: Part & { form: TeamForm[]; name: (s: Sid
           </div>
         ))}
       </div>
-      <p className="pre-hint muted">{t("pre.newestLast")}</p>
     </section>
   );
 }
@@ -215,7 +216,8 @@ function HeadToHead({ context, plans, t, title, short }: Part & {
   );
 }
 
-const when = (t: T, hours: number) => (hours < 48 ? t("pre.hoursBefore", { n: hours }) : t("pre.daysBefore", { n: Math.round(hours / 24) }));
+/** One rule in every language: hours under 48 h before kick-off, whole days from then on. */
+const when = (t: T, hours: number) => (hours < 48 ? t("pre.hoursBefore", { n: hours }) : t("pre.daysBefore", { n: Math.floor(hours / 24) }));
 
 function News({ news, t, title, name, teamOf }: Part & People & { news: NewsItem[] }) {
   if (!news.length) return null;
@@ -255,6 +257,10 @@ function strongest(effects: ContextEffect[], keep: (e: ContextEffect) => boolean
     .slice(0, max);
 }
 
+/** "+3.6%" / "−1.2%" in the page's number format. */
+const pct = (d: number) =>
+  `${d > 0 ? "+" : "−"}${Math.abs(d * 100).toLocaleString(numberLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+
 function Factors({ effects, t, title, name, teamOf, fan }: Part & People & { effects: ContextEffect[]; fan: boolean }) {
   if (!effects.length) return null;
   return (
@@ -264,10 +270,15 @@ function Factors({ effects, t, title, name, teamOf, fan }: Part & People & { eff
           <li key={e.effect_id}>
             <span className={`pre-chip ${e.delta > 0 ? "up" : "down"}`}>
               {t(`pre.target.${e.target}`)} {e.delta > 0 ? "▲" : "▼"}
-              {!fan && <small> {e.delta > 0 ? "+" : "−"}{Math.abs(e.delta * 100).toFixed(1)}%</small>}
             </span>
             <span>
               <b className="pre-who"><Kit side={teamOf(e.subject_id)} />{name(e.subject_id)}</b>
+              {/* What the effect would change in play, with its size for analysts (context only: not applied). */}
+              <span className="pre-effect">
+                {fan
+                  ? t(e.delta > 0 ? "pre.effectUp" : "pre.effectDown", { what: t(`pre.affects.${e.target}`) })
+                  : t("pre.effectSize", { size: pct(e.delta), what: t(`pre.affects.${e.target}`) })}
+              </span>
               <span className="pre-note">{e.note} <LangTag lang="en" /></span>
             </span>
           </li>

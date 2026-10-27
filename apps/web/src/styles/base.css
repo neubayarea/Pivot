@@ -842,3 +842,14 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .wi-pivots .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); box-shadow: none; }
 .wi-tab .back, .wi-tab .headline, .wi-tab .grid3 { padding-inline: 0; }
 .wi-tab .back { padding-top: 0; }
+
+/* ---------- "How do you want to watch?" (C13 #316): once, under the site bar, blocking nothing ---------- */
+.ask { background: var(--pv-sheet); border-bottom: 1px solid var(--pv-hair); }
+.ask-in { max-width: 1280px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.ask h2 { font-weight: 700; font-size: var(--pv-fs-lg); margin-right: 8px; }
+.ask-opt { display: grid; gap: 1px; text-align: left; padding: 8px 14px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-ctl); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; max-width: 320px; }
+.ask-opt:hover { border-color: var(--pv-ink); }
+.ask-opt b { font-size: var(--pv-fs-md); }
+.ask-opt span { font-size: 13px; color: var(--pv-ink-2); }
+.ask-where { font-size: 13px; color: var(--pv-ink-2); flex: 0 1 13em; margin-left: auto; }
+.ask-later { padding-inline: 4px; }

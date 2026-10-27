@@ -1,126 +1,140 @@
 1
-00:00:00,100 --> 00:00:05,289
-Match stats tell you what happened: 57%
-possession, 13 shots.
+00:00:00,150 --> 00:00:03,917
+Harbour City 3, Northgate Rovers 3:
+one simulated match.
 
 2
-00:00:05,339 --> 00:00:07,350
-Not why the game turned.
+00:00:03,967 --> 00:00:07,733
+Pivot finds the moments that turned it,
+explains why,
 
 3
-00:00:07,600 --> 00:00:12,179
-Pivot finds the moments that turned a
-match, explains why,
+00:00:07,783 --> 00:00:11,550
+and lets you replay it
+with one thing changed.
 
 4
-00:00:12,229 --> 00:00:15,850
-and lets you replay it with one thing
-changed.
+00:00:12,150 --> 00:00:14,150
+Pivot found three turning points.
 
 5
-00:00:16,100 --> 00:00:20,162
-Here's a synthetic match. Harbour City 3,
-Northgate 1.
+00:00:14,200 --> 00:00:17,020
+Take Anbel's goal at 35 minutes.
 
 6
-00:00:20,212 --> 00:00:23,588
-Pivot found three turning points. A red
-card.
+00:00:17,070 --> 00:00:20,710
+A Judge agent confirms
+it really swung the game.
 
 7
-00:00:23,638 --> 00:00:27,166
-A substitution that pulled Harbour City
-deeper.
+00:00:20,760 --> 00:00:22,350
+An Explainer writes why.
 
 8
-00:00:27,216 --> 00:00:30,364
-And a second change that won control back.
+00:00:22,400 --> 00:00:26,040
+A Verifier recomputes every number
+from the event log:
 
 9
-00:00:31,100 --> 00:00:37,180
-Pick one. The AI explains why it mattered,
-and every number is checked.
+00:00:26,090 --> 00:00:30,550
+Northgate's passes into the final third
+went from zero to four.
 
 10
-00:00:37,230 --> 00:00:42,793
-Northgate's passes fell from 12 to 6.
-Hover it to see its source.
+00:00:31,150 --> 00:00:34,810
+Now switch to Fan
+and pick Harbour City.
 
 11
-00:00:43,100 --> 00:00:45,713
-So did the red card decide it?
+00:00:34,860 --> 00:00:38,984
+Same moment, same checked facts,
+told from your side:
 
 12
-00:00:45,763 --> 00:00:51,926
-Remove it, and Pivot replays the rest of
-the match 200 times each way.
+00:00:39,034 --> 00:00:42,231
+"Harbour City lose grip
+after Northgate's second."
 
 13
-00:00:51,976 --> 00:00:58,850
-Northgate's shots double, and Harbour
-City's win chance drops from 80% to 52%.
+00:00:42,281 --> 00:00:44,550
+In Chinese or Spanish, too.
 
 14
-00:00:59,100 --> 00:01:03,584
-Two minutes after the card, Harbour City
-scored from a corner.
+00:00:45,150 --> 00:00:46,421
+Follow a player.
 
 15
-00:01:03,634 --> 00:01:08,850
-At quarter speed: four attackers, three
-defenders, nobody tight on them.
+00:00:46,471 --> 00:00:50,825
+Miquingorini scored a hat-trick
+and is rated 9.3.
 
 16
-00:01:09,100 --> 00:01:14,538
-And it's personal. Switch to Fan, pick
-Harbour City, follow Darbelnoez,
+00:00:50,875 --> 00:00:56,550
+You get his shots, his heatmap
+and his part in each turning point.
 
 17
-00:01:14,588 --> 00:01:19,254
-and the story is told from your side. In
-Chinese, or Spanish.
+00:00:57,150 --> 00:01:01,016
+So what if his equaliser
+had been ruled out?
 
 18
-00:01:19,304 --> 00:01:21,650
-Every version is checked again.
+00:01:01,066 --> 00:01:07,978
+Pivot saves the match at that minute
+and plays the rest 200 times each way.
 
 19
-00:01:22,100 --> 00:01:26,430
-Every card comes from a Microsoft Agent
-Framework workflow.
+00:01:08,028 --> 00:01:14,069
+Northgate's chance of winning doubles,
+from 26 to 53 percent.
 
 20
-00:01:26,480 --> 00:01:30,290
-A Judge confirms the moment, an Explainer
-writes it,
+00:01:14,119 --> 00:01:17,550
+The ranges don't overlap.
+It's a clear difference.
 
 21
-00:01:30,340 --> 00:01:32,889
-a Verifier recomputes every number.
+00:01:18,150 --> 00:01:21,003
+Every match replays on the pitch,
 
 22
-00:01:32,939 --> 00:01:38,531
-Here it caught the model giving Harbour
-City the other team's pass accuracy,
+00:01:21,053 --> 00:01:25,357
+with passes, shots and tackles
+drawn as they happen.
 
 23
-00:01:38,581 --> 00:01:39,793
-and sent it back.
+00:01:25,407 --> 00:01:30,679
+Set pieces too: his first goal
+came from a free kick,
 
 24
-00:01:40,100 --> 00:01:42,817
-The agents run on Azure AI Foundry.
+00:01:30,729 --> 00:01:34,550
+three attackers against eight defenders,
+all three man-marked.
 
 25
-00:01:42,867 --> 00:01:46,850
-Results live in Cosmos DB, matches in Blob
-Storage.
+00:01:35,150 --> 00:01:39,119
+Before kick-off: third against fifth,
+two points apart, the storylines,
 
 26
-00:01:47,100 --> 00:01:51,315
-Every match here is synthetic, as the
-rules require.
+00:01:39,169 --> 00:01:45,550
+and each coach's plan: a defensive 4-3-3
+against a balanced 4-2-3-1.
 
 27
-00:01:51,365 --> 00:01:54,350
-Next: real match data. This is Pivot.
+00:01:46,150 --> 00:01:49,026
+The agents run on Azure AI Foundry.
+
+28
+00:01:49,076 --> 00:01:52,788
+Results live in Cosmos DB,
+matches in Blob Storage.
+
+29
+00:01:52,838 --> 00:01:55,296
+Every club and player is synthetic.
+
+30
+00:01:55,346 --> 00:01:56,550
+This is Pivot.
