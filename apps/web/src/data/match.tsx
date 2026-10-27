@@ -11,6 +11,7 @@ import { DEMO_1021, ROSTER, clockLabel, type MatchFixture } from "../fixtures/de
 import { localisePivot, localiseRowLabel } from "../fixtures/demo-1021-i18n";
 import { useLang, type Lang } from "../i18n";
 import { MatchChoiceContext, initialMatch, readSavedMatch, saveMatch, type MatchChoice } from "./choice";
+import { isLiveLink } from "./liveClock";
 import LiveProvider from "./live/provider";
 import ReplayProvider, { replayStart } from "./live/replay";
 import { useReplayClock } from "./replayClock";
@@ -102,27 +103,31 @@ export function MatchProvider({ children, fallback = null }: ProviderProps) {
 function ChosenLiveProvider({ children, fallback }: ProviderProps) {
   const [choice, setChoice] = useState<MatchChoice>(() => initialMatch(window.location.search, readSavedMatch()));
   const [from, setFrom] = useState(() => replayStart(window.location.search));
+  // C14: `?live=1` plays the chosen match as the simulated live one, on the wall clock.
+  const [live, setLive] = useState(() => isLiveLink(window.location.search));
   const navigate = useNavigate();
   const choose = useCallback((id: string) => {
     saveMatch(id);
     setChoice({ id, fromUrl: true });
     setMissing(null);
     setFrom(null);
+    setLive(false);
     const search = new URLSearchParams(window.location.search);
     search.set("match", id);
     search.delete("from");
+    search.delete("live");
     navigate({ pathname: "/", search: `?${search}` });
   }, [navigate]);
   // An old link's match was gone and the default is shown: say so until the viewer picks one (Ax55).
   const [missing, setMissing] = useState<string | null>(null);
   const dismiss = useCallback(() => setMissing(null), []);
   const value = useMemo(() => ({ choice, choose, missing, dismiss }), [choice, choose, missing, dismiss]);
-  const key = `${choice.id ?? ""}|${from ?? "live"}`;
+  const key = `${choice.id ?? ""}|${live ? "wall" : (from ?? "live")}`;
   return (
     <MatchChoiceContext.Provider value={value}>
-      {from === null
+      {from === null && !live
         ? <LiveProvider key={key} choice={choice} onMissing={setMissing} fallback={fallback}>{children}</LiveProvider>
-        : <ReplayProvider key={key} choice={choice} from={from} onMissing={setMissing} fallback={fallback}>{children}</ReplayProvider>}
+        : <ReplayProvider key={key} choice={choice} from={from ?? 0} live={live} onMissing={setMissing} fallback={fallback}>{children}</ReplayProvider>}
     </MatchChoiceContext.Provider>
   );
 }

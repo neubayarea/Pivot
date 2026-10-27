@@ -13,6 +13,7 @@ from pivot_adapters import build_adapters, build_sim_store
 from pivot_worker.models import model_client_from_env
 
 from .demo import seed_demo
+from .hub import router as hub_router
 from .personalize import personalizer_from_env
 from .pictures import router as pictures_router
 from .players import router as players_router
@@ -150,6 +151,7 @@ app.include_router(team_stats_router)
 app.include_router(pictures_router)
 app.include_router(realtime_router)
 app.include_router(whatif_router)
+app.include_router(hub_router)
 
 
 @app.get("/healthz")

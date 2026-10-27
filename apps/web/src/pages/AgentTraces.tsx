@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import type { AgentTrace, Pivot1 as Pivot } from "@pivot/contracts";
 import Button from "../components/Button";
 import Card from "../components/Card";
@@ -7,6 +7,7 @@ import Kicker from "../components/Kicker";
 import { pivotHeadline } from "../components/PivotList";
 import Stamp from "../components/Stamp";
 import { useClock } from "../data/clock";
+import { boardHref } from "../data/liveClock";
 import { useFixture, useMatch } from "../data/match";
 import { numberLocale } from "../data/motion";
 import {
@@ -187,6 +188,7 @@ export default function AgentTraces() {
 export function TraceList({ state, pivotId: id, onRetry }: { state: TraceState; pivotId?: string; onRetry: () => void }) {
   const t = useT();
   const { match, pivots } = useMatch();
+  const { search } = useLocation();
   const { minute } = useClock();
   const pivotOf = (pivotId: string) => pivots.find((p) => p.pivot_id === pivotId);
   // Only what the match has reached, so a replay from kick-off does not give away later pivots.
@@ -203,7 +205,7 @@ export function TraceList({ state, pivotId: id, onRetry }: { state: TraceState; 
         {id && own ? (
           <Link to={`/pivot/${id}`}>{t("trace.backPivot", { minute: minute(own.minute) })}</Link>
         ) : (
-          <Link to="/">{t("detail.back")}</Link>
+          <Link to={boardHref(match.match_id, search)}>{t("detail.back")}</Link>
         )}
       </div>
       <div className="headline">

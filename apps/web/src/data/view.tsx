@@ -53,6 +53,8 @@ export type MatchView = {
     end: number;
     /** The replay clock to the fraction of a second, right now; `match.clock` only moves a few times a second (Ax61). */
     now?: () => number;
+    /** Only on the simulated live match (C14): back to the wall-clock minute at 1x. */
+    goLive?: () => void;
   } | null;
 };
 

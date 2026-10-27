@@ -32,8 +32,12 @@ export function MatchPickerView({ matches, sims, value, onChange }: ViewProps) {
 
 export default function MatchPicker() {
   const choice = useMatchChoice();
-  const { match } = useMatch();
+  const { match, playback } = useMatch();
   const list = useMatchList(choice !== null);
   if (!choice) return null;
-  return <MatchPickerView {...list} value={match.match_id} onChange={choice.choose} />;
+  // C14: the simulated live match shows its score so far, not the final one.
+  const matches = playback?.goLive
+    ? list.matches.map((m) => (m.match_id === match.match_id ? { ...m, score: match.score, status: match.status } : m))
+    : list.matches;
+  return <MatchPickerView {...list} matches={matches} value={match.match_id} onChange={choice.choose} />;
 }

@@ -1,0 +1,47 @@
+/* The match centre (C14, #354): pages/Hub.tsx. Tokens only (docs/design/ui-standards.md); kit colours come from the data as --kit. */
+.hub { padding: var(--pv-s5) var(--pv-s6) var(--pv-s7); display: grid; gap: var(--pv-s5); }
+.hub h1 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: 1; letter-spacing: -.01em; }
+.hub h2 { font-weight: 700; font-size: var(--pv-fs-xl); letter-spacing: -.01em; }
+.hub-note { color: var(--pv-ink-2); font-size: var(--pv-fs-sm); max-width: 70ch; }
+
+/* Live now: the one hero panel. */
+.hub-live { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s5); display: grid; gap: var(--pv-s4); }
+.hub-live-head { display: flex; align-items: center; gap: var(--pv-s3); }
+.hub-live-min { margin-left: auto; font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-2xl); line-height: 1; }
+.hub-live-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--pv-s5);
+  text-decoration: none; color: inherit; padding: var(--pv-s4) 0; border-radius: var(--pv-r-ctl); }
+.hub-live-score .hub-team { font-size: var(--pv-fs-xl); font-weight: 700; }
+.hub-live-score .hub-team:first-child { justify-content: flex-end; }
+.hub-live-goals { font-family: var(--pv-display); font-weight: 900; font-size: var(--pv-fs-4xl); line-height: 1; }
+.hub-live-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--pv-s4); }
+.hub-live-foot p { font-weight: 600; }
+
+/* Results: a quiet list by matchday. */
+.hub-results { display: grid; gap: var(--pv-s4); }
+.hub-section-head { display: flex; align-items: baseline; gap: var(--pv-s3); }
+.hub-day { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s3) var(--pv-s4); }
+.hub-day h3 { font-weight: 700; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); padding: var(--pv-s2) var(--pv-s2) var(--pv-s1); }
+.hub-day ul { list-style: none; margin: 0; padding: 0; }
+.hub-day li + li { border-top: 1px solid var(--pv-hair); }
+.hub-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr) 150px 220px 120px; align-items: center; gap: var(--pv-s3);
+  padding: var(--pv-s3) var(--pv-s2); text-decoration: none; color: inherit; border-radius: var(--pv-r-ctl); }
+.hub-row .hub-team:first-child { justify-content: flex-end; }
+.hub-score { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); text-align: center; }
+.hub-meta { color: var(--pv-ink-2); font-size: var(--pv-fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub-you { font-size: var(--pv-fs-sm); font-weight: 700; text-align: right; }
+
+.hub-team { display: flex; align-items: center; gap: var(--pv-s2); min-width: 0; font-weight: 600; }
+.hub-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--kit); flex: none; }
+.hub-team.mine { font-weight: 800; text-decoration: underline; text-decoration-color: var(--kit); text-decoration-thickness: 3px; text-underline-offset: 5px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hub-row, .hub-live-score { transition: background-color 150ms; }
+}
+.hub-row:hover, .hub-live-score:hover { background: var(--pv-sunk); }
+
+@media (max-width: 960px) {
+  .hub { padding-inline: var(--pv-s4); }
+  .hub-row { grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); }
+  .hub-row .hub-meta, .hub-row .hub-you { grid-column: 1 / -1; text-align: left; }
+  .hub-live-goals { font-size: var(--pv-fs-3xl); }
+}

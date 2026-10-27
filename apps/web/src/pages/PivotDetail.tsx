@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TrackingFrame } from "@pivot/contracts";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import { describe } from "../components/EventFeed";
@@ -13,6 +13,7 @@ import Stamp from "../components/Stamp";
 import WhyItTurned from "../components/WhyItTurned";
 import { useClock } from "../data/clock";
 import { type Frames, useFrames } from "../data/live/frames";
+import { boardHref } from "../data/liveClock";
 import { fixtureMode, involves, useMatch } from "../data/match";
 import { swingAt, usePersona } from "../data/persona";
 import { inWindow } from "../data/window";
@@ -40,6 +41,7 @@ export function detailFrame(own: TrackingFrame[], from: number, t: number, fetch
 export default function PivotDetail() {
   const { id = "" } = useParams();
   const { match, squads, pivotDetail, eventById, teams, playerName, metrics } = useMatch();
+  const { search } = useLocation();
   // C12: the ♥ team sees whether it went its way; an analyst also sees the alarm's numbers.
   const persona = usePersona();
   const { minute, at, span } = useClock();
@@ -108,7 +110,7 @@ export default function PivotDetail() {
         </div>
       )}
       <div className="back">
-        <Link to="/">{tr("detail.back")}</Link>
+        <Link to={boardHref(match.match_id, search)}>{tr("detail.back")}</Link>
       </div>
       <div className="s2-head">
         <span className="min">{minute(pivot.minute)}′</span>

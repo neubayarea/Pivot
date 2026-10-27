@@ -4,6 +4,7 @@ import type {
   AgentTrace, Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, PlayerStatsReport, Scenario, ScenarioSpec,
   TrackingFrame, ViewerPrefs,
 } from "@pivot/contracts";
+import type { HubData } from "../hub";
 
 export class ApiError extends Error {
   constructor(
@@ -85,6 +86,8 @@ export const api = {
   listMatches: () => request<Match[]>("/matches"),
   getMatch: (id: string) => request<Match>(m(id)),
   sims: () => request<SimsStatus>("/sims"),
+  /** The match centre (C14): the simulated live match and a line for every stored match (data/hub.ts). */
+  hub: () => request<HubData>("/hub"),
   /** Events with seq > `since` (MatchEvent.seq, not the envelope seq), in seq order. */
   listEvents: (id: string, since = -1) => request<MatchEvent[]>(`${m(id)}/events?since=${since}`),
   getTimeline: (id: string) => request<MinuteMetric[]>(`${m(id)}/timeline`),
