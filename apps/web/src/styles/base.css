@@ -693,6 +693,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ts-teams span { display: inline-flex; align-items: center; gap: 6px; }
 .ts-teams span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--tc); }
 .ts-teams .fav::after { content: "♥"; color: var(--tc); }
+.ts-teams small { font-weight: 600; color: var(--tc); }
 .ts-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px 48px; align-items: start; }
 .ts-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ts-table caption { text-align: left; font-weight: 700; font-size: var(--pv-fs-md); padding-bottom: 6px; }
@@ -783,6 +784,12 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .wi-pivots .chip .badge { width: 24px; height: 24px; font-size: 14px; flex: none; }
 .wi-pivots .chip .wi-hd { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .wi-pivots .chip[aria-pressed="true"] .badge { background: var(--pv-gold); color: var(--pv-on-gold); }
+.wi-feature { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 20px 24px; display: grid; gap: 12px; border-top: 4px solid var(--pv-gold); }
+.wi-feature h2 { font-family: var(--pv-display); font-weight: 800; font-size: 32px; line-height: 1; }
+.wi-feature-line { font-weight: 700; font-size: 20px; line-height: 1.35; max-width: 60ch; }
+.wi-feature .dist .ci { display: none; }
+.wi-feature-more { font-size: 14px; }
+:lang(zh) .wi-feature h2 { font-family: var(--pv-body); font-weight: 700; font-size: 26px; }
 .wi-tab .back, .wi-tab .headline, .wi-tab .grid3 { padding-inline: 0; }
 .wi-tab .back { display: none; }
 

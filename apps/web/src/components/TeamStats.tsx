@@ -82,6 +82,7 @@ export default function TeamStats({ state }: { state: VizState<TeamStatsReport> 
         {(["home", "away"] as const).map((side) => (
           <span key={side} className={prefs.focus_team === side ? "fav" : undefined} style={{ "--tc": `var(--pv-${side})` } as CSSProperties}>
             {teams[side].name}
+            {prefs.focus_team === side && <small>{t("ts.yours")}</small>}
           </span>
         ))}
       </p>
