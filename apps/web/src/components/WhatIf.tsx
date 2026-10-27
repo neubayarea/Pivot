@@ -55,11 +55,12 @@ function ifClause({ type, minute, change, pressLower }: StoryInput, t: T): strin
  * from 82% to 46%, and the most likely score goes from 3–1 to 1–1". The outcome is the one the big
  * number shows; the score clause needs both arms' stats (results stored before Bx10 have none).
  */
-/** "1-2" becomes "1–2" in a sentence (C13 QA); a formation like 4-3-3 is left alone. */
-export const scoreDashes = (text: string) => text.replace(/(?<![\d-])(\d{1,2})-(\d{1,2})(?![\d-])/g, "$1–$2");
+/** "1-2" becomes "1–2" and "38'" becomes "38′" in a sentence (C13 QA); a formation like 4-3-3 is left alone. */
+export const scoreDashes = (text: string) =>
+  text.replace(/(?<![\d-])(\d{1,2})-(\d{1,2})(?![\d-])/g, "$1–$2").replace(/(\d)'(?=[\s,.;:)]|$)/g, "$1′");
 
-/** A team name ending in s takes a bare apostrophe: "Northgate Rovers’ chance", not "Rovers’s". */
-const possessive = (text: string) => text.replace(/s’s/g, "s’");
+/** A team name ending in s takes a bare apostrophe: "Northgate Rovers’ chance", not "Rovers’s" or "Rovers's". */
+const possessive = (text: string) => text.replace(/s['’]s\b/g, "s’");
 
 export function storyLine(input: StoryInput, t: T): string {
   const { result: r, teams } = input;
@@ -362,8 +363,8 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
                 {t("why.writing", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
               </div>
             )}
-            <p lang={served ?? undefined}><b>{narrative.headline}</b> <LangTag lang={served} /></p>
-            {sentences.map((s, i) => <p key={i} lang={served ?? undefined}>{scoreDashes(s.text)}</p>)}
+            <p lang={served ?? undefined}><b>{possessive(scoreDashes(narrative.headline))}</b> <LangTag lang={served} /></p>
+            {sentences.map((s, i) => <p key={i} lang={served ?? undefined}>{possessive(scoreDashes(s.text))}</p>)}
           </>
         ) : (
           <p className="muted">{t("whatif.noNarrative")}</p>

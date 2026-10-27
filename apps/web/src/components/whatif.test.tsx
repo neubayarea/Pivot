@@ -14,7 +14,7 @@ import {
 } from "../data/scenarios";
 import { translator } from "../i18n";
 import WhatIfLab from "../pages/WhatIfLab";
-import { ArmCompare, RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText, storyLine } from "./WhatIf";
+import { ArmCompare, RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText, scoreDashes, storyLine } from "./WhatIf";
 
 const ev = (id: string, minute: number, team: "home" | "away", type: MatchEvent["type"], extra: Partial<MatchEvent> = {}) =>
   ({ event_id: id, seq: minute, t: minute * 60, minute, period: minute < 45 ? 1 : 2, team, type, meta: {}, shot_outcome: null, ...extra }) as MatchEvent;
@@ -336,5 +336,13 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
     const html = render(<ScenarioResult state={rich} {...props} />);
     expect(html).toContain("Side by side");
     expect(html).toContain("and the most likely score goes from 3–1 to 1–1.");
+  });
+});
+
+describe("what-if typography (C13 QA)", () => {
+  it("writes scores with an en dash and leaves formations alone", () => {
+    expect(scoreDashes("from 1-2 to 2-2")).toBe("from 1–2 to 2–2");
+    expect(scoreDashes("a 4-3-3 shape")).toBe("a 4-3-3 shape");
+    expect(scoreDashes("Remove 38' red card, at 90'.")).toBe("Remove 38′ red card, at 90′.");
   });
 });
