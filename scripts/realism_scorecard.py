@@ -7,6 +7,7 @@ football, side by side (B12).
   uv run scripts/realism_scorecard.py --build-reference <statsbomb dir> --as pl1516
   uv run scripts/realism_scorecard.py --build-recent E0_2324.csv E0_2425.csv
   uv run scripts/realism_scorecard.py --set-pieces --matches 80   # where players stand at corners and free kicks
+  uv run scripts/realism_scorecard.py --styled                    # each coach's own tactics, as on the site (Bx13)
 
 Real numbers come from eval/realism/reference.json, Premier League first (REAL_ORDER):
 
@@ -39,6 +40,7 @@ from pivot_core.domain import PlantSpec
 from pivot_core.sim import build_demo_match
 from pivot_core.sim.engine import Engine, Params
 from pivot_core.sim.formations import DEFENDER_ROLES as DEFENDERS
+from pivot_core.sim.tactics import styled as with_styles
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "eval" / "realism" / "reference.json"
@@ -307,9 +309,14 @@ def _frame_metrics(out) -> dict:
     return res
 
 
-def _run_one(job: tuple) -> dict:
-    scenario, seed, overrides, plant = job
+def _build(scenario: str, seed: int, styled: bool):
     m = build_demo_match(seed, **SCENARIOS[scenario])
+    return with_styles(m) if styled else m
+
+
+def _run_one(job: tuple) -> dict:
+    scenario, seed, overrides, plant, styled = job
+    m = _build(scenario, seed, styled)
     params = Params(**overrides) if overrides else None
     eng = Engine(m, seed, params, [RED] if plant else None)
     out = eng.run()
@@ -339,8 +346,8 @@ def _after_red(out) -> dict:
 
 
 def run_sim(scenario: str, seeds: range, overrides: dict | None = None, plant: bool | None = None,
-            pool: ProcessPoolExecutor | None = None) -> list[dict]:
-    jobs = [(scenario, s, overrides or {}, plant) for s in seeds]
+            pool: ProcessPoolExecutor | None = None, styled: bool = False) -> list[dict]:
+    jobs = [(scenario, s, overrides or {}, plant, styled) for s in seeds]
     if pool is None:
         with ProcessPoolExecutor() as p:
             return list(p.map(_run_one, jobs, chunksize=2))
@@ -691,8 +698,8 @@ def _sp_corner(out, n: int, k: int, taker: str | None, ball, shooter: bool = Fal
 
 
 def _run_setpieces(job: tuple) -> dict:
-    scenario, seed = job
-    return setpiece_rows(Engine(build_demo_match(seed, **SCENARIOS[scenario]), seed).run())
+    scenario, seed, styled = job
+    return setpiece_rows(Engine(_build(scenario, seed, styled), seed).run())
 
 
 def setpiece_card(rows: list[dict], ref: dict) -> list[tuple]:
@@ -831,6 +838,7 @@ def main() -> None:
     ap.add_argument("--build-recent", type=Path, nargs="+", help="football-data.co.uk E0.csv files")
     ap.add_argument("--json", type=Path, help="also write the simulated numbers here")
     ap.add_argument("--set-pieces", action="store_true", help="only the set-piece positions (Ax44)")
+    ap.add_argument("--styled", action="store_true", help="each coach's style and tactics, as the site's matches (Bx13)")
     args = ap.parse_args()
 
     if args.build_reference or args.build_recent:
@@ -853,21 +861,21 @@ def main() -> None:
     seeds = range(args.seed, args.seed + args.matches)
     if args.set_pieces:
         with ProcessPoolExecutor() as pool:
-            rows = list(pool.map(_run_setpieces, [(name, s) for name in args.scenarios.split(",") for s in seeds],
+            rows = list(pool.map(_run_setpieces, [(name, s, args.styled) for name in args.scenarios.split(",") for s in seeds],
                                  chunksize=2))
         print_setpieces(rows, ref)
         return
     dump = {}
     with ProcessPoolExecutor() as pool:
         for name in args.scenarios.split(","):
-            agg = aggregate(run_sim(name, seeds, overrides, None, pool))
+            agg = aggregate(run_sim(name, seeds, overrides, None, pool, args.styled))
             dump[name] = agg
             print_card(name, agg, ref)
         if args.red:
             red_seeds = range(args.seed, args.seed + args.red)
             report = {}
             for plant in (False, True):
-                rows = run_sim("demo", red_seeds, overrides, plant, pool)
+                rows = run_sim("demo", red_seeds, overrides, plant, pool, args.styled)
                 after = [r["_red_after"] for r in rows]
                 level = [r for r, a in zip(rows, after) if a["level_at_37"]]
                 report[plant] = {

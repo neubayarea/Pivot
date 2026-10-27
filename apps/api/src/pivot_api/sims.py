@@ -23,6 +23,10 @@ The recorded demo (B02) is stored the same way, from the files committed in `eva
 (`demo-1021.json` and `demo-1021.frames.json.gz`) instead of the cache: `load_fixture`. Its results are keyed by the fixture file's content hash.
 It is test data now and only loaded when `PIVOT_DEMO_FIXTURE` asks for it (Ax55).
 
+Every seed match is built by `seed_match` (Bx13): each coach gets a style and tactics that follow
+it (`pivot_core.sim.tactics`), and the match gets its careers, pre-match context and context effects
+from the season so far (`with_seed_season`, from `eval/fixtures/season-2026.json`).
+
 Each stored match also gets a `Replay`: how it was simulated (match, seed, plants) and the version its
 results belong to, so a what-if (A09, `whatif.py`) replays the very same match.
 """
@@ -53,7 +57,8 @@ from pivot_core.analytics import StatCalculator, detect_candidates, momentum_ser
 from pivot_core.domain import Match, MatchEvent, MinuteMetric, PivotCandidate, PlantSpec
 from pivot_core.ports import PIVOT_CANDIDATES
 from pivot_core.sim import PRESETS, build_demo_match, simulate
-from pivot_core.sim.season import load_season, site_matchday, with_prematch
+from pivot_core.sim.season import load_season, with_seed_season
+from pivot_core.sim.tactics import styled
 
 log = logging.getLogger("uvicorn.error")
 
@@ -87,8 +92,31 @@ class SimSpec:
         return f"M-seed-{self.seed}"
 
     def replay(self) -> Replay:
-        return Replay(SIM_VERSION, partial(build_demo_match, self.seed, self.home_strength, self.away_strength,
+        return Replay(SIM_VERSION, partial(seed_match, self.seed, self.home_strength, self.away_strength,
                                        self.home_formation, self.away_formation))
+
+
+# The recorded demo (B02) and the season it ends (B13): committed to the repo, so every machine shows the
+# same matches. Tests read them.
+FIXTURES = Path(__file__).resolve().parents[4] / "eval" / "fixtures"
+FIXTURE = FIXTURES / "demo-1021.json"
+
+
+@lru_cache(maxsize=1)
+def _season() -> dict | None:
+    try:
+        return load_season(FIXTURES)
+    except OSError:
+        log.warning("no season file in %s: simulated matches get only the basic pre-match context", FIXTURES)
+        return None
+
+
+def seed_match(seed: int, home_strength: float, away_strength: float, home_formation: str,
+               away_formation: str) -> Match:
+    """A seed match before kick-off: the squads, each coach's own tactics and the pre-match context."""
+    match = styled(build_demo_match(seed, home_strength, away_strength, home_formation, away_formation))
+    season = _season()
+    return match if season is None else with_seed_season(match, season)
 
 
 SPECS = [
@@ -146,8 +174,7 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     if data_path.is_file() and frames_path.is_file():
         return False
     data_dir.mkdir(parents=True, exist_ok=True)
-    match = build_demo_match(spec.seed, spec.home_strength, spec.away_strength, spec.home_formation,
-                             spec.away_formation)
+    match = seed_match(spec.seed, spec.home_strength, spec.away_strength, spec.home_formation, spec.away_formation)
     out = simulate(match)
     events = out.events_as_models()
     frames = out.frames_as_models()
@@ -157,7 +184,7 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     _write_json_gz(data_path, {
         "sim_version": version,
         "spec": spec.__dict__,
-        "match": prematch(out.match, spec).model_dump(mode="json", round_trip=True),
+        "match": out.match.model_dump(mode="json", round_trip=True),
         "events": [e.model_dump(mode="json", round_trip=True) for e in events],
         "metrics": [m.model_dump(mode="json", round_trip=True) for m in metrics],
         "candidates": [c.model_dump(mode="json", round_trip=True) for c in candidates],
@@ -165,23 +192,6 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     })
     drop_old_versions(data_dir, spec, version)
     return True
-
-
-@lru_cache(maxsize=1)
-def _season() -> dict | None:
-    try:
-        return load_season(FIXTURE.parent)
-    except OSError:
-        log.warning("no season file in %s: simulated matches get only the basic pre-match context", FIXTURE.parent)
-        return None
-
-
-def prematch(match: Match, spec: SimSpec) -> Match:
-    """The played match with its pre-match context (Bx13): form, table, head-to-head, news, ties and the
-    context effects, from the fictional season up to the round the seed sets it on. Added after the match
-    is simulated, so its events and score are the same with or without it."""
-    season = _season()
-    return match if season is None else with_prematch(match, season, site_matchday(spec.seed))
 
 
 def drop_old_versions(data_dir: Path, spec: SimSpec, version: str) -> None:
@@ -281,8 +291,6 @@ async def store_data(adapters: Adapters, data: dict, version: str) -> str:
     return match.match_id
 
 
-# The recorded demo (B02): committed to the repo, so every machine shows the same match. Tests read it.
-FIXTURE = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "demo-1021.json"
 
 
 def fixture_from_env() -> Path | None:

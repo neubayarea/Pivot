@@ -7,7 +7,8 @@ import type { PeriodStart } from "./clock";
 import type { ConnectionStatus } from "./live/socket";
 
 export type Side = "home" | "away";
-export type Speed = Match["speed"];
+/** Replay speeds: the contract's 1, 5, 20 and 60, and the pitch board's slower 0.5 and 2 (Ax61), which only the browser uses. */
+export type Speed = Match["speed"] | 0.5 | 2;
 /** Everything S2 needs for one pivot. The pivot is the confirmed version even before the replay reaches it. */
 export type PivotDetail = PivotDetailData & { pivot: Pivot };
 /** One player in the focus-player picker. */
@@ -17,7 +18,8 @@ export type TeamStats = { possession: number; shots: number; xg: number; pressur
 export type TeamPlan = { club_id: string; coach: Coach; tactics: TeamTactics };
 
 export type MatchView = {
-  match: Pick<Match, "match_id" | "clock" | "period" | "status" | "speed"> & {
+  match: Pick<Match, "match_id" | "clock" | "period" | "status"> & {
+    speed: Speed;
     score: Score;
     clockLabel: string;
     /** When each period started on the elapsed clock, for the minutes shown (data/clock.ts); plain when left out. */
@@ -49,6 +51,8 @@ export type MatchView = {
     seek: (t: number) => void;
     /** Where the replay stops, in elapsed seconds. */
     end: number;
+    /** The replay clock to the fraction of a second, right now; `match.clock` only moves a few times a second (Ax61). */
+    now?: () => number;
   } | null;
 };
 

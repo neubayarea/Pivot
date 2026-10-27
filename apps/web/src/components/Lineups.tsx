@@ -2,11 +2,12 @@
 // attacking up from the bottom, away down from the top, then each team's list with its bench.
 // Places come from the formation's rows, or the team sheet's anchors when the rows do not add up;
 // the fixture has no sheets and gets the squad lists only.
-import type { CSSProperties } from "react";
+// C11 (Ax63): each team in its kit colour from the page's tokens, so the night theme lightens it too.
 import type { TeamSheet } from "@pivot/contracts";
 import { useMatch, type Side, type SquadPlayer } from "../data/match";
 import { useT } from "../i18n";
 import { surname } from "./FocusPickers";
+import "../styles/prematch.css";
 
 const W = 68;
 const H = 105;
@@ -46,7 +47,7 @@ function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
   const byId = new Map([...squads.home, ...squads.away].map((p) => [p.player_id, p]));
   const places = { home: formationPlaces("home", sheets.home), away: formationPlaces("away", sheets.away) };
   return (
-    <svg className="lu-pitch" viewBox={`-2 -2 ${W + 4} ${H + 4}`} role="img"
+    <svg className="lu-pitch" viewBox={`-2 -2 ${W + 4} ${H + 8}`} role="img"
       aria-label={t("pre.pitchLabel", { home: `${teams.home.name} ${sheets.home.formation}`, away: `${teams.away.name} ${sheets.away.formation}` })}>
       <rect x="0" y="0" width={W} height={H} className="lu-grass" />
       <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="lu-line" />
@@ -54,7 +55,7 @@ function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
       <rect x={W / 2 - 20.16} y="0" width="40.32" height="16.5" className="lu-line" fill="none" />
       <rect x={W / 2 - 20.16} y={H - 16.5} width="40.32" height="16.5" className="lu-line" fill="none" />
       {(["home", "away"] as Side[]).map((side) => (
-        <g key={side} className={`lu-team ${side}`} style={{ "--tc": teams[side].color } as CSSProperties}>
+        <g key={side} className={`lu-team ${side}`}>
           {sheets[side].starters.map((s) => {
             const [cx, cy] = places[side]?.get(s.player_id) ?? place(side, s.anchor);
             const p = byId.get(s.player_id);
@@ -84,9 +85,9 @@ function TeamList({ side, sheet }: { side: Side; sheet?: TeamSheet }) {
     : squads[side];
   const bench = sheet ? sheet.bench.flatMap((id) => byId.get(id) ?? []) : [];
   return (
-    <section className={`card lu-list ${side}`} style={{ "--tc": teams[side].color } as CSSProperties}>
+    <section className={`card lu-list ${side}`}>
       <h3>
-        <span><span className="lu-crest" aria-hidden="true" />{teams[side].name}</span>
+        <span><i className={`pre-kit ${side}`} aria-hidden="true" />{teams[side].name}</span>
         {sheet && <small>{sheet.formation}</small>}
       </h3>
       <ol aria-label={sheet ? t("pre.starters") : t("pre.squad")}>
@@ -101,7 +102,11 @@ function TeamList({ side, sheet }: { side: Side; sheet?: TeamSheet }) {
       {bench.length > 0 && (
         <>
           <h4>{t("pre.bench")}</h4>
-          <p className="lu-bench">{bench.map((p) => `${p.shirt ?? ""} ${p.name}`.trim()).join(" · ")}</p>
+          <ul className="lu-bench">
+            {bench.map((p) => (
+              <li key={p.player_id}><span className="no num">{p.shirt ?? ""}</span> {p.name}</li>
+            ))}
+          </ul>
         </>
       )}
     </section>
