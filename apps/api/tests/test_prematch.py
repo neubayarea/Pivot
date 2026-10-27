@@ -4,6 +4,7 @@ frames stored with it are exactly what the engine produced."""
 from pivot_api import sims
 from pivot_core.domain import Match, MatchEvent
 from pivot_core.sim import simulate as real_simulate
+from pivot_core.sim.tactics import styled
 
 SPEC = sims.SPECS[0]
 
@@ -31,16 +32,17 @@ def test_build_one_stores_the_played_match_with_its_pre_match_context(tmp_path, 
     # and what the pre-match page shows
     c = stored.context
     assert len(c.form) == 2 and c.head_to_head and c.head_to_head.played >= 4
-    assert 3 <= len(c.news) <= 6 and c.relationships and c.effects
-    assert c == sims.prematch(out.match, SPEC).context            # the same every time for this seed
+    assert 2 <= len(c.news) <= 5 and c.relationships and c.effects
+    assert c == sims.seed_match(SPEC.seed, SPEC.home_strength, SPEC.away_strength, SPEC.home_formation,
+                                SPEC.away_formation).context   # the same every time for this seed
     assert [MatchEvent.model_validate(e) for e in data["events"]] == out.events_as_models()
 
 
 def test_without_the_season_file_the_match_keeps_the_basic_context(monkeypatch, tmp_path):
-    monkeypatch.setattr(sims, "FIXTURE", tmp_path / "missing" / "demo-1021.json")
+    monkeypatch.setattr(sims, "FIXTURES", tmp_path / "missing")
     sims._season.cache_clear()
     try:
-        match = sims.build_demo_match(SPEC.seed)
-        assert sims.prematch(match, SPEC) == match
+        spec = (SPEC.seed, SPEC.home_strength, SPEC.away_strength, SPEC.home_formation, SPEC.away_formation)
+        assert sims.seed_match(*spec) == styled(sims.build_demo_match(*spec))
     finally:
         sims._season.cache_clear()
