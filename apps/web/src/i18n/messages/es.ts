@@ -907,6 +907,13 @@ export const es: Messages = {
   "header.collapse.label": "Plegar el marcador",
 
   // Ax59 · match tabs
+  "ask.q": "¿Cómo quieres ver el partido?",
+  "ask.fan": "Como aficionado",
+  "ask.fanNote": "La historia en palabras sencillas: los grandes momentos, tu equipo, tu jugador.",
+  "ask.analyst": "Como analista",
+  "ask.analystNote": "Todas las cifras, las pruebas y cómo las comprobó la IA.",
+  "ask.where": "Puedes cambiarlo cuando quieras en la barra de arriba.",
+  "ask.later": "Ahora no",
   "tabs.label": "Secciones del partido",
   "tabs.overview": "Resumen",
   "tabs.whatif": "Y si…",

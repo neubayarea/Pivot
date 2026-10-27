@@ -906,6 +906,13 @@ export const en = {
   "header.collapse.label": "Collapse the score header",
 
   // Ax59 · match tabs
+  "ask.q": "How do you want to watch?",
+  "ask.fan": "As a fan",
+  "ask.fanNote": "The story in plain words: the big moments, your team, your player.",
+  "ask.analyst": "As an analyst",
+  "ask.analystNote": "Every number, the evidence, and how the AI checked it.",
+  "ask.where": "You can switch any time in the bar at the top.",
+  "ask.later": "Not now",
   "tabs.label": "Match sections",
   "tabs.overview": "Overview",
   "tabs.whatif": "What if",

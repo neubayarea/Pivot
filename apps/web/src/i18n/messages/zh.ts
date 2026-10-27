@@ -905,6 +905,13 @@ export const zh: Messages = {
   "header.collapse.label": "收起比分栏",
 
   // Ax59 · match tabs
+  "ask.q": "你想怎么看这场比赛？",
+  "ask.fan": "作为球迷",
+  "ask.fanNote": "用大白话讲故事：关键时刻、你的球队、你关注的球员。",
+  "ask.analyst": "作为分析师",
+  "ask.analystNote": "所有数据、证据，以及 AI 是怎么核对的。",
+  "ask.where": "随时可以在顶栏切换。",
+  "ask.later": "以后再说",
   "tabs.label": "比赛分页",
   "tabs.overview": "概况",
   "tabs.whatif": "假如",
