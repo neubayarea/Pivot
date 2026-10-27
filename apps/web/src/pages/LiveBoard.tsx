@@ -3,14 +3,16 @@ import { useSearchParams } from "react-router-dom";
 import MatchTabs from "../components/MatchTabs";
 import { useMatch } from "../data/match";
 import { useTab } from "../data/tab";
-import { LiveTab } from "./match/LiveTab";
+import { LineupsTab } from "./match/LineupsTab";
+import { LiveTab, StatsTab } from "./match/LiveTab";
 import { PostMatchTab } from "./match/PostMatchTab";
-import { PreMatchTab } from "./match/PreMatchTab";
+import { PreviewTab } from "./match/PreviewTab";
+import { WhatIfTab } from "./match/WhatIfTab";
 
-// S1 · Match board (Ax32), split Premier League style into before / during / after the match
-// (Ax59, #276) under the sticky match header. Each tab is its own link (`?tab=pre|live|post`), the
-// live one by default, and the open pivot is in the link too (`&pivot=pv-…`) so a pivot alert on
-// the live tab can open its explanation on the post-match tab.
+// S1 · Match board (Ax32) under the sticky match header, in six tabs by content (C13 #316, after
+// FotMob, Sofascore and the Premier League site): overview, what-if, replay, stats, line-ups,
+// preview. Each tab is its own link (`?tab=`, data/tab.ts), and the open pivot is in the link too
+// (`&pivot=pv-…`) so a pivot alert on the replay can open its explanation on the overview.
 export default function LiveBoard() {
   const { match, pivots } = useMatch();
   const tab = useTab();
@@ -43,12 +45,15 @@ export default function LiveBoard() {
     <>
       <MatchTabs tab={tab} />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="board">
-        {tab === "pre" && <PreMatchTab />}
-        {tab === "live" && <LiveTab moments={moments} evidence={evidence} />}
-        {tab === "post" && (
+        {tab === "overview" && (
           <PostMatchTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
             keySelected={key} onKey={setKey} />
         )}
+        {tab === "whatif" && <WhatIfTab moments={moments} open={open} onPick={pick} />}
+        {tab === "replay" && <LiveTab moments={moments} evidence={evidence} />}
+        {tab === "stats" && <StatsTab />}
+        {tab === "lineups" && <LineupsTab />}
+        {tab === "preview" && <PreviewTab />}
       </div>
     </>
   );
