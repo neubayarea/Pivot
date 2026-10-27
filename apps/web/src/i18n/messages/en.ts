@@ -955,8 +955,6 @@ export const en = {
   "follow.teamOff": "Stop following {team}",
   "follow.chip": "Following: {player}",
   "follow.stop": "Stop following {player}",
-  "lu.follow": "Follow {player}",
-  "lu.unfollow": "Stop following {player}",
   "lu.note": "The starting XIs in their formations. Press ☆ beside a player to follow them through the match.",
   "mu.title": "The line-up from your side",
   "mu.note": "Your team attacks up the pitch. Where each of your lines meets theirs, and how the two plans differ.",

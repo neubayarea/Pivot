@@ -3,11 +3,11 @@
 // Places come from the formation's rows, or the team sheet's anchors when the rows do not add up;
 // the fixture has no sheets and gets the squad lists only.
 // C11 (Ax63): each team in its kit colour from the page's tokens, so the night theme lightens it too.
-// Ax69: on the line-ups tab the ♥ team attacks up the page, and each player has a ☆ to follow him.
+// Ax69: on the line-ups tab the ♥ team attacks up the page, and each player has the shared ☆ Follow button (#324).
 import type { TeamSheet } from "@pivot/contracts";
-import { toggled } from "../data/matchup";
 import { useMatch, type Side, type SquadPlayer } from "../data/match";
 import { usePrefs, useT } from "../i18n";
+import FollowButton from "./FollowButton";
 import { surname } from "./FocusPickers";
 import "../styles/prematch.css";
 
@@ -41,20 +41,6 @@ function formationPlaces(side: Side, sheet: TeamSheet): Map<string, [number, num
     }
   });
   return out;
-}
-
-/** The ☆ beside a player: follows him, or stops following him when he is the ★ player already. */
-export function FollowStar({ player }: { player: SquadPlayer }) {
-  const { prefs, setPrefs, t } = usePrefs();
-  const on = prefs.focus_player_id === player.player_id;
-  return (
-    <button type="button" className={`lu-star${on ? " on" : ""}`} aria-pressed={on}
-      aria-label={t(on ? "lu.unfollow" : "lu.follow", { player: player.name })}
-      title={t(on ? "lu.unfollow" : "lu.follow", { player: player.name })}
-      onClick={() => setPrefs({ ...prefs, focus_player_id: toggled(prefs.focus_player_id, player.player_id) })}>
-      {on ? "★" : "☆"}
-    </button>
-  );
 }
 
 function FormationPitch({ sheets, up = "home", followed = null }: { sheets: Record<Side, TeamSheet>; up?: Side; followed?: string | null }) {
@@ -114,7 +100,7 @@ function TeamList({ side, sheet, follow }: { side: Side; sheet?: TeamSheet; foll
             <span className="no num">{p.shirt ?? ""}</span>
             <span className="nm">{p.name}{sheet?.captain_id === p.player_id && <abbr title={t("pre.captain")}> (C)</abbr>}</span>
             <span className="rl">{p.slotRole ?? p.role ?? ""}</span>
-            {follow && <FollowStar player={p} />}
+            {follow && <FollowButton playerId={p.player_id} name={p.name} />}
           </li>
         ))}
       </ol>
@@ -123,7 +109,7 @@ function TeamList({ side, sheet, follow }: { side: Side; sheet?: TeamSheet; foll
           <h4>{t("pre.bench")}</h4>
           <ul className="lu-bench">
             {bench.map((p) => (
-              <li key={p.player_id}><span className="no num">{p.shirt ?? ""}</span> {p.name}{follow && <FollowStar player={p} />}</li>
+              <li key={p.player_id}><span className="no num">{p.shirt ?? ""}</span> {p.name}{follow && <FollowButton playerId={p.player_id} name={p.name} />}</li>
             ))}
           </ul>
         </>
@@ -139,7 +125,7 @@ export default function Lineups({ up = "home", follow = false }: { up?: Side; fo
   // The team at the bottom of the pitch is listed first.
   const order: Side[] = up === "home" ? ["home", "away"] : ["away", "home"];
   return (
-    <div className={`lineups${sheets ? "" : " no-sheet"}${follow ? " follow" : ""}`}>
+    <div className={`lineups${sheets ? "" : " no-sheet"}${follow ? " with-follow" : ""}`}>
       {sheets && <FormationPitch sheets={sheets} up={up} followed={prefs.focus_player_id} />}
       {order.map((s) => <TeamList key={s} side={s} sheet={sheets?.[s]} follow={follow} />)}
     </div>

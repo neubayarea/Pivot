@@ -954,8 +954,6 @@ export const zh: Messages = {
   "follow.teamOff": "取消关注{team}",
   "follow.chip": "正在关注：{player}",
   "follow.stop": "取消关注{player}",
-  "lu.follow": "关注{player}",
-  "lu.unfollow": "取消关注{player}",
   "lu.note": "两队首发和阵型。点球员旁边的 ☆，整场比赛都跟着这名球员看。",
   "mu.title": "从你这队看排兵布阵",
   "mu.note": "你的球队朝上进攻。你的每条线对上对方哪条线，两队的打法差在哪。",

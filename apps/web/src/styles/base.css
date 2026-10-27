@@ -663,11 +663,13 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .lu-list .no { text-align: right; font-family: var(--pv-label); font-weight: 700; color: var(--pv-ink-2); }
 .lu-list .nm { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .lu-list abbr { text-decoration: none; color: var(--pv-ink-2); }
-.lineups.follow .lu-list li { grid-template-columns: 2em minmax(0, 1fr) auto auto; align-items: center; }
-.lu-star { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--pv-ink-2); font: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
-.lu-star:hover { background: var(--pv-sunk); color: var(--pv-ink); }
-.lu-star.on { color: var(--pv-ink); }
-.lu-bench .lu-star { width: 24px; height: 24px; vertical-align: middle; }
+.lineups.with-follow .lu-list li { grid-template-columns: 2em minmax(0, 1fr) auto auto; align-items: center; }
+.lu-list .follow { padding: 1px 8px; font-size: var(--pv-fs-xs); }
+.lineups.with-follow .lu-list { min-width: 0; }
+/* With a Follow button on every row the lists need more room than the pitch: pitch first, then both lists. */
+@media (min-width: 901px) {
+  .lineups.with-follow:not(.no-sheet) { grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "pitch home away"; }
+}
 .lu-team .followed circle { stroke: var(--pv-ink); stroke-width: 1.2; }
 .lu-team .followed .lu-nm { text-decoration: underline; }
 .lu-list .rl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }

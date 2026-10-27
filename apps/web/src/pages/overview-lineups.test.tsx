@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TeamSheet, TeamTactics } from "@pivot/contracts";
+import { PlayerDetail } from "../components/PitchBoard";
 import ScoreHeader from "../components/ScoreHeader";
 import { FixtureProvider } from "../data/match";
 import { lines, tacticsDiff, toggled } from "../data/matchup";
@@ -123,8 +124,8 @@ describe("the line-ups tab", () => {
   it("puts a ☆ beside every player, and a ★ on the followed one", () => {
     const html = render("?fixture=1&from=95&tab=lineups&player=hcy-9");
     expect(html).toContain('aria-label="Follow C. Nkemelu"');
-    expect(html).toMatch(/class="lu-star on" aria-pressed="true" aria-label="Stop following D. Okafor"[^>]*>★/);
-    expect(html.match(/class="lu-star on"/g)).toHaveLength(1);
+    expect(html).toMatch(/class="follow on" aria-pressed="true" aria-label="Stop following D. Okafor"><span aria-hidden="true">★/);
+    expect(html.match(/class="follow on"/g)).toHaveLength(1);
     expect(toggled("hcy-9", "hcy-9")).toBeNull();
     expect(toggled("hcy-9", "hcy-7")).toBe("hcy-7");
   });
@@ -139,6 +140,16 @@ describe("the line-ups tab", () => {
 
 const sheet = (formation: string, roles: TeamSheet["starters"][number]["role"][]): TeamSheet =>
   ({ formation, starters: roles.map((role, slot) => ({ player_id: `p${slot}`, slot, role, anchor: [0, 0] })), bench: [] }) as unknown as TeamSheet;
+
+describe("the player clicked on the pitch", () => {
+  it("has the shared Follow button", () => {
+    const player = { player_id: "hcy-9", name: "D. Okafor", shirt: 9 };
+    const off = render("?fixture=1&from=95", <PlayerDetail player={player} role={undefined} onBack={() => {}} />);
+    expect(off).toContain('class="follow" aria-pressed="false" aria-label="Follow D. Okafor"');
+    const on = render("?fixture=1&from=95&player=hcy-9", <PlayerDetail player={player} role={undefined} onBack={() => {}} />);
+    expect(on).toContain('class="follow on" aria-pressed="true"');
+  });
+});
 
 describe("the matchup from your side", () => {
   const home = sheet("4-3-3", ["GK", "LB", "CB", "CB", "RB", "CM", "DM", "CM", "LW", "ST", "RW"]);

@@ -9,6 +9,7 @@ import { usePrefs, useT, type MessageKey } from "../i18n";
 import Card from "./Card";
 import ControlBar, { barKey, type BarMark } from "./ControlBar";
 import { describe } from "./EventFeed";
+import FollowButton from "./FollowButton";
 import { EventCues, smoothFor, usePitchMotion } from "./motion";
 import Pitch, { whoFromSquads } from "./Pitch";
 import { PlayerNumbers, usePlayerReport } from "./PlayerCard";
@@ -329,6 +330,7 @@ export function PlayerDetail({ player, role, onBack }: { player: SquadPlayer; ro
           <span className="pd-nm">{player.name}</span>
           <small className="muted">{[teams[side].name, role ?? player.role].filter(Boolean).join(" · ")} · 0′–{at(upTo ?? match.clock)}′</small>
         </span>
+        <FollowButton playerId={player.player_id} name={player.name} />
       </div>
       {report === null ? <p className="muted">{t("board.rosterNoStats")}</p> : <PlayerNumbers report={report} />}
     </div>

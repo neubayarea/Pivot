@@ -54,3 +54,4 @@
 .roster-detail .player-stats { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 /* Back gets focus when the card swaps; keep it clear of the sticky match header when that scrolls it into view. */
 .pd-back { scroll-margin-top: 280px; }
+.pd-hd > .follow { margin-left: auto; flex: none; }

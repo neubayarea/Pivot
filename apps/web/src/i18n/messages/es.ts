@@ -956,8 +956,6 @@ export const es: Messages = {
   "follow.teamOff": "Dejar de seguir a {team}",
   "follow.chip": "Siguiendo a: {player}",
   "follow.stop": "Dejar de seguir a {player}",
-  "lu.follow": "Seguir a {player}",
-  "lu.unfollow": "Dejar de seguir a {player}",
   "lu.note": "Los onces iniciales en su sistema. Pulsa ☆ junto a un jugador para seguirlo todo el partido.",
   "mu.title": "La alineación desde tu lado",
   "mu.note": "Tu equipo ataca hacia arriba. Dónde se cruza cada línea tuya con la suya y en qué se diferencian los dos planes.",
