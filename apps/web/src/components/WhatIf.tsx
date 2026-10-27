@@ -88,14 +88,15 @@ type ChipsProps = {
   moveTo?: number;
 };
 
-/** One button per scenario; unavailable ones stay focusable and say why, rather than vanishing. */
+/** One button per scenario this match can have; the others are named on one line, with why. */
 export function ScenarioChips({ options, selected, onSelect, teams, moveTo }: ChipsProps) {
   const t = useT();
   const minuteOf = useOptionMinute();
   const id = useId();
   return (
     <div className="scn" role="group" aria-label={t("whatif.pickLabel")}>
-      {options.map((o) => {
+      {/* C13 UX: the changes this match cannot have go on one quiet line under the rest. */}
+      {options.filter((o) => o.enabled).map((o) => {
         const reason = o.enabled ? null : disabledReason(o, t);
         return (
           <button
@@ -113,6 +114,11 @@ export function ScenarioChips({ options, selected, onSelect, teams, moveTo }: Ch
           </button>
         );
       })}
+      {options.some((o) => !o.enabled) && (
+        <p className="scn-off">
+          {t("whatif.notHere", { list: options.filter((o) => !o.enabled).map((o) => `${optionLabel(o, t)} (${disabledReason(o, t)})`).join("; ") })}
+        </p>
+      )}
     </div>
   );
 }

@@ -5,13 +5,15 @@
 import { useState, type CSSProperties } from "react";
 import type { StatMetricInfo, TeamStatsReport, TeamStatsScope } from "@pivot/contracts";
 import { useMatch } from "../data/match";
-import { FAN5 } from "../data/persona";
+import { FAN_STATS } from "../data/persona";
 import { useVizData, type VizState } from "../data/viz";
 import { isMessageKey, usePrefs, type T } from "../i18n";
 import Segmented from "./Segmented";
 
 // C12: fans get the five plain ones (data/persona.ts), analysts all 23.
-const FAN = new Set<string>(FAN5);
+const FAN = new Set<string>(FAN_STATS);
+/** Shown to nobody: an index the reader cannot use (the momentum chart says it better). */
+const HIDDEN = new Set(["momentum_avg"]);
 
 /** GET /api/matches/{id}/stats, up to the replay's or live match's second (whole minutes) when given. */
 export function useTeamStats(matchId: string | null, upTo: number | null) {
@@ -47,6 +49,7 @@ function Row({ m, s, fan, t }: { m: StatMetricInfo; s: TeamStatsScope; fan: bool
       <td className={`h num${lead === "home" ? " win" : ""}`}>{statText(h, m)}</td>
       <th scope="row">
         <span title={m.description}>{name}</span>
+        {m.metric === "ppda" && <small className="ts-note">{t("ts.ppdaNote")}</small>}
         {both && (
           <span className="ts-bar" aria-hidden="true">
             <i style={{ width: `${share}%` }} />
@@ -59,7 +62,7 @@ function Row({ m, s, fan, t }: { m: StatMetricInfo; s: TeamStatsScope; fan: bool
   );
 }
 
-/** `only`: just these metrics, whoever is watching (the overview's core five); otherwise fans get FAN5, analysts all. */
+/** `only`: just these metrics, whoever is watching (the overview's core five); otherwise fans get FAN_STATS, analysts all. */
 export default function TeamStats({ state, only }: { state: VizState<TeamStatsReport>; only?: ReadonlySet<string> }) {
   const { teams } = useMatch();
   const { prefs, t } = usePrefs();
@@ -71,10 +74,12 @@ export default function TeamStats({ state, only }: { state: VizState<TeamStatsRe
   const shown = scopes.find((s) => s.scope === scope) ?? scopes[0];
   if (!shown) return <p className="muted">{t("ts.error")}</p>;
   const keep = only ?? (fan ? FAN : null);
-  const metrics = data.metrics.filter((m) => !keep || keep.has(m.metric));
-  const groups = [...new Set(metrics.map((m) => m.group))];
+  const metrics = data.metrics.filter((m) => !HIDDEN.has(m.metric) && (!keep || keep.has(m.metric)))
+    // A fan's six come in the order of FAN_STATS, in one table; a chosen few (`only`) also share one table.
+    .sort((a, b) => (fan && !only ? FAN_STATS.indexOf(a.metric as never) - FAN_STATS.indexOf(b.metric as never) : 0));
+  const groups = fan || only ? ["key"] : [...new Set(metrics.map((m) => m.group))];
   return (
-    <div className="ts">
+    <div className={`ts${fan ? " ts-fan" : ""}`}>
       {scopes.length > 1 && (
         <Segmented label={t("ts.scope")} value={shown.scope} onChange={setScope}
           options={scopes.map((s) => ({ value: s.scope, label: t(`ts.scope.${s.scope as Exclude<typeof s.scope, "window">}`) }))} />
@@ -91,12 +96,12 @@ export default function TeamStats({ state, only }: { state: VizState<TeamStatsRe
       <div className="ts-groups">
         {groups.map((g) => (
           <table key={g} className="ts-table">
-            <caption>{isMessageKey(`ts.group.${g}`) ? t(`ts.group.${g}` as never) : g}</caption>
+            <caption>{g === "key" ? t("ts.key") : isMessageKey(`ts.group.${g}`) ? t(`ts.group.${g}` as never) : g}</caption>
             <thead className="sr-only">
               <tr><th scope="col">{teams.home.name}</th><th scope="col">{t("ts.title")}</th><th scope="col">{teams.away.name}</th></tr>
             </thead>
             <tbody>
-              {metrics.filter((m) => m.group === g).map((m) => <Row key={m.metric} m={m} s={shown} fan={fan} t={t} />)}
+              {metrics.filter((m) => g === "key" || m.group === g).map((m) => <Row key={m.metric} m={m} s={shown} fan={fan} t={t} />)}
             </tbody>
           </table>
         ))}

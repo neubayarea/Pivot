@@ -18,6 +18,8 @@ export type Goals = Pick<Score, "home" | "away">;
 
 /** The five team stats a fan sees: no indices, no xG numbers. */
 export const FAN5 = ["possession_pct", "shots", "shots_on_target", "box_entries", "distance_covered_km"] as const;
+/** The fan's team-stats card (C13 UX): six plain numbers in one table, attack and defence both. */
+export const FAN_STATS = ["possession_pct", "shots", "shots_on_target", "box_entries", "tackles_won", "distance_covered_km"] as const;
 
 /**
  * Which way is better for the team, for the stats where "more" has one meaning. PPDA and turnovers

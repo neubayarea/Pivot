@@ -75,16 +75,30 @@ function useUpTo() {
 export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: ReadonlySet<string> }) {
   const { match } = useMatch();
   const t = useT();
-  const { at } = useClock();
+  const { at, minute } = useClock();
   const scheduled = match.status === "scheduled";
   const { over, upTo } = useUpTo();
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
   return (
     <>
-      {(scheduled || over) && (
+      {scheduled && (
         <div className="live-start">
-          <p className="muted">{t(scheduled ? "board.kickoffPending" : "live.replayHint")}</p>
-          <StartDemoButton matchId={match.match_id}>{t(scheduled ? "demo.startMatch" : "demo.startShort")}</StartDemoButton>
+          <p className="muted">{t("board.kickoffPending")}</p>
+          <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
+        </div>
+      )}
+      {/* C13 UX: a finished match offers the replay from kick-off or straight from the first turning point. */}
+      {over && (
+        <div className="live-start replay-start">
+          <p>{t("live.replayHint")}</p>
+          <span className="replay-go">
+            <StartDemoButton matchId={match.match_id}>{t("live.replayStart")}</StartDemoButton>
+            {moments[0] && (
+              <a className="btn" href={`/?match=${encodeURIComponent(match.match_id)}&from=${Math.max(0, moments[0].minute - 1)}&tab=replay`}>
+                {t("live.replayFrom", { n: 1, minute: minute(moments[0].minute) })}
+              </a>
+            )}
+          </span>
         </div>
       )}
       <div className="more-bd live-bd">

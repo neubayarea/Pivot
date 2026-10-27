@@ -56,7 +56,7 @@ describe("shot map", () => {
     expect(analyst).toContain("Home: 2 shots, 1 scored, xG 0.32");
     const fan = render(<ShotMap data={SHOTS} squads={SQUADS} />, "?lang=en&mode=fan");
     expect(fan).not.toContain("xG");
-    expect(fan).toContain("Gold: goal.");
+    expect(fan).toContain("Ring with a white centre: goal.");
     expect(shotRadius(0.4, false)).toBeGreaterThan(shotRadius(0.05, false));
     expect(shotRadius(0.4, true)).toBe(shotRadius(0.05, true));
   });

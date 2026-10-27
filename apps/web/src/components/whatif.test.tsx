@@ -70,10 +70,11 @@ describe("scenario chips", () => {
     expect(options.find((o) => o.type === "change_press")).toMatchObject({ team: "home", label: "Press higher from 64′" });
   });
 
-  it("shows why a chip is greyed out, and keeps it focusable", () => {
+  it("names the changes this match cannot have on one line, with why, instead of a dead button (C13)", () => {
     const html = render(<ScenarioChips options={options} selected="cancel_substitution" onSelect={() => {}} teams={view.teams} />);
     expect(html).toContain("No red card in this match");
-    expect(html).toMatch(/aria-disabled="true"[^>]*aria-describedby="[^"]+"/);
+    expect(html).toMatch(/class="scn-off">Not possible here: Remove red card \(No red card in this match\)/);
+    expect(html).not.toContain('aria-disabled="true"');
     expect(html).not.toContain(" disabled=");
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(html).toContain("Remove red card");

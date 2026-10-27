@@ -50,7 +50,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
   const { t } = usePrefs();
   const { minute } = useClock();
   const minuteOf = useOptionMinute();
-  const { side } = usePersona();
+  const { side, fan } = usePersona();
   const pivot = pivotDetail(pivotId)?.pivot;
   const [opts, setOpts] = useState<Options>({ kind: "loading" });
   const [reload, setReload] = useState(0);
@@ -230,7 +230,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
             )}
             {state.phase === "done" && <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} source={source} />}
           </div>
-          <p className="fine">{t("whatif.fine")}</p>
+          {!fan && <p className="fine">{t("whatif.fine")}</p>}
         </Card>
       </div>
     </>
