@@ -114,11 +114,13 @@ def test_the_warm_up_replays_only_chips_not_in_the_file():
             await whatif.stop()
 
     runner, scenarios = asyncio.run(warm())
-    assert runner.calls == [] and len(scenarios) == 15        # all five chips of each pivot, comparisons only
+    chips = {(s.spec.pivot_id, s.spec.type) for s in stored()[1].values()}
+    assert runner.calls == [] and len(scenarios) == len(chips)   # every chip of every pivot, comparisons only
     assert all(s.status == "completed" for s in scenarios)
 
 
 def test_a_changed_demo_does_not_use_the_file(tmp_path):
+    chip = min(stored()[1].values(), key=lambda s: (s.spec.pivot_id, s.spec.type)).spec   # any chip in the file
     demo_file = tmp_path / sims.FIXTURE.name
     demo_file.write_bytes(sims.FIXTURE.read_bytes() + b"\n")                  # same match, another hash
     shutil.copy(FILE, precomputed_path(demo_file))
@@ -136,7 +138,7 @@ def test_a_changed_demo_does_not_use_the_file(tmp_path):
         whatif.precomputed[match_id] = load_precomputed(precomputed_path(demo_file), version)
         whatif.start()
         try:
-            scenario = await whatif.submit(f"{match_id}:p79", "remove_goal")
+            scenario = await whatif.submit(chip.pivot_id, chip.type)
             await until_done(whatif, [scenario.scenario_id])
         finally:
             await whatif.stop()
@@ -147,10 +149,10 @@ def test_a_changed_demo_does_not_use_the_file(tmp_path):
 
 
 def test_a_stored_result_equals_a_fresh_run():
-    """The cheapest chip (the 90' goal, from the 79' pivot) replayed here: same numbers as in the file."""
+    """The cheapest chip (200 runs from the latest minute) replayed here: same numbers as in the file."""
     _, scenarios = stored()
-    ahead = next(s for s in scenarios.values()
-                 if s.spec.pivot_id.endswith(":p79") and s.spec.type == "remove_goal" and s.spec.n_runs == 200)
+    ahead = max((s for s in scenarios.values() if s.spec.n_runs == 200),
+                key=lambda s: (s.spec.at_minute, s.spec.pivot_id, s.spec.type))
 
     async def fresh():
         adapters, replays, match_id = await demo()
