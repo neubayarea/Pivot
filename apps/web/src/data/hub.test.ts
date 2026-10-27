@@ -49,12 +49,15 @@ describe("the match centre's links", () => {
 });
 
 describe("the next round (C14 PR 2)", () => {
-  it("opens a match before kick-off on its preview, and only the preview and line-ups", () => {
-    expect(tabFrom("", "scheduled")).toBe("preview");
-    expect(tabFrom("?tab=overview", "scheduled")).toBe("preview");
-    expect(tabFrom("?tab=lineups", "scheduled")).toBe("lineups");
-    expect(tabFrom("?tab=overview", "finished")).toBe("overview");
-    expect(TABS.filter((tab) => tabOpen(tab, "scheduled"))).toEqual(["lineups", "preview"]);
+  it("opens a next-round fixture on its preview, and only the preview and line-ups", () => {
+    const id = "S2026-31-LUN-HBC";
+    expect(tabFrom("", "scheduled", id)).toBe("preview");
+    expect(tabFrom("?tab=overview", "scheduled", id)).toBe("preview");
+    expect(tabFrom("?tab=lineups", "scheduled", id)).toBe("lineups");
+    expect(TABS.filter((tab) => tabOpen(tab, "scheduled", id))).toEqual(["lineups", "preview"]);
+    // any other match before kick-off can still be started, so its tabs stay open
+    expect(tabFrom("?tab=replay", "scheduled", "M-api-demo")).toBe("replay");
+    expect(tabFrom("?tab=overview", "finished", id)).toBe("overview");
   });
 
   it("puts the viewer's club's games first", () => {

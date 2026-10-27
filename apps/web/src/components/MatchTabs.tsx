@@ -13,10 +13,10 @@ export default function MatchTabs({ tab }: { tab: MatchTab }) {
   const navigate = useNavigate();
   const t = useT();
   // C13: the replay is "Live" while the match is being played.
-  const { status } = useMatch().match;
+  const { status, match_id } = useMatch().match;
   const live = ["live", "paused"].includes(status);
   // C14: before kick-off only the preview and the line-ups have anything to show.
-  const open = TABS.filter((id) => tabOpen(id, status));
+  const open = TABS.filter((id) => tabOpen(id, status, match_id));
   const list = useRef<HTMLDivElement>(null);
   const move = (e: KeyboardEvent) => {
     const i = open.indexOf(tab);
@@ -30,7 +30,7 @@ export default function MatchTabs({ tab }: { tab: MatchTab }) {
   return (
     <nav className="tabs" aria-label={t("tabs.label")}>
       <div role="tablist" ref={list} onKeyDown={move}>
-        {TABS.map((id) => !tabOpen(id, status) ? (
+        {TABS.map((id) => !tabOpen(id, status, match_id) ? (
           <span key={id} id={`tab-${id}`} role="tab" aria-selected={false} aria-disabled="true" className="tab-off"
             title={t("tabs.notYet")}>
             {t(`tabs.${id}`)}
