@@ -1,7 +1,7 @@
 // The starting line-ups and formations (Ax59), Premier League style: both XIs on one pitch, home
 // attacking up from the bottom, away down from the top, then each team's list with its bench.
-// Places come from the team sheet's anchors (metres from the team's own goal, y = 0 on its right
-// touchline); the fixture has no sheets and gets the squad lists only.
+// Places come from the formation's rows, or the team sheet's anchors when the rows do not add up;
+// the fixture has no sheets and gets the squad lists only.
 import type { CSSProperties } from "react";
 import type { TeamSheet } from "@pivot/contracts";
 import { useMatch, type Side, type SquadPlayer } from "../data/match";
@@ -11,17 +11,40 @@ import { surname } from "./FocusPickers";
 const W = 68;
 const H = 105;
 // A team's anchors run from its goal to about the halfway line and a bit; squeezed into its half.
-const DEPTH = 0.47;
+const DEPTH = 0.6;
 
 function place(side: Side, [x, y]: readonly [number, number]): [number, number] {
-  const depth = Math.min(H / 2 - 3, x * DEPTH) ;
+  const depth = Math.min(H / 2 - 7, x * DEPTH);
   return side === "home" ? [W - y, H - 3 - depth] : [y, 3 + depth];
+}
+
+/**
+ * Places from the formation, the way match pages draw it: the keeper, then one row per number in
+ * "4-2-3-1", slots back to front and left to right. Null when the sheet does not add up, so the
+ * anchors are used instead.
+ */
+function formationPlaces(side: Side, sheet: TeamSheet): Map<string, [number, number]> | null {
+  const rows = [1, ...sheet.formation.split("-").map(Number)];
+  const slots = sheet.starters.slice().sort((a, b) => a.slot - b.slot);
+  if (rows.reduce((n, r) => n + r, 0) !== slots.length) return null;
+  const out = new Map<string, [number, number]>();
+  const gap = (H / 2 - 9) / (rows.length - 1);
+  let i = 0;
+  rows.forEach((count, row) => {
+    for (let k = 0; k < count; k++, i++) {
+      const across = (W * (k + 1)) / (count + 1);           // the team's left to right
+      const depth = 4 + row * gap;
+      out.set(slots[i].player_id, side === "home" ? [across, H - depth] : [W - across, depth]);
+    }
+  });
+  return out;
 }
 
 function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
   const { teams, squads } = useMatch();
   const t = useT();
   const byId = new Map([...squads.home, ...squads.away].map((p) => [p.player_id, p]));
+  const places = { home: formationPlaces("home", sheets.home), away: formationPlaces("away", sheets.away) };
   return (
     <svg className="lu-pitch" viewBox={`-2 -2 ${W + 4} ${H + 4}`} role="img"
       aria-label={t("pre.pitchLabel", { home: `${teams.home.name} ${sheets.home.formation}`, away: `${teams.away.name} ${sheets.away.formation}` })}>
@@ -33,7 +56,7 @@ function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
       {(["home", "away"] as Side[]).map((side) => (
         <g key={side} className={`lu-team ${side}`} style={{ "--tc": teams[side].color } as CSSProperties}>
           {sheets[side].starters.map((s) => {
-            const [cx, cy] = place(side, s.anchor);
+            const [cx, cy] = places[side]?.get(s.player_id) ?? place(side, s.anchor);
             const p = byId.get(s.player_id);
             return (
               <g key={s.player_id} transform={`translate(${cx} ${cy})`}>

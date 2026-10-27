@@ -37,7 +37,10 @@ button { font: inherit; color: inherit; }
 }
 @media (max-width: 720px) {
   .top { gap: 8px; padding-inline: 14px; }
-  .top .match-pick select { max-width: 150px; }
+  /* The match picker takes a row of its own under the brand, so its label still shows. */
+  .top { flex-wrap: wrap; row-gap: 8px; }
+  .top > .match-pick { order: 5; flex: 1 1 100%; }
+  .top .match-pick select { max-width: none; width: 100%; }
   .top .match-gen { display: none; }
 }
 
