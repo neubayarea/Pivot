@@ -11,8 +11,9 @@ COPY apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile --filter web...
 COPY packages/contracts ./packages/contracts
 COPY apps/web ./apps/web
-# web tests read the recorded demo match, and tsc checks them too
+# web tests read a frozen recorded match (eval/frozen), and tsc checks them too
 COPY eval/fixtures ./eval/fixtures
+COPY eval/frozen ./eval/frozen
 RUN pnpm --filter web build
 
 # --- app: the Python workspace, plus the web build as static files

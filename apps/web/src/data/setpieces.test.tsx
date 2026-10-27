@@ -4,7 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { Match, MatchEvent, TrackingFrame } from "@pivot/contracts";
 import { SetPieceBoard, ShotBoard } from "../components/SetPieces";
-import demo from "../../../../eval/fixtures/demo-1021.json";
+// a recorded match that never changes (eval/frozen/README.md: M-seed-29 before Ax44)
+import demo from "../../../../eval/frozen/m-seed-29-before-ax44.json";
 import { toView } from "./live/provider";
 import { MatchContext } from "./match";
 import { clipBall, frameBefore, frameBetween, freeKickZone, resultOf, setPieces, setupAt, shotClips, tally } from "./setpieces";
@@ -108,7 +109,7 @@ describe("shot clips", () => {
   });
 });
 
-// The demo match the board shows: M-seed-29, Harbour City v the away side.
+// The frozen match (eval/frozen): M-seed-29 as it was before Ax44, Harbour City v the away side.
 const fx = demo as unknown as { match: Match; events: MatchEvent[] };
 
 describe("on the M-seed-29 demo match", () => {

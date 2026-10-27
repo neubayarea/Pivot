@@ -88,9 +88,9 @@ def test_target_prefers_a_trigger_then_the_lead_up_then_a_tactical_substitution(
     assert by_type(sc.options_for(pivot(minute=38, triggers=()), goals))["remove_goal"].at_minute == 30
 
 
-# --- the recorded demo (eval/fixtures/demo-1021.json, M-seed-29) ----------------------------
+# --- a frozen recorded match (eval/frozen/README.md: the demo before Ax44, M-seed-29) --------
 
-FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
+FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "frozen" / "m-seed-29-before-ax44.json"
 
 
 @pytest.fixture(scope="module")

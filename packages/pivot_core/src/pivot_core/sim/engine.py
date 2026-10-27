@@ -39,6 +39,7 @@ from .movement import (
     ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, norm,
     normal, settle, to_view, top_speed, uniform,
 )
+from .setpieces import KEEP_OFF, SetPieceShape
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
 BOX_DEPTH, BOX_Y = 16.5, (13.84, 54.16)
@@ -133,6 +134,7 @@ class Params:
     clear_behind: float = 0.366                  # a clearance in his own box goes behind for a corner
     loose_shot: float = 0.1                      # chance to strike a loose ball in front of goal first time, x (1 + 8 xG)
     offside_pen: float = 3.2                     # passer's reluctance to pick a receiver standing offside
+    corner_line_pen: float = 2.2                 # corner taker's reluctance to aim within 4 m of the goal line (Ax44)
     offside_slack: float = 1.1                   # metres a forward may drift beyond the last defender
     claim_rate: float = 0.9                      # keeper comes for a cross dropping into his area
     sweep_rate: float = 0.13                     # keeper rushes out to a ball played in behind
@@ -250,6 +252,8 @@ class Engine:
         # Technique labels draw from their own stream, so adding or changing a label rule never
         # changes the run of play of a seed.
         self.style_rng = np.random.default_rng([(match.seed if seed is None else seed) or 0, 2])
+        # Where players stand at corners and free kicks (Ax44): its own stream too.
+        self.set_pieces = SetPieceShape(np.random.default_rng([(match.seed if seed is None else seed) or 0, 3]))
         self.touch: dict | None = None            # last reception: who, when, what kind of ball
         self.p = params
         self.teams = [match.home, match.away]
@@ -328,6 +332,7 @@ class Engine:
         """Draw everything from here on from a new seed, the same way __init__ seeds a match (B08)."""
         self.rng = np.random.default_rng(seed)
         self.style_rng = np.random.default_rng([seed, 2])
+        self.set_pieces.rng = np.random.default_rng([seed, 3])
         self.move.rng = self.rng
 
     @staticmethod
@@ -531,7 +536,10 @@ class Engine:
         self.dead = int(wait) + int(self.p.waste_s * max(-self.urgency[team], 0.0))
 
     def _restart_targets(self, targets: np.ndarray) -> None:
-        """During a stoppage the taker walks to the ball; after a goal everyone walks back to their half."""
+        """During a stoppage the taker walks to the ball; after a goal everyone walks back to their half;
+        at a corner or free kick everyone goes to his set-piece spot (Ax44, setpieces.py)."""
+        self.set_pieces.apply(targets, tuple(self.shapes), self.pos, self.ball, self.owner, self.restart, self.forced,
+                              self.flight)
         r = self.restart
         if r is None:
             return
@@ -565,7 +573,7 @@ class Engine:
         k, kind, spot, i = r["team"], r["kind"], r["spot"], r["taker"]
         if not self._active(k)[i]:
             i = r["taker"] = self._choose_taker(k, kind, spot)
-        if norm(self.pos[k, i] - spot) > 1.5 and r["waited"] < 60:
+        if (norm(self.pos[k, i] - spot) > 1.5 or self._encroaching(k, kind, spot)) and r["waited"] < 60:
             r["waited"] += 1
             return False
         self.restart = None
@@ -573,6 +581,13 @@ class Engine:
         self._gain(k, i)
         self.forced = {"kind": kind}
         return True
+
+    def _encroaching(self, k: int, kind: str, spot: np.ndarray) -> bool:
+        """Laws 13 and 17: the referee waits for the opponents to be 9.15 m from a free kick or corner."""
+        if kind not in ("corner", "free_kick"):
+            return False
+        d = norm(self.pos[1 - k] - spot)
+        return bool(((d < KEEP_OFF) & self._active(1 - k)).any())
 
     # --- on-ball actions -------------------------------------------------------------
 
@@ -814,6 +829,8 @@ class Engine:
         score -= self.p.offside_pen * offside
         if restart == "corner":
             score = np.where([_in_box(mates[m]) for m in cand], score + 4, score - 4)
+            # aimed past the keeper's reach, not at the man screening him on the line (Ax44)
+            score = np.where(mates[cand, 0] > PITCH_LENGTH - 4.0, score - self.p.corner_line_pen, score)
         if restart == "goal_kick" and style == "direct":
             score += 0.08 * dists
         probs = np.exp((score - score.max()) / 0.55)

@@ -139,6 +139,12 @@
 - 现在：拿球的人身边没人逼抢、而且往前还能把机会做得更好时，会先带一步再射；有传中要来时，中锋和远端边锋冲到小禁区。
   再配合联合调参（更看重好机会、更愿意往危险区域传、更多打身后），每场约 3 个进球、26 脚射门、每脚 0.12 个预期进球。
 
+## REAL-018 定位球站位（Ax44）
+
+- 角球和任意球开出前，球员站到定位球的位置：禁区内约 5 名进攻、9 名防守，按球队的区域 / 人盯人 / 混合防守分配；
+  任意球时对方退到 9.15 米外，人墙人数随距离变（20 米内约 6 人，30 米外约 2 人）。
+- 开球后的传中、争顶、射门都按这时的站位算；角球不再瞄准门将身前的人（`Params.corner_line_pen`）。数字、出处和规则表见 [set-pieces.md](set-pieces.md)。
+
 ## 怎么量
 
 `scripts/realism_scorecard.py` 把同一批数字在模拟比赛和真实比赛上各算一遍，并排打印：
@@ -146,6 +152,7 @@
 ```bash
 uv run scripts/realism_scorecard.py                     # 每种对阵 120 场
 uv run scripts/realism_scorecard.py --red 120           # 再加一组：第 38 分钟客队红牌
+uv run scripts/realism_scorecard.py --set-pieces        # 只比定位球站位（REAL-018）
 ```
 
 - **真实数据**：`eval/realism/reference.json`，**以英超为准**，按下面的顺序取第一个有的：

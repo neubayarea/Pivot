@@ -209,5 +209,415 @@
       ],
       "source": "Premier League 2023/24-2024/25: 3.1 goals from 26.8 shots a match (football-data.co.uk), about 0.115 per shot; 2015/16 was 0.098"
     }
+  },
+  "set_pieces_pl1516": {
+    "corners": {
+      "att_box": {
+        "mean": 5.35,
+        "median": 5.0,
+        "p10": 4.0,
+        "p90": 6.0,
+        "n": 1126
+      },
+      "def_box": {
+        "mean": 8.58,
+        "median": 9.0,
+        "p10": 7.0,
+        "p90": 10.0,
+        "n": 1126
+      },
+      "att_six": {
+        "mean": 1.6,
+        "median": 1.0,
+        "p10": 0.0,
+        "p90": 3.0,
+        "n": 1126
+      },
+      "def_six": {
+        "mean": 3.08,
+        "median": 3.0,
+        "p10": 0.0,
+        "p90": 6.0,
+        "n": 1126
+      },
+      "att_edge": {
+        "mean": 0.81,
+        "median": 1.0,
+        "p10": 0.0,
+        "p90": 2.0,
+        "n": 1126
+      },
+      "def_upfield": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 1126
+      },
+      "att_back": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 1126
+      },
+      "keeper_m": {
+        "mean": 1.27,
+        "median": 1.14,
+        "p10": 0.44,
+        "p90": 2.1,
+        "n": 1125
+      },
+      "seen": {
+        "mean": 16.79,
+        "median": 17.0,
+        "p10": 14.0,
+        "p90": 19.0,
+        "n": 1126
+      },
+      "near_post_share": 0.355,
+      "far_post_share": 0.312,
+      "both_posts_share": 0.152,
+      "att_back_full_frames": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 56
+      },
+      "def_upfield_full_frames": {
+        "mean": 0.04,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 56
+      }
+    },
+    "free_kick_crosses": {
+      "att_box": {
+        "mean": 5.07,
+        "median": 5.0,
+        "p10": 3.0,
+        "p90": 6.0,
+        "n": 380
+      },
+      "def_box": {
+        "mean": 7.79,
+        "median": 8.0,
+        "p10": 6.0,
+        "p90": 10.0,
+        "n": 380
+      },
+      "att_six": {
+        "mean": 0.72,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 2.0,
+        "n": 380
+      },
+      "def_six": {
+        "mean": 1.08,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 4.0,
+        "n": 380
+      },
+      "att_edge": {
+        "mean": 1.17,
+        "median": 1.0,
+        "p10": 0.0,
+        "p90": 2.0,
+        "n": 380
+      },
+      "def_upfield": {
+        "mean": 0.01,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 380
+      },
+      "att_back": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 380
+      },
+      "keeper_m": {
+        "mean": 1.78,
+        "median": 1.57,
+        "p10": 0.7,
+        "p90": 3.06,
+        "n": 380
+      },
+      "seen": {
+        "mean": 17.29,
+        "median": 18.0,
+        "p10": 15.0,
+        "p90": 19.0,
+        "n": 380
+      },
+      "att_back_full_frames": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 30
+      },
+      "def_upfield_full_frames": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0,
+        "n": 30
+      }
+    },
+    "direct_free_kicks": {
+      "all": {
+        "wall": {
+          "mean": 5.13,
+          "median": 6.0,
+          "p10": 2.0,
+          "p90": 8.0,
+          "n": 401
+        },
+        "wall_line": {
+          "mean": 4.43,
+          "median": 5.0,
+          "p10": 2.0,
+          "p90": 7.0,
+          "n": 401
+        },
+        "wall_m": {
+          "mean": 8.95,
+          "median": 8.91,
+          "p10": 7.96,
+          "p90": 10.05,
+          "n": 397
+        },
+        "nearest_def_m": {
+          "mean": 8.49,
+          "median": 8.51,
+          "p10": 7.18,
+          "p90": 9.77,
+          "n": 401
+        },
+        "dist": {
+          "mean": 24.96,
+          "median": 24.53,
+          "p10": 20.59,
+          "p90": 29.49,
+          "n": 401
+        }
+      },
+      "by_distance": {
+        "0-20m": {
+          "wall": {
+            "mean": 7.38,
+            "median": 7.0,
+            "p10": 6.5,
+            "p90": 8.0,
+            "n": 26
+          },
+          "wall_line": {
+            "mean": 6.54,
+            "median": 6.5,
+            "p10": 5.0,
+            "p90": 8.0,
+            "n": 26
+          },
+          "wall_m": {
+            "mean": 8.61,
+            "median": 8.49,
+            "p10": 7.73,
+            "p90": 9.73,
+            "n": 26
+          },
+          "def_box": {
+            "mean": 9.58,
+            "median": 10.0,
+            "p10": 8.5,
+            "p90": 10.0,
+            "n": 26
+          },
+          "att_box": {
+            "mean": 4.27,
+            "median": 4.5,
+            "p10": 3.0,
+            "p90": 5.5,
+            "n": 26
+          },
+          "keeper_m": {
+            "mean": 1.22,
+            "median": 1.14,
+            "p10": 0.44,
+            "p90": 1.79,
+            "n": 26
+          },
+          "keeper_side_m": {
+            "mean": -0.4,
+            "median": -0.77,
+            "p10": -1.36,
+            "p90": 0.64,
+            "n": 26
+          }
+        },
+        "20-25m": {
+          "wall": {
+            "mean": 5.78,
+            "median": 6.0,
+            "p10": 3.0,
+            "p90": 8.0,
+            "n": 201
+          },
+          "wall_line": {
+            "mean": 4.96,
+            "median": 5.0,
+            "p10": 2.0,
+            "p90": 7.0,
+            "n": 201
+          },
+          "wall_m": {
+            "mean": 8.8,
+            "median": 8.81,
+            "p10": 7.93,
+            "p90": 9.89,
+            "n": 201
+          },
+          "def_box": {
+            "mean": 9.39,
+            "median": 10.0,
+            "p10": 9.0,
+            "p90": 10.0,
+            "n": 201
+          },
+          "att_box": {
+            "mean": 4.75,
+            "median": 5.0,
+            "p10": 3.0,
+            "p90": 6.0,
+            "n": 201
+          },
+          "keeper_m": {
+            "mean": 1.34,
+            "median": 1.4,
+            "p10": 0.79,
+            "p90": 1.84,
+            "n": 201
+          },
+          "keeper_side_m": {
+            "mean": -0.11,
+            "median": -0.25,
+            "p10": -1.02,
+            "p90": 0.94,
+            "n": 201
+          }
+        },
+        "25-30m": {
+          "wall": {
+            "mean": 4.46,
+            "median": 5.0,
+            "p10": 2.0,
+            "p90": 7.0,
+            "n": 142
+          },
+          "wall_line": {
+            "mean": 3.84,
+            "median": 4.0,
+            "p10": 2.0,
+            "p90": 6.0,
+            "n": 142
+          },
+          "wall_m": {
+            "mean": 9.2,
+            "median": 9.21,
+            "p10": 8.15,
+            "p90": 10.56,
+            "n": 139
+          },
+          "def_box": {
+            "mean": 6.81,
+            "median": 6.0,
+            "p10": 4.0,
+            "p90": 10.0,
+            "n": 142
+          },
+          "att_box": {
+            "mean": 4.15,
+            "median": 4.0,
+            "p10": 2.0,
+            "p90": 6.0,
+            "n": 142
+          },
+          "keeper_m": {
+            "mean": 1.43,
+            "median": 1.49,
+            "p10": 0.7,
+            "p90": 2.01,
+            "n": 142
+          },
+          "keeper_side_m": {
+            "mean": -0.24,
+            "median": -0.25,
+            "p10": -1.1,
+            "p90": 0.68,
+            "n": 142
+          }
+        },
+        "30m+": {
+          "wall": {
+            "mean": 2.25,
+            "median": 2.0,
+            "p10": 2.0,
+            "p90": 3.9,
+            "n": 32
+          },
+          "wall_line": {
+            "mean": 2.03,
+            "median": 2.0,
+            "p10": 1.0,
+            "p90": 3.0,
+            "n": 32
+          },
+          "wall_m": {
+            "mean": 9.06,
+            "median": 9.01,
+            "p10": 8.06,
+            "p90": 10.38,
+            "n": 31
+          },
+          "def_box": {
+            "mean": 5.44,
+            "median": 6.0,
+            "p10": 1.2,
+            "p90": 8.0,
+            "n": 32
+          },
+          "att_box": {
+            "mean": 3.72,
+            "median": 4.0,
+            "p10": 1.0,
+            "p90": 5.9,
+            "n": 32
+          },
+          "keeper_m": {
+            "mean": 1.96,
+            "median": 1.57,
+            "p10": 0.88,
+            "p90": 3.89,
+            "n": 32
+          },
+          "keeper_side_m": {
+            "mean": 0.03,
+            "median": -0.09,
+            "p10": -0.84,
+            "p90": 1.22,
+            "n": 32
+          }
+        }
+      }
+    },
+    "matches": 380,
+    "source": "StatsBomb open data, Premier League 2015/16, shot freeze frames (regular time): corners and free-kick crosses = shots within 6 s of the kick in the same possession; direct free kicks = the free-kick shot itself. Built by scripts/setpiece_reference.py."
   }
 }

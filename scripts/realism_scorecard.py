@@ -6,6 +6,7 @@ football, side by side (B12).
   uv run scripts/realism_scorecard.py --matches 240 --red 120
   uv run scripts/realism_scorecard.py --build-reference <statsbomb dir> --as pl1516
   uv run scripts/realism_scorecard.py --build-recent E0_2324.csv E0_2425.csv
+  uv run scripts/realism_scorecard.py --set-pieces --matches 80   # where players stand at corners and free kicks
 
 Real numbers come from eval/realism/reference.json, Premier League first (REAL_ORDER):
 
@@ -585,6 +586,167 @@ CARD = [
 ]
 
 
+# --- set pieces (Ax44) -----------------------------------------------------------------
+# Who stands where at corners and free kicks, counted in the tracking frames the same way
+# scripts/setpiece_reference.py counts the Premier League's shot freeze frames
+# (reference.json "set_pieces_pl1516"). The sim is read at the kick (the last frame before it,
+# as the match page reads it) and, for shots soon after a corner, at the shot as well.
+
+def _sp_view(xy: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
+    """Metres from the goal `k` attacks, and y in k's view."""
+    x = xy[..., 0] if k == 0 else L - xy[..., 0]
+    y = xy[..., 1] if k == 0 else W - xy[..., 1]
+    return L - x, y
+
+
+def _sp_box(d, y) -> np.ndarray:
+    return (d <= 16.5) & (y >= 13.84) & (y <= 54.16)
+
+
+def _sp_six(d, y) -> np.ndarray:
+    return (d <= 5.5) & (y >= 24.84) & (y <= 43.16)
+
+
+def _sp_frame(out, n: int, k: int, taker: str | None) -> tuple:
+    """Attackers (taker aside), outfield defenders and the defending keeper of frame n, in k's view."""
+    ids = out.frames_ids[n]
+    gk = {s.player_id for team in (out.match.home, out.match.away) for s in team.sheet.starters if s.role == "GK"}
+    pos = out.frames_pos[n]
+    att = [i for i, pid in enumerate(ids[k]) if pid and pid != taker]
+    dfn = [j for j, pid in enumerate(ids[1 - k]) if pid and pid not in gk]
+    keeper = [j for j, pid in enumerate(ids[1 - k]) if pid in gk]
+    return (_sp_view(pos[k, att], k), _sp_view(pos[1 - k, dfn], k),
+            _sp_view(pos[1 - k, keeper], k) if keeper else None)
+
+
+def setpiece_rows(out) -> dict:
+    """One row per corner (at the kick and, for a shot within 6 s, at the shot) and per free kick
+    within 40 m of goal (at the kick)."""
+    t = out.frames_t
+    rows: dict = {"corners": [], "corner_shots": [], "free_kicks": [], "jumps": 0, "player_seconds": 0}
+    ev = out.events
+    side = {"home": 0, "away": 1}
+    last_corner: dict | None = None
+    for e in ev:
+        kind = e.get("pass_type") if e["type"] == "pass" else None
+        if e["type"] == "shot" and e.get("play_pattern") == "free_kick" and not any(
+                p["type"] in ("pass", "carry", "shot") and p.get("possession_id") == e.get("possession_id")
+                and p["t"] < e["t"] for p in ev if p.get("possession_id") == e.get("possession_id") and p is not e):
+            kind = "free_kick"
+        if e["type"] == "shot" and last_corner and last_corner["team"] == e["team"] and e["t"] - last_corner["t"] <= 6:
+            n = int(np.searchsorted(t, e["t"]))
+            if n < len(t) and t[n] == e["t"]:
+                rows["corner_shots"].append(_sp_corner(out, n, side[e["team"]], e["player_id"], None, shooter=True))
+        if kind not in ("corner", "free_kick"):
+            continue
+        n = int(np.searchsorted(t, e["t"])) - 1
+        if n < 0:
+            continue
+        k = side[e["team"]]
+        if kind == "corner":
+            last_corner = e
+            rows["corners"].append(_sp_corner(out, n, k, e["player_id"], out.frames_ball[n]))
+            continue
+        bd, by = _sp_view(out.frames_ball[n][:2], k)
+        dist = float(np.sqrt(bd * bd + (by - 34) ** 2))
+        if dist >= 40:
+            continue
+        a, (dd, dy), keeper = _sp_frame(out, n, k, e["player_id"])
+        vx, vy = dd - bd, dy - by
+        gx, gy = -bd, 34.0 - by
+        r = np.sqrt(vx * vx + vy * vy)
+        cos = (vx * gx + vy * gy) / np.maximum(r * np.sqrt(gx * gx + gy * gy), 1e-9)
+        cone = (r >= 1.5) & (r <= 12) & (np.degrees(np.arccos(np.clip(cos, -1, 1))) <= 25)
+        dists = r[cone]
+        line = dists[dists <= dists.min() + 1.5] if len(dists) else dists
+        row = {"dist": dist, "wide": abs(float(by) - 34), "wall": int(cone.sum()), "wall_line": len(line),
+               "nearest_def_m": float(r.min()) if len(r) else None,
+               "def_box": int(_sp_box(dd, dy).sum()), "att_box": int(_sp_box(*a).sum())}
+        if len(line):
+            row["wall_m"] = float(line.mean())
+        if keeper is not None:
+            row["keeper_m"] = float(keeper[0][0])
+        rows["free_kicks"].append(row)
+    step = np.sqrt(((out.frames_pos[1:] - out.frames_pos[:-1]) ** 2).sum(-1))
+    live = (out.frames_period[1:] == out.frames_period[:-1])[:, None, None]
+    rows["jumps"] = int(((step > 11.0) & live).sum())             # faster than anyone runs
+    rows["player_seconds"] = int(live.sum()) * 22
+    return rows
+
+
+def _sp_corner(out, n: int, k: int, taker: str | None, ball, shooter: bool = False) -> dict:
+    (ad, ay), (dd, dy), keeper = _sp_frame(out, n, k, None if shooter else taker)
+    row = {"att_box": int(_sp_box(ad, ay).sum()), "def_box": int(_sp_box(dd, dy).sum()),
+           "att_six": int(_sp_six(ad, ay).sum()), "def_six": int(_sp_six(dd, dy).sum()),
+           "att_edge": int(((ad > 16.5) & (ad <= 25) & (np.abs(ay - 34) <= 16)).sum()),
+           "def_upfield": int((dd > 30).sum()), "att_back": int((ad > 52.5).sum())}
+    if keeper is not None:
+        row["keeper_m"] = float(keeper[0][0])
+    if ball is not None:
+        near = 37.66 if _sp_view(ball[:2], k)[1] > 34 else 30.34
+        far = 30.34 if near > 34 else 37.66
+        row["near_post"] = bool(((dd <= 2) & (np.abs(dy - near) <= 2.5)).any())
+        row["far_post"] = bool(((dd <= 2) & (np.abs(dy - far) <= 2.5)).any())
+    return row
+
+
+def _run_setpieces(job: tuple) -> dict:
+    scenario, seed = job
+    return setpiece_rows(Engine(build_demo_match(seed, **SCENARIOS[scenario]), seed).run())
+
+
+def setpiece_card(rows: list[dict], ref: dict) -> list[tuple]:
+    """(label, sim, PL, PL p10-p90) rows for the set-piece comparison."""
+    from setpiece_reference import FK_BINS, _stats
+    pl = ref.get("set_pieces_pl1516", {})
+    corners = [r for m in rows for r in m["corners"]]
+    shots = [r for m in rows for r in m["corner_shots"]]
+    fks = [r for m in rows for r in m["free_kicks"]]
+    out = []
+
+    def add(label, vals, real):
+        st = _stats(vals)
+        out.append((label, st.get("mean"), st.get("n", 0), real.get("mean") if real else None,
+                    f"{real['p10']:g}–{real['p90']:g}" if real and "p10" in real else ""))
+
+    pc = pl.get("corners", {})
+    for key, label in (("att_box", "corner: attackers in the box"), ("def_box", "corner: defenders in the box"),
+                       ("att_six", "corner: attackers in the six-yard box"),
+                       ("def_six", "corner: defenders in the six-yard box"), ("att_edge", "corner: attackers on the edge"),
+                       ("keeper_m", "corner: keeper off his line, m"), ("att_back", "corner: attackers in own half"),
+                       ("def_upfield", "corner: defenders left upfield")):
+        # the broadcast camera behind the freeze frames rarely shows the players left back
+        real = None if key in ("att_back", "def_upfield") else pc.get(key)
+        add(label + " (kick)", [r[key] for r in corners if key in r], real)
+        if key in ("att_box", "def_box", "att_six", "def_six"):
+            add(label + " (shot)", [r[key] for r in shots if key in r], pc.get(key))
+    for key, label in (("near_post", "corner: man on the near post, share"), ("far_post", "corner: man on the far post, share")):
+        vals = [float(r[key]) for r in corners if key in r]
+        out.append((label, float(np.mean(vals)) if vals else None, len(vals), pc.get(f"{key}_share"), ""))
+    direct = pl.get("direct_free_kicks", {})
+    shooting = [r for r in fks if r["dist"] < 32 and r["wide"] < 18]
+    add("free kick < 32 m: wall to ball, m", [r["wall_m"] for r in shooting if "wall_m" in r], direct.get("all", {}).get("wall_m"))
+    add("free kick < 32 m: nearest defender, m", [r["nearest_def_m"] for r in shooting if r["nearest_def_m"] is not None],
+        direct.get("all", {}).get("nearest_def_m"))
+    for lo, hi in FK_BINS:
+        name = f"{lo}-{hi}m" if hi < 99 else f"{lo}m+"
+        part = [r for r in shooting if lo <= r["dist"] < hi]
+        real = direct.get("by_distance", {}).get(name, {})
+        add(f"free kick {name}: in the wall", [r["wall_line"] for r in part], real.get("wall_line"))
+        add(f"free kick {name}: defenders in the box", [r["def_box"] for r in part], real.get("def_box"))
+        add(f"free kick {name}: attackers in the box", [r["att_box"] for r in part], real.get("att_box"))
+    jumps = sum(m["jumps"] for m in rows) / max(sum(m["player_seconds"] for m in rows), 1)
+    out.append(("frames: player steps > 11 m in a second, per 10k", 1e4 * jumps, len(rows), None, ""))
+    return out
+
+
+def print_setpieces(rows: list[dict], ref: dict) -> None:
+    print(f"\n== set pieces: {len(rows)} simulated matches vs Premier League 2015/16 (StatsBomb freeze frames) ==")
+    print(f"{'':52} {'sim':>7} {'n':>6} {'PL':>7}  PL p10–p90")
+    for label, s, n, r, band in setpiece_card(rows, ref):
+        print(f"{label:52} {_fmt(s):>7} {n:>6} {_fmt(r):>7}  {band}")
+
+
 def _fmt(v) -> str:
     if v is None:
         return "-"
@@ -668,6 +830,7 @@ def main() -> None:
     ap.add_argument("--as", dest="ref_name", default="pl1516", help="name of the data set --build-reference writes")
     ap.add_argument("--build-recent", type=Path, nargs="+", help="football-data.co.uk E0.csv files")
     ap.add_argument("--json", type=Path, help="also write the simulated numbers here")
+    ap.add_argument("--set-pieces", action="store_true", help="only the set-piece positions (Ax44)")
     args = ap.parse_args()
 
     if args.build_reference or args.build_recent:
@@ -688,6 +851,12 @@ def main() -> None:
             raise SystemExit(f"unknown parameter {key}")
         overrides[key] = json.loads(value)
     seeds = range(args.seed, args.seed + args.matches)
+    if args.set_pieces:
+        with ProcessPoolExecutor() as pool:
+            rows = list(pool.map(_run_setpieces, [(name, s) for name in args.scenarios.split(",") for s in seeds],
+                                 chunksize=2))
+        print_setpieces(rows, ref)
+        return
     dump = {}
     with ProcessPoolExecutor() as pool:
         for name in args.scenarios.split(","):

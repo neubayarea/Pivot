@@ -84,9 +84,9 @@ def test_the_explainer_sees_the_match_state():
     assert request["match_state"]["after_window"]["score"] == "Rovers 2-1 Harbour"
 
 
-# --- the recorded demo (eval/fixtures/demo-1021.json, M-seed-41) ----------------------------
+# --- a frozen recorded match (eval/frozen/README.md: the demo before Ax44, M-seed-29) --------
 
-FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
+FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "frozen" / "m-seed-29-before-ax44.json"
 
 
 @pytest.fixture(scope="module")
