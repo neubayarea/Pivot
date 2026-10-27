@@ -83,5 +83,8 @@ describe("on the M-seed-29 demo match", () => {
     expect(html).toContain('aria-label="Replay: ');
     for (const r of RATES) expect(html).toContain(`${r}×`);
     expect(html).toContain("from 3 seconds before the kick");
+    // Ax57: marking and walls are shown again, so the how-to names the marker lines and the simulator note is gone.
+    expect(html).toContain("dashed lines join each attacker to their marker");
+    expect(html).not.toContain("does not yet line players up");
   });
 });

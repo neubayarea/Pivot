@@ -17,8 +17,8 @@
 //   marker. Three in five or more attackers marked reads "man", one in three or fewer "zonal", in
 //   between "mixed"; fewer than two attackers in the box is too few to say.
 // - A free kick's wall: two or more defenders WALL_NEAR–WALL_FAR metres from the ball, within
-//   WALL_DEG degrees of the line from the ball to the middle of the goal. Not 9.15 m: the simulator
-//   does not step its players back, so a "wall" here is whoever stands in the way.
+//   WALL_DEG degrees of the line from the ball to the middle of the goal. The simulator builds its
+//   wall 9.15 m off (Ax44, sim/setpieces.py); the wider band also catches a wall still settling.
 // Frames are one a second, so "the kick" is the last frame before it and a fast run can be a metre or
 // two from where the frame has him.
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";

@@ -46,7 +46,6 @@
 .sp-facts dd { margin: 0; }
 .sp-facts small { color: var(--pv-ink-2); }
 .sp-view > small, .clip > small { font-size: 12px; }
-.sp-view > .sp-sim { color: var(--pv-ink-2); font-style: italic; }
 
 .pitch .sp-box { fill: var(--pv-gold); fill-opacity: .14; stroke: none; }
 .pitch .sp-pair { stroke: var(--pv-ink); stroke-width: 2; stroke-dasharray: 4 3; }

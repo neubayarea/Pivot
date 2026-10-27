@@ -520,7 +520,6 @@ export const en = {
   "sp.then": "What happened",
   "sp.how": "Plays {from}–{to}: from 3 seconds before the kick to 3 seconds after the shot, clearance or lost ball that settled it (positions are recorded once a second; the dots glide in between). Shaded: the box being attacked. Until the kick, dashed lines join each attacker to their marker, as they stood a second before it. The result follows the next 15 seconds. Man-to-man means at least 3 in 5 attackers in the box had a defender within 2.5 m; zonal, 1 in 3 or fewer. Tap a dot to see who it is.",
   "sp.howPlain": "Plays {from}–{to}: from 3 seconds before the kick to 3 seconds after the shot, clearance or lost ball that settled it (positions are recorded once a second; the dots glide in between). Shaded: the box being attacked. The result follows the next 15 seconds. Tap a dot to see who it is.",
-  "sp.simNote": "Player positions come from the simulator, which does not yet line players up for set pieces, so marking and walls are not shown.",
   "shots.none": "No shots yet.",
   "shots.noneHere": "No shots of this kind.",
   "shots.filter": "Where the shot came from",

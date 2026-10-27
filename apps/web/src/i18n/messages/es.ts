@@ -521,7 +521,6 @@ export const es: Messages = {
   "sp.then": "Qué pasó",
   "sp.how": "Va de {from} a {to}: desde 3 segundos antes del saque hasta 3 segundos después del tiro, despeje o pérdida que lo decidió (las posiciones se registran una vez por segundo; los puntos se deslizan entre ellas). Sombreada: el área atacada. Hasta el saque, las líneas discontinuas unen a cada atacante con su marcador, según estaban un segundo antes. El resultado mira los 15 segundos siguientes. Al hombre: al menos 3 de cada 5 atacantes en el área tenían un defensor a 2,5 m o menos; zonal: 1 de cada 3 o menos. Toca un punto para ver quién es.",
   "sp.howPlain": "Va de {from} a {to}: desde 3 segundos antes del saque hasta 3 segundos después del tiro, despeje o pérdida que lo decidió (las posiciones se registran una vez por segundo; los puntos se deslizan entre ellas). Sombreada: el área atacada. El resultado mira los 15 segundos siguientes. Toca un punto para ver quién es.",
-  "sp.simNote": "Las posiciones vienen del simulador, que aún no coloca a los jugadores en las jugadas a balón parado, así que no se muestran el marcaje ni la barrera.",
   "shots.none": "Todavía no hay tiros.",
   "shots.noneHere": "No hay tiros de este tipo.",
   "shots.filter": "De dónde vino el tiro",
