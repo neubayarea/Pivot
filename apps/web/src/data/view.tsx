@@ -58,6 +58,13 @@ export type MatchView = {
   } | null;
 };
 
+/**
+ * The match is really being played now (QA round 4, #354): the live feed (no replay controls) or the
+ * hub's simulated live match on the wall clock (`goLive`). A finished match being replayed is not.
+ */
+export const onAir = (v: Pick<MatchView, "match" | "playback">) =>
+  ["live", "paused"].includes(v.match.status) && (!v.playback || !!v.playback.goLive);
+
 /** Why the live feed has no match to show yet; StartupScreen turns it into a message and a next step. */
 export type LoadProblem =
   | { kind: "no-matches" }

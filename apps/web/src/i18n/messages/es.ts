@@ -117,6 +117,7 @@ export const es: Messages = {
   "picker.seed": "partido {seed}",
   "picker.demo": "demo",
   "picker.next": "próxima jornada",
+  "picker.matchday": "J{n}",
   "picker.sample": "muestra",
   "picker.generating": "Generando partidos… {ready}/{total}",
 
@@ -199,7 +200,7 @@ export const es: Messages = {
   "moments.kickerDone": "Tras el partido: {home} {score} {away}",
   "moments.kickerLive": "{home} {score} {away}",
   "moments.title": "Los {n} momentos que cambiaron el rumbo de este partido",
-  "moments.titleLive": "{n} momentos han cambiado el rumbo del partido hasta ahora",
+  "moments.titleLive": "Momentos que han cambiado el rumbo del partido hasta ahora: {n}",
   "moments.lede": "Elige uno. La IA explica por qué importó, con cada cifra comprobada con los datos del partido, y puedes cambiar una decisión para ver si cambia el resultado.",
   "moments.open": "Abrir el momento {n}, {minute}′",
   "moments.cause": "Origen: {cause}",

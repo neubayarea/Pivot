@@ -116,6 +116,7 @@ export const en = {
   "picker.seed": "game {seed}",
   "picker.demo": "demo",
   "picker.next": "next round",
+  "picker.matchday": "MD{n}",
   "picker.sample": "sample",
   "picker.generating": "Generating matches… {ready}/{total}",
 
@@ -198,7 +199,7 @@ export const en = {
   "moments.kickerDone": "After the match: {home} {score} {away}",
   "moments.kickerLive": "{home} {score} {away}",
   "moments.title": "The {n} moments that changed the course of this match",
-  "moments.titleLive": "{n} moments have changed the course of this match so far",
+  "moments.titleLive": "Moments that have changed the course of this match so far: {n}",
   "moments.lede": "Pick one. The AI explains why it mattered, with every number checked against the match data, and you can change one decision to see if the result would change.",
   "moments.open": "Open moment {n}, {minute}′",
   "moments.cause": "Set off by {cause}",

@@ -7,6 +7,7 @@ import { MatchHead } from "./components/ScoreHeader";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import WatchPrompt from "./components/WatchPrompt";
+import { FollowClub, FollowClubOnHub } from "./data/followClub";
 import { MatchProvider, fixtureMode } from "./data/match";
 import { usePrefs } from "./i18n";
 import AgentTraces from "./pages/AgentTraces";
@@ -36,11 +37,13 @@ export default function App() {
   const [fixture] = useState(() => fixtureMode());
 
   // C14: `/` with no match in the link is the match centre; a match opens under it as before.
-  if (!fixture && isHubPage(pathname, search)) return <Hub />;
+  if (!fixture && isHubPage(pathname, search)) return <><FollowClubOnHub /><Hub /></>;
 
   return (
     <MatchProvider fallback={WAITING}>
       <KitColours />
+      {/* #354: the ♥ team is the club, whichever side it plays on. */}
+      <FollowClub />
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       {/* C13: asked once, on a first visit: fan or analyst. */}
       <WatchPrompt />
