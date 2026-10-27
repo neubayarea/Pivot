@@ -44,11 +44,11 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
   const goals = scorers(events, side, playerName, t, at);
   return (
     <div className={`mh-team ${side}${fav ? " fav" : ""}`} style={{ "--tc": team.color } as CSSProperties}>
-      <span className="mh-name">
+      <span className="mh-name" title={team.name}>
         <span className="mh-crest" aria-hidden="true" />
         <span className="tm-full">{team.name}</span>
         <span className="tm-short">{team.short_name}</span>
-        {fav && <span className="mh-fav" aria-label={t("top.team.label")}>♥</span>}
+        {fav && <span className="mh-fav" role="img" aria-label={t("top.team.label")}>♥</span>}
       </span>
       {goals.length > 0 && (
         <ul className="mh-goals" aria-label={t("header.scorers", { team: team.name })}>
@@ -76,7 +76,7 @@ export default function ScoreHeader({ prefs, onPrefsChange }: Props) {
       <div className="mh-score">
         <TeamSide side="home" fav={prefs.focus_team === "home"} />
         <div className="mh-mid">
-          <span className="mh-sc num" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
+          <span className="mh-sc num" role="img" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
             <span>{match.score.home}</span>
             <span className="mh-dash" aria-hidden="true">–</span>
             <span>{match.score.away}</span>

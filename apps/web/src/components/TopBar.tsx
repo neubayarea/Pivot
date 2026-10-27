@@ -8,7 +8,7 @@ import Segmented from "./Segmented";
 // Each language names itself, so a viewer who cannot read the current one still finds theirs.
 const LANGUAGES = [
   { value: "en", label: "EN" },
-  { value: "zh", label: "中文" },
+  { value: "zh", label: "中文", lang: "zh" },
   { value: "es", label: "ES" },
 ] as const;
 
