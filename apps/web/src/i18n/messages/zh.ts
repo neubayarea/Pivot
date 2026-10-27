@@ -19,8 +19,6 @@ export const zh: Messages = {
   "top.team": "球队：{team}",
   "top.player": "球员：{player}",
   "top.trace": "溯源 {n}",
-  "top.settings": "设置",
-  "top.settingsSet": "已选了球队或球员",
   "top.team.label": "主队",
   "top.team.short": "主队",
   "top.team.none": "不选主队",
@@ -556,4 +554,10 @@ export const zh: Messages = {
   "keys.clipHow.penalty": "{span}：犯规前 8 秒到判罚后 3 秒；如果随后罚进，接着放到进球后 3 秒，中间等着主罚的时间剪掉。",
   "keys.clipHow.var": "{span}：VAR 复核的那个进球、点球或红牌，按同样的规则剪，一直放到复核后 3 秒。",
   "keys.inMain": "在主回放中查看",
+
+  // Ax59 · match header
+  "header.label": "比分",
+  "header.controls": "观看方式",
+  "header.scorers": "{team} 进球",
+  "header.pen": "（点球）",
 };

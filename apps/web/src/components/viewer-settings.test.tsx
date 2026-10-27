@@ -13,7 +13,7 @@ import { DEMO_1021 } from "../fixtures/demo-1021";
 import { DEFAULT_PREFS, PrefsProvider, initialView, readSavedView, saveView, usePrefs } from "../i18n";
 import LiveBoard from "../pages/LiveBoard";
 import PivotDetail from "../pages/PivotDetail";
-import TopBar from "./TopBar";
+import ScoreHeader from "./ScoreHeader";
 import WhyItTurned, { nameMatcher } from "./WhyItTurned";
 
 type FakeStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -162,16 +162,16 @@ describe("what the page shows", () => {
     expect(render(<LiveBoard />)).toContain("打到危险区域的球");
   });
 
-  it("marks the viewer's team in the top bar and the stats", () => {
+  it("marks the viewer's team in the match header and the stats", () => {
     withWindow("?from=80&team=away");
-    const html = render(<><TopBar prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} onPrefsChange={() => {}} /><LiveBoard /></>);
-    expect(html).toMatch(/class="tm fav"><span class="tm-full">Northvale Rovers/);
+    const html = render(<><ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} onPrefsChange={() => {}} /><LiveBoard /></>);
+    expect(html).toMatch(/class="sh-team away fav"/);
     expect(html).toContain('class="r fav"');
   });
 
   it("puts the followed player in the picker", () => {
     withWindow("");
-    const html = render(<TopBar prefs={{ ...DEFAULT_PREFS, focus_player_id: "hcy-11" }} onPrefsChange={() => {}} />);
+    const html = render(<ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_player_id: "hcy-11" }} onPrefsChange={() => {}} />);
     expect(html).toContain("Moreau");
     expect(html).toContain("Player: A. Moreau");
   });

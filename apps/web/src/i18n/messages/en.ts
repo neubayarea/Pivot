@@ -18,8 +18,6 @@ export const en = {
   "top.team": "Team: {team}",
   "top.player": "Player: {player}",
   "top.trace": "Trace {n}",
-  "top.settings": "Settings",
-  "top.settingsSet": "A team or player is set",
   "top.team.label": "Your team",
   "top.team.short": "Team",
   "top.team.none": "No team",
@@ -557,4 +555,10 @@ export const en = {
   "keys.clipHow.penalty": "{span}: 8 s before the foul to 3 s after it; when the kick goes in, on to 3 s after the goal, with the wait for the kick cut out.",
   "keys.clipHow.var": "{span}: what VAR looked at, cut like a goal, penalty or red card, on to 3 s after the review.",
   "keys.inMain": "In the main replay",
+
+  // Ax59 · match header
+  "header.label": "Match score",
+  "header.controls": "How you watch",
+  "header.scorers": "{team} goals",
+  "header.pen": "(pen)",
 };

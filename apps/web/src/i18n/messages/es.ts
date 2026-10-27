@@ -19,8 +19,6 @@ export const es: Messages = {
   "top.team": "Equipo: {team}",
   "top.player": "Jugador: {player}",
   "top.trace": "Rastro {n}",
-  "top.settings": "Ajustes",
-  "top.settingsSet": "Hay un equipo o jugador elegido",
   "top.team.label": "Tu equipo",
   "top.team.short": "Equipo",
   "top.team.none": "Sin equipo",
@@ -558,4 +556,10 @@ export const es: Messages = {
   "keys.clipHow.penalty": "{span}: de 8 s antes de la falta a 3 s después; si el penalti entra, sigue hasta 3 s después del gol, sin la espera hasta el lanzamiento.",
   "keys.clipHow.var": "{span}: lo que revisó el VAR, cortado como un gol, un penalti o una roja, hasta 3 s después de la revisión.",
   "keys.inMain": "En la repetición principal",
+
+  // Ax59 · match header
+  "header.label": "Marcador",
+  "header.controls": "Cómo lo ves",
+  "header.scorers": "Goles de {team}",
+  "header.pen": "(p.)",
 };
