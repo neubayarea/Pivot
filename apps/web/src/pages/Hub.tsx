@@ -5,7 +5,7 @@ import Segmented from "../components/Segmented";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
 import {
-  byMatchday, clubGames, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubLive, type HubNext, type HubPrediction, type HubTeam,
+  byFixture, byMatchday, clubGames, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubLive, type HubNext, type HubPrediction, type HubTeam,
 } from "../data/hub";
 import { liveHref } from "../data/liveClock";
 import { useLang, usePrefs, useT } from "../i18n";
@@ -90,7 +90,7 @@ function LiveNow({ live, line, fav }: { live: HubLive; line: HubLine; fav: strin
         <p>
           {now.over
             ? t("hub.live.break", { n: left })
-            : now.lastPivot === null ? t("hub.live.noPivot") : t("hub.live.pivot", { minute: now.lastPivot + 1 })}
+            : now.lastPivot === null ? t("hub.live.noPivot") : t("hub.live.pivot", { minute: now.lastPivotLabel ?? "" })}
         </p>
         <Link to={href} className="btn pri">{t("hub.live.watch")}</Link>
       </div>
@@ -327,7 +327,17 @@ export default function Hub() {
               <div key={day ?? "other"} className="hub-day">
                 <h3>{day === null ? t("hub.matchday.none") : t("hub.matchday", { n: day })}</h3>
                 <ul>
-                  {lines.map((l) => <ResultRow key={l.match_id} line={l} fav={fav} fan={fan} />)}
+                  {byFixture(lines).map((group) => group.length === 1
+                    ? <ResultRow key={group[0].match_id} line={group[0]} fav={fav} fan={fan} />
+                    : (
+                      // The same fixture simulated more than once: one game with several runs, said so.
+                      <li key={group[0].match_id} className="hub-alt">
+                        <p className="hub-note">
+                          {t("hub.results.alt", { home: group[0].home.name, away: group[0].away.name, n: group.length })}
+                        </p>
+                        <ul>{group.map((l) => <ResultRow key={l.match_id} line={l} fav={fav} fan={fan} />)}</ul>
+                      </li>
+                    ))}
                 </ul>
               </div>
             ))}

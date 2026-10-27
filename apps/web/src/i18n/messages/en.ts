@@ -23,6 +23,7 @@ export const en = {
   "hub.live.break": "Full time. The next kick-off is in {n} min.",
   "hub.results.title": "Results",
   "hub.results.note": "{n} simulated matches",
+  "hub.results.alt": "{home} v {away}: the same game simulated {n} times, each with its own seed",
   "hub.matchday": "Matchday {n}",
   "hub.matchday.none": "Other matches",
   "hub.pivots": "Turning points: {n}",

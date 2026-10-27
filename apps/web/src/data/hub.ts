@@ -3,7 +3,7 @@
 // and latest turning point worked out in the browser every second from the wall clock.
 import { useEffect, useState } from "react";
 import type { Score } from "@pivot/contracts";
-import { minuteAt, type PeriodStart } from "./clock";
+import { minuteAt, minuteLabel, type PeriodStart } from "./clock";
 import { api } from "./live/api";
 import { liveClock } from "./liveClock";
 
@@ -87,7 +87,11 @@ export function useHub(): HubState {
 }
 
 /** The live match right now: its clock, score, minute label and the latest turning point it has reached. */
-export type LiveNow = { clock: number; over: boolean; score: { home: number; away: number }; minute: string; lastPivot: number | null };
+/** `lastPivotLabel`: the clock minute the pivot card shows ("75", "45+2"), not the elapsed one. */
+export type LiveNow = {
+  clock: number; over: boolean; score: { home: number; away: number }; minute: string; lastPivot: number | null;
+  lastPivotLabel: string | null;
+};
 
 export function liveNow(live: HubLive, nowMs = Date.now()): LiveNow {
   const clock = liveClock(live.length_s, nowMs);
@@ -97,7 +101,11 @@ export function liveNow(live: HubLive, nowMs = Date.now()): LiveNow {
   for (const g of live.goals) if (g.t <= t) score[g.team]++;
   // A turning point shows once its minute is over, as on the replay (data/live/replay.tsx).
   const reached = live.pivot_minutes.filter((m) => t >= (m + 1) * 60);
-  return { clock, over, score, minute: minuteAt(live.periods, t), lastPivot: reached.at(-1) ?? null };
+  const last = reached.at(-1) ?? null;
+  return {
+    clock, over, score, minute: minuteAt(live.periods, t), lastPivot: last,
+    lastPivotLabel: last === null ? null : minuteLabel(live.periods, last),
+  };
 }
 
 /** Ticks once a second, so the live card's clock moves. */
@@ -115,4 +123,15 @@ export function byMatchday(lines: HubLine[]): [number | null, HubLine[]][] {
   const groups = new Map<number | null, HubLine[]>();
   for (const l of lines) groups.set(l.matchday, [...(groups.get(l.matchday) ?? []), l]);
   return [...groups].sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : b - a));
+}
+
+/** A matchday's results with the same fixture played more than once (seed matches drawn onto the same
+ * matchday, QA round 4) kept together, in the order they came. */
+export function byFixture(lines: HubLine[]): HubLine[][] {
+  const groups = new Map<string, HubLine[]>();
+  for (const l of lines) {
+    const key = `${l.home.short_name}-${l.away.short_name}`;
+    groups.set(key, [...(groups.get(key) ?? []), l]);
+  }
+  return [...groups.values()];
 }

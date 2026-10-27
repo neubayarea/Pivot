@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { isHubPage } from "../pages/Hub";
-import { byMatchday, clubGames, liveNow, pinned, type HubLine, type HubLive } from "./hub";
+import { byFixture, byMatchday, clubGames, liveNow, pinned, type HubLine, type HubLive } from "./hub";
 import { TABS, tabFrom, tabOpen } from "./tab";
-import { LIVE_ANCHOR, LIVE_BREAK_S, boardHref, liveClock } from "./liveClock";
+import { LIVE_ANCHOR, LIVE_BREAK_S, boardHref, liveClock, msToKickoff } from "./liveClock";
 
 const at = (s: number) => (LIVE_ANCHOR + s) * 1000;
 
@@ -77,5 +77,29 @@ describe("the schedule (C15)", () => {
       { matchday: 32, fixtures: [fx("c", "GRE", "LUN"), fx("d", "HBC", "ROV")] },
     ];
     expect(clubGames(rounds, "HBC").map((g) => [g.round.matchday, g.fixture.match_id])).toEqual([[31, "a"], [32, "d"]]);
+  });
+});
+
+describe("QA round 4", () => {
+  it("names the latest pivot by the clock minute its card shows, not the elapsed one", () => {
+    // four minutes of first-half stoppage: elapsed minute 78 is 75′ on the clock
+    const live: HubLive = {
+      match_id: "M-seed-212", length_s: 96 * 60, periods: [{ period: 1, start_t: 0 }, { period: 2, start_t: 49 * 60 }],
+      goals: [], pivot_minutes: [78],
+    };
+    expect(liveNow(live, at(80 * 60))).toMatchObject({ lastPivot: 78, lastPivotLabel: "75" });
+  });
+
+  it("knows how long the break before the next kick-off still is", () => {
+    const length = 95 * 60;
+    expect(msToKickoff(length, at(600))).toBeNull();
+    expect(msToKickoff(length, at(length + 20))).toBe((LIVE_BREAK_S - 20) * 1000);
+  });
+
+  it("keeps the same fixture simulated twice on one matchday together", () => {
+    const team = (short_name: string) => ({ name: short_name, short_name, color: "#000000" });
+    const line = (match_id: string, h: string, a: string) => ({ match_id, home: team(h), away: team(a) }) as HubLine;
+    const groups = byFixture([line("a", "HBC", "ROV"), line("b", "LUN", "ELM"), line("c", "HBC", "ROV")]);
+    expect(groups.map((g) => g.map((l) => l.match_id))).toEqual([["a", "c"], ["b"]]);
   });
 });

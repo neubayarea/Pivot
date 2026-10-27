@@ -24,6 +24,7 @@ export const zh: Messages = {
   "hub.live.break": "全场结束，{n} 分钟后重新开球。",
   "hub.results.title": "已结束",
   "hub.results.note": "{n} 场模拟比赛",
+  "hub.results.alt": "{home} 对 {away}：同一场比赛用不同的随机种子模拟了 {n} 次",
   "hub.matchday": "第 {n} 轮",
   "hub.matchday.none": "其他比赛",
   "hub.pivots": "转折点：{n}",

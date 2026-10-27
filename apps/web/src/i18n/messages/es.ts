@@ -24,6 +24,7 @@ export const es: Messages = {
   "hub.live.break": "Final. El próximo saque inicial es en {n} min.",
   "hub.results.title": "Resultados",
   "hub.results.note": "{n} partidos simulados",
+  "hub.results.alt": "{home} contra {away}: el mismo partido simulado {n} veces, cada una con su propia semilla",
   "hub.matchday": "Jornada {n}",
   "hub.matchday.none": "Otros partidos",
   "hub.pivots": "Puntos de inflexión: {n}",
