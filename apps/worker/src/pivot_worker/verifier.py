@@ -20,6 +20,13 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
    any off-pitch story ("former club", "feud") cites one (D13)
 8. score: in pivot cards, words about the score ("equaliser", "extend the lead", "trailing") fit the
    real score before and after the goal they describe, or around the pivot (Dx8)
+9. people and minutes: in pivot cards, every player a sentence names takes part in an event it cites
+   (or in a context item it cites), no player id is written as a name ("H.06"), and every match minute
+   is the clock of an event it cites (#186: the pivot's own clock is not enough; 86' was written for
+   changes made at 78' and 84')
+10. momentum: with the pivot's `direction`, no sentence or headline gives the momentum to the other side (#187)
+11. stat meaning: a pressing stat whose fall means a harder press (PPDA, press distance) is not read the
+   other way round (#254)
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -192,7 +199,8 @@ def _stat_names(lang: str) -> dict[str, frozenset[str]]:
     """
     names: dict[str, set[str]] = {}
     for metric, term in STAT_TERMS.items():
-        for label in (term.label, term.fan_label, lang_rules.LABELS.get(lang, {}).get(metric, "")):
+        for label in (term.label, term.fan_label, lang_rules.LABELS.get(lang, {}).get(metric, ""),
+                      *lang_rules.STAT_NAMES.get(lang, {}).get(metric, ())):
             for part in re.split(r"[()]", label.lower()):                 # "expected goals (xG)"
                 part = re.sub(r"^(el|la|los|las) ", "", part.strip())     # "la amenaza creada"
                 if part:
@@ -414,6 +422,112 @@ def _card_problems(text: str, lang: str, cited: Iterable[MatchEvent]) -> list[st
     return [f"the card it cites is a {colour} card, so do not write '{found[0]}'."] if found else []
 
 
+def _say(metric: str, lang: str, fan: bool) -> str:
+    """What a sentence should call `metric` in this language and audience."""
+    if names := lang_rules.STAT_NAMES.get(lang, {}).get(metric):
+        return names[0]
+    if label := (lang_rules.FAN_LABELS if fan else lang_rules.LABELS).get(lang, {}).get(metric):
+        return label
+    term = STAT_TERMS[metric]
+    return term.fan_label if fan else term.label
+
+
+# Stats the writer mixes up (#208), with how to tell them apart in the retry message.
+_CONFUSED = {
+    frozenset({"threat_total", "momentum_avg"}): "threat created adds up how much danger the team's passes, carries "
+                                                 "and dribbles made; momentum is the -1 to 1 swing index from the chart",
+    frozenset({"field_tilt_pct", "possession_pct"}): "field tilt is the share of play in the attacking third; "
+                                                     "possession is the share of the ball",
+}
+
+
+def _name_forms(player_names: Mapping[str, str]) -> dict[str, set[str]]:
+    """Each way a sentence may write a player, the full name or the surname, with the ids it could be."""
+    forms: dict[str, set[str]] = {}
+    for pid, name in player_names.items():
+        for form in (name, name.split()[-1]):
+            if len(form) >= 3:
+                forms.setdefault(form, set()).add(pid)
+    return forms
+
+
+def _named_players(text: str, forms: Mapping[str, set[str]]) -> list[tuple[str, set[str]]]:
+    """(name as written, ids it could be) for every player `text` names; a surname inside a full name counts once.
+    Names stay in Latin letters in every language, so this works inside Chinese text too."""
+    found, taken = [], []
+    for form in sorted(forms, key=len, reverse=True):
+        for m in re.finditer(rf"(?<![A-Za-zÀ-ÿ]){re.escape(form)}(?![A-Za-zÀ-ÿ])", text):
+            if not any(a <= m.start() < b for a, b in taken):
+                taken.append((m.start(), m.end()))
+                found.append((form, forms[form]))
+    return found
+
+
+def _ids_written(text: str, player_names: Mapping[str, str]) -> list[tuple[str, str]]:
+    """Player ids written as if they were names ("H.06" for h06, #186), with the name they stand for."""
+    found = []
+    for pid, name in player_names.items():
+        parts = re.fullmatch(r"([A-Za-z]+)(\d+)", pid)
+        if parts and (m := re.search(rf"(?<![A-Za-z\d]){parts[1]}\.?{parts[2]}(?!\d)", text, re.IGNORECASE)):
+            found.append((m[0], name))
+    return found
+
+
+def _side_phrases(names: Mapping[str, str], lang: str) -> dict[str, str]:
+    """Phrases that stand for each side: its name, the words of its name the other side's lacks, "the home side"."""
+    phrases: dict[str, str] = {}
+    for side, name in names.items():
+        phrases[name] = side
+        other = {w.lower() for s, n in names.items() if s != side for w in n.split()}
+        for word in name.split():
+            if len(word) >= 5 and word.lower() not in other:
+                phrases.setdefault(word, side)
+    for side, words in lang_rules.SIDE_WORDS.get(lang, {}).items():
+        for w in words:
+            phrases.setdefault(w, side)
+    return phrases
+
+
+def _momentum_sides(text: str, lang: str, phrases: Mapping[str, str]) -> list[tuple[str, str]]:
+    """(side, words) for every phrase in `text` that gives the momentum to a side (#187): "momentum swung to X",
+    "X seized the momentum", or the other side for "away from X" and "X lost the momentum"."""
+    if not phrases:
+        return []
+    alternation = "|".join(sorted(map(re.escape, phrases), key=len, reverse=True))
+    lookup = {p.lower(): side for p, side in phrases.items()}
+    other = {"home": "away", "away": "home"}
+    found = []
+    for patterns, flip in ((lang_rules.MOMENTUM_GAIN.get(lang, ()), False), (lang_rules.MOMENTUM_LOSE.get(lang, ()), True)):
+        for pattern in patterns:
+            for m in re.finditer(pattern.replace("{T}", alternation), text, re.IGNORECASE):
+                if side := lookup.get(m["t"].lower()):
+                    found.append((other[side] if flip else side, m[0].strip()))
+    return found
+
+
+def _press_problems(text: str, lang: str, claims: Sequence[Claim], fan: bool) -> list[str]:
+    """A pressing stat read the wrong way round (#254): a lower PPDA or press distance is a more intense press."""
+    by_stat: dict[tuple, list[Claim]] = {}
+    for c in claims:
+        if c.stat_ref.metric in lang_rules.PRESS_INVERTED:
+            by_stat.setdefault(_key(c), []).append(c)
+    problems = []
+    for group in by_stat.values():
+        group = sorted(group, key=lambda c: c.stat_ref.window)
+        for a, b in zip(group, group[1:]):
+            if a.stat_ref.window == b.stat_ref.window or a.value == b.value:
+                continue
+            label = _say(a.stat_ref.metric, lang, fan)
+            fell = b.value < a.value
+            wrong = _has_word(text, (lang_rules.PRESS_LESS if fell else lang_rules.PRESS_MORE).get(lang, ()))
+            if wrong:
+                moved, meaning = ("fell", "more intense") if fell else ("rose", "looser")
+                problems.append(f"{label} {moved} from {a.value:g} to {b.value:g}; a {'lower' if fell else 'higher'} "
+                                f"{label} means a {meaning} press, so '{wrong[0]}' reads it the wrong way round. "
+                                f"Say the press got {'tighter' if fell else 'looser'}.")
+    return problems
+
+
 def verify(
     narrative: Narrative,
     *,
@@ -427,6 +541,8 @@ def verify(
     team_names: Mapping[str, str] | None = None,
     max_sentences: int = 3,
     replays: Replays | None = None,
+    player_names: Mapping[str, str] | None = None,
+    direction: str | None = None,
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
 
@@ -438,6 +554,8 @@ def verify(
     `allowed_evidence`, when given, replaces the minute window: only those ids may be cited.
     `context` is the match-context items the writer was shown (`explainer.shown_context`).
     `team_names` ("home"/"away" to display names) let the number check see which team a number is about.
+    `player_names` (player id to name) turns on the check that named players are in the cited events (#186);
+    `direction` ("home"/"away", the side the pivot swung towards) the check on momentum words (#187).
     """
     issues: list[VerifierIssue] = []
 
@@ -495,6 +613,16 @@ def verify(
     for problem in _card_problems(narrative.headline, lang, cited):
         issue("evidence_invalid", f"Headline: {problem}")
     any_significant = bool(significant) and any(significant.values())
+    forms = _name_forms(player_names or {})
+    momentum_phrases = _side_phrases(names, lang) if direction else {}
+    if score_check and forms:
+        everyone = set().union(*(involved_in(e) for e in cited))
+        everyone |= {p for s in narrative.sentences for cid in s.context_ids if cid in shown
+                     for p in shown[cid].subject_ids}
+        for written, ids in _named_players(narrative.headline, forms):
+            if not ids & everyone:
+                issue("evidence_invalid", f"The headline names {written}, who is in none of the events the card "
+                      "cites; name only players from the cited events.")
     nothing_to_cite = not any(lo <= e.minute <= hi for e in events.values()) if allowed_evidence is None else False
 
     for i, s in enumerate(narrative.sentences):
@@ -587,8 +715,17 @@ def verify(
                     ([f"on {' or '.join(sorted(named_stats))}"] if named_stats else [])
                 claimed = ", ".join(f"{c.stat_ref.metric} for {names.get(c.stat_ref.team, c.stat_ref.team)}"
                                     for c in same)
-                issue("number_mismatch", f"The number {n} in sentence {i + 1} only matches {claimed}, but the "
-                      f"sentence has it {' and '.join(said)}; cite the claim for what the sentence says.", i)
+                real = same[0].stat_ref.metric
+                if named_stats and not any(c.stat_ref.metric in named_stats for c in same):
+                    # The writer named another stat (#208): say what the number is and what to write instead.
+                    wrong = sorted(named_stats)[0]
+                    hint = _CONFUSED.get(frozenset({real, wrong}))
+                    issue("number_mismatch", f"The number {n} in sentence {i + 1} is {_say(real, lang, fan)} "
+                          f"(`{real}`), not {_say(wrong, lang, fan)} (`{wrong}`): call it "
+                          f"'{_say(real, lang, fan)}', or drop the number." + (f" ({hint}.)" if hint else ""), i)
+                else:
+                    issue("number_mismatch", f"The number {n} in sentence {i + 1} only matches {claimed}, but the "
+                          f"sentence has it {' and '.join(said)}; cite the claim for what the sentence says.", i)
         if fan and len(numbers) > 1:
             issue("number_mismatch", f"Sentence {i + 1} has {len(numbers)} numbers; fan versions use at most one "
                   "number per sentence (keep both claims, write only the newer value).", i)
@@ -678,9 +815,44 @@ def verify(
             issue("context_invalid", f"'{story[0]}' tells an off-pitch story; cite the match-context item it "
                   "comes from, or drop it.", i)
 
+        # 9. People and minutes (#186): in pivot cards, named players are in the cited events and minutes are theirs.
+        if score_check:
+            here = [events[e] for e in s.evidence_ids if e in events]
+            clocks = {e.clock_label.rstrip("'") for e in here}
+            for written in lang_rules.minutes_in(s.text):
+                if written not in clocks:
+                    at = ", ".join(f"{c}'" for c in sorted({e.clock_label.rstrip("'") for e in here})) or "no minute"
+                    issue("evidence_invalid", f"Sentence {i + 1} says {written}', but the events it cites are at {at}; "
+                          f"write their minutes, or cite the event at {written}'.", i)
+            if forms:
+                allowed = people | {p for cid in s.context_ids if cid in shown for p in shown[cid].subject_ids}
+                in_events = ", ".join(dict.fromkeys(player_names[p] for p in people if p in player_names))
+                for written, ids in _named_players(s.text, forms):
+                    if not ids & allowed:
+                        issue("evidence_invalid", f"Sentence {i + 1} names {written}, who is not in the events it "
+                              f"cites ({in_events or 'no named player'}); name only the players in those events, "
+                              f"or cite an event {written} took part in.", i)
+                for written, name in _ids_written(s.text, player_names):
+                    issue("evidence_invalid", f"Sentence {i + 1} writes '{written}', a player id; write the "
+                          f"player's name ({name}) instead.", i)
+
+        # 11. Stat meaning (#254): a fall in PPDA is a harder press, not a softer one.
+        for problem in _press_problems(s.text, lang, s.claims, fan):
+            issue("direction_mismatch", f"Sentence {i + 1}: {problem}", i)
+
         # 8. Score words.
         if score_check:
             for problem in _score_problems(s.text, lang, goals, s.evidence_ids, (lo, hi), sides):
                 issue("number_mismatch", f"Sentence {i + 1}: {problem}", i)
+
+    # 10. Momentum (#187): the card must not give the momentum to the side the pivot swung away from.
+    if direction in ("home", "away") and momentum_phrases:
+        towards = names.get(direction, direction)
+        for i, text in [(None, narrative.headline), *enumerate(s.text for s in narrative.sentences)]:
+            wrong = next((words for side, words in _momentum_sides(text, lang, momentum_phrases) if side != direction), None)
+            if wrong:
+                where = "The headline" if i is None else f"Sentence {i + 1}"
+                issue("direction_mismatch", f"{where} says '{wrong}', but at this pivot the momentum went to "
+                      f"{towards}; write that it swung towards {towards}.", i)
 
     return Verdict(passed=not issues, issues=issues)

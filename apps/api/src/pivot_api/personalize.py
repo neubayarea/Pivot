@@ -44,7 +44,7 @@ from pivot_core.domain import Narrative, Pivot, PivotCandidate, Verdict, Verifie
 from pivot_core.ports import MatchRepository
 from pivot_worker import explainer
 from pivot_worker.detect import EXPLAINER_TIMEOUT, MatchView, StatsFactory, load_view, match_stats, with_computed
-from pivot_worker.languages import INSTRUCTIONS, MAX_HEADLINE, wrong_script
+from pivot_worker.languages import GLOSSARY, INSTRUCTIONS, MAX_HEADLINE, wrong_script
 from pivot_worker.models import ModelClient, ModelUnavailable, model_client_from_env
 from pivot_worker.template import template_explain
 from pivot_worker.verifier import verify
@@ -63,7 +63,9 @@ Return JSON only: {{"headline": "...", "sentences": ["...", ...]}}, one translat
 in the same order. Translate the meaning faithfully and naturally for a {audience}; add nothing and drop nothing.
 Keep every number exactly as written, with the same digits (no number words), and minutes as 61'.
 Keep team and player names exactly as given, in their original Latin spelling.
-The headline has no digits and at most {headline} {unit}. {instruction}"""
+The headline has no digits and at most {headline} {unit}. {instruction}
+Stat names have fixed translations; use these and never swap one stat for another:
+{glossary}"""
 
 
 @dataclass(frozen=True)
@@ -273,7 +275,7 @@ class Personalizer:
     def _verify(self, narrative: Narrative, candidate: PivotCandidate, view: MatchView) -> Verdict:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
                       context=explainer.shown_context(candidate, view.events, view.context),
-                      team_names=view.team_names)
+                      team_names=view.team_names, player_names=view.player_names, direction=candidate.direction)
 
 
 def translation_messages(source: Narrative, prefs: ViewerPrefs) -> list[dict[str, str]]:
@@ -281,7 +283,8 @@ def translation_messages(source: Narrative, prefs: ViewerPrefs) -> list[dict[str
     lang = prefs.language
     system = TRANSLATE_PROMPT.format(
         language=LANGUAGE_NAMES[lang], audience="football fan" if prefs.audience == "fan" else "match analyst",
-        headline=MAX_HEADLINE[lang], unit="characters" if lang == "zh" else "words", instruction=INSTRUCTIONS[lang])
+        headline=MAX_HEADLINE[lang], unit="characters" if lang == "zh" else "words", instruction=INSTRUCTIONS[lang],
+        glossary="\n".join(f"- {en}: {there}" for en, there in GLOSSARY.get(lang, {}).items()))
     user = json.dumps({"headline": source.headline, "sentences": [s.text for s in source.sentences]},
                       ensure_ascii=False)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

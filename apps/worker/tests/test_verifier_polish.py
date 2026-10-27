@@ -56,15 +56,15 @@ def test_no_evidence_is_only_for_template_sentences_without_numbers_when_nothing
 
 # 2. Match minutes written as words or ordinals are not claims; wrong stats still fail.
 @pytest.mark.parametrize("lang,text", [
-    ("en", "Okafor came on in the 61st and final-third passes rose from 3 to 9."),
-    ("en", "Okafor came on at minute 61 and final-third passes rose from 3 to 9."),
-    ("en", "In the 61st minute, final-third passes rose from 3 to 9."),
-    ("en", "At the 63rd minute Rovers' final-third passes had risen from 3 to 9."),
-    ("en", "After minute 61, final-third passes rose from 3 to 9."),
-    ("es", "Okafor entró en el 61 y los pases al último tercio de Rovers subieron de 3 a 9."),
-    ("es", "Desde el minuto 61, los pases al último tercio de Rovers subieron de 3 a 9."),
-    ("es", "En el minuto 63 los pases al último tercio de Rovers ya habían subido de 3 a 9."),
-    ("zh", "第63分钟，Rovers的前场传球从3上升到9。"),
+    ("en", "Okafor came on in the 62nd and final-third passes rose from 3 to 9."),
+    ("en", "Okafor came on at minute 62 and final-third passes rose from 3 to 9."),
+    ("en", "In the 62nd minute, final-third passes rose from 3 to 9."),
+    ("en", "At the 62nd minute Rovers' final-third passes had risen from 3 to 9."),
+    ("en", "After minute 62, final-third passes rose from 3 to 9."),
+    ("es", "Okafor entró en el 62 y los pases al último tercio de Rovers subieron de 3 a 9."),
+    ("es", "Desde el minuto 62, los pases al último tercio de Rovers subieron de 3 a 9."),
+    ("es", "En el minuto 62 los pases al último tercio de Rovers ya habían subido de 3 a 9."),
+    ("zh", "第62分钟，Rovers的前场传球从3上升到9。"),
 ])
 def test_minutes_in_words_are_not_claims(events, stats, lang, text):
     assert codes(card(text, RISE, lang), events, stats) == []

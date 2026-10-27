@@ -25,7 +25,7 @@ def check(narrative, events, stats, **kw):
     return verify(narrative, pivot_minute=PIVOT, events=events, stats=stats, **kw)
 
 
-GOOD = s("Okafor came on at 61' and final-third passes rose from 3 to 9 in the next five minutes.",
+GOOD = s("Okafor came on at 62' and final-third passes rose from 3 to 9 in the next five minutes.",
          claims=[claim("passes_final_third", "home", (56, 61), 3), claim("passes_final_third", "home", (61, 66), 9)])
 
 
@@ -213,7 +213,7 @@ def test_digits_in_a_team_name_are_not_numbers(events, stats):
 
 
 def test_likelihood_words_are_not_direction_words_on_pivot_cards(events, stats):
-    text = s("After Okafor came on at 61', Harbour City looked more likely to score.")
+    text = s("After Okafor came on at 62', Harbour City looked more likely to score.")
     assert check(card(text), events, stats).passed
 
 
@@ -224,20 +224,20 @@ SENT_OFF = event("m063-s01030", 60, "card", team="away",
 
 
 @pytest.mark.parametrize("lang,text,ok", [
-    ("en", "Harbour were down to ten men after the red card at 60'.", True),
-    ("en", "Rovers pressed the 10-man Harbour side after 60'.", True),
-    ("en", "Harbour, with 10 players, sat deep after 60'.", True),
-    ("en", "Rovers' eleven men pinned Harbour back after 60'.", True),
-    ("en", "Harbour were down to nine men after the red card at 60'.", False),
-    ("en", "Harbour dropped to ten men after the red card at 60'.", True),
-    ("en", "Harbour fell to just 10 players after 60'.", True),
-    ("en", "Harbour dropped to nine men after the red card at 60'.", False),
-    ("es", "Harbour se redujo a diez jugadores tras la roja del 60'.", True),
-    ("zh", "第60分钟红牌后，Harbour降至十人。", True),
-    ("es", "Harbour se quedó con diez jugadores tras la roja del 60'.", True),
-    ("es", "Harbour se quedó con nueve jugadores tras la roja del 60'.", False),
-    ("zh", "第60分钟红牌后，Harbour只剩10人。", True),
-    ("zh", "第60分钟红牌后，Harbour只剩9名球员。", False),
+    ("en", "Harbour were down to ten men after the red card at 61'.", True),
+    ("en", "Rovers pressed the 10-man Harbour side after 61'.", True),
+    ("en", "Harbour, with 10 players, sat deep after 61'.", True),
+    ("en", "Rovers' eleven men pinned Harbour back after 61'.", True),
+    ("en", "Harbour were down to nine men after the red card at 61'.", False),
+    ("en", "Harbour dropped to ten men after the red card at 61'.", True),
+    ("en", "Harbour fell to just 10 players after 61'.", True),
+    ("en", "Harbour dropped to nine men after the red card at 61'.", False),
+    ("es", "Harbour se redujo a diez jugadores tras la roja del 61'.", True),
+    ("zh", "第61分钟红牌后，Harbour降至十人。", True),
+    ("es", "Harbour se quedó con diez jugadores tras la roja del 61'.", True),
+    ("es", "Harbour se quedó con nueve jugadores tras la roja del 61'.", False),
+    ("zh", "第61分钟红牌后，Harbour只剩10人。", True),
+    ("zh", "第61分钟红牌后，Harbour只剩9名球员。", False),
 ])
 def test_players_on_the_pitch_must_fit_the_red_cards(events, stats, lang, text, ok):
     evs = {**events, SENT_OFF.event_id: SENT_OFF}
@@ -249,7 +249,7 @@ def test_players_on_the_pitch_must_fit_the_red_cards(events, stats, lang, text, 
 
 def test_ten_men_before_the_red_card_is_wrong(events, stats):
     late = SENT_OFF.model_copy(update={"t": 64 * 60 + 10, "period_t": 64 * 60 + 10 - 2700})
-    early = card(s("Harbour already had ten men at 61'.", evidence=["m063-s01042"]))
+    early = card(s("Harbour already had ten men at 62'.", evidence=["m063-s01042"]))
     assert codes(check(early, {**events, late.event_id: late}, stats)) == ["number_mismatch"]
 
 
@@ -262,15 +262,15 @@ SECOND = event("m063-s01032", 60, "card", team="away",
 
 
 @pytest.mark.parametrize("lang,text,cited,ok", [
-    ("en", "Lisais was booked at 60', leaving Harbour with ten men.", SENT_OFF, False),
-    ("en", "Lisais was sent off at 60', leaving Harbour with ten men.", SENT_OFF, True),
-    ("zh", "E. Lisais在60'被黄牌罚下，Harbour只剩十人。", SENT_OFF, False),
-    ("zh", "E. Lisais在60'被红牌罚下，Harbour只剩十人。", SENT_OFF, True),
-    ("es", "Lisais vio la amarilla en el 60' y Harbour se quedó con diez jugadores.", SENT_OFF, False),
-    ("es", "Lisais fue expulsado en el 60' y Harbour se quedó con diez jugadores.", SENT_OFF, True),
-    ("en", "Lisais was sent off at 60'.", BOOKED, False),
-    ("en", "Lisais was booked at 60'.", BOOKED, True),
-    ("en", "Lisais was booked again and sent off at 60'.", SECOND, True),
+    ("en", "Lisais was booked at 61', leaving Harbour with ten men.", SENT_OFF, False),
+    ("en", "Lisais was sent off at 61', leaving Harbour with ten men.", SENT_OFF, True),
+    ("zh", "E. Lisais在61'被黄牌罚下，Harbour只剩十人。", SENT_OFF, False),
+    ("zh", "E. Lisais在61'被红牌罚下，Harbour只剩十人。", SENT_OFF, True),
+    ("es", "Lisais vio la amarilla en el 61' y Harbour se quedó con diez jugadores.", SENT_OFF, False),
+    ("es", "Lisais fue expulsado en el 61' y Harbour se quedó con diez jugadores.", SENT_OFF, True),
+    ("en", "Lisais was sent off at 61'.", BOOKED, False),
+    ("en", "Lisais was booked at 61'.", BOOKED, True),
+    ("en", "Lisais was booked again and sent off at 61'.", SECOND, True),
 ])
 def test_a_card_is_named_in_its_colour(events, stats, lang, text, cited, ok):
     evs = {**events, cited.event_id: cited}
@@ -283,11 +283,11 @@ def test_a_card_is_named_in_its_colour(events, stats, lang, text, cited, ok):
 
 def test_a_headline_calling_a_red_card_a_booking_is_wrong(events, stats):
     evs = {**events, SENT_OFF.event_id: SENT_OFF}
-    narrative = card(s("Harbour lost a man at 60'.", evidence=[SENT_OFF.event_id]), headline="Lisais booking flips it")
+    narrative = card(s("Harbour lost a man at 61'.", evidence=[SENT_OFF.event_id]), headline="Lisais booking flips it")
     assert codes(check(narrative, evs, stats)) == ["evidence_invalid"]
 
 
 def test_a_direction_word_about_a_stat_still_needs_its_claims(events, stats):
     evs = {**events, SENT_OFF.event_id: SENT_OFF}
-    text = s("With ten men after 60', Harbour's passing dropped.", evidence=[SENT_OFF.event_id])
+    text = s("With ten men after 61', Harbour's passing dropped.", evidence=[SENT_OFF.event_id])
     assert codes(check(card(text), evs, stats)) == ["direction_mismatch"]

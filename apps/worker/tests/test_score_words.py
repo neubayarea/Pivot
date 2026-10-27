@@ -47,9 +47,9 @@ def test_m505_extend_the_lead_passes():
 
 
 @pytest.mark.parametrize("text", [
-    "Northgate Rovers pulled level at 65'.",
-    "Harbour City took the lead again at 67'.",
-    "Harbour City completed a comeback at 67'.",
+    "Northgate Rovers pulled level at 66'.",
+    "Harbour City took the lead again at 68'.",
+    "Harbour City completed a comeback at 68'.",
     "Harbour City were trailing before the substitution.",
 ])
 def test_m505_wrong_score_stories_are_rejected(text):
@@ -58,7 +58,7 @@ def test_m505_wrong_score_stories_are_rejected(text):
 
 
 @pytest.mark.parametrize("text", [
-    "Northgate Rovers pulled one back at 65', so Harbour City were protecting their lead.",
+    "Northgate Rovers pulled one back at 66', so Harbour City were protecting their lead.",
     "Northgate Rovers were trailing, but kept chasing an equaliser.",
     "Harbour City sat on their lead and it nearly cost them.",
 ])
