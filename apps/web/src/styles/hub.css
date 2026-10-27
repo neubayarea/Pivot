@@ -45,3 +45,32 @@
   .hub-row .hub-meta, .hub-row .hub-you { grid-column: 1 / -1; text-align: left; }
   .hub-live-goals { font-size: var(--pv-fs-3xl); }
 }
+
+/* Next round (PR 2): each fixture with its prediction bar between the two names. */
+.hub-next { display: grid; gap: var(--pv-s4); }
+.hub-fx { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 1.3fr) minmax(0, 1fr) 260px; align-items: center; gap: var(--pv-s4);
+  padding: var(--pv-s3) var(--pv-s2); text-decoration: none; color: inherit; border-radius: var(--pv-r-ctl); }
+.hub-fx .hub-team:first-child { justify-content: flex-end; }
+.hub-pred { display: grid; gap: var(--pv-s1); }
+.hub-bar { display: flex; height: 24px; border-radius: var(--pv-r-pill); overflow: hidden; gap: 2px; }
+.hub-bar > span { display: flex; align-items: center; justify-content: center; min-width: 4px; font-size: var(--pv-fs-xs); font-weight: 700; }
+.hub-bar-home_win, .hub-bar-away_win { background: var(--kit); color: var(--pv-on-team); }
+.hub-bar-draw { background: var(--pv-draw); color: var(--pv-ink); }
+.hub-ranges { display: flex; justify-content: space-between; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
+.hub-facts { display: flex; gap: var(--pv-s5); margin: 0; }
+.hub-facts dt { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
+.hub-facts dd { margin: 0; font-weight: 700; }
+.hub-facts small { font-weight: 500; color: var(--pv-ink-2); }
+.hub-next li + li { border-top: 1px solid var(--pv-hair); }
+.hub-fx:hover { background: var(--pv-sunk); }
+@media (prefers-reduced-motion: no-preference) {
+  .hub-fx { transition: background-color 150ms; }
+}
+@media (max-width: 960px) {
+  .hub-fx { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
+  .hub-fx .hub-facts { grid-column: 1 / -1; }
+}
+
+/* A match before kick-off (MatchTabs): the tabs with nothing to show yet are greyed out. */
+.tabs [role="tab"].tab-off { opacity: .45; cursor: not-allowed; }
+.tabs [role="tab"].tab-off:hover { color: var(--pv-ink-2); border-bottom-color: transparent; }

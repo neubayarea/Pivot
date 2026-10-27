@@ -38,6 +38,20 @@ export const en = {
   "hub.failed.title": "No matches to show",
   "hub.failed": "The matches could not be loaded. Is the API running?",
   "hub.generating": "More simulated matches are still being generated.",
+  "hub.next.title": "Next round",
+  "hub.next.note": "Matchday {n}: each game played {runs} times from kick-off by the simulator",
+  "hub.next.noPrediction": "No prediction yet",
+  "hub.next.open": "{home} v {away}: open the preview",
+  "hub.pred.label": "{home} win {h}%, draw {d}%, {away} win {a}%",
+  "hub.pred.range": "{lo}–{hi}%",
+  "hub.pred.say": "Prediction",
+  "hub.pred.fav": "{team} are favourites",
+  "hub.pred.close": "Too close to call",
+  "hub.pred.score": "Likeliest score",
+  "hub.pred.scoreFan": "Most likely score",
+  "hub.pred.share": "({n}%)",
+  "hub.pred.xg": "Expected goals",
+  "tabs.notYet": "Not played yet",
 
   // Match pictures (Bx12): components/viz
   "viz.attacks": "Attacking this way →",
@@ -101,6 +115,7 @@ export const en = {
   "picker.label": "Match",
   "picker.seed": "game {seed}",
   "picker.demo": "demo",
+  "picker.next": "next round",
   "picker.sample": "sample",
   "picker.generating": "Generating matches… {ready}/{total}",
 

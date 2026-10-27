@@ -14,6 +14,7 @@ from pivot_worker.models import model_client_from_env
 
 from .demo import seed_demo
 from .hub import router as hub_router
+from .nextround import load_next_round
 from .personalize import personalizer_from_env
 from .pictures import router as pictures_router
 from .players import router as players_router
@@ -88,6 +89,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         tasks.append(asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims,
                                               store=build_sim_store()),
                                          name="sims"))
+    # The next round (C14): matchday 31's fixtures, not played yet, with predictions worked out ahead of time.
+    app.state.next_round = None
+    if app.state.adapters.profile == "local" and os.getenv("PIVOT_NEXT_ROUND", "1") != "0":
+        try:
+            await load_next_round(app.state)
+        except (OSError, ValueError, KeyError):
+            log.exception("could not load the next round")
     # What-if replays (A09): one at a time in the background; the recorded demo's chips run first.
     app.state.whatif = WhatIf.from_env(app.state.adapters, replays, model_client_from_env())
     app.state.whatif.precomputed.update(precomputed)

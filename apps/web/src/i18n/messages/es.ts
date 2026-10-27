@@ -39,6 +39,20 @@ export const es: Messages = {
   "hub.failed.title": "No hay partidos que mostrar",
   "hub.failed": "No se pudieron cargar los partidos. ¿Está en marcha la API?",
   "hub.generating": "Aún se están generando partidos simulados.",
+  "hub.next.title": "Próxima jornada",
+  "hub.next.note": "Jornada {n}: cada partido jugado {runs} veces desde el inicio por el simulador",
+  "hub.next.noPrediction": "Aún sin predicción",
+  "hub.next.open": "{home} contra {away}: abrir la previa",
+  "hub.pred.label": "Gana {home} {h}%, empate {d}%, gana {away} {a}%",
+  "hub.pred.range": "{lo}–{hi}%",
+  "hub.pred.say": "Predicción",
+  "hub.pred.fav": "{team} parte como favorito",
+  "hub.pred.close": "Muy igualado",
+  "hub.pred.score": "Resultado más probable",
+  "hub.pred.scoreFan": "Resultado más probable",
+  "hub.pred.share": "({n}%)",
+  "hub.pred.xg": "Goles esperados",
+  "tabs.notYet": "Aún no se ha jugado",
 
   // Match pictures (Bx12): components/viz
   "viz.attacks": "Ataca hacia aquí →",
@@ -102,6 +116,7 @@ export const es: Messages = {
   "picker.label": "Partido",
   "picker.seed": "partido {seed}",
   "picker.demo": "demo",
+  "picker.next": "próxima jornada",
   "picker.sample": "muestra",
   "picker.generating": "Generando partidos… {ready}/{total}",
 

@@ -31,7 +31,28 @@ export type HubLive = {
   pivot_minutes: number[];
 };
 
-export type HubData = { matches: HubLine[]; live: HubLive | null; generating: boolean };
+/** A pre-match prediction (C14 PR 2): the fixture played 200 times from kick-off, nothing changed. */
+export type HubPrediction = {
+  n_runs: number;
+  home_win: number;
+  draw: number;
+  away_win: number;
+  ci95: Record<"home_win" | "draw" | "away_win", [number, number]>;
+  scorelines: { home: number; away: number; share: number }[];
+  xg: { home: number; away: number };
+  goals: { home: number; away: number };
+};
+
+export type HubFixture = { match_id: string; home: HubTeam; away: HubTeam; venue: string; prediction: HubPrediction | null };
+
+export type HubNext = { matchday: number; fixtures: HubFixture[] };
+
+export type HubData = { matches: HubLine[]; live: HubLive | null; generating: boolean; next: HubNext | null };
+
+/** The viewer's club's games first, the rest in the round's order. */
+export const pinned = <T extends { home: HubTeam; away: HubTeam }>(items: T[], fav: string | null) =>
+  fav ? [...items].sort((a, b) => Number(![a.home.short_name, a.away.short_name].includes(fav))
+    - Number(![b.home.short_name, b.away.short_name].includes(fav))) : items;
 
 export type HubState = { data: HubData | null; failed: boolean };
 

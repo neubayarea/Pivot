@@ -4,7 +4,9 @@ import type { ViewerPrefs } from "@pivot/contracts";
 import Segmented from "../components/Segmented";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
-import { byMatchday, liveNow, useHub, useNow, type HubLine, type HubLive, type HubTeam } from "../data/hub";
+import {
+  byMatchday, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubLive, type HubNext, type HubPrediction, type HubTeam,
+} from "../data/hub";
 import { liveHref } from "../data/liveClock";
 import { usePrefs, useT } from "../i18n";
 import "../styles/hub.css";
@@ -138,6 +140,84 @@ function ResultRow({ line, fav, fan }: { line: HubLine; fav: string | null; fan:
   );
 }
 
+const pct = (x: number) => Math.round(x * 100);
+
+/** Win / draw / win as one bar in the two kits, the share in each part, its 95 % range under it (analysts). */
+function PredictionBar({ p, home, away, fan }: { p: HubPrediction; home: HubTeam; away: HubTeam; fan: boolean }) {
+  const t = useT();
+  const parts = [
+    { key: "home_win", share: p.home_win, style: { "--kit": home.color } as CSSProperties },
+    { key: "draw", share: p.draw, style: undefined },
+    { key: "away_win", share: p.away_win, style: { "--kit": away.color } as CSSProperties },
+  ] as const;
+  const label = t("hub.pred.label", { home: home.name, away: away.name, h: pct(p.home_win), d: pct(p.draw), a: pct(p.away_win) });
+  return (
+    <div className="hub-pred">
+      <div className="hub-bar" role="img" aria-label={label}>
+        {parts.map((x) => (
+          <span key={x.key} className={`hub-bar-${x.key}`} style={{ ...x.style, flexGrow: Math.max(x.share, 0.001) }}>
+            {x.share >= 0.12 && <span className="num">{pct(x.share)}%</span>}
+          </span>
+        ))}
+      </div>
+      {!fan && (
+        <div className="hub-ranges num" aria-hidden="true">
+          {parts.map((x) => <span key={x.key}>{t("hub.pred.range", { lo: pct(p.ci95[x.key][0]), hi: pct(p.ci95[x.key][1]) })}</span>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function verdictLine(p: HubPrediction, f: HubFixture, t: ReturnType<typeof useT>): string {
+  const lead = p.home_win - p.away_win;
+  if (Math.abs(lead) < 0.1) return t("hub.pred.close");
+  return t("hub.pred.fav", { team: (lead > 0 ? f.home : f.away).name });
+}
+
+function FixtureRow({ f, fav, fan }: { f: HubFixture; fav: string | null; fan: boolean }) {
+  const t = useT();
+  const p = f.prediction;
+  const top = p?.scorelines[0];
+  const mine = fav !== null && [f.home.short_name, f.away.short_name].includes(fav);
+  return (
+    <li className={mine ? "mine" : undefined}>
+      <Link to={`/?match=${encodeURIComponent(f.match_id)}&tab=preview`} className="hub-fx"
+        aria-label={t("hub.next.open", { home: f.home.name, away: f.away.name })}>
+        <TeamName team={f.home} fav={fav} />
+        {p ? <PredictionBar p={p} home={f.home} away={f.away} fan={fan} /> : <span className="hub-meta">{t("hub.next.noPrediction")}</span>}
+        <TeamName team={f.away} fav={fav} />
+        <dl className="hub-facts">
+          {p && fan && <div><dt>{t("hub.pred.say")}</dt><dd>{verdictLine(p, f, t)}</dd></div>}
+          {top && (
+            <div>
+              <dt>{t(fan ? "hub.pred.scoreFan" : "hub.pred.score")}</dt>
+              <dd className="num">{top.home}–{top.away}{!fan && <small> {t("hub.pred.share", { n: pct(top.share) })}</small>}</dd>
+            </div>
+          )}
+          {p && !fan && <div><dt>{t("hub.pred.xg")}</dt><dd className="num">{p.xg.home.toFixed(1)}–{p.xg.away.toFixed(1)}</dd></div>}
+        </dl>
+      </Link>
+    </li>
+  );
+}
+
+function NextRound({ next, fav, fan }: { next: HubNext; fav: string | null; fan: boolean }) {
+  const t = useT();
+  const runs = next.fixtures.find((f) => f.prediction)?.prediction?.n_runs ?? 200;
+  return (
+    <section className="hub-next" aria-labelledby="hub-next-h">
+      <div className="hub-section-head">
+        <h2 id="hub-next-h">{t("hub.next.title")}</h2>
+        <span className="hub-note">{t("hub.next.note", { n: next.matchday, runs })}</span>
+      </div>
+      <div className="hub-day">
+        <ul>{pinned(next.fixtures, fav).map((f) => <FixtureRow key={f.match_id} f={f} fav={fav} fan={fan} />)}</ul>
+      </div>
+    </section>
+  );
+}
+
 export default function Hub() {
   const { prefs, setPrefs } = usePrefs();
   const t = useT();
@@ -158,6 +238,7 @@ export default function Hub() {
         {failed && <StateCard title={t("hub.failed.title")} tone="error">{t("hub.failed")}</StateCard>}
         {!data && !failed && <p className="hub-note" role="status">{t("hub.loading")}</p>}
         {data?.live && liveLine && <LiveNow live={data.live} line={liveLine} fav={fav} />}
+        {data?.next && data.next.fixtures.length > 0 && <NextRound next={data.next} fav={fav} fan={fan} />}
         {data && (
           <section className="hub-results" aria-labelledby="hub-results-h">
             <div className="hub-section-head">

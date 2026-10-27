@@ -10,6 +10,17 @@ import { useMatch } from "./match";
 export const TABS = ["overview", "whatif", "replay", "stats", "lineups", "preview"] as const;
 export type MatchTab = (typeof TABS)[number];
 
+/** C14: a fixture of the next round (`S2026-31-LUN-HBC`, apps/api nextround.py) is never played on the
+ * site, so it has only these; the others are greyed out. Other scheduled matches can still kick off. */
+export const BEFORE_KICKOFF: readonly MatchTab[] = ["lineups", "preview"];
+const NEXT_ROUND_ID = /^S\d{4}-\d{2}-[A-Z]+-[A-Z]+$/;
+
+export const notPlayed = (status: Match["status"] | undefined, matchId = "") =>
+  status === "scheduled" && NEXT_ROUND_ID.test(matchId);
+
+export const tabOpen = (tab: MatchTab, status: Match["status"] | undefined, matchId = "") =>
+  !notPlayed(status, matchId) || BEFORE_KICKOFF.includes(tab);
+
 /** The Ax59 tabs, for links recorded before C13. */
 const OLD: Record<string, MatchTab> = { pre: "preview", live: "replay", post: "overview" };
 
@@ -20,9 +31,10 @@ export function defaultTab(status: Match["status"] | undefined): MatchTab {
   return "overview";
 }
 
-export function tabFrom(search: string, status?: Match["status"]): MatchTab {
+export function tabFrom(search: string, status?: Match["status"], matchId = ""): MatchTab {
   const asked = new URLSearchParams(search).get("tab") ?? "";
-  return TABS.find((t) => t === asked) ?? OLD[asked] ?? defaultTab(status);
+  const tab = TABS.find((t) => t === asked) ?? OLD[asked] ?? defaultTab(status);
+  return tabOpen(tab, status, matchId) ? tab : defaultTab(status);
 }
 
 /** The same link with another tab open; the match, replay and viewer settings in it stay. */
@@ -35,5 +47,5 @@ export function tabSearch(search: string, tab: MatchTab): string {
 export function useTab(): MatchTab {
   const { search } = useLocation();
   const { match } = useMatch();
-  return tabFrom(search, match.status);
+  return tabFrom(search, match.status, match.match_id);
 }

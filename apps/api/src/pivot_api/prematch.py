@@ -25,6 +25,7 @@ Every note comes in English, with a `note_key` and `params` so the page can writ
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from functools import cache
 from typing import Literal
@@ -215,10 +216,16 @@ CONTRACT_MODELS = (
 
 # --- which matchday ----------------------------------------------------------------------------------
 
+FIXTURE_ID = re.compile(r"S(\d{4})-(\d{2})-[A-Z]+-[A-Z]+")   # world.fixture_match
+
+
 def matchday_of(match: Match) -> int | None:
     """The matchday the match is played as: 30 for the recorded demo (the season's matchday-30 fixture,
     on the demo's seed), and for a seed match the one `with_seed_season` draws (the same draw from the
-    same generator); None for a match between other clubs."""
+    same generator); a season fixture not played yet (the next round, C14) by its id
+    (`S2026-31-LUN-HBC`); None for any other match between other clubs."""
+    if match.status == "scheduled" and (m := FIXTURE_ID.fullmatch(match.match_id)) and int(m[1]) == SEASON:
+        return int(m[2])
     if (match.home.club_id, match.away.club_id) != (HBC.club_id, ROV.club_id):
         return None
     if match.seed == DEMO_1021.seed:
@@ -382,7 +389,10 @@ def cup_tie(match: Match, side: Side, matchday: int, xi: PrematchUsualXi,
     season, and each club is still in the cup with that round's chance. `taken`: clubs already drawn
     against the other side in this round."""
     rng = np.random.default_rng([match.seed or 0, 314, 0 if side == "home" else 1])
-    _, stage, importance, chance = next(x for x in CUP_ROUNDS if matchday <= x[0])
+    cup_round = next((x for x in CUP_ROUNDS if matchday <= x[0]), None)
+    if cup_round is None:                      # after the semi-finals (the next round, C14): no midweek tie
+        return None
+    _, stage, importance, chance = cup_round
     alive, days, home = rng.random() < chance, int(rng.choice([3, 4])), bool(rng.random() < 0.5)
     pool = sorted(c for c in CLUB_NAMES if c not in (match.home.club_id, match.away.club_id, *taken))
     opponent = pool[int(rng.integers(len(pool)))]

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isHubPage } from "../pages/Hub";
-import { byMatchday, liveNow, type HubLine, type HubLive } from "./hub";
+import { byMatchday, liveNow, pinned, type HubLine, type HubLive } from "./hub";
+import { TABS, tabFrom, tabOpen } from "./tab";
 import { LIVE_ANCHOR, LIVE_BREAK_S, boardHref, liveClock } from "./liveClock";
 
 const at = (s: number) => (LIVE_ANCHOR + s) * 1000;
@@ -44,5 +45,25 @@ describe("the match centre's links", () => {
     const line = (match_id: string, matchday: number | null) => ({ match_id, matchday }) as HubLine;
     const groups = byMatchday([line("a", 12), line("b", null), line("c", 20), line("d", 12)]);
     expect(groups.map(([day, ls]) => [day, ls.map((l) => l.match_id)])).toEqual([[20, ["c"]], [12, ["a", "d"]], [null, ["b"]]]);
+  });
+});
+
+describe("the next round (C14 PR 2)", () => {
+  it("opens a next-round fixture on its preview, and only the preview and line-ups", () => {
+    const id = "S2026-31-LUN-HBC";
+    expect(tabFrom("", "scheduled", id)).toBe("preview");
+    expect(tabFrom("?tab=overview", "scheduled", id)).toBe("preview");
+    expect(tabFrom("?tab=lineups", "scheduled", id)).toBe("lineups");
+    expect(TABS.filter((tab) => tabOpen(tab, "scheduled", id))).toEqual(["lineups", "preview"]);
+    // any other match before kick-off can still be started, so its tabs stay open
+    expect(tabFrom("?tab=replay", "scheduled", "M-api-demo")).toBe("replay");
+    expect(tabFrom("?tab=overview", "finished", id)).toBe("overview");
+  });
+
+  it("puts the viewer's club's games first", () => {
+    const team = (short_name: string) => ({ name: short_name, short_name, color: "#000000" });
+    const games = [["LUN", "ELM"], ["ROV", "GRE"], ["THO", "HBC"]].map(([h, a]) => ({ home: team(h), away: team(a) }));
+    expect(pinned(games, "HBC").map((g) => g.home.short_name)).toEqual(["THO", "LUN", "ROV"]);
+    expect(pinned(games, null)).toBe(games);
   });
 });
