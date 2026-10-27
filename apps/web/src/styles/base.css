@@ -628,3 +628,31 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ev-more { display: inline-block; font-family: var(--pv-label); font-weight: 700; font-size: 11px; padding: 0 6px; border: 1.5px dashed var(--pv-ink-2); background: transparent; color: var(--pv-ink-2); cursor: pointer; line-height: 1.5; vertical-align: .1em; }
 .ev-more:hover { background: var(--pv-gold-soft); color: var(--pv-ink); }
 :lang(zh) .ev-more { }
+
+/* ---------- Live tab (C11): the match pictures and the team stats table ---------- */
+.live-sec { display: grid; gap: 14px; min-width: 0; margin-top: 16px; }
+.live-hd { display: grid; gap: 4px; }
+.live-hd h2 { font-weight: 700; font-size: var(--pv-fs-xl); line-height: 1.2; letter-spacing: -.01em; }
+.live-hd p { font-size: 15px; max-width: 70ch; }
+.live-start { border: 0; border-radius: var(--pv-r-panel); }
+.pics { display: grid; gap: 16px; }
+.pics-ctl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.pics-bd { max-width: 820px; min-width: 0; }
+.ts { display: grid; gap: 18px; min-width: 0; }
+.ts > .seg { justify-self: start; }
+.ts-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px 48px; align-items: start; }
+.ts-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ts-table caption { text-align: left; font-weight: 700; font-size: var(--pv-fs-md); padding-bottom: 6px; }
+.ts-table td, .ts-table th { padding: 9px 0 8px; border-top: 1px solid var(--pv-hair); vertical-align: top; }
+.ts-table th { font-weight: 500; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); text-align: center; padding-inline: 14px; }
+.ts-table th > span:first-child { display: block; line-height: 1.35; }
+.ts-table td { width: 4.6em; font-weight: 600; font-size: var(--pv-fs-md); }
+.ts-table td.a { text-align: right; }
+.ts-table td.win { font-weight: 800; }
+.ts-table td.h.win { color: var(--pv-home); }
+.ts-table td.a.win { color: var(--pv-away); }
+.ts-bar { display: flex; gap: 2px; height: 4px; margin-top: 7px; }
+.ts-bar i { display: block; border-radius: 2px; background: var(--pv-home); }
+.ts-bar i + i { background: var(--pv-away); }
+.stat .bar { border: 0; height: 6px; gap: 2px; }
+.stat .bar i { border-radius: 3px; }

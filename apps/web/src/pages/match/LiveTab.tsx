@@ -7,10 +7,12 @@ import { Link, useLocation } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import Card from "../../components/Card";
 import EventFeed from "../../components/EventFeed";
+import MatchPictures from "../../components/MatchPictures";
 import MatchStats from "../../components/MatchStats";
 import PitchBoard from "../../components/PitchBoard";
 import { pivotHeadline } from "../../components/PivotList";
 import StartDemoButton from "../../components/StartDemoButton";
+import TeamStats, { useTeamStats } from "../../components/TeamStats";
 import { useClock } from "../../data/clock";
 import { useMatch } from "../../data/match";
 import { tabSearch } from "../../data/tab";
@@ -51,7 +53,7 @@ function PivotAlert({ moments }: { moments: Pivot[] }) {
       <span className="pv-alert-k">{t("live.alert", { minute: minute(shown.minute) })}</span>
       <b className="pv-alert-hd">{pivotHeadline(shown, teams, t)}</b>
       <span className="pv-alert-ft">
-        <Link to={{ search: `?${q}` }} className="more-link">{t("live.alertOpen")} →</Link>
+        <Link to={{ search: `?${q}` }} className="more-link">{t("live.alertOpen")}</Link>
         <button type="button" className="btn ghost" onClick={() => setShown(null)}>{t("live.alertClose")}</button>
       </span>
     </aside>
@@ -65,6 +67,9 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
   const scheduled = match.status === "scheduled";
   // A stored match that is not being replayed: offer the replay, which moves everything on this tab.
   const over = match.status === "finished" && !playback;
+  // C11: the team stats and the pictures follow the replay or the live clock; a stored match shows all of it.
+  const upTo = over ? null : match.clock;
+  const report = useTeamStats(scheduled ? null : match.match_id, upTo);
   return (
     <>
       {(scheduled || over) && (
@@ -77,12 +82,30 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
         {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them. */}
         {!scheduled && <PitchBoard key={match.match_id} />}
         <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`} className="more-stats">
-          <MatchStats />
+          <MatchStats report={report.data} />
         </Card>
         <Card title={t("board.events")} note={t("board.autoScroll")} className="more-events">
           <EventFeed highlight={evidence} />
         </Card>
       </div>
+      {!scheduled && (
+        <>
+          <section className="live-sec" aria-labelledby="live-pics-hd">
+            <header className="live-hd">
+              <h2 id="live-pics-hd">{t("pics.title")}</h2>
+              {!over && <p className="muted">{t("pics.note")}</p>}
+            </header>
+            <div className="card"><MatchPictures key={match.match_id} upTo={upTo} /></div>
+          </section>
+          <section className="live-sec" aria-labelledby="live-stats-hd">
+            <header className="live-hd">
+              <h2 id="live-stats-hd">{t("ts.title")}</h2>
+              <p className="muted">{t("ts.note")}</p>
+            </header>
+            <div className="card"><TeamStats state={report} /></div>
+          </section>
+        </>
+      )}
       <PivotAlert moments={moments} />
     </>
   );

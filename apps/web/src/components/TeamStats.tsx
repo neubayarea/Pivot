@@ -1,0 +1,94 @@
+// The team stats table (C11, data from Bx11 #279): MET-001 to MET-023 for both teams, grouped
+// the Premier League way (attack, possession, defence, shape, physical), for the whole match or
+// one half. The same numbers the AI cites and the Verifier checks, so the page and the
+// explanations agree. Fans get the ten that need no explaining; analysts get all of them.
+import { useState } from "react";
+import type { StatMetricInfo, TeamStatsReport, TeamStatsScope } from "@pivot/contracts";
+import { useMatch } from "../data/match";
+import { useVizData, type VizState } from "../data/viz";
+import { isMessageKey, usePrefs, type T } from "../i18n";
+import Segmented from "./Segmented";
+
+const FAN = new Set(["shots", "shots_on_target", "xg", "possession_pct", "passes", "pass_accuracy_pct", "box_entries",
+  "tackles_won", "interceptions", "distance_covered_km"]);
+
+/** GET /api/matches/{id}/stats, up to the replay's or live match's second (whole minutes) when given. */
+export function useTeamStats(matchId: string | null, upTo: number | null) {
+  const q = upTo === null ? "" : `?up_to=${Math.floor(Math.max(0, upTo) / 60) * 60}`;
+  return useVizData<TeamStatsReport>(matchId ? `/api/matches/${encodeURIComponent(matchId)}/stats${q}` : null);
+}
+
+/** "57%", "1.23", "104.2", "–" for no answer. */
+export function statText(v: number | null | undefined, m: StatMetricInfo): string {
+  if (v === null || v === undefined) return "–";
+  if (m.unit === "pct") return `${v.toFixed(v % 1 ? 1 : 0)}%`;
+  if (m.unit === "xg" || m.unit === "index") return v.toFixed(2);
+  if (m.unit === "m" || m.unit === "km") return v.toFixed(1);
+  return String(Math.round(v));
+}
+
+const label = (m: StatMetricInfo, fan: boolean, t: T) => {
+  const k = fan ? `ts.fan.${m.metric}` : `ts.m.${m.metric}`;
+  return isMessageKey(k) ? t(k) : isMessageKey(`ts.m.${m.metric}`) ? t(`ts.m.${m.metric}` as never) : m.label;
+};
+
+function Row({ m, s, fan, t }: { m: StatMetricInfo; s: TeamStatsScope; fan: boolean; t: T }) {
+  const h = s.home[m.metric] ?? null;
+  const a = s.away[m.metric] ?? null;
+  // Which side the bar leans to; PPDA reads the other way round (fewer passes allowed is the harder press).
+  const lower = m.metric === "ppda";
+  const both = h !== null && a !== null && h + a > 0;
+  const share = both ? (h! / (h! + a!)) * 100 : 50;
+  const lead = h === null || a === null || h === a ? null : (h > a) !== lower ? "home" : "away";
+  const name = label(m, fan, t);
+  return (
+    <tr>
+      <td className={`h num${lead === "home" ? " win" : ""}`}>{statText(h, m)}</td>
+      <th scope="row">
+        <span title={m.description}>{name}</span>
+        {both && (
+          <span className="ts-bar" aria-hidden="true">
+            <i style={{ width: `${share}%` }} />
+            <i style={{ width: `${100 - share}%` }} />
+          </span>
+        )}
+      </th>
+      <td className={`a num${lead === "away" ? " win" : ""}`}>{statText(a, m)}</td>
+    </tr>
+  );
+}
+
+export default function TeamStats({ state }: { state: VizState<TeamStatsReport> }) {
+  const { teams } = useMatch();
+  const { prefs, t } = usePrefs();
+  const { data, error } = state;
+  const [scope, setScope] = useState<TeamStatsScope["scope"]>("match");
+  const fan = prefs.audience === "fan";
+  if (!data) return <p className="muted" role="status">{t(error ? "ts.error" : "ts.loading")}</p>;
+  const scopes = data.scopes.filter((s) => s.scope !== "window");
+  const shown = scopes.find((s) => s.scope === scope) ?? scopes[0];
+  if (!shown) return <p className="muted">{t("ts.error")}</p>;
+  const metrics = data.metrics.filter((m) => !fan || FAN.has(m.metric));
+  const groups = [...new Set(metrics.map((m) => m.group))];
+  return (
+    <div className="ts">
+      {scopes.length > 1 && (
+        <Segmented label={t("ts.scope")} value={shown.scope} onChange={setScope}
+          options={scopes.map((s) => ({ value: s.scope, label: t(`ts.scope.${s.scope as Exclude<typeof s.scope, "window">}`) }))} />
+      )}
+      <div className="ts-groups">
+        {groups.map((g) => (
+          <table key={g} className="ts-table">
+            <caption>{isMessageKey(`ts.group.${g}`) ? t(`ts.group.${g}` as never) : g}</caption>
+            <thead className="sr-only">
+              <tr><th scope="col">{teams.home.name}</th><th scope="col">{t("ts.title")}</th><th scope="col">{teams.away.name}</th></tr>
+            </thead>
+            <tbody>
+              {metrics.filter((m) => m.group === g).map((m) => <Row key={m.metric} m={m} s={shown} fan={fan} t={t} />)}
+            </tbody>
+          </table>
+        ))}
+      </div>
+    </div>
+  );
+}

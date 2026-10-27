@@ -57,7 +57,7 @@ export function VizPitch({ label, children, under, arrow }: {
   const t = useT();
   return (
     <div className="viz-pitch">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={label}>
         <rect x={0} y={0} width={W} height={H} fill="var(--pv-pitch)" />
         {under}
         <g className="viz-lines"><Markings /></g>

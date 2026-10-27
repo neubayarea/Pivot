@@ -59,14 +59,15 @@ export default function EventFeed({ highlight }: { highlight: ReadonlySet<string
   }, [newest]);
   if (!events.length) return <p className="muted">{t("feed.empty")}</p>;
   return (
-    <div className="feed" aria-live="polite" ref={box} onScroll={(e) => (follow.current = e.currentTarget.scrollTop < 24)}>
+    // C11: no aria-live here; at replay speed it would read out every row. New pivots have their own alert.
+    <div className="feed" ref={box} onScroll={(e) => (follow.current = e.currentTarget.scrollTop < 24)}>
       {/* The newest rows, plus any older event picked as evidence in "Why it turned". */}
       {events.filter((e, i) => i < ROWS || highlight.has(e.event_id)).map((e) => {
         const key = KEY_TYPES.has(e.type) || e.shot_outcome === "goal" || e.shot_outcome === "disallowed";
         return (
           <div key={e.event_id}
             className={`${key ? "key" : ""}${highlight.has(e.event_id) ? " on" : ""}${involves(e, prefs.focus_player_id) ? " mine" : ""}`}>
-            <span className="t">{e.clock_label}</span>
+            <span className="t">{e.clock_label.replace(/'/g, "′")}</span>
             <span className={e.team === "home" ? "h" : "a"}>{teams[e.team].short_name}</span>
             <span>{describe(e, playerName, t)}</span>
           </div>
