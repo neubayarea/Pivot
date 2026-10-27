@@ -90,3 +90,48 @@
 .rp-key .k-src.s1::before { background: color-mix(in oklab, var(--pv-ink-2) 72%, var(--pv-sheet)); }
 .rp-key .k-src.s2::before { background: color-mix(in oklab, var(--pv-ink-2) 45%, var(--pv-sheet)); }
 .rp-key .k-src.s3::before { background: color-mix(in oklab, var(--pv-ink-2) 25%, var(--pv-sheet)); }
+
+/* Attacking lanes */
+.rp-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--pv-s4); }
+.rp-lane { margin: 0; display: grid; gap: 6px; }
+.rp-lane .rp-row { color: currentColor; font-weight: 700; font-size: 14px; }
+.rp-turf { fill: color-mix(in oklab, var(--pv-pitch, #DDE6DF) 60%, var(--pv-sheet)); stroke: var(--pv-hair); }
+.rp-turf-line { stroke: var(--pv-hair); stroke-width: 1.5; }
+.rp-turf-line.third { stroke-dasharray: 4 4; }
+.rp-turf-line.lane { stroke-dasharray: 2 6; }
+.rp-arrow { fill: currentColor; opacity: .85; }
+.rp-lane-k { font-size: 12px; font-weight: 600; fill: var(--pv-ink-2); }
+.rp-lane-pct { font-family: var(--pv-display); font-weight: 800; font-size: 20px; fill: var(--pv-ink); }
+.rp-lane-xg { font-size: 12px; font-weight: 600; fill: var(--pv-ink-2); }
+
+/* Style profile */
+.rp-radar { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--pv-s3); align-items: center; }
+.rp-ring { fill: none; stroke: var(--pv-hair); stroke-width: 1; }
+.rp-spoke { stroke: var(--pv-hair); stroke-width: 1; }
+.rp-radar-k { font-size: 12px; fill: var(--pv-ink); font-weight: 600; }
+.rp-ring-k { font-size: 10px; }
+.rp-area { fill: currentColor; fill-opacity: .18; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.rp-vertex { fill: currentColor; stroke: var(--pv-sheet); stroke-width: 2; }
+.rp-pf-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.rp-pf-table th, .rp-pf-table td { padding: 4px 6px; border-top: 1px solid var(--pv-hair); text-align: left; }
+.rp-pf-table thead th { border-top: 0; color: var(--pv-ink-2); font-weight: 600; }
+.rp-pf-table thead .home { color: var(--pv-home); }
+.rp-pf-table thead .away { color: var(--pv-away); }
+
+/* Key players */
+.rp-pl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rp-pl li { display: grid; grid-template-columns: minmax(8em, 11em) minmax(0, 1fr) 7.5em; gap: 10px; align-items: center; }
+.rp-pl-name { font-weight: 600; font-size: 13px; color: var(--pv-ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-pl-name:hover { text-decoration: underline; }
+.rp-pl-name .num { display: inline-block; min-width: 2ch; text-align: right; color: var(--pv-ink-2); margin-right: 4px; }
+.rp-pl-name small { color: var(--tc); font-weight: 700; margin-left: 4px; }
+.rp-pl-bar { display: flex; gap: 2px; height: 18px; min-width: 4px; }
+.rp-pl-bar i { display: block; height: 100%; }
+.rp-pl-bar .xg { background: var(--tc); border-radius: 4px 0 0 4px; }
+.rp-pl-bar .xa { background: color-mix(in oklab, var(--tc) 40%, var(--pv-sheet)); border-radius: 0 4px 4px 0; }
+.rp-pl-bar i:only-child { border-radius: 4px; }
+.rp-pl-n { font-weight: 700; font-size: 13px; }
+.rp-pl-n small { font-weight: 500; color: var(--pv-ink-2); }
+.rp-key .k-xg::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--pv-ink-2); }
+.rp-key .k-xa::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: color-mix(in oklab, var(--pv-ink-2) 40%, var(--pv-sheet)); }
+.pt-table tbody tr.linked { background: var(--pv-sunk); box-shadow: inset 4px 0 var(--pv-ink-2); }

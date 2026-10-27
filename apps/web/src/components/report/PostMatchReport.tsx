@@ -15,6 +15,10 @@ import GameStateTable, { mostDangerous, stateFor } from "./GameStateTable";
 import Phases, { METRIC_KEY, bestSpell, type PhaseMetric } from "./Phases";
 import ReportSection from "./ReportSection";
 import ShotQuality from "./ShotQuality";
+import Lanes, { LANES, laneShares } from "./Lanes";
+import PlayerContrib, { topContributors } from "./PlayerContrib";
+import StyleRadar from "./StyleRadar";
+import { usePlayers } from "../../data/persona";
 import "../../styles/report.css";
 
 export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; upTo: number | null }) {
@@ -24,6 +28,7 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
   const { data, sample } = useAnalysis(match.match_id, upTo);
   const shots = useShotMap(match.match_id, { upTo, stepS: 60 });
   const [metric, setMetric] = useState<PhaseMetric>("xg");
+  const players = usePlayers(match.match_id, upTo);
   if (!data) return null;
   const names = { home: teams.home.short_name, away: teams.away.short_name };
   const full = { home: teams.home.name, away: teams.away.name };
@@ -53,6 +58,23 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
   const other = better === "home" ? "away" : "home";
   const sqTake = t("rp.sq.take", { team: full[better], v: q[better].xg_per_shot.toFixed(2), w: q[other].xg_per_shot.toFixed(2), n: q[better].big_chances, m: q[other].big_chances });
 
+  // C19 B: the lane that made the most xG, the clearest difference in style, the top contributor.
+  let lane: { side: "home" | "away"; k: (typeof LANES)[number] } | null = null;
+  for (const side of ["home", "away"] as const) {
+    for (const k of LANES) if (!lane || data.lanes[side][k].xg > data.lanes[lane.side][lane.k].xg) lane = { side, k };
+  }
+  const lnTake = lane && t("rp.ln.take", { team: full[lane.side], lane: t(`rp.ln.word.${lane.k}` as MessageKey), xg: data.lanes[lane.side][lane.k].xg.toFixed(2), pct: laneShares(data.lanes[lane.side])[lane.k] });
+  const pf = data.profile;
+  let gap = -1;
+  pf.metrics.forEach((_, i) => { if (gap < 0 || Math.abs(pf.home[i] - pf.away[i]) > Math.abs(pf.home[gap] - pf.away[gap])) gap = i; });
+  const ahead = gap >= 0 && pf.home[gap] >= pf.away[gap] ? "home" : "away";
+  const pfTake = gap >= 0 ? t("rp.pf.take", {
+    metric: t(`rp.pf.${pf.metrics[gap]}` as MessageKey), team: full[ahead],
+    v: Math.round(pf[ahead][gap]), w: Math.round(pf[ahead === "home" ? "away" : "home"][gap]),
+  }) : null;
+  const top = players.data ? topContributors(players.data.players, 1)[0] : undefined;
+  const plTake = top?.stats ? t("rp.pl.take", { name: top.name, v: (top.stats.xg + top.stats.xa).toFixed(2), xg: top.stats.xg.toFixed(2), xa: top.stats.xa.toFixed(2) }) : null;
+
   return (
     <div className="rp" style={{ ["--rp-cols" as string]: 2 }}>
       <ReportSection id="rp-deserved" title={t("rp.dsv.title")} takeaway={dsvTake} source={t("rp.src.deserved", { n: data.deserved.n_sims.toLocaleString() })} sample={sample}>
@@ -66,6 +88,15 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
       </ReportSection>
       <ReportSection id="rp-shots" title={t("rp.sq.title")} takeaway={sqTake} source={t("rp.src.shots")} sample={sample} className="wide">
         <ShotQuality shots={shots.data?.shots ?? []} quality={q} names={names} nameOf={playerName} />
+      </ReportSection>
+      <ReportSection id="rp-lanes" title={t("rp.ln.title")} takeaway={lnTake} source={t("rp.src.lanes")} sample={sample} className="wide">
+        <Lanes lanes={data.lanes} names={full} />
+      </ReportSection>
+      <ReportSection id="rp-players" title={t("rp.pl.title")} takeaway={plTake} source={t("rp.src.players")}>
+        {players.data && <PlayerContrib players={players.data.players} short={names} />}
+      </ReportSection>
+      <ReportSection id="rp-profile" title={t("rp.pf.title")} takeaway={pfTake} source={t("rp.src.profile", { n: pf.baseline_matches })} sample={sample}>
+        <StyleRadar profile={pf} names={names} />
       </ReportSection>
     </div>
   );
