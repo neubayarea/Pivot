@@ -10,7 +10,7 @@ import recorded from "../../../../eval/frozen/m-seed-29-before-ax44.json";
 import { toView } from "../data/live/provider";
 import { MatchContext, type MatchView } from "../data/match";
 import { PrefsProvider } from "../i18n";
-import { PreMatchTab } from "../pages/match/PreMatchTab";
+import { PreviewTab } from "../pages/match/PreviewTab";
 import { PreMatchStories, PreMatchTop } from "./PreMatch";
 import TeamTactics from "./TeamTactics";
 
@@ -80,6 +80,12 @@ describe("the pre-match cards", () => {
     expect(out.match(/Ex-teammates/g)).toHaveLength(4);
     // The routine per-player effects (form, big-match rating) stay out of the factors card.
     expect(out).toContain("Card risk ▲");
+    // Each effect says what it would change and by how much; the form strip marks the newest result.
+    expect(out).toMatch(/\+\d+\.\d% to chance of a card/);
+    expect(out).toContain("Latest");
+    expect(out).not.toContain("Most recent result on the right");
+    // One time rule: hours under 48 h, days after, both "before kick-off".
+    expect(out).not.toMatch(/\d+ days before(?! kick-off)/);
     expect(out).not.toContain("average rating");
   });
 
@@ -105,6 +111,7 @@ describe("the pre-match cards", () => {
     expect(out).toContain("How they come in");
     expect(out).toContain("When they last met");
     expect(out).not.toMatch(/[+−]\d+\.\d%/);
+    expect(out).toMatch(/Slightly (more|less): /);
   });
 
   it("speak the page's language", () => {
@@ -154,21 +161,31 @@ describe("the coach's plan", () => {
   });
 });
 
-describe("the pre-match tab", () => {
-  it("opens on the table, form and head-to-head, then the coach's plan, the line-ups and the storylines (Ax63)", () => {
-    const html = render(viewOf(full), <PreMatchTab />);
+describe("the preview tab", () => {
+  it("opens on the table, form and head-to-head, then the storylines; the plan and line-ups have their own tab (Ax63, C13)", () => {
+    const html = render(viewOf(full), <PreviewTab />);
     const at = (s: string) => html.indexOf(s);
     expect(at('data-slot="prematch"')).toBeGreaterThan(-1);
     expect(at("Form &amp; table")).toBeGreaterThan(at('data-slot="prematch"'));
     expect(at("Head-to-head")).toBeGreaterThan(at("Form &amp; table"));
-    expect(at("The coach&#x27;s plan")).toBeGreaterThan(at("Head-to-head"));
-    expect(at("Line-ups")).toBeGreaterThan(at("The coach&#x27;s plan"));
-    expect(at("Storylines")).toBeGreaterThan(at("Line-ups"));
+    expect(at("Storylines")).toBeGreaterThan(at("Head-to-head"));
+    expect(at("The coach&#x27;s plan")).toBe(-1);
+    expect(at("pre-lineups-hd")).toBe(-1);
     expect(at("News &amp; storylines")).toBeGreaterThan(at("Storylines"));
   });
 
+  it("puts the storylines first for fans and the numbers first for analysts (#311)", () => {
+    withWindow("?mode=fan");
+    const fan = render(viewOf(full), <PreviewTab />);
+    expect(fan.indexOf("Storylines")).toBeGreaterThan(-1);
+    expect(fan.indexOf("Storylines")).toBeLessThan(fan.indexOf('data-slot="prematch"'));
+    delete g.window;
+    const analyst = render(viewOf(full), <PreviewTab />);
+    expect(analyst.indexOf('data-slot="prematch"')).toBeLessThan(analyst.indexOf("Storylines"));
+  });
+
   it("chains nothing with a middle dot and leaves the storylines out when there are none (Ax63)", () => {
-    expect(text(render(viewOf(full), <PreMatchTab />))).not.toContain(" · ");
-    expect(render(viewOf(basic), <PreMatchTab />)).not.toContain("Storylines");
+    expect(text(render(viewOf(full), <PreviewTab />))).not.toContain(" · ");
+    expect(render(viewOf(basic), <PreviewTab />)).not.toContain("Storylines");
   });
 });

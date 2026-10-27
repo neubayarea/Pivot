@@ -36,6 +36,9 @@
   --pv-away: var(--pv-away-kit, #4A1D57);
   --pv-on-team: #FFFFFF;
   --pv-draw: #B9BEC7;
+  /* Results (W / D / L pills): win and loss each get a colour, the draw stays grey. Not kit colours,
+   * not yellow; white on each light-mode fill is AA, dark ink on the night ones. */
+  --pv-win: #17784A; --pv-on-win: #FFFFFF; --pv-loss: #B42A2A; --pv-on-loss: #FFFFFF;
 
   /* Status */
   --pv-ok-bg: #FFCC1F;  --pv-ok-fg: #121418;   /* verified */
@@ -76,6 +79,8 @@
     --pv-home: color-mix(in oklab, var(--pv-home-kit, #1E6B45) 55%, white);
     --pv-away: color-mix(in oklab, var(--pv-away-kit, #4A1D57) 50%, white);
     --pv-on-team: #0F1114; --pv-draw: #4A505B;
+  --pv-win: #43B57D; --pv-on-win: #0F1114; --pv-loss: #E8615C; --pv-on-loss: #0F1114;
+    --pv-win: #43B57D; --pv-on-win: #0F1114; --pv-loss: #E8615C; --pv-on-loss: #0F1114;
     --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451; --pv-bad-bg: #4A1820; --pv-bad-fg: #FFB3BA;
     --pv-pitch: #18261F; --pv-pitch-line: #4B6758;
     --pv-lift: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
