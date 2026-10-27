@@ -37,7 +37,7 @@ from pivot_core.domain.stats import STAT_UNITS, Claim
 from . import languages as lang_rules
 from .context import ContextItem, involved_in, mentions
 from .matchstate import men_at, score_line
-from .scenarios import is_goal
+from .scenarios import card_colour, is_goal
 from .vocabulary import STAT_TERMS
 
 EVIDENCE_BEFORE, EVIDENCE_AFTER = 8, 5
@@ -402,6 +402,18 @@ def _score_problems(text: str, lang: str, goals: list[Goal], cited: Collection[s
     return problems
 
 
+def _card_problems(text: str, lang: str, cited: Iterable[MatchEvent]) -> list[str]:
+    """A card's colour named wrong (#261): a straight red called a booking, or a yellow a sending-off.
+    Only when every card the text cites has the same colour; a second yellow is both, so it never is."""
+    colours = {c for e in cited if (c := card_colour(e))}
+    if colours not in ({"red"}, {"yellow"}):
+        return []
+    (colour,) = colours
+    wrong = "yellow" if colour == "red" else "red"
+    found = _has_word(text, lang_rules.CARD_WORDS[lang][wrong])
+    return [f"the card it cites is a {colour} card, so do not write '{found[0]}'."] if found else []
+
+
 def verify(
     narrative: Narrative,
     *,
@@ -479,6 +491,9 @@ def verify(
         all_cited = {e for s in narrative.sentences for e in s.evidence_ids}
         for problem in _score_problems(narrative.headline, lang, goals, all_cited, (lo, hi), sides):
             issue("number_mismatch", f"Headline: {problem}")
+    cited = [events[e] for s in narrative.sentences for e in s.evidence_ids if e in events]
+    for problem in _card_problems(narrative.headline, lang, cited):
+        issue("evidence_invalid", f"Headline: {problem}")
     any_significant = bool(significant) and any(significant.values())
     nothing_to_cite = not any(lo <= e.minute <= hi for e in events.values()) if allowed_evidence is None else False
 
@@ -504,6 +519,9 @@ def verify(
                           f"{', '.join(sorted(allowed_evidence))}.", i)
             elif not lo <= event.minute <= hi:
                 issue("evidence_invalid", f"Evidence {eid} is at minute {event.minute}, outside {lo}-{hi}.", i)
+
+        for problem in _card_problems(s.text, lang, [events[e] for e in s.evidence_ids if e in events]):
+            issue("evidence_invalid", f"Sentence {i + 1}: {problem}", i)
 
         # 3. Numbers: claims recompute in their stat's unit, and the text carries no unclaimed numbers.
         actuals = [_compute(stats, c.stat_ref) for c in s.claims]

@@ -115,3 +115,12 @@ def test_few_shot_examples_follow_the_rules(draft):
                        for s in draft.sentences for c in s.claims})
     verdict = verify(ex.parse_draft(draft.model_dump()), pivot_minute=minute, events=events, stats=stats)
     assert verdict.passed, verdict.issues
+
+
+def test_ax53_the_model_sees_the_colour_of_a_card():
+    from pivot_core.domain.officials import FoulDetail
+
+    red = event("m038-s00678", 38, "card", team="away", foul=FoulDetail(foul_type="tackle", card="red"))
+    line = ex.event_line(red, {"home": "Harbour", "away": "Rovers"})
+    assert line["type"] == "card" and line["card"] == "red"
+    assert "card" not in ex.event_line(event("m038-s00679", 38), {"home": "Harbour", "away": "Rovers"})

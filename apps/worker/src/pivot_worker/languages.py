@@ -487,6 +487,17 @@ REASONS: dict[str, dict[str, str]] = {
 
 # Words for the What-if numbers that are not match stats (Bx10). A number about one of them must
 # sit in a sentence that names it, as a stat's number must name the stat.
+# Words that give a card its colour (#261): a straight red written as a booking, or a yellow as a sending-off,
+# is caught against the cards a sentence cites. "Ten men" is checked against the red cards elsewhere.
+CARD_WORDS: dict[str, dict[str, tuple[str, ...]]] = {
+    "en": {"yellow": ("yellow", "booked", "booking", "cautioned"),
+           "red": ("red card", "sent off", "sending off", "sending-off", "dismissed", "dismissal")},
+    "zh": {"yellow": ("黄牌", "警告"), "red": ("红牌", "罚下", "罚出场")},
+    "es": {"yellow": ("amarilla", "amonestado", "amonestada", "amonestación"),
+           "red": ("tarjeta roja", "roja directa", "expulsado", "expulsada", "expulsión")},
+}
+
+
 REPLAY_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
     "en": {"goals": ("goal", "goals"), "scored_pct": ("scored", "score at least"),
            "cards": ("card", "cards", "booking", "bookings"), "red_cards": ("red card", "red cards", "sent off"),
