@@ -727,6 +727,12 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .pics { display: grid; gap: 16px; }
 .pics-ctl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
 .pics-bd { max-width: 820px; min-width: 0; }
+.pics-who { display: grid; gap: 10px; justify-items: start; }
+.pics-names { display: flex; flex-wrap: wrap; gap: 6px; }
+.pics-names .chip { padding: 4px 11px; font-size: 13px; }
+.pics-names .chip small { min-width: 1.4em; text-align: right; }
+.pics-names .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+.spot-who .follow, .you-best .follow { margin-top: 6px; }
 .ts { display: grid; gap: 18px; min-width: 0; }
 .ts > .seg { justify-self: start; }
 .ts-teams { display: flex; justify-content: space-between; margin: 0; font-weight: 700; font-size: var(--pv-fs-sm); }

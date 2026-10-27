@@ -9,6 +9,7 @@ import { useMatch } from "../data/match";
 import { coreStats, roleGroup, teamRating, usePersona, usePlayers, type StatKey } from "../data/persona";
 import { usePrefs } from "../i18n";
 import { describe } from "./EventFeed";
+import FollowButton from "./FollowButton";
 import LangTag from "./LangTag";
 import { pivotHeadline } from "./PivotList";
 import { usePlayerReport } from "./PlayerCard";
@@ -53,6 +54,7 @@ export default function PlayerSpotlight({ upTo = null, onPivot }: { upTo?: numbe
         <div>
           <p className="spot-k">{t("spot.title")}</p>
           <h2 id="spot-hd">{report.name}</h2>
+          <FollowButton playerId={report.player_id} name={report.name} />
           <p className="muted">{teams[side].name}, {fan ? t(`role.${roleGroup(report.role)}`) : report.role}</p>
         </div>
         {s && (

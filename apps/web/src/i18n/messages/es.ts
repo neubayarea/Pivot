@@ -233,6 +233,8 @@ export const es: Messages = {
   "ts.key": "Las cifras clave",
   "ts.ppdaNote": "cuanto más bajo, más intensa la presión",
   "whatif.notHere": "Aquí no es posible: {list}",
+  "pics.player": "Qué jugador",
+  "pics.wholeTeam": "Todo el equipo",
   "ts.title": "Estadísticas de equipo",
   "ts.note": "Las mismas cifras que cita la IA y comprueba el verificador.",
   "ts.scope": "Parte del partido",
