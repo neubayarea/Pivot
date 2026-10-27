@@ -21,8 +21,6 @@ import Segmented from "./Segmented";
 import "../styles/setpieces.css";
 
 const S = 5;
-/** Off until the simulator lines players up for set pieces (#245): its marking and walls are not real yet. */
-const SHOW_MARKING = false;
 const HASHES = ["#set-pieces", "#shots"] as const;
 type Tab = "set" | "shots";
 
@@ -123,7 +121,7 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
   const att = teams[sp.event.team].short_name;
   const def = teams[sp.event.team === "home" ? "away" : "home"].short_name;
   const names = (ids: string[]) => ids.map((id) => people.tag(id)).join(", ");
-  const marks = SHOW_MARKING && sp.kind !== "penalty";
+  const marks = sp.kind !== "penalty";
   const [from, to] = clip.parts[0];
 
   return (
@@ -133,7 +131,6 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
         const before = tm < sp.event.t;
         return <SetupLayer frame={frame} sp={sp} pairs={marks && before && setup ? setup.pairs : []} wall={marks && before && setup ? setup.wall : []} />;
       }}>
-      {!SHOW_MARKING && sp.kind !== "penalty" && <small className="sp-sim">{t("sp.simNote")}</small>}
       {setup && (
         <dl className="sp-facts">
           <dt>{t("sp.inBox")}</dt>
