@@ -12,6 +12,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from pivot_adapters import build_adapters, build_sim_store
 from pivot_worker.models import model_client_from_env
 
+from .analysis import router as analysis_router
 from .demo import seed_demo
 from .hub import router as hub_router
 from .nextround import load_next_round
@@ -154,6 +155,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(players_router)
 app.include_router(prematch_router)
+app.include_router(analysis_router)
 app.include_router(pretext_router)
 app.include_router(team_stats_router)
 app.include_router(pictures_router)
