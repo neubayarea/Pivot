@@ -69,8 +69,12 @@ async def _match_or_404(request: Request, match_id: str) -> Match:
 
 @router.get("/matches")
 async def list_matches(request: Request) -> list[Match]:
-    """Stored matches, most recent first."""
-    return await _adapters(request).matches.list_matches()
+    """Stored matches: the simulated ones in seed-list order (SPECS), the first being the one the site
+    opens by default (Ax55), then any others, most recent first."""
+    matches = await _adapters(request).matches.list_matches()
+    status = getattr(request.app.state, "sims", None)
+    order = {m: n for n, m in enumerate(status.order if status else [])}
+    return sorted(matches, key=lambda m: order.get(m.match_id, len(order)))
 
 
 @router.get("/sims")

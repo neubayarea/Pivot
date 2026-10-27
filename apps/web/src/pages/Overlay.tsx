@@ -3,9 +3,11 @@
 // `?clock=mm:ss` holds one moment, `?speed=N` replays the timeline locally, `?preview=1` puts a
 // placeholder pitch behind it. See docs/design/matchday-programme.html, section 09.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import type { OverlayCard, OverlayScoreboard } from "@pivot/contracts";
+import { readSavedMatch } from "../data/choice";
 import { api } from "../data/live/api";
+import { pickMatch } from "../data/live/provider";
 import { useT } from "../i18n";
 import { cardAt, clockMode, replayClock, severityDots, type ClockMode } from "../overlay/clock";
 import "../styles/overlay.css";
@@ -172,4 +174,20 @@ export default function Overlay() {
       <div aria-live="polite">{shown && <Card key={shown.pivot_id} card={shown} leaving={leaving} />}</div>
     </div>
   );
+}
+
+/** `/overlay` with no match: the one last picked on the live board, else the default (first) match (Ax55). */
+export function OverlayDefault() {
+  const [id, setId] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    pickMatch({ id: readSavedMatch(), fromUrl: false }).then(
+      (picked) => alive && setId(picked.id),
+      (err) => console.warn("No match for the overlay", err),
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return id ? <Navigate replace to={`/overlay/${encodeURIComponent(id)}${window.location.search}`} /> : null;
 }

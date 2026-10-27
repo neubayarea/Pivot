@@ -31,8 +31,8 @@ COPY eval/fixtures ./eval/fixtures
 RUN uv sync --frozen --no-dev --package pivot-api
 COPY --from=web /web/apps/web/dist ./web
 
-ENV PATH="/app/.venv/bin:$PATH" HOST=0.0.0.0 PORT=8000 PIVOT_WEB_DIST=/app/web \
-    PIVOT_DEMO_FIXTURE=/app/eval/fixtures/demo-1021.json
+# eval/fixtures stays in the image for PIVOT_DEMO_FIXTURE=1; the site does not load it by default (Ax55).
+ENV PATH="/app/.venv/bin:$PATH" HOST=0.0.0.0 PORT=8000 PIVOT_WEB_DIST=/app/web
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"
 CMD ["python", "-m", "pivot_api.single"]

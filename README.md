@@ -14,23 +14,24 @@ All matches, clubs and players are synthetic (see [Data](#data-and-disclaimer)).
 
 ## Try it
 
-**Live demo: https://pivot.in-stacks.com/?match=M-seed-29**
+**Live demo: https://pivot.in-stacks.com/**
 
-No sign-in is needed. The link opens the demo match, Harbour City 3–1 Northgate Rovers. A private window works best, because the site remembers the last match you opened.
+No sign-in is needed. The site shows 20 simulated matches and opens the first one in the match list (top bar) by default. Every match is an ordinary simulation: nothing in it is staged. A private window works best, because the site remembers the last match you opened.
 
 | Step | Do this | You should see |
 |---|---|---|
-| 1 | Open the link | The match board: score, momentum chart, the list of **Pivots**, the pitch and match stats. The red lines on the momentum chart are the pivots. |
+| 1 | Open the link | The default match: score, momentum chart, the list of **Pivots**, the pitch and match stats. The red lines on the momentum chart are the pivots. |
 | 2 | Click **Start demo**, then **60×** | The match replays from 0′. Momentum is drawn live, players move on the pitch, and each pivot card appears at the minute it was detected. |
-| 3 | Click the **62′** pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1107`. |
+| 3 | Click the first pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1107`. |
 | 4 | Click an evidence number | The mini pitch shows that event (a shot gets an arrow) and the timeline jumps to that second. |
 | 5 | Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar | The explanation is rewritten for that audience and language. It goes through the same checks, so the evidence numbers stay. |
-| 6 | Go back, open the **38′** pivot (the red card), click **What if…** | The What-if Lab, with five scenarios for this moment. |
-| 7 | Pick **Remove 38′ red card**, keep **200** runs, click **Run simulation** | This scenario was computed in advance, so the result is instant: win/draw/loss "as played" vs "with the change", 95 % ranges, and a short "Why it differs". |
+| 6 | On the pivot page, click **What if…** | The What-if Lab, with the scenarios that fit this moment (for example cancelling a substitution or removing a goal or a red card). |
+| 7 | Pick a scenario, keep **200** runs, click **Run simulation** | Win/draw/loss "as played" vs "with the change", 95 % ranges, and a short "Why it differs". |
+| 8 | Pick another match in the top bar | The board switches to that match; steps 2 to 7 work the same on every match. |
 
-The live server has only 2 CPU cores. Scenarios not computed in advance take a few minutes there and queue behind each other, so please stay with the one in step 7. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
+The live server has only 2 CPU cores. A scenario nobody has run yet takes a few minutes there and queues behind the others; one that has been run before answers at once. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
 
-To see what the AI agents did for a pivot, open the raw agent trace: https://pivot.in-stacks.com/api/pivots/M-seed-29:p66/traces. It lists each step (Judge, Explainer, Verifier), the model used, latency, tokens and the verdict.
+To see what the AI agents did, click **Trace** in the top bar. It lists each step (Judge, Explainer, Verifier) for every pivot, the model used, latency, tokens and the verdict. The raw data is at `https://pivot.in-stacks.com/api/pivots/<pivot id>/traces`; the pivot id (such as `M-seed-101:p37`) is in the address bar of a pivot page.
 
 | Pivot detail with evidence | What-if result |
 |---|---|
@@ -160,7 +161,7 @@ uv sync && pnpm install && pnpm --filter web build
 PIVOT_PIPELINE=fake PIVOT_SIM_MATCHES=1 PIVOT_WHATIF_WARM=0 PIVOT_DATA_DIR=.pivot-data uv run python -m pivot_api.single
 ```
 
-Open http://127.0.0.1:8000/?match=M-seed-29. The site, API, WebSocket, simulator, agents and what-if runner all run in this one process. Explanations are template text in this mode, which is expected. A 200-run what-if takes about 30 seconds on a laptop. Add `PORT=8011` in front to use another port.
+Open http://127.0.0.1:8000/. It opens the first simulated match (`PIVOT_SIM_MATCHES=1` makes just one, seed 101, in a few seconds). The site, API, WebSocket, simulator, agents and what-if runner all run in this one process. Explanations are template text in this mode, which is expected. A 200-run what-if takes about 30 seconds on a laptop. Add `PORT=8011` in front to use another port.
 
 Checks and tests:
 

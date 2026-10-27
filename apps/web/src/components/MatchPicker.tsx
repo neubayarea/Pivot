@@ -1,19 +1,16 @@
 // The match select in the top bar (Ax6). Picking one reloads S1 with that match and remembers it.
 import type { Match } from "@pivot/contracts";
-import { DEMO_MATCH_ID, isRecordedDemo, matchLabel, useMatchChoice, useMatchList, type MatchList } from "../data/choice";
+import { matchLabel, useMatchChoice, useMatchList, type MatchList } from "../data/choice";
 import { useMatch } from "../data/match";
 import { useT } from "../i18n";
-
-const rank = (m: Match) => (isRecordedDemo(m) ? 0 : m.match_id === DEMO_MATCH_ID ? 2 : 1);
-const bySeed = (a: Match, b: Match) => rank(a) - rank(b) || a.seed - b.seed;
 
 type ViewProps = MatchList & { value: string; onChange: (id: string) => void };
 
 export function MatchPickerView({ matches, sims, value, onChange }: ViewProps) {
   const t = useT();
-  // The shown match may not be in the list yet (first poll still running). Simulated matches arrive
-  // in whatever order they finish, so list them by seed: the recorded demo first, the hand-made sample last.
-  const shown = matches.some((m) => m.match_id === value) ? [...matches].sort(bySeed) : [];
+  // The shown match may not be in the list yet (first poll still running). The API lists the
+  // simulated matches in seed-list order, the default (first) one on top (Ax55), so keep its order.
+  const shown = matches.some((m) => m.match_id === value) ? matches : [];
   return (
     <span className="match-pick">
       <select aria-label={t("picker.label")} value={value} onChange={(e) => onChange(e.target.value)}>

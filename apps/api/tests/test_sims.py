@@ -188,3 +188,37 @@ def test_recorded_demo_off_or_missing_leaves_the_api_running(tmp_path, monkeypat
         assert client.get("/healthz").status_code == 200
         assert not [m for m in client.get("/api/matches").json() if m["preset"] == "demo-1021"]
 
+
+
+# --- Ax55: no recorded demo on the site, the first seed is the default --------------------------
+
+def test_ax55_recorded_demo_is_off_unless_asked_for(tmp_path, monkeypatch):
+    monkeypatch.delenv("PIVOT_DEMO_FIXTURE")
+    assert sims.fixture_from_env() is None
+    with TestClient(app) as client:
+        assert not [m for m in client.get("/api/matches").json() if m["preset"] == "demo-1021"]
+    monkeypatch.setenv("PIVOT_DEMO_FIXTURE", "0")
+    assert sims.fixture_from_env() is None
+    monkeypatch.setenv("PIVOT_DEMO_FIXTURE", "1")
+    assert sims.fixture_from_env() == sims.FIXTURE
+    monkeypatch.setenv("PIVOT_DEMO_FIXTURE", str(tmp_path / "other.json"))
+    assert sims.fixture_from_env() == tmp_path / "other.json"
+
+
+def test_ax55_twenty_matches_by_default_the_first_seed_first(monkeypatch):
+    monkeypatch.delenv("PIVOT_SIM_MATCHES")
+    specs = specs_from_env()
+    assert len(specs) == 20 and specs[0].match_id == "M-seed-101"
+    assert [s.seed for s in specs] == sorted(s.seed for s in specs)
+
+
+def test_ax55_api_lists_simulated_matches_in_seed_list_order_then_the_rest():
+    order = ["M-seed-101", "M-seed-212", "M-seed-303"]
+    with TestClient(app) as client:
+        repo = app.state.adapters.matches
+        sample = client.portal.call(repo.get_match, "M-api-demo")
+        for match_id in ("M-seed-303", "M-seed-101", "M-seed-212"):     # stored in the order they finish
+            client.portal.call(repo.upsert_match, sample.model_copy(update={"match_id": match_id}))
+        app.state.sims.order = order
+        ids = [m["match_id"] for m in client.get("/api/matches").json()]
+        assert ids == [*order, "M-api-demo"]                           # the first is the site's default

@@ -1,3 +1,4 @@
+import { useMatchChoice } from "../data/choice";
 import { useConnection, useMaybeMatch } from "../data/match";
 import { useT } from "../i18n";
 import Button from "./Button";
@@ -26,6 +27,20 @@ export default function ConnectionBanner() {
       <Button onClick={conn.retryNow}>{t("common.retryNow")}</Button>
       <span className="sp" />
       {paused}
+    </div>
+  );
+}
+
+/** An old link named a match the site no longer has, so the default one is shown (Ax55). */
+export function MissingMatchBanner() {
+  const choice = useMatchChoice();
+  const t = useT();
+  if (!choice?.missing) return null;
+  return (
+    <div className="banner warn" role="status">
+      {t("banner.missing", { id: choice.missing })}
+      <span className="sp" />
+      <Button onClick={choice.dismiss}>{t("banner.dismiss")}</Button>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import ConnectionBanner from "./components/ConnectionBanner";
+import ConnectionBanner, { MissingMatchBanner } from "./components/ConnectionBanner";
 import Playback from "./components/Playback";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
@@ -31,6 +31,7 @@ export default function App() {
     <MatchProvider fallback={WAITING}>
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <ConnectionBanner />
+      <MissingMatchBanner />
       <Playback />
       {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}
       <main className="page" data-fav={prefs.focus_team ?? undefined}>

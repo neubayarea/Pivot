@@ -43,6 +43,8 @@ export const es: Messages = {
   "banner.failed": "Datos en vivo no disponibles: {reason}.",
   "banner.reconnecting": "Se perdió la conexión en vivo. Reconectando… (intento {n})",
   "banner.degraded": "Las explicaciones de la IA van con retraso. Se muestran resúmenes automáticos.",
+  "banner.missing": "Ya no existe ningún partido llamado “{id}”; se muestra el primer partido.",
+  "banner.dismiss": "Vale",
 
   "error.title": "Algo salió mal",
   "error.reload": "Recargar la página",

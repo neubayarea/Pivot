@@ -50,9 +50,9 @@ export function stateAt(full: LiveState, clock: number, playing: boolean): LiveS
   return { match, events, metrics: full.metrics.filter((m) => m.minute <= minute), pivots };
 }
 
-type Props = { children: ReactNode; fallback: ReactNode; choice: MatchChoice; from: number };
+type Props = { children: ReactNode; fallback: ReactNode; choice: MatchChoice; from: number; onMissing?: (id: string) => void };
 
-export default function ReplayProvider({ children, fallback, choice, from }: Props) {
+export default function ReplayProvider({ children, fallback, choice, from, onMissing }: Props) {
   const [full, setFull] = useState<LiveState | null>(null);
   const [connection, setConnection] = useState<Connection | null>(null);
   const [clock, setClock] = useState(from);
@@ -80,7 +80,9 @@ export default function ReplayProvider({ children, fallback, choice, from }: Pro
   useEffect(() => {
     let alive = true;
     (async () => {
-      const id = (matchId.current = await pickMatch(choice));
+      const picked = await pickMatch(choice);
+      const id = (matchId.current = picked.id);
+      if (picked.missing && alive) onMissing?.(picked.missing);
       const asked = prefsRef.current;
       const [match, events, metrics, pivots] = await Promise.all([
         api.getMatch(id), api.listEvents(id), api.getTimeline(id), firstPivots(id, asked),
