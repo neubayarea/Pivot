@@ -1,25 +1,30 @@
 // One player for every clip on the pitch (Ax42): a shot's attack (Ax37), a key moment (Ax38) and a
 // set piece (Ax56).
 // It runs on clip time with requestAnimationFrame, moved by the real time since the last screen
-// frame times the speed, so the dots glide between the once-a-second frames at any speed.
+// frame times the speed; the dots, ball and thumb move on every screen frame through
+// usePitchMotion (Ax61), while React redraws only four times a clip second.
 // Keys, with the clip focused: Space or K plays and pauses, ←/→ go back and on a second (Shift: 5),
 // Home goes to the start, R plays it again, − and + change the speed.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { TrackingFrame } from "@pivot/contracts";
 import { useClock } from "../data/clock";
-import { advance, clipLength, nextRate, partAt, RATES, toMatch, type Clip, type ClipMark, type Rate } from "../data/clips";
+import { advance, clipLength, nextRate, partAt, RATES, toClip, toMatch, type Clip, type ClipMark, type Rate } from "../data/clips";
 import type { KeyKind } from "../data/keyMoments";
 import { useFrameWindow } from "../data/live/frames";
 import { fixtureMode, useMatch, type Side } from "../data/match";
+import { cueSpan, cuesAt } from "../data/motion";
 import { clipBall, frameBetween } from "../data/setpieces";
 import { useT, type MessageKey } from "../i18n";
 import { describe } from "./EventFeed";
+import ControlBar, { barKey, type BarMark } from "./ControlBar";
+import { EventCues, usePitchMotion } from "./motion";
 import Pitch, { whoFromSquads } from "./Pitch";
-import Segmented from "./Segmented";
 import { lineupAt } from "./shape";
 import "../styles/setpieces.css";
 
 const S = 5;
+// How many times a second of clip time the clip redraws (caption, cues, marks); the dots move every frame.
+const REDRAWS = 4;
 
 /** Who is who for these pitches: side, shirt, keeper, and the tooltip text. */
 export function usePeople() {
@@ -82,10 +87,12 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
   const length = clipLength(parts);
   const frames = useFrameWindow(matchId, parts[0][0], parts.at(-1)![1]);
   const ready = !!frames?.length;
+  // posAt is the clip clock; React only hears about it a few times a second (Ax61), the motion loop on every frame.
   const [pos, setPosState] = useState(0);
   const posAt = useRef(0);
+  const drawnAt = useRef(0);
   const setPos = (c: number) => {
-    posAt.current = Math.min(length, Math.max(0, c));
+    posAt.current = drawnAt.current = Math.min(length, Math.max(0, c));
     setPosState(posAt.current);
   };
   const [playing, setPlaying] = useState(() => !reducedMotion());
@@ -105,7 +112,11 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
       const next = advance(posAt.current, last === null ? 0 : now - last, rateAt.current, length);
       last = now;
       posAt.current = next;
-      setPosState(next);
+      // A redraw every quarter second of clip time is enough for the caption, cues and marks.
+      if (Math.floor(next * REDRAWS) !== Math.floor(drawnAt.current * REDRAWS) || next >= length) {
+        drawnAt.current = next;
+        setPosState(next);
+      }
       if (next >= length) setPlaying(false);
       else id = requestAnimationFrame(step);
     };
@@ -113,29 +124,42 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
     return () => cancelAnimationFrame(id);
   }, [playing, ready, length]);
 
+  const svg = useRef<SVGSVGElement>(null);
+  const scrub = useRef<HTMLInputElement>(null);
+  const time = useRef<HTMLSpanElement>(null);
+  usePitchMotion(svg, () => {
+    if (!frames?.length) return null;
+    const at = toMatch(parts, posAt.current);
+    const flying = clip.shot ? clipBall(clip.shot, frames, at) : null;
+    return { t: at, frames, ball: flying && [flying.x, flying.y] };
+  }, (at) => {
+    if (scrub.current && !scrub.current.matches(":active")) scrub.current.value = String(posAt.current);
+    const text = clock(at);
+    if (time.current && time.current.textContent !== text) time.current.textContent = text;
+  });
+
   const tm = toMatch(parts, pos);
   const part = parts[partAt(parts, pos)];
-  const between = frames ? frameBetween(frames, tm) : null;
-  const flying = frames && clip.shot ? clipBall(clip.shot, frames, tm) : null;
-  const frame = between && flying ? { ...between, ball: { ...between.ball, ...flying, owner_id: null } } : between;
+  // The set-piece layer under the players (marking lines, the wall) is drawn from this, a few times a second.
+  const frame = frames ? frameBetween(frames, tm) : null;
   const reached = clip.marks.filter((m) => m.t <= tm);
   const banner = reached.at(-1);
   const now = clip.events.filter((e) => e.t <= tm).at(-1);
-  const drawn = clip.events.filter((e) => (e.type === "pass" || e.type === "shot") && e.t >= part[0] && e.t <= tm);
+  const cues = cuesAt(clip.events.filter((e) => e.t >= part[0]), tm, cueSpan(rate));
   const ended = pos >= length;
   const replay = () => {
     setPos(0);
     setPlaying(true);
   };
   const toggle = () => (!playing && ended ? replay() : setPlaying(!playing));
+  const seek = (c: number) => {
+    setPlaying(false);
+    setPos(c);
+  };
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const tag = (e.target as HTMLElement).tagName;
-    const by = e.shiftKey ? 5 : 1;
-    if ((e.key === " " || e.key === "k" || e.key === "K") && tag !== "BUTTON") toggle();
-    else if (e.key === "ArrowLeft") setPos(posAt.current - by);
-    else if (e.key === "ArrowRight") setPos(posAt.current + by);
-    else if (e.key === "Home") setPos(0);
+    if (barKey(e, { toggle, seekBy: (d) => setPos(posAt.current + d), step: 1 })) return;
+    if (e.key === "Home") setPos(0);
     else if (e.key === "End") setPos(length);
     else if (e.key === "r" || e.key === "R") replay();
     else if (e.key === "-" || e.key === "_") setRate(nextRate(rateAt.current, -1));
@@ -150,12 +174,17 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
   else {
     const trailTo = clip.shot && clip.shot.t >= part[0] ? Math.min(tm, clip.shot.t - 1) : tm;
     pitch = (
-      <Pitch frame={frame} actions={drawn} selected={null} who={people.who} stepMs={1} label={label}
+      <Pitch frame={frame} actions={[]} selected={null} who={people.who} label={label} animated svgRef={svg}
+        className={playing ? undefined : "paused"}
         picked={pickedPlayer} onPick={setPickedPlayer} tag={people.tag} marked={new Set(clip.involved)}
         under={<>{under?.(frame, tm)}<BallTrail frames={frames.filter((f) => f.t >= part[0])} pos={trailTo} now={frame} /></>}
-        over={<Marks marks={reached} tm={tm} />} />
+        over={<><EventCues cues={cues} /><Marks marks={reached} /></>} />
     );
   }
+  const barMarks: BarMark[] = clip.marks.map((m) => ({
+    t: toClip(parts, m.t), kind: m.kind === "goal" ? "goal" : m.kind === "red" ? "red" : "moment", side: m.side,
+    label: `${at(m.t)}′ ${t(`clip.banner.${m.kind}` as MessageKey)}`,
+  }));
 
   return (
     <div className={`clip${banner?.kind === "goal" ? " goal" : ""}`} role="group" aria-label={label} tabIndex={0} onKeyDown={onKey}
@@ -167,23 +196,15 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
         </h4>
       )}
       {pitch}
-      <div className="clip-ctl">
-        <button type="button" className="play" aria-label={t(playing ? "scrub.pause" : "scrub.play")} onClick={toggle} disabled={!ready}>
-          {playing ? "❚❚" : "▶"}
-        </button>
+      <ControlBar playing={playing} onPlaying={(on) => (on ? (ended ? replay() : setPlaying(true)) : setPlaying(false))}
+        value={pos} min={0} max={length} onSeek={seek} step={1} speeds={RATES} speed={rate} onSpeed={(r) => setRate(r as Rate)}
+        marks={barMarks} lead={1} format={() => clock(tm)} disabled={!ready} inputRef={scrub} timeRef={time}>
         <button type="button" className="again" aria-label={t("clip.replay")} title={t("clip.replay")} onClick={replay} disabled={!ready}>↺</button>
-        <input type="range" min={0} max={length} step={0.05} value={pos} aria-label={t("scrub.time")}
-          aria-valuetext={clock(tm)} disabled={!ready}
-          onChange={(e) => {
-            setPlaying(false);
-            setPos(Number(e.target.value));
-          }} />
-        <span className="num">{clock(tm)}</span>
-        <Segmented label={t("shots.speed")} value={String(rate)} onChange={(v) => setRate(Number(v) as Rate)}
-          options={RATES.map((r) => ({ value: String(r), label: `${r}×` }))} />
-      </div>
+      </ControlBar>
       <p className="pitch-cap">
-        {now ? <><b>{at(now.t)}′ · {teams[now.team].short_name}</b> {describe(now, playerName, t)}</> : <span className="muted">{intro}</span>}
+        {now ? (
+          <span className={`cap-ev ${now.team}`}><b>{at(now.t)}′ · {teams[now.team].short_name}</b> {describe(now, playerName, t)}</span>
+        ) : <span className="muted">{intro}</span>}
       </p>
       {children}
       <small className="muted clip-keys">{t("clip.keys")}</small>
@@ -191,13 +212,13 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
   );
 }
 
-/** Each key moment reached so far, marked where it happened; the newest with a ring for a second. */
-function Marks({ marks, tm }: { marks: ClipMark[]; tm: number }) {
+/** Each key moment reached so far, marked where it happened; the newest with a ring that flashes once. */
+function Marks({ marks }: { marks: ClipMark[] }) {
   return (
     <g className="clip-marks" pointerEvents="none">
       {marks.map((m, i) => m.at && (
         <g key={i}>
-          {tm - m.t < 1 && <circle cx={m.at[0] * S} cy={m.at[1] * S} r={14 + (tm - m.t) * 10} fill="none" stroke="var(--pv-gold)" strokeWidth={3} opacity={1 - (tm - m.t)} />}
+          <circle className="cue-flash" cx={m.at[0] * S} cy={m.at[1] * S} r={22} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />
           <KeyMark kind={m.kind} side={m.side} x={m.at[0] * S} y={m.at[1] * S - 20} size={1.6} />
         </g>
       ))}
