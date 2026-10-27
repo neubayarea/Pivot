@@ -332,6 +332,8 @@ export const es: Messages = {
   "feed.k.pivots": "Giros",
   "feed.none": "Todavía no hay eventos de este tipo.",
   "feed.fanNote": "Solo los grandes momentos: goles, rojas, cambios y lo que provocó los giros.",
+  "feed.goalXg": "Gol de {who}, xG {xg}",
+  "pt.team": "Total {team}",
   "ts.title": "Estadísticas de equipo",
   "ts.note": "Las mismas cifras que cita la IA y comprueba el verificador.",
   "ts.scope": "Parte del partido",

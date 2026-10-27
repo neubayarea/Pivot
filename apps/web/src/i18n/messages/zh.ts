@@ -331,6 +331,8 @@ export const zh: Messages = {
   "feed.k.pivots": "转折点",
   "feed.none": "暂时还没有这类事件。",
   "feed.fanNote": "只列大事：进球、红牌、换人，以及引发转折的那几下。",
+  "feed.goalXg": "进球：{who}，xG {xg}",
+  "pt.team": "{team} 全队",
   "ts.title": "球队数据",
   "ts.note": "和 AI 解释里引用、核对员核对的是同一套数字。",
   "ts.scope": "比赛的哪一段",

@@ -109,7 +109,9 @@ export default function EventFeed({ highlight }: { highlight: ReadonlySet<string
             className={`${key ? "key" : ""}${highlight.has(e.event_id) ? " on" : ""}${involves(e, prefs.focus_player_id) ? " mine" : ""}`}>
             <span className="t">{e.clock_label.replace(/'/g, "′")}</span>
             <span className={e.team === "home" ? "h" : "a"}>{teams[e.team].short_name}</span>
-            <span>{describe(e, playerName, t)}</span>
+            <span>{!fan && e.shot_outcome === "goal" && e.xg != null
+              ? t("feed.goalXg", { who: playerName(e.player_id), xg: e.xg.toFixed(2) })
+              : describe(e, playerName, t)}</span>
           </div>
         );
       })}

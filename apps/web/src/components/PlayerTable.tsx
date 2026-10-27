@@ -3,18 +3,22 @@
 // line (/players/stats, the verifier's StatCalculator); nothing is worked out here. Each header
 // carries its definition (metric.*), shown on hover and read out by screen readers.
 import { useState } from "react";
-import type { PlayerMatchStats, PlayerReport } from "@pivot/contracts";
+import type { PlayerReport } from "@pivot/contracts";
 import { useMatch, type Side } from "../data/match";
 import { usePersona, usePlayers } from "../data/persona";
 import { usePrefs, type MessageKey } from "../i18n";
 import Segmented from "./Segmented";
+import { useTeamStats } from "./TeamStats";
 
 export const PLAYER_COLS = ["minutes_played", "passes", "pass_accuracy_pct", "progressive_passes", "shots", "xg", "tackles_won", "interceptions", "rating"] as const;
 type Col = (typeof PLAYER_COLS)[number];
 
-const cell = (s: PlayerMatchStats, c: Col): string => {
+/** The team's own line, from the team stats (the same report as the team-stats card), not a sum made here. */
+const TEAM_COLS = new Set<Col>(["passes", "pass_accuracy_pct", "progressive_passes", "shots", "xg", "tackles_won", "interceptions"]);
+
+const cell = (s: Partial<Record<Col, number | null>>, c: Col): string => {
   const v = s[c];
-  if (v === null) return "–";
+  if (v === null || v === undefined) return "–";
   if (c === "xg") return v.toFixed(2);
   if (c === "rating") return v.toFixed(1);
   if (c === "pass_accuracy_pct") return `${Math.round(v)}%`;
@@ -41,6 +45,7 @@ export default function PlayerTable({ upTo }: { upTo: number | null }) {
   const [col, setCol] = useState<Col | null>("rating");
   const [asc, setAsc] = useState(false);
   const { data, loading, error } = usePlayers(match.match_id, upTo);
+  const team = useTeamStats(match.match_id, upTo).data?.scopes.find((s) => s.scope === "match")?.[side];
   if (!data) return <p className="muted" role="status">{t(error ? "pt.error" : loading ? "pt.loading" : "pt.error")}</p>;
   const rows = playerRows(data.players, side, col, asc);
   const sortBy = (c: Col) => {
@@ -81,6 +86,14 @@ export default function PlayerTable({ upTo }: { upTo: number | null }) {
               </tr>
             ))}
           </tbody>
+          {team && (
+            <tfoot>
+              <tr>
+                <th scope="row" className="pt-who">{t("pt.team", { team: teams[side].short_name })}</th>
+                {PLAYER_COLS.map((c) => <td key={c} className="num">{TEAM_COLS.has(c) ? cell({ [c]: team[c] ?? null }, c) : ""}</td>)}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       <p className="muted pt-note">{t("pt.note")}</p>

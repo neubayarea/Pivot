@@ -331,6 +331,8 @@ export const en = {
   "feed.k.pivots": "Turning points",
   "feed.none": "No events of this kind yet.",
   "feed.fanNote": "The big moments only: goals, red cards, substitutions and what set the turning points off.",
+  "feed.goalXg": "Goal: {who}, xG {xg}",
+  "pt.team": "{team} total",
   "ts.title": "Team stats",
   "ts.note": "The same numbers the AI cites and the checker verifies.",
   "ts.scope": "Part of the match",

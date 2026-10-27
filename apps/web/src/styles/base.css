@@ -788,6 +788,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .pt-table tbody tr:hover { background: var(--pv-paper); }
 .pt-table tbody tr.on { box-shadow: inset 4px 0 var(--pv-ink); }
 .pt-note { font-size: 13px; margin: 0; }
+.pt-table tfoot th, .pt-table tfoot td { border-top: 2px solid var(--pv-ink); font-weight: 700; }
 .ts-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ts-table caption { text-align: left; font-weight: 700; font-size: var(--pv-fs-md); padding-bottom: 6px; }
 .ts-table td, .ts-table th { padding: 9px 0 8px; border-top: 1px solid var(--pv-hair); vertical-align: top; }
