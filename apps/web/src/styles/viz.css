@@ -38,3 +38,7 @@
 .viz-shirt { display: inline-block; min-width: 18px; margin-right: 5px; padding: 0 3px; text-align: center; color: var(--pv-paper); }
 .viz-shirt.home { background: var(--pv-home); }
 .viz-shirt.away { background: var(--pv-away); }
+/* C18: the formation on paper as faint rings, joined to where each starter actually stood. */
+.viz-ghost line { stroke-width: 1.5; stroke-dasharray: 3 3; opacity: .55; }
+.viz-ghost circle { fill: none; stroke-width: 1.5; opacity: .45; }
+.viz-subs { display: inline-flex; align-items: center; gap: 6px; font-size: var(--pv-fs-sm); justify-self: start; cursor: pointer; }

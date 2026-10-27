@@ -57,7 +57,10 @@ describe("the overview", () => {
   it("opens on a different first block for a fan and an analyst (ORDER.*.post)", () => {
     const first = (html: string) => html.match(/<div class="post (?:fan|analyst)"[^>]*><header class="post-lead">.*?<\/header>(<\w+[^>]*>)/)![1];
     expect(first(render("?fixture=1&from=95&tab=overview&mode=fan"))).toContain('id="post-story"');
-    expect(first(render("?fixture=1&from=95&tab=overview&mode=analyst"))).toContain('id="post-momentum"');
+    // C18 (#366): an analyst opens on the key numbers and the xG race, then the momentum line.
+    const analyst = render("?fixture=1&from=95&tab=overview&mode=analyst");
+    expect(first(analyst)).toContain('id="post-xg"');
+    expect(analyst.indexOf('id="post-xg"')).toBeLessThan(analyst.indexOf('id="post-momentum"'));
   });
 
   it("shows both the key moments and the core five stats, and the AI log last", () => {

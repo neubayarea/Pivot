@@ -10,7 +10,8 @@
 // the five core team stats, and the AI's work log is a link at the bottom.
 import { Fragment, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import type { Pivot1 as Pivot } from "@pivot/contracts";
+import type { Pivot1 as Pivot, TeamStatsReport } from "@pivot/contracts";
+import KeyMetrics from "../../components/KeyMetrics";
 import KeyMoments, { KeyLegend, keyId, keyWhat } from "../../components/KeyMoments";
 import MomentumChart from "../../components/MomentumChart";
 import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments";
@@ -19,6 +20,8 @@ import PlayerSpotlight from "../../components/PlayerSpotlight";
 import SetPiecesAndShots from "../../components/SetPieces";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
+import { useShotMap } from "../../components/viz";
+import XgRace from "../../components/XgRace";
 import YourTeamSummary from "../../components/YourTeamSummary";
 import { keyMoments, matchPhase } from "../../data/keyMoments";
 import { useMatch } from "../../data/match";
@@ -51,6 +54,9 @@ type Props = {
 
 const CORE = new Set<string>(FAN5);
 
+/** The team stats' whole-match xG for one side, or null before they load. */
+const xgOf = (r: TeamStatsReport | null, side: "home" | "away") => (r?.scopes.find((s) => s.scope === "match") ?? r?.scopes[0])?.[side].xg ?? null;
+
 export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySelected, onKey }: Props) {
   const { match, teams, metrics, pivots, playback, events, playerName, pivotDetail } = useMatch();
   const t = useT();
@@ -72,6 +78,8 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   // The team stats follow the replay or the live clock, whole minutes, like the live tab's.
   const upTo = finished ? null : Math.floor(match.clock / 60) * 60;
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
+  // C18 (#366): the analyst's xG race; the shots are fetched only for an analyst.
+  const shots = useShotMap(scheduled || fan ? null : match.match_id, { upTo, stepS: 60 });
 
   // A fan has no open turning point on this tab: a pivot picked on the line opens its own page.
   const pickFor = fan ? (id: string) => navigate({ pathname: `/pivot/${id}`, search: location.search }) : pick;
@@ -85,6 +93,16 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   }
 
   const blocks: Record<string, ReactNode> = {
+    // C18 (#366): an analyst's first block, the key numbers and the xG race (Opta / Understat).
+    xgRace: (
+      <Section id="post-xg" title={t("xg.title")} note={t("xg.note")} className="post-xg">
+        <KeyMetrics report={report.data} names={{ home: teams.home.short_name, away: teams.away.short_name }} />
+        {shots.data && (
+          <XgRace shots={shots.data.shots} events={events} pivots={moments} names={{ home: teams.home.name, away: teams.away.name }}
+            totals={{ home: xgOf(report.data, "home"), away: xgOf(report.data, "away") }} end={match.clock} />
+        )}
+      </Section>
+    ),
     // C12: the ♥ team's match, then (ORDER) the story for a fan and the numbers for an analyst.
     yourTeam: <YourTeamSummary report={report.data} upTo={upTo} />,
     spotlight: <PlayerSpotlight upTo={upTo} onPivot={fan ? undefined : pick} />,
@@ -163,6 +181,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   };
   // The blocks in the order each audience reads them (data/persona.ts); a fan also gets the core five, after the key moments.
   const order: string[] = [...persona.order.post];
+  if (!fan) order.unshift("xgRace");
   if (fan && !order.includes("teamStats")) order.splice(order.indexOf("keys") + 1, 0, "teamStats");
 
   return (

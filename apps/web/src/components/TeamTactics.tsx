@@ -7,6 +7,7 @@ import type { TeamTactics as Tactics } from "@pivot/contracts";
 import { useMatch, type Side } from "../data/match";
 import { usePrefs, type MessageKey } from "../i18n";
 import Card from "./Card";
+import { useTeamStats } from "./TeamStats";
 import "../styles/prematch.css";
 
 const SIDES: Side[] = ["home", "away"];
@@ -19,6 +20,11 @@ const SCALES = [
   ["tempo", ["slow", "normal", "fast"]],
   ["passing", ["short", "mixed", "direct"]],
 ] as const satisfies readonly (readonly [keyof Tactics, readonly string[]])[];
+/**
+ * C18 (#366): what the match actually showed for each setting, from the team stats (the verifier's
+ * numbers), next to the coach's plan for an analyst once the match has started.
+ */
+const REAL = { press: "ppda", line_height: "line_height_m", width: "team_width_m" } as const;
 const LANES = ["left", "centre", "right"] as const;
 const FLAGS = ["counter_attack", "offside_trap", "time_wasting"] as const satisfies readonly (keyof Tactics)[];
 
@@ -28,6 +34,10 @@ export default function TeamTactics() {
   if (!preMatch) return null;
   const { plans } = preMatch;
   const fan = prefs.audience === "fan";
+  const { match } = useMatch();
+  const started = !fan && !!match && match.status !== "scheduled";
+  const stats = useTeamStats(started ? match.match_id : null, null).data;
+  const real = stats?.scopes.find((sc) => sc.scope === "match");
   const label = (key: string) => t((fan ? `plan.fan.${key}` : `plan.${key}`) as MessageKey);
   const value = (key: string, v: string) => t(`plan.${key}.${v}` as MessageKey);
 
@@ -65,6 +75,11 @@ export default function TeamTactics() {
                     {steps.map((step, i) => <i key={step} className={i <= at ? "on" : undefined} />)}
                   </span>
                   <span className="plan-word">{value(key, v)}</span>
+                  {real && key in REAL && real[s][REAL[key as keyof typeof REAL]] != null && (
+                    <small className="plan-real num" title={t(`plan.real.${key}.def` as MessageKey)}>
+                      {t(`plan.real.${key}` as MessageKey, { v: real[s][REAL[key as keyof typeof REAL]]!.toFixed(1) })}
+                    </small>
+                  )}
                 </span>
               );
             })}

@@ -1,9 +1,10 @@
 import { Fragment, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import type { Claim, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { involves, useMatch } from "../data/match";
 import { useLocalising } from "../data/view";
-import { narrativeLang, usePrefs, type MessageKey } from "../i18n";
+import { isMessageKey, narrativeLang, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import { surname } from "./FocusPickers";
 import Sourced from "./Sourced";
@@ -70,6 +71,12 @@ type Props = {
   outside?: ReadonlySet<string>;
 };
 
+/** An event's kind in the viewer's words, for the evidence chips ("Evidence · Pass #260"). */
+const kindOf = (type: string, t: T) => {
+  const k = `event.type.${type}`;
+  return isMessageKey(k) ? t(k) : type[0].toUpperCase() + type.slice(1).replaceAll("_", " ");
+};
+
 export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outside }: Props) {
   const { eventById, playerName } = useMatch();
   const { prefs, t } = usePrefs();
@@ -78,6 +85,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   const focus = prefs.focus_player_id;
   const name = nameMatcher(playerName(focus));
   const narrative = pivot?.narrative;
+  const { search } = useLocation();
   // Fans get the sentences without the evidence numbers (#904); a tap on a sentence's sources
   // shows them. Analysts always see them (Ax59, #276).
   const fan = prefs.audience === "fan";
@@ -127,6 +135,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
             return (
               <Fragment key={id}>
                 {" "}
+                {!fan && e && <span className="ev-kind">{t("why.evKind", { kind: kindOf(e.type, t) })}</span>}
                 <button type="button" className={`ev${selected.has(id) ? " on" : ""}${star ? " star" : ""}${out ? " out" : ""}`}
                   ref={k === 0 && justOpened === i ? (el) => el?.focus() : undefined}
                   aria-pressed={selected.has(id)} title={chipHint ?? t("why.chipHint")} onClick={() => onToggle(id)}>
@@ -138,6 +147,8 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
           })}
         </p>
       ))}
+      {/* C18 (#366): the evidence is checkable: the AI's steps for this turning point, in the work log. */}
+      {!fan && pivot && <Link className="ev-trace" to={`/trace/${pivot.pivot_id}${search}`}>{t("why.checkTrace")} <span aria-hidden="true">↗</span></Link>}
       <span className="pipe">
         {t(auto ? "why.pipeAuto" : "why.pipeOk")} {t("why.counts", { claims, evidence })}
       </span>
