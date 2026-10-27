@@ -1,0 +1,189 @@
+/* 赛后 · Post-match tab (C11 step 3, Ax64, #288). Everything is scoped to .post so the shared
+ * rules in base.css (the pivot detail page, the live tab) are left as they are.
+ * Yellow marks only the AI's pivots and the numbers it checked; the clubs' kit colours carry the
+ * data; greys and white hold the rest. */
+
+.post { display: grid; gap: var(--pv-s7); min-width: 0; max-width: 1280px; }
+
+/* ---------- The lead: score line and the one-sentence verdict ---------- */
+.post .lead { padding: 0; gap: var(--pv-s3); }
+.post .lead h1 { font-size: clamp(30px, 3.6vw, 48px); line-height: 1.04; max-width: 20em; }
+
+/* ---------- Sections: a heading, a quiet line under it, then the content ---------- */
+.post .post-sec { display: grid; gap: var(--pv-s4); min-width: 0; }
+.post .post-sec + .post-sec { border-top: 0; padding-top: 0; margin-top: 0; }
+.post .sec-hd { display: grid; gap: var(--pv-s1); padding-bottom: var(--pv-s3); border-bottom: 1px solid var(--pv-hair); }
+.post .sec-hd h2 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); line-height: 1.1; }
+.post .sec-hd p { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); max-width: 62em; flex-basis: auto; }
+.post .lead-sec .sec-hd h2 { font-size: var(--pv-fs-2xl); }
+
+/* The two kits, as a key next to the momentum heading. */
+.post .kit-key { display: inline-flex; flex-wrap: wrap; gap: var(--pv-s1) var(--pv-s4); }
+.post .kit-key span { display: inline-flex; align-items: center; gap: 6px; color: var(--pv-ink); font-weight: 600; }
+.post .kit-key span::before { content: ""; width: 12px; height: 12px; border-radius: 3px; }
+.post .kit-key .home::before { background: var(--pv-home); }
+.post .kit-key .away::before { background: var(--pv-away); }
+
+/* ---------- Pivots: the story of the match, one line each ---------- */
+.post .pv-story { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--pv-s3); }
+.post .pv-story > li { background: var(--pv-sheet); border-radius: var(--pv-r-panel); box-shadow: var(--pv-lift); min-width: 0; overflow: hidden; }
+.post .pr { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; align-items: center;
+  grid-template-columns: 40px 4.2em minmax(0, 1fr) auto auto 20px; gap: var(--pv-s2) var(--pv-s4); padding: var(--pv-s4) var(--pv-s5);
+  border-left: 6px solid transparent; transition: background-color .15s; }
+.post .pr.to-home { border-left-color: var(--pv-home); }
+.post .pr.to-away { border-left-color: var(--pv-away); }
+.post .pr:hover { background: var(--pv-sunk); }
+.post .pr:focus-visible { outline: 2px solid var(--pv-focus); outline-offset: -2px; }
+/* The pivot's number: a yellow disc, since the pivot is the AI's finding. */
+.post .pr-n { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--pv-gold); color: var(--pv-on-gold);
+  font-family: var(--pv-display); font-weight: 800; font-size: 19px; }
+.post .pr-min { font-family: var(--pv-display); font-weight: 800; font-size: 40px; line-height: .9; font-variant-numeric: tabular-nums; }
+.post .pr-txt { display: grid; gap: 4px; min-width: 0; }
+.post .pr-hd { font-weight: 700; font-size: var(--pv-fs-lg); line-height: 1.3; color: var(--pv-ink); overflow-wrap: anywhere; }
+.post .pr-cause { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); line-height: 1.4; }
+.post .pr-sw { display: grid; justify-items: end; gap: 2px; font-size: var(--pv-fs-xs); font-weight: 700; white-space: nowrap; }
+.post .pr.to-home .pr-sw .to { color: var(--pv-home); }
+.post .pr.to-away .pr-sw .to { color: var(--pv-away); }
+.post .pr-swing { display: block; overflow: visible; }
+.post .pr-swing .home { fill: var(--pv-home); }
+.post .pr-swing .away { fill: var(--pv-away); }
+.post .pr-swing .mid { stroke: var(--pv-hair); stroke-width: 1; }
+.post .pr-swing .at { stroke: var(--pv-ink); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.post .pr-chev { width: 10px; height: 10px; border-right: 2px solid var(--pv-ink-2); border-bottom: 2px solid var(--pv-ink-2); transform: rotate(45deg) translate(-3px, -3px); transition: transform .15s; justify-self: center; }
+.post .pr[aria-pressed="true"] .pr-chev { transform: rotate(-135deg) translate(-3px, -3px); }
+.post .pv-story > li.on .pr { background: var(--pv-gold-soft); }
+/* The picked team's swings get a heart, like the score band's. */
+.page[data-fav="home"] .post .pr.to-home .pr-sw .to::before,
+.page[data-fav="away"] .post .pr.to-away .pr-sw .to::before { content: "♥ "; }
+
+/* The opened pivot: the explanation to read, the pitch beside it. */
+.post .open-mo { border: 0; box-shadow: none; background: transparent; padding: var(--pv-s2) var(--pv-s5) var(--pv-s5); display: grid; gap: var(--pv-s4); border-top: 1px solid var(--pv-hair); }
+.post .open-bd { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--pv-s6); padding: var(--pv-s4) 0 0; }
+.post .open-mo .more-link { justify-self: start; font-weight: 600; }
+.post .open-mo .banner { margin: var(--pv-s3) 0 0; }
+
+.post .why { gap: var(--pv-s3); }
+.post .why > h3 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); justify-content: flex-start; flex-wrap: wrap; gap: 4px 12px; }
+.post .why > h3 small { font-family: var(--pv-body); color: var(--pv-gold-ink); font-weight: 600; font-size: var(--pv-fs-sm); }
+.post .why p { font-size: 17px; line-height: 1.65; max-width: 62ch; color: var(--pv-ink); }
+.post .why p + p { border-top: 0; padding-top: 0; }
+.post .why .pipe { font-family: var(--pv-body); font-weight: 500; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); padding-top: var(--pv-s2); border-top: 1px solid var(--pv-hair); max-width: 62ch; }
+.post .why .lang-note { border-radius: var(--pv-r-ctl); font-weight: 600; padding: 6px 10px; }
+.page[data-fav] .post .why { box-shadow: none; padding-left: 0; }
+
+/* Evidence ids: quiet pills, yellow only once picked (they open the AI's sources). */
+.post .ev { font-family: var(--pv-body); font-weight: 600; font-size: var(--pv-fs-xs); padding: 0 8px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill);
+  background: var(--pv-sunk); color: var(--pv-ink-2); line-height: 1.7; vertical-align: 2px; }
+.post .ev:hover { background: var(--pv-gold-soft); color: var(--pv-ink); border-color: var(--pv-gold); }
+.post .ev.on { background: var(--pv-gold); color: var(--pv-on-gold); border-color: var(--pv-gold); }
+.post .ev.star { border-color: var(--pv-gold); box-shadow: none; color: var(--pv-ink); }
+.post .ev-more { font: inherit; font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); background: none; border: 0; padding: 0 2px;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; vertical-align: 1px; }
+.post .ev-more:hover { color: var(--pv-ink); }
+
+.post .mo-pitch figcaption { font-size: var(--pv-fs-sm); }
+.post .player-card { box-shadow: var(--pv-lift); }
+
+/* ---------- Momentum ---------- */
+.post .post-mom { padding: var(--pv-s5); box-shadow: var(--pv-lift); }
+.post .mom text { font-family: var(--pv-body); }
+.post .mom > line { stroke: var(--pv-ink-2); stroke-width: 1; }
+.post .mom-mk line { stroke: var(--pv-gold-ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.post .mom-mk circle { fill: var(--pv-gold-soft); stroke: var(--pv-gold); stroke-width: 2; }
+.post .mom-mk text { font-family: var(--pv-display); font-weight: 800; }
+.post .mom-mk .mk-min { font-family: var(--pv-body); font-weight: 700; }
+.post .mom-mk:hover circle { fill: var(--pv-gold); }
+.post .mom-mk.on circle { fill: var(--pv-gold); stroke: var(--pv-ink); stroke-width: 2; }
+.post .mom-mk.on line { stroke: var(--pv-ink); stroke-width: 2; }
+.post .mom-mk:focus-visible circle { stroke: var(--pv-focus); stroke-width: 3; }
+.post .mom-key .ring { fill: var(--pv-sheet); stroke: var(--pv-ink); stroke-width: 1.5; }
+.post .mom-key:focus-visible .hit { stroke: var(--pv-focus); }
+.post .mom .now { fill: var(--pv-ink); stroke: var(--pv-sheet); stroke-width: 2; }
+.post .km-legend { margin-top: var(--pv-s3); font-size: var(--pv-fs-xs); }
+.post .km-legend .km-pv { color: var(--pv-gold-ink); }
+
+/* ---------- Key moments: a timeline of the goals and cards ---------- */
+.post .keys { border: 0; border-radius: var(--pv-r-panel); box-shadow: var(--pv-lift); padding: var(--pv-s2) var(--pv-s4); }
+.post .km { padding: var(--pv-s3) var(--pv-s3); border-left-width: 4px; border-radius: 0; grid-template-columns: 3.4em 16px 3.4em minmax(0, 1fr) auto; }
+.post .km.to-home { border-left-color: transparent; }
+.post .km:hover { background: var(--pv-sunk); }
+.post .km[aria-expanded="true"] { background: var(--pv-sunk); }
+.post .km.to-home[aria-expanded="true"] { border-left-color: var(--pv-home); }
+.post .km.to-away[aria-expanded="true"] { border-left-color: var(--pv-away); }
+.post .km-min { font-size: 24px; }
+.post .km-what { font-weight: 600; }
+.post .km.goal .km-what { font-weight: 700; }
+.post .km-tag { border-radius: var(--pv-r-pill); padding: 2px 9px; font-weight: 600; font-size: var(--pv-fs-xs); background: var(--pv-sunk); }
+.post .km-tag.big { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); }
+.post .km-score { font-size: 20px; font-weight: 800; }
+.post .km-pv { color: var(--pv-gold-ink); font-weight: 700; }
+.post .km-clip { border-left: 4px solid var(--pv-hair); background: var(--pv-sunk); border-radius: 0 var(--pv-r-ctl) var(--pv-r-ctl) 0; padding: var(--pv-s3) var(--pv-s4) var(--pv-s4); margin: 0 0 var(--pv-s3); max-width: 760px; }
+
+/* ---------- Set pieces and shots ---------- */
+.post .set-shots.open { border: 0; border-radius: var(--pv-r-panel); background: var(--pv-sheet); box-shadow: var(--pv-lift); padding: var(--pv-s4) var(--pv-s5) var(--pv-s5); display: grid; gap: var(--pv-s3); }
+.post .set-shots .sp-count { font-size: var(--pv-fs-sm); }
+.post .set-shots .more-bd { padding: 0; gap: var(--pv-s4); display: grid; }
+.post .sp-sum { font-family: var(--pv-body); }
+.post .sp-list { border-radius: var(--pv-r-ctl); }
+.post .sp-list button { font-family: var(--pv-body); }
+.post .sp-list button:hover, .post .sp-list button:focus-visible { background: var(--pv-sunk); }
+.post .sp-list button:focus-visible { outline-color: var(--pv-focus); }
+.post .sp-res, .post .sh-out { font-family: var(--pv-body); font-weight: 600; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill); padding: 1px 8px; background: var(--pv-sheet); color: var(--pv-ink-2); }
+.post .sp-res.shot { background: var(--pv-sunk); color: var(--pv-ink); border-color: var(--pv-hair); }
+.post .sp-res.goal, .post .sh-card.goal .sh-out { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); }
+.post .sp-list button[aria-pressed="true"] .sp-res { border-color: transparent; }
+.post .sp-facts { font-family: var(--pv-body); }
+.post .sh-card { font-family: var(--pv-body); border-radius: var(--pv-r-ctl); border-width: 1px; border-left-width: 5px; }
+.post .sh-card.goal { border-width: 1px; border-left-width: 5px; }
+.post .sh-card:hover, .post .sh-card:focus-visible { background: var(--pv-sunk); }
+.post .sh-card[aria-pressed="true"] { background: var(--pv-sunk); border-color: var(--pv-ink); }
+.post .sh-card.home[aria-pressed="true"] { border-left-color: var(--pv-home); }
+.post .sh-card.away[aria-pressed="true"] { border-left-color: var(--pv-away); }
+.post .sh-who b { margin-right: 4px; }
+
+/* ---------- What-if ---------- */
+.post .post-wi { border: 0; border-radius: var(--pv-r-panel); box-shadow: var(--pv-lift); padding: var(--pv-s4) var(--pv-s5) var(--pv-s5); gap: var(--pv-s4); }
+.post .post-wi > .chips { padding-bottom: var(--pv-s4); border-bottom: 1px solid var(--pv-hair); }
+.post .chip { font-family: var(--pv-body); font-weight: 600; border-radius: var(--pv-r-pill); padding: 6px 14px; }
+.post .chip:hover { background: var(--pv-sunk); border-color: var(--pv-ink-2); }
+.post .chip[aria-pressed="true"] { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); box-shadow: none; }
+.post .mo-wi-res { border: 0; border-radius: var(--pv-r-ctl); background: var(--pv-sunk); padding: var(--pv-s4); }
+.post .mo-wi-go p { display: grid; gap: 4px; }
+.post .mo-wi .more-link { justify-self: start; font-weight: 600; }
+
+/* ---------- AI work log: one row, the AI's yellow at its edge ---------- */
+.post .post-trace { box-shadow: var(--pv-lift); border-left: 6px solid var(--pv-gold); padding: var(--pv-s4) var(--pv-s5); }
+
+:lang(zh) .post :is(.sec-hd h2, .why > h3) { font-family: var(--pv-body); font-weight: 700; font-synthesis: none; letter-spacing: 0; }
+:lang(zh) .post .sec-hd h2 { font-size: 22px; }
+:lang(zh) .post .lead-sec .sec-hd h2 { font-size: 30px; }
+:lang(zh) .post .why > h3 { font-size: 20px; }
+:lang(zh) .post .why p { line-height: 1.8; }
+
+@media (max-width: 960px) {
+  .post .pr { grid-template-columns: 36px 3.6em minmax(0, 1fr) auto 20px; grid-template-areas: "n m t t c" ". . s st st"; padding: var(--pv-s4); }
+  .post .pr-n { grid-area: n; }
+  .post .pr-min { grid-area: m; }
+  .post .pr-txt { grid-area: t; }
+  .post .pr-chev { grid-area: c; }
+  .post .pr-sw { grid-area: s; grid-auto-flow: column; justify-content: start; align-items: center; gap: var(--pv-s3); }
+  .post .pr-st { grid-area: st; justify-self: end; align-self: center; }
+  .post .pr-sw { white-space: normal; min-width: 0; }
+  .post .open-bd { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .post { gap: var(--pv-s6); }
+  .post .lead h1 { font-size: 28px; }
+  .post .lead-sec .sec-hd h2 { font-size: 28px; }
+  .post .pr { grid-template-columns: 30px minmax(0, 1fr) auto 16px; grid-template-areas: "n m m c" "t t t t" "s s st st"; gap: var(--pv-s2) var(--pv-s3); padding: var(--pv-s3) var(--pv-s4); }
+  .post .pr-n { width: 30px; height: 30px; font-size: 16px; }
+  .post .pr-min { font-size: 30px; }
+  .post .pr-hd { font-size: var(--pv-fs-md); }
+  .post .pr-cause { display: block; }
+  .post .open-mo { padding: var(--pv-s2) var(--pv-s4) var(--pv-s4); }
+  .post .open-bd { gap: var(--pv-s4); }
+  .post .why p { font-size: var(--pv-fs-md); }
+  .post .post-mom, .post .set-shots.open, .post .post-wi { padding: var(--pv-s3); }
+  .post .keys { padding: var(--pv-s1) var(--pv-s2); }
+  .post .km { grid-template-columns: 3em 16px minmax(0, 1fr); padding: var(--pv-s2); }
+}

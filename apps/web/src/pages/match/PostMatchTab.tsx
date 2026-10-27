@@ -1,7 +1,7 @@
-// 赛后 · Post-match (Ax59): the analysis, one numbered section after another so it reads top to
-// bottom instead of as a wall of cards: the pivots (one line each, the full explanation a click
-// away), the momentum line with the goals on it, the key moments, set pieces and shots, what-if,
-// and the AI's work log across the bottom.
+// 赛后 · Post-match (Ax59, C11 Ax64): the analysis, read top to bottom as the story of the match.
+// The pivots lead (one line each, the explanation opening under the line picked), then the
+// momentum line with the goals on it, the key moments, set pieces and shots, what-if, and the
+// AI's work log across the bottom. Styles in styles/post.css.
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
@@ -16,13 +16,13 @@ import { useClock } from "../../data/clock";
 import { keyMoments, matchPhase } from "../../data/keyMoments";
 import { useMatch } from "../../data/match";
 import { useT } from "../../i18n";
+import "../../styles/post.css";
 
-/** One numbered section of the analysis, with its heading and a line on what it shows. */
-function Section({ n, title, note, children, id }: { n: number; title: string; note?: ReactNode; children: ReactNode; id: string }) {
+/** One section of the analysis, with its heading and a line on what it shows; the pivots lead. */
+function Section({ title, note, children, id, lead = false }: { title: string; note?: ReactNode; children: ReactNode; id: string; lead?: boolean }) {
   return (
-    <section className="post-sec" aria-labelledby={`${id}-hd`} id={id}>
+    <section className={`post-sec${lead ? " lead-sec" : ""}`} aria-labelledby={`${id}-hd`} id={id}>
       <header className="sec-hd">
-        <span className="sec-n" aria-hidden="true">{n}</span>
         <h2 id={`${id}-hd`}>{title}</h2>
         {note && <p className="muted">{note}</p>}
       </header>
@@ -60,13 +60,13 @@ export function PostMatchTab({ moments, open, onPick, evidence, onEvidence, keyS
   if (scheduled) {
     return (
       <div className="empty-box">
-        {t("board.kickoffPending")} · <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
+        {t("board.kickoffPending")} <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="post">
       <div className="lead">
         <Kicker>
           {moments.length
@@ -81,23 +81,23 @@ export function PostMatchTab({ moments, open, onPick, evidence, onEvidence, keyS
         {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
       </div>
 
-      <Section n={1} id="post-pivots" title={t("post.pivots")} note={moments.length ? t("post.pivotsNote") : undefined}>
+      <Section lead id="post-pivots" title={t("post.pivots")} note={moments.length ? t("post.pivotsNote") : undefined}>
         {moments.length ? (
-          <MomentCards pivots={moments} selected={open?.pivot_id ?? null} onPick={onPick} />
+          <MomentCards pivots={moments} selected={open?.pivot_id ?? null} onPick={onPick}
+            open={open && <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={onEvidence} />} />
         ) : (
           <p className="muted">{t(finished ? "board.noSwingLede" : "pivots.empty")}</p>
         )}
-        {open && <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={onEvidence} />}
         {/* The ★ player's numbers so far, whole minutes so a live clock refetches once a minute. */}
         <PlayerCard upTo={finished ? null : Math.floor(match.clock / 60) * 60} numbered={moments.map((p) => p.pivot_id)} onPivot={onPick} />
       </Section>
 
-      <Section n={2} id="post-momentum" title={t("board.momentum")}
-        note={<>
-          <span style={{ color: "var(--pv-home)" }}>■</span> {teams.home.name} &nbsp;
-          <span style={{ color: "var(--pv-away)" }}>■</span> {teams.away.name}
-        </>}>
-        <div className="card">
+      <Section id="post-momentum" title={t("board.momentum")}
+        note={<span className="kit-key">
+          <span className="home">{teams.home.name}</span>
+          <span className="away">{teams.away.name}</span>
+        </span>}>
+        <div className="card post-mom">
           {metrics.length ? (
             <MomentumChart
               metrics={metrics}
@@ -121,15 +121,15 @@ export function PostMatchTab({ moments, open, onPick, evidence, onEvidence, keyS
         </div>
       </Section>
 
-      <Section n={3} id="post-keys" title={t("keys.title")} note={t("keys.note")}>
+      <Section id="post-keys" title={t("keys.title")} note={t("keys.note")}>
         <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={keySelected} onPick={onKey} heading={false} />
       </Section>
 
-      <Section n={4} id="post-set-pieces" title={t("sp.title")}>
+      <Section id="post-set-pieces" title={t("sp.title")}>
         <SetPiecesAndShots key={match.match_id} folded={false} />
       </Section>
 
-      <Section n={5} id="post-whatif" title={t("detail.whatIf")} note={t("moments.wiNote")}>
+      <Section id="post-whatif" title={t("detail.whatIf")} note={t("moments.wiNote")}>
         {whatIf ? (
           <div className="post-wi">
             {moments.length > 1 && (
@@ -148,12 +148,12 @@ export function PostMatchTab({ moments, open, onPick, evidence, onEvidence, keyS
         )}
       </Section>
 
-      <Section n={6} id="post-trace" title={t("post.trace")}>
+      <Section id="post-trace" title={t("post.trace")}>
         <div className="card post-trace">
-          <p className="muted">{t("moments.traceNote")}</p>
+          <p>{t("moments.traceNote")}</p>
           <Link to="/trace" className="btn">{t("top.trace", { n: pivots.length })}</Link>
         </div>
       </Section>
-    </>
+    </div>
   );
 }

@@ -129,7 +129,7 @@ describe("key moments", () => {
 describe("board without pivots", () => {
   it("a finished match that never turned says so and leads with its key moments", () => {
     const html = render(view(SEED_404, "finished"));
-    expect(html).toContain("Full time · Harbour City 2–2 Northgate Rovers");
+    expect(html).toContain("Full time: Harbour City 2–2 Northgate Rovers");
     expect(html).toContain("No clear swing in momentum in this match");
     expect(html).not.toContain("Watching for the first pivot");
     expect(html).not.toContain("No pivots yet");
@@ -150,20 +150,20 @@ describe("board without pivots", () => {
   it("a match still going says it is watching, under the right phase", () => {
     const live = SEED_404.filter((e) => e.t < H2 + 2000);
     const html = render(view(live, "live"));
-    expect(html).toContain("Kick-off · Harbour City");
+    expect(html).toContain("Kick-off: Harbour City");
     expect(html).toContain("Watching for the first pivot");
     expect(html).toContain("No pivots yet. Watching the momentum line.");
     expect(html).not.toContain("No clear swing");
     const ht = render(view([ev({ event_id: "e1", type: "period_end", team: "home", period: 1, period_t: 2830, t: 2830 })], "live"));
-    expect(ht).toContain("Half-time · Harbour City");
+    expect(ht).toContain("Half-time: Harbour City");
   });
 
   it("M-seed-29 keeps its numbered pivots first and links the key moments to them", () => {
     const html = render(view(SEED_29, "finished", [pivot(39, ["m037-s00678", "m039-s00714"]), pivot(69), pivot(89, ["m089-s01553"])]));
     expect(html).toContain("The 3 moments that changed the course of this match");
     expect(html).not.toContain("No clear swing");
-    expect(html).toContain("→ Pivot ①");
-    expect(html).toContain("→ Pivot ③");
+    expect(html).toContain(">Pivot ①<");
+    expect(html).toContain(">Pivot ③<");
     expect(html).toContain("VAR overturns it: no penalty");
     expect(html).toContain("Pivot: the run of play turned");
     expect(html.indexOf("mc to-")).toBeLessThan(html.indexOf("Key moments"));

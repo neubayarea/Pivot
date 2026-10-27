@@ -140,7 +140,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
       {last && (
         <>
           <rect x={x(last.minute) + 8} y={T} width={2} height={H - T - B} fill="var(--pv-hair)" />
-          <circle cx={x(last.minute)} cy={y(last.momentum)} r={5} fill="var(--pv-gold)" stroke="var(--pv-ink)" strokeWidth={2} />
+          <circle className="now" cx={x(last.minute)} cy={y(last.momentum)} r={5} fill="var(--pv-ink)" stroke="var(--pv-sheet)" strokeWidth={2} />
         </>
       )}
     </svg>

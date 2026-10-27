@@ -99,7 +99,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   const plainForFan = prefs.audience === "fan" && narrative.prefs.audience !== "fan";
   const vars = { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served ?? "en"}`) };
   return (
-    <Card title={t("why.title")} note={`${minute(pivot.minute)}′ · ${t(auto ? "why.noteAuto" : "why.noteVerified")}`} className="why drop">
+    <Card title={t("why.title")} note={t(auto ? "why.noteAuto" : "why.noteVerified", { minute: minute(pivot.minute) })} className="why drop">
       {(fellBack || plainForFan) && (
         // A div, not a p: the drop cap goes on the first paragraph of the explanation.
         <div className="lang-note" role="note">
@@ -128,7 +128,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
                 <button type="button" className={`ev${selected.has(id) ? " on" : ""}${star ? " star" : ""}${out ? " out" : ""}`}
                   aria-pressed={selected.has(id)} title={chipHint ?? t("why.chipHint")} onClick={() => onToggle(id)}>
                   {star && "★ "}#{e?.seq ?? id}
-                  {out && <span className="ev-out"> · {t("why.outside")}</span>}
+                  {out && <span className="ev-out"> {t("why.outside")}</span>}
                 </button>
               </Fragment>
             );
