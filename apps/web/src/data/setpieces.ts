@@ -3,7 +3,9 @@
 //
 // Rules, kept simple on purpose:
 // - A set piece is a corner or free-kick pass (`pass_type`), or a shot whose possession began with a
-//   free kick and that is that team's first action in it (a direct free kick).
+//   free kick and that is that team's first action in it (a direct free kick), or a penalty kick
+//   in the match: the kick of a foul that gave one (penaltyKick), or a shot with play_pattern
+//   "penalty". A shootout's kicks are not set pieces.
 // - Its result follows the next FOLLOW_S seconds: a shot by the taking team is "shot" (or "goal");
 //   a clearance, block or keeper claim/punch by the defenders first is "cleared"; the defenders
 //   winning the ball any other way (passing, carrying, recovering, intercepting), or the attackers
@@ -25,6 +27,8 @@ import type { Side } from "./view";
 export const PITCH_L = 105;
 export const PITCH_W = 68;
 export const FOLLOW_S = 15;
+/** How long after a penalty is given its kick is looked for. */
+export const KICK_WITHIN = 240;
 export const SHOOTING_M = 30;
 export const MARK_M = 2.5;
 export const WALL_NEAR = 1.5;
@@ -33,7 +37,7 @@ export const WALL_DEG = 25;
 const BOX_DEPTH = 16.5;
 const BOX_HALF = 20.15;
 
-export type SetPieceKind = "corner" | "free_kick";
+export type SetPieceKind = "corner" | "free_kick" | "penalty";
 export type SetPieceResult = "goal" | "shot" | "cleared" | "lost" | "kept";
 export type FreeKickZone = "shooting" | "attacking" | "deep";
 
@@ -54,6 +58,16 @@ export const goalX = (team: Side) => (team === "home" ? PITCH_L : 0);
 const fromOwnGoal = (x: number, team: Side) => (team === "home" ? x : PITCH_L - x);
 
 export const oldestFirst = (events: MatchEvent[]) => [...events].sort((a, b) => a.t - b.t || a.seq - b.seq);
+
+const atSpot = (e: MatchEvent, side: Side) =>
+  !!e.location && Math.abs(Math.abs(e.location[0] - goalX(side)) - 11) <= 1.5 && Math.abs(e.location[1] - PITCH_W / 2) <= 1.5;
+
+/** The kick of the penalty given for `foul`: the fouled side's next shot, from the spot. `all` is oldest first. */
+export function penaltyKick(all: readonly MatchEvent[], foul: MatchEvent): MatchEvent | null {
+  const side = other(foul.team);
+  const next = all.find((e) => e.type === "shot" && e.team === side && e.t >= foul.t && e.seq > foul.seq && e.t - foul.t <= KICK_WITHIN);
+  return next && (next.play_pattern === "penalty" || atSpot(next, side)) ? next : null;
+}
 
 export function freeKickZone(e: MatchEvent): FreeKickZone {
   const [x, y] = e.location ?? [PITCH_L / 2, PITCH_W / 2];
@@ -84,7 +98,7 @@ export function resultOf(e: MatchEvent, after: MatchEvent[]): Pick<SetPiece, "re
   return { result: "kept", decidedBy: null };
 }
 
-/** Every corner and free kick in the events (any order in, oldest first out). */
+/** Every corner, free kick and penalty in the events (any order in, oldest first out). */
 export function setPieces(events: MatchEvent[]): SetPiece[] {
   const all = oldestFirst(events);
   const firstOfTeam = new Map<string, MatchEvent>();
@@ -92,28 +106,31 @@ export function setPieces(events: MatchEvent[]): SetPiece[] {
     const k = `${e.possession_id}:${e.team}`;
     if (e.possession_id !== null && !firstOfTeam.has(k)) firstOfTeam.set(k, e);
   }
+  const kicks = new Set(all.filter((e) => e.type === "foul" && e.foul?.penalty_awarded).map((f) => penaltyKick(all, f)));
   const out: SetPiece[] = [];
   all.forEach((e, i) => {
     let kind: SetPieceKind | null = null;
     if (e.type === "pass" && (e.pass_type === "corner" || e.pass_type === "free_kick")) kind = e.pass_type;
     else if (e.type === "shot" && e.play_pattern === "free_kick" && firstOfTeam.get(`${e.possession_id}:${e.team}`) === e) kind = "free_kick";
+    else if (e.type === "shot" && e.period !== 5 && e.shootout_round == null && (kicks.has(e) || e.play_pattern === "penalty")) kind = "penalty";
     if (!kind) return;
     out.push({ event: e, kind, zone: kind === "free_kick" ? freeKickZone(e) : null, ...resultOf(e, all.slice(i + 1)) });
   });
   return out;
 }
 
-export type SetPieceTally = { corners: number; freeKicks: number; shots: number; goals: number };
+export type SetPieceTally = { corners: number; freeKicks: number; penalties: number; shots: number; goals: number };
 
-/** Per team: corners, free kicks shown, and how many of those ended in a shot or a goal. */
+/** Per team: corners, free kicks shown, penalties, and how many of those ended in a shot or a goal. */
 export function tally(list: SetPiece[]): Record<Side, SetPieceTally> {
   const out = {
-    home: { corners: 0, freeKicks: 0, shots: 0, goals: 0 },
-    away: { corners: 0, freeKicks: 0, shots: 0, goals: 0 },
+    home: { corners: 0, freeKicks: 0, penalties: 0, shots: 0, goals: 0 },
+    away: { corners: 0, freeKicks: 0, penalties: 0, shots: 0, goals: 0 },
   };
   for (const s of list) {
     const t = out[s.event.team];
     if (s.kind === "corner") t.corners++;
+    else if (s.kind === "penalty") t.penalties++;
     else t.freeKicks++;
     if (s.result === "shot" || s.result === "goal") t.shots++;
     if (s.result === "goal") t.goals++;

@@ -1,12 +1,13 @@
 // Set pieces and shot clips on the match board (Ax37), folded below the moments like "More details".
-// Set pieces: every corner and every free kick near the goal it attacks, with what came of it, and
-// the pitch stopped at the kick showing who stood in the box, how the defenders marked and the wall.
+// Set pieces: every corner, every free kick near the goal it attacks and every penalty, with what
+// came of it; opening one replays it in the clip player (Ax56), from the players lining up to the
+// shot or clearance, with who stood in the box, how the defenders marked and the wall until the kick.
 // Shots: one card per shot; opening one replays the attack on the pitch in the clip player shared
 // with the key moments (Ax42). The rules are in data/setpieces.ts.
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import type { TrackingFrame } from "@pivot/contracts";
 import { useClock } from "../data/clock";
-import { fromShot } from "../data/clips";
+import { fromShot, setPieceClip } from "../data/clips";
 import { useFrameWindow } from "../data/live/frames";
 import { useMatch } from "../data/match";
 import {
@@ -16,7 +17,6 @@ import {
 import { useT, type MessageKey } from "../i18n";
 import { describe } from "./EventFeed";
 import ClipPlayer, { useFramesMatch, usePeople } from "./ClipPlayer";
-import Pitch from "./Pitch";
 import Segmented from "./Segmented";
 import "../styles/setpieces.css";
 
@@ -59,7 +59,8 @@ function Result({ r }: { r: SetPieceResult }) {
 }
 
 function kindLabel(sp: SetPiece, t: ReturnType<typeof useT>) {
-  return sp.kind === "corner" ? t("sp.corner") : t(`sp.fk.${sp.zone ?? "deep"}` as MessageKey);
+  if (sp.kind === "corner") return t("sp.corner");
+  return sp.kind === "penalty" ? t("sp.penalty") : t(`sp.fk.${sp.zone ?? "deep"}` as MessageKey);
 }
 
 export function SetPieceBoard() {
@@ -79,7 +80,9 @@ export function SetPieceBoard() {
         {(["home", "away"] as const).map((side) => (
           <p key={side} className={side}>
             <b>{teams[side].short_name}</b>{" "}
-            {t("sp.sum", { corners: sums[side].corners, fks: sums[side].freeKicks, shots: sums[side].shots, goals: sums[side].goals })}
+            {t(sums[side].penalties ? "sp.sumPens" : "sp.sum", {
+              corners: sums[side].corners, fks: sums[side].freeKicks, pens: sums[side].penalties, shots: sums[side].shots, goals: sums[side].goals,
+            })}
           </p>
         ))}
         <label className="sp-all">
@@ -106,45 +109,36 @@ export function SetPieceBoard() {
   );
 }
 
+/** The set piece replayed in the shared clip player; the box, marking and wall are drawn until the kick. */
 function SetPieceView({ sp }: { sp: SetPiece }) {
-  const { teams, playerName } = useMatch();
+  const { events, teams, playerName } = useMatch();
   const t = useT();
-  const { at } = useClock();
+  const { at, clock } = useClock();
   const people = usePeople();
   const matchId = useFramesMatch();
+  const clip = useMemo(() => setPieceClip(sp, events), [sp, events]);
   const frames = useFrameWindow(matchId, sp.event.t - 2, sp.event.t);
-  const frame = frames ? frameBefore(frames, sp.event.t) : null;
-  const setup = frame ? setupAt(frame, sp, people.isHome, people.isKeeper) : null;
-  const [pickedPlayer, setPickedPlayer] = useState<string | null>(null);
+  const still = frames ? frameBefore(frames, sp.event.t) : null;
+  const setup = still ? setupAt(still, sp, people.isHome, people.isKeeper) : null;
   const att = teams[sp.event.team].short_name;
   const def = teams[sp.event.team === "home" ? "away" : "home"].short_name;
   const names = (ids: string[]) => ids.map((id) => people.tag(id)).join(", ");
-
-  let pitch: ReactNode;
-  if (matchId === null || (frames && !frames.length)) pitch = <div className="empty-box muted">{t("board.pitchNone")}</div>;
-  else if (!frame || !setup) pitch = <div className="empty-box muted">{t("board.pitchLoading")}</div>;
-  else {
-    pitch = (
-      <Pitch frame={frame} actions={[sp.event]} selected={null} who={people.who} stepMs={1}
-        label={t("sp.pitchLabel", { minute: `${at(sp.event.t)}′` })}
-        picked={pickedPlayer} onPick={setPickedPlayer} tag={people.tag}
-        marked={SHOW_MARKING ? new Set(setup.pairs.flat()) : undefined}
-        under={<SetupLayer frame={frame} sp={sp} pairs={SHOW_MARKING ? setup.pairs : []} wall={SHOW_MARKING ? setup.wall : []} />} />
-    );
-  }
+  const marks = SHOW_MARKING && sp.kind !== "penalty";
+  const [from, to] = clip.parts[0];
 
   return (
-    <div className="sp-view">
-      <h4>
-        {at(sp.event.t)}′ · {kindLabel(sp, t)} · {att} · {playerName(sp.event.player_id)} <Result r={sp.result} />
-      </h4>
-      {pitch}
-      {!SHOW_MARKING && <small className="sp-sim">{t("sp.simNote")}</small>}
+    <ClipPlayer clip={clip} label={t("sp.clipLabel", { minute: `${at(sp.event.t)}′`, kind: kindLabel(sp, t) })} intro={t("sp.clipIntro")}
+      title={<>{at(sp.event.t)}′ · {kindLabel(sp, t)} · {att} · {playerName(sp.event.player_id)} <Result r={sp.result} /></>}
+      under={(frame, tm) => {
+        const before = tm < sp.event.t;
+        return <SetupLayer frame={frame} sp={sp} pairs={marks && before && setup ? setup.pairs : []} wall={marks && before && setup ? setup.wall : []} />;
+      }}>
+      {!SHOW_MARKING && sp.kind !== "penalty" && <small className="sp-sim">{t("sp.simNote")}</small>}
       {setup && (
         <dl className="sp-facts">
           <dt>{t("sp.inBox")}</dt>
           <dd>{t("sp.inBoxVal", { att, n: setup.attackersInBox.length, def, m: setup.defendersInBox.length })}</dd>
-          {SHOW_MARKING && (
+          {marks && (
             <>
               <dt>{t("sp.marking")}</dt>
               <dd>
@@ -153,7 +147,7 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
               </dd>
             </>
           )}
-          {SHOW_MARKING && sp.kind === "free_kick" && (
+          {marks && sp.kind === "free_kick" && (
             <>
               <dt>{t("sp.wall")}</dt>
               <dd>{setup.wall.length ? t("sp.wallVal", { n: setup.wall.length, who: names(setup.wall) }) : t("sp.wallNone")}</dd>
@@ -163,8 +157,8 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
           <dd>{sp.decidedBy ? `${at(sp.decidedBy.t)}′ ${teams[sp.decidedBy.team].short_name} · ${describe(sp.decidedBy, playerName, t)}` : t("sp.result.kept")}</dd>
         </dl>
       )}
-      <small className="muted">{t(SHOW_MARKING ? "sp.how" : "sp.howPlain")}</small>
-    </div>
+      <small className="muted">{t(marks ? "sp.how" : "sp.howPlain", { from: clock(from), to: clock(to) })}</small>
+    </ClipPlayer>
   );
 }
 
