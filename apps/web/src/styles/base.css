@@ -912,3 +912,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ask-opt span { font-size: 13px; color: var(--pv-ink-2); }
 .ask-where { font-size: 13px; color: var(--pv-ink-2); flex: 0 1 13em; margin-left: auto; }
 .ask-later { padding-inline: 4px; }
+
+/* Ax78 (#374): the Preview tab's "on this page" row: the What-if chip row, its stops in text weight. */
+.pv-body { display: contents; }
+.pv-nav .chip { padding: 6px 14px; font-weight: 500; white-space: nowrap; }
+.pv-nav .chip[aria-current="location"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }

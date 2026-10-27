@@ -1001,6 +1001,7 @@ export const en = {
   "tabs.stats": "Stats",
   "tabs.lineups": "Line-ups",
   "tabs.preview": "Preview",
+  "pre.navLabel": "On this page",
   "tabs.previewNone": "No pre-match information for this match.",
   "tabs.pre": "Pre-match",
   "tabs.live": "Live",
