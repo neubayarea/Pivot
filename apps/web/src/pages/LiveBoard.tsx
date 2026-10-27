@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import MatchTabs from "../components/MatchTabs";
 import { useMatch } from "../data/match";
 import { useTab } from "../data/tab";
+import { useT } from "../i18n";
 import { LineupsTab } from "./match/LineupsTab";
 import { LiveTab, StatsTab } from "./match/LiveTab";
 import { PostMatchTab } from "./match/PostMatchTab";
@@ -16,6 +17,8 @@ import { WhatIfTab } from "./match/WhatIfTab";
 export default function LiveBoard() {
   const { match, pivots } = useMatch();
   const tab = useTab();
+  const t = useT();
+  const tabName = t(tab === "replay" && ["live", "paused"].includes(match.status) ? "tabs.live" : `tabs.${tab}`);
   const [params, setParams] = useSearchParams();
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   // Pivots still being checked get a mark on the line but no card yet; the checker's rejects get neither.
@@ -45,6 +48,8 @@ export default function LiveBoard() {
     <>
       <MatchTabs tab={tab} />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="board">
+        {/* C13 QA: one h1 per page. The overview and the what-if lab have their own; the other tabs are named by the tab. */}
+        {tab !== "overview" && tab !== "whatif" && <h1 className="sr-only">{tabName}</h1>}
         {tab === "overview" && (
           <PostMatchTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
             keySelected={key} onKey={setKey} />

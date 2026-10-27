@@ -14,7 +14,7 @@ import {
 } from "../data/scenarios";
 import { translator } from "../i18n";
 import WhatIfLab from "../pages/WhatIfLab";
-import { ArmCompare, RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText, storyLine } from "./WhatIf";
+import { ArmCompare, RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText, scoreDashes, storyLine } from "./WhatIf";
 
 const ev = (id: string, minute: number, team: "home" | "away", type: MatchEvent["type"], extra: Partial<MatchEvent> = {}) =>
   ({ event_id: id, seq: minute, t: minute * 60, minute, period: minute < 45 ? 1 : 2, team, type, meta: {}, shot_outcome: null, ...extra }) as MatchEvent;
@@ -70,10 +70,11 @@ describe("scenario chips", () => {
     expect(options.find((o) => o.type === "change_press")).toMatchObject({ team: "home", label: "Press higher from 64′" });
   });
 
-  it("shows why a chip is greyed out, and keeps it focusable", () => {
+  it("names the changes this match cannot have on one line, with why, instead of a dead button (C13)", () => {
     const html = render(<ScenarioChips options={options} selected="cancel_substitution" onSelect={() => {}} teams={view.teams} />);
     expect(html).toContain("No red card in this match");
-    expect(html).toMatch(/aria-disabled="true"[^>]*aria-describedby="[^"]+"/);
+    expect(html).toMatch(/class="scn-off">Not possible here: Remove red card \(No red card in this match\)/);
+    expect(html).not.toContain('aria-disabled="true"');
     expect(html).not.toContain(" disabled=");
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(html).toContain("Remove red card");
@@ -336,5 +337,13 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
     const html = render(<ScenarioResult state={rich} {...props} />);
     expect(html).toContain("Side by side");
     expect(html).toContain("and the most likely score goes from 3–1 to 1–1.");
+  });
+});
+
+describe("what-if typography (C13 QA)", () => {
+  it("writes scores with an en dash and leaves formations alone", () => {
+    expect(scoreDashes("from 1-2 to 2-2")).toBe("from 1–2 to 2–2");
+    expect(scoreDashes("a 4-3-3 shape")).toBe("a 4-3-3 shape");
+    expect(scoreDashes("Remove 38' red card, at 90'.")).toBe("Remove 38′ red card, at 90′.");
   });
 });

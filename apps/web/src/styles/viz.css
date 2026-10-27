@@ -19,10 +19,11 @@
 .viz-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
 .viz-key i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -2px; border-radius: 50%;
   border: 1px solid var(--pv-hair); }
-.viz-key.goal i { background: var(--pv-gold); }
-.viz-key.saved i { background: var(--pv-ink); }
-.viz-key.post i, .viz-key.off_target i, .viz-key.disallowed i { background: transparent; }
-.viz-key.blocked i { border: none; border-radius: 0; background:
+.viz-key.k-goal i { background: radial-gradient(circle, #FFFFFF 0 28%, var(--pv-ink-2) 32%); border: 2px solid var(--pv-ink); }
+.viz-key.k-saved i { background: var(--pv-ink); }
+.viz-key.k-post i, .viz-key.k-off_target i, .viz-key.k-disallowed i { background: transparent; border: 2px solid var(--pv-ink-2); }
+.viz-key { white-space: nowrap; }
+.viz-key.k-blocked i { border: none; border-radius: 0; background:
   linear-gradient(45deg, transparent 42%, var(--pv-ink) 42% 58%, transparent 58%),
   linear-gradient(-45deg, transparent 42%, var(--pv-ink) 42% 58%, transparent 58%); }
 .viz-legend .viz-note { flex-basis: 100%; }

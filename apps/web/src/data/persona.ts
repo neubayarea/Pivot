@@ -18,6 +18,8 @@ export type Goals = Pick<Score, "home" | "away">;
 
 /** The five team stats a fan sees: no indices, no xG numbers. */
 export const FAN5 = ["possession_pct", "shots", "shots_on_target", "box_entries", "distance_covered_km"] as const;
+/** The fan's team-stats card (C13 UX): six plain numbers in one table, attack and defence both. */
+export const FAN_STATS = ["possession_pct", "shots", "shots_on_target", "box_entries", "tackles_won", "distance_covered_km"] as const;
 
 /**
  * Which way is better for the team, for the stats where "more" has one meaning. PPDA and turnovers
@@ -96,6 +98,15 @@ export function teamRating(players: readonly PlayerReport[], side: Side): number
 }
 
 export type StatKey = keyof NonNullable<PlayerReport["stats"]>;
+
+/** The line a position code belongs to, for words a fan reads: "AM" is a midfielder (C13 QA). */
+export function roleGroup(role: string): "gk" | "def" | "mid" | "fwd" {
+  const r = role.toUpperCase();
+  if (r === "GK") return "gk";
+  if (/^(CB|LB|RB|LWB|RWB|SW)$/.test(r)) return "def";
+  if (/^(DM|CDM|CM|LM|RM|AM|CAM)$/.test(r)) return "mid";
+  return "fwd";
+}
 
 /** The six numbers that say most about a player in his position. */
 export function coreStats(role: string): StatKey[] {

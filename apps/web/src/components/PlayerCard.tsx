@@ -70,8 +70,8 @@ export function PlayerCardView({ report, upTo, numbered = [], onPivot }: Props &
   const { t } = usePrefs();
   const { at } = useClock();
   const title = report ? t("player.title", { player: report.name }) : t("player.titleLoading");
-  const note = report && `#${report.shirt_number} · ${teams[report.team].short_name} · ${report.role}` +
-    ` · 0′–${at(upTo ?? match.clock)}′`;
+  // C13 QA: facts side by side, not a · chain.
+  const note = report && `#${report.shirt_number}, ${teams[report.team].short_name}, ${report.role}, 0′–${at(upTo ?? match.clock)}′`;
   return (
     <Card title={title} note={note} className="player-card">
       {report && <FollowButton playerId={report.player_id} name={report.name} />}
@@ -107,7 +107,7 @@ export function PlayerNumbers({ report, numbered = [], onPivot }: Pick<Props, "n
           {report.pivots.length ? t("player.inMoments") : t("player.noMoments")}
           {report.pivots.map((p) => {
             const n = numbered.indexOf(p.pivot_id) + 1;
-            const text = `${n ? `${n} · ` : ""}${minute(p.minute)}′${p.in_trigger ? ` · ${t("player.setOff")}` : ""}`;
+            const text = `${n ? `${n}: ` : ""}${minute(p.minute)}′${p.in_trigger ? `, ${t("player.setOff")}` : ""}`;
             return onPivot ? (
               <button key={p.pivot_id} type="button" className="ev" onClick={() => onPivot(p.pivot_id)}>{text}</button>
             ) : (

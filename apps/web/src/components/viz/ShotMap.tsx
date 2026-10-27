@@ -25,7 +25,7 @@ function Mark({ s, fan, label, on, onPick }: {
   const pick = onPick ? () => onPick(s.event_id) : undefined;
   // C11: a clickable shot is a button for the keyboard and screen readers too (Enter or Space picks it).
   const common = {
-    className: `viz-shot ${s.outcome ?? ""}${on ? " on" : ""}`, onClick: pick, tabIndex: pick ? 0 : undefined,
+    className: `viz-shot${s.outcome ? ` o-${s.outcome}` : ""}${on ? " on" : ""}`, onClick: pick, tabIndex: pick ? 0 : undefined,
     role: pick ? "button" : undefined, "aria-label": pick ? label : undefined, "aria-pressed": pick ? on : undefined,
     onKeyDown: pick ? (e: KeyboardEvent<SVGGElement>) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick()) : undefined,
   };
@@ -43,14 +43,16 @@ function Mark({ s, fan, label, on, onPick }: {
   let line = null;
   if (goal && s.end_x !== null && s.end_x !== undefined && s.end_y !== null && s.end_y !== undefined) {
     const [ex, ey] = toPx(s.end_x, s.end_y, s.team === "away");
-    line = <line x1={x} y1={y} x2={ex} y2={ey} stroke="var(--pv-gold)" strokeWidth={2} strokeDasharray="5 3" />;
+    line = <line x1={x} y1={y} x2={ex} y2={ey} stroke={color} strokeWidth={2} strokeDasharray="5 3" />;
   }
   return (
     <g {...common}>
       <title>{label}</title>
       {line}
-      <circle cx={x} cy={y} r={r} fill={goal ? "var(--pv-gold)" : filled ? color : "none"}
-        fillOpacity={filled ? 0.85 : undefined} stroke={goal ? "var(--pv-ink)" : color} strokeWidth={on ? 4 : 2} />
+      {/* C13 UX: no yellow (yellow is the AI's); a goal is the team's colour with an ink ring and a white centre. */}
+      <circle cx={x} cy={y} r={r} fill={filled ? color : "none"} fillOpacity={filled ? (goal ? 1 : 0.85) : undefined}
+        stroke={goal ? "var(--pv-ink)" : color} strokeWidth={goal ? 3 : on ? 4 : 2} />
+      {goal && <circle cx={x} cy={y} r={Math.max(2.5, r * 0.35)} fill="#FFFFFF" pointerEvents="none" />}
     </g>
   );
 }
@@ -100,7 +102,7 @@ export default function ShotMap({ data, squads, teamNames, selected = null, onPi
       {data.shots.length === 0 && <p className="viz-empty">{t("viz.shots.empty")}</p>}
       <ul className="viz-legend">
         {OUTCOMES.filter((o) => o !== "disallowed" || data.shots.some((s) => s.outcome === o)).map((o) => (
-          <li key={o} className={`viz-key ${o}`}><i aria-hidden="true" />{outcome(o)}</li>
+          <li key={o} className={`viz-key k-${o}`}><i aria-hidden="true" />{outcome(o)}</li>
         ))}
         <li className="viz-note">{t(fan ? "viz.shots.legendFan" : "viz.shots.legend")}</li>
       </ul>

@@ -55,6 +55,13 @@ function ifClause({ type, minute, change, pressLower }: StoryInput, t: T): strin
  * from 82% to 46%, and the most likely score goes from 3–1 to 1–1". The outcome is the one the big
  * number shows; the score clause needs both arms' stats (results stored before Bx10 have none).
  */
+/** "1-2" becomes "1–2" and "38'" becomes "38′" in a sentence (C13 QA); a formation like 4-3-3 is left alone. */
+export const scoreDashes = (text: string) =>
+  text.replace(/(?<![\d-])(\d{1,2})-(\d{1,2})(?![\d-])/g, "$1–$2").replace(/(\d)'(?=[\s,.;:)]|$)/g, "$1′");
+
+/** A team name ending in s takes a bare apostrophe: "Northgate Rovers’ chance", not "Rovers’s" or "Rovers's". */
+const possessive = (text: string) => text.replace(/s['’]s\b/g, "s’");
+
 export function storyLine(input: StoryInput, t: T): string {
   const { result: r, teams } = input;
   const { outcome } = biggestShift(r);
@@ -65,11 +72,11 @@ export function storyLine(input: StoryInput, t: T): string {
     : t(`whatif.story.win.${way}`, { team: teams[outcome === "home_win" ? "home" : "away"].name, before, after });
   const [was, now] = [r.baseline_stats?.top_scores[0], r.counterfactual_stats?.top_scores[0]];
   const vars = { if: ifClause(input, t), chance };
-  if (!was || !now) return t("whatif.storyShort", vars);
+  if (!was || !now) return possessive(t("whatif.storyShort", vars));
   const score = scoreText(was) === scoreText(now)
     ? t("whatif.story.scoreSame", { before: scoreText(was) })
     : t("whatif.story.score", { before: scoreText(was), after: scoreText(now) });
-  return t("whatif.story", { ...vars, score });
+  return possessive(t("whatif.story", { ...vars, score }));
 }
 
 type ChipsProps = {
@@ -81,14 +88,15 @@ type ChipsProps = {
   moveTo?: number;
 };
 
-/** One button per scenario; unavailable ones stay focusable and say why, rather than vanishing. */
+/** One button per scenario this match can have; the others are named on one line, with why. */
 export function ScenarioChips({ options, selected, onSelect, teams, moveTo }: ChipsProps) {
   const t = useT();
   const minuteOf = useOptionMinute();
   const id = useId();
   return (
     <div className="scn" role="group" aria-label={t("whatif.pickLabel")}>
-      {options.map((o) => {
+      {/* C13 UX: the changes this match cannot have go on one quiet line under the rest. */}
+      {options.filter((o) => o.enabled).map((o) => {
         const reason = o.enabled ? null : disabledReason(o, t);
         return (
           <button
@@ -106,6 +114,11 @@ export function ScenarioChips({ options, selected, onSelect, teams, moveTo }: Ch
           </button>
         );
       })}
+      {options.some((o) => !o.enabled) && (
+        <p className="scn-off">
+          {t("whatif.notHere", { list: options.filter((o) => !o.enabled).map((o) => `${optionLabel(o, t)} (${disabledReason(o, t)})`).join("; ") })}
+        </p>
+      )}
     </div>
   );
 }
@@ -162,8 +175,10 @@ export function RunFailed({ error, onRetry, onReset }: { error: unknown; onRetry
 }
 
 /** One three-part bar, with every share and its 95% range written underneath. */
-export function Distribution({ label, dist, teams, significant }: {
+export function Distribution({ label, dist, teams, significant, ranges = true }: {
   label: string; dist: OutcomeDist; teams: Teams; significant?: SimResult["significant"];
+  /** C13 QA: a fan gets the bar alone, no 95% ranges under it. */
+  ranges?: boolean;
 }) {
   const t = useT();
   return (
@@ -176,18 +191,17 @@ export function Distribution({ label, dist, teams, significant }: {
           </i>
         ))}
       </div>
-      <span className="ci">
+      {ranges && <span className="ci">
         {OUTCOMES.map((k) => {
           const [lo, hi] = ci(dist, k);
           return (
             <span key={k}>
-
               {significant?.[k] && <b className="sig-mark" aria-hidden="true">◆ </b>}
               {outcomeShort(k, teams, t)} {pct(dist[k])}% ({pct(lo)}–{pct(hi)})
             </span>
           );
         })}
-      </span>
+      </span>}
     </div>
   );
 }
@@ -313,26 +327,33 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
     <div className="result">
       <div className="stamps">
         <Stamp tone="warn">{t("whatif.stamp", { n: n.toLocaleString(numberLocale()) })}</Stamp>
-        {cached && <Stamp tone="line">{t("whatif.cached")}</Stamp>}
+        {cached && !fan && <Stamp tone="line">{t("whatif.cached")}</Stamp>}
       </div>
       <div className={`verdict${shift.significant ? "" : " flat"}`}>
-        <span className="big num">
-          {shift.points > 0 ? "+" : shift.points < 0 ? "−" : "±"}{Math.abs(shift.points)}<small>{t("whatif.pts")}</small>
-        </span>
+        {/* C13 QA: a fan gets the sentence; the points and the significance stamp are an analyst's. */}
+        {!fan && (
+          <span className="big num">
+            {shift.points > 0 ? "+" : shift.points < 0 ? "−" : "±"}{Math.abs(shift.points)}<small>{t("whatif.pts")}</small>
+          </span>
+        )}
         <span className="t">
           {storyLine({ result: r, type: scenario.spec.type, minute: option ? minuteOf(option) : from, change,
             pressLower: !!option && /lower/i.test(option.label), teams }, t)}
-          <br />
-          <Stamp tone={shift.significant ? "ok" : "line"}>{t(shift.significant ? "whatif.significant" : "whatif.notSignificant")}</Stamp>
+          {!fan && (
+            <>
+              <br />
+              <Stamp tone={shift.significant ? "ok" : "line"}>{t(shift.significant ? "whatif.significant" : "whatif.notSignificant")}</Stamp>
+            </>
+          )}
         </span>
       </div>
       <div className="dists">
-        <Distribution label={t("whatif.asPlayed", { minute: from })} dist={r.baseline} teams={teams} />
-        <Distribution label={t("whatif.changed", { change })} dist={r.counterfactual} teams={teams} significant={r.significant} />
+        <Distribution label={t("whatif.asPlayed", { minute: from })} dist={r.baseline} teams={teams} ranges={!fan} />
+        <Distribution label={t("whatif.changed", { change })} dist={r.counterfactual} teams={teams} significant={r.significant} ranges={!fan} />
       </div>
       {side && (
         <p className="wi-you" style={{ "--tc": `var(--pv-${side})` } as CSSProperties}>
-          {t("whatif.forYou", { team: teams[side].name, was: pct(r.baseline[`${side}_win`]), now: pct(r.counterfactual[`${side}_win`]) })}
+          {possessive(t("whatif.forYou", { team: teams[side].name, was: pct(r.baseline[`${side}_win`]), now: pct(r.counterfactual[`${side}_win`]) }))}
         </p>
       )}
       {!fan && r.baseline_stats && r.counterfactual_stats && (
@@ -348,8 +369,8 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
                 {t("why.writing", { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served}`) })}
               </div>
             )}
-            <p lang={served ?? undefined}><b>{narrative.headline}</b> <LangTag lang={served} /></p>
-            {sentences.map((s, i) => <p key={i} lang={served ?? undefined}>{s.text}</p>)}
+            <p lang={served ?? undefined}><b>{possessive(scoreDashes(narrative.headline))}</b> <LangTag lang={served} /></p>
+            {sentences.map((s, i) => <p key={i} lang={served ?? undefined}>{possessive(scoreDashes(s.text))}</p>)}
           </>
         ) : (
           <p className="muted">{t("whatif.noNarrative")}</p>
