@@ -48,3 +48,5 @@
 .pd-nm { font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
 .pd-hd small { font-size: 12px; }
 .roster-detail .player-stats { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+/* Back gets focus when the card swaps; keep it clear of the sticky match header when that scrolls it into view. */
+.pd-back { scroll-margin-top: 280px; }
