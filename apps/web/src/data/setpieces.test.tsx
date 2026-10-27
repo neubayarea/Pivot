@@ -127,7 +127,7 @@ describe("on the M-seed-29 demo match", () => {
     const clips = shotClips(fx.events);
     expect(clips).toHaveLength(19);
     expect(clips.find((c) => c.shot.t === 2391)?.source).toBe("set_piece");
-    expect(clips.find((c) => c.shot.t === 3692)?.source).toBe("counter");
+    expect(clips.find((c) => c.shot.t === 3783)?.source).toBe("open_play");   // the 60′ penalty (3692) is a set piece since Ax56
   });
 
   it("lists them on the board with their results", () => {

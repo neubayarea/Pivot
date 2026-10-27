@@ -10,17 +10,23 @@
 //   GOAL_AFTER after the goal, the wait in between cut when it is longer than GAP_S.
 // - VAR reversal: the reviewed goal, penalty or red card as above, and on to KEY_AFTER after the
 //   review when that is later (a review more than GAP_S later gets a short stretch of its own).
+//
+// A set piece's clip (Ax56): SET_BEFORE before the kick, while the players line up, to SET_AFTER
+// after the shot, clearance or lost ball that decided it (setpieces.ts, resultOf), or SET_KEPT after
+// the kick when nothing did.
 import type { MatchEvent } from "@pivot/contracts";
 import { goalFor, type KeyKind, type KeyMoment } from "./keyMoments";
-import { attackChain, attackFrom, goalX, oldestFirst, PITCH_W, type ShotClip } from "./setpieces";
+import { attackChain, attackFrom, oldestFirst, penaltyKick, type SetPiece, type ShotClip } from "./setpieces";
 import { isRedCard, type Side } from "./view";
 
 export const KEY_BEFORE = 8;
 export const KEY_AFTER = 3;
 export const GOAL_AFTER = 3;
 export const GAP_S = 6;
-/** How long after a penalty is given its kick is looked for. */
-export const KICK_WITHIN = 240;
+export const SET_BEFORE = 3;
+export const SET_AFTER = 3;
+export const SET_KEPT = 8;
+export { KICK_WITHIN, penaltyKick } from "./setpieces";
 export const RATES = [0.25, 0.5, 1, 2, 5] as const;
 export type Rate = (typeof RATES)[number];
 /** The longest real step the player takes in one go, so a hidden tab or a slow frame does not jump ahead. */
@@ -106,6 +112,27 @@ export function fromShot(c: ShotClip): Clip {
 const around = (all: readonly MatchEvent[], from: number, to: number) =>
   all.filter((e) => e.t >= from && e.t <= to && ["pass", "carry", "dribble", "shot", "foul", "card", "var_review", "goalkeeper"].includes(e.type));
 
+/** A set piece's clip also tells who cleared it or won the ball back. */
+const SET_TOLD = new Set<MatchEvent["type"]>(["pass", "carry", "dribble", "shot", "foul", "card", "var_review", "goalkeeper",
+  "clearance", "block", "interception", "ball_recovery", "tackle", "offside"]);
+
+/** The clip of a corner, free kick or penalty: the wait before the kick to just after what came of it. */
+export function setPieceClip(sp: SetPiece, events: readonly MatchEvent[]): Clip {
+  const e = sp.event;
+  const by = sp.decidedBy && sp.decidedBy.type !== "period_end" ? sp.decidedBy : null;
+  const from = Math.max(0, e.t - SET_BEFORE);
+  const to = (by ? by.t : e.t + SET_KEPT) + SET_AFTER;
+  const shot = by?.type === "shot" ? by : null;
+  return {
+    parts: [[from, to]],
+    events: oldestFirst(events.filter((x) => x.t >= from && x.t <= to && SET_TOLD.has(x.type))),
+    shot: shot?.end_location ? shot : null,
+    involved: players(by && by !== e ? [e, by] : [e]),
+    named: null,
+    marks: shot?.shot_outcome === "goal" ? [{ t: shot.t, kind: "goal", side: shot.team, at: loc(shot) }] : [],
+  };
+}
+
 function goalClip(all: readonly MatchEvent[], e: MatchEvent, side: Side): Clip {
   const from = attackFrom(all, e, side);
   const chain = attackChain(all, e, from, side);
@@ -131,16 +158,6 @@ function redClip(all: readonly MatchEvent[], card: MatchEvent): Clip {
     parts: [[from, to]], events: around(all, from, to), shot: null, involved: players([foul]), named: foul.player_id,
     marks: [{ t: foul.t, kind: "red", side: card.team, at: loc(foul) ?? loc(card) }],
   };
-}
-
-const atSpot = (e: MatchEvent, side: Side) =>
-  !!e.location && Math.abs(Math.abs(e.location[0] - goalX(side)) - 11) <= 1.5 && Math.abs(e.location[1] - PITCH_W / 2) <= 1.5;
-
-/** The kick of the penalty given for `foul`: the fouled side's next shot, from the spot. */
-export function penaltyKick(all: readonly MatchEvent[], foul: MatchEvent): MatchEvent | null {
-  const side = other(foul.team);
-  const next = all.find((e) => e.type === "shot" && e.team === side && e.t >= foul.t && e.seq > foul.seq && e.t - foul.t <= KICK_WITHIN);
-  return next && (next.play_pattern === "penalty" || atSpot(next, side)) ? next : null;
 }
 
 function penaltyClip(all: readonly MatchEvent[], foul: MatchEvent, withKick: boolean): Clip {

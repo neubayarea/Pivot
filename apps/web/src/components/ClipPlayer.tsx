@@ -1,4 +1,5 @@
-// One player for every clip on the pitch (Ax42): a shot's attack (Ax37) and a key moment (Ax38).
+// One player for every clip on the pitch (Ax42): a shot's attack (Ax37), a key moment (Ax38) and a
+// set piece (Ax56).
 // It runs on clip time with requestAnimationFrame, moved by the real time since the last screen
 // frame times the speed, so the dots glide between the once-a-second frames at any speed.
 // Keys, with the clip focused: Space or K plays and pauses, ←/→ go back and on a second (Shift: 5),
@@ -60,13 +61,15 @@ export function KeyMark({ kind, side, x, y, size = 1 }: { kind: KeyKind; side: S
 let lastRate: Rate = 1;
 const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export default function ClipPlayer({ clip, label, title, intro, children }: {
+export default function ClipPlayer({ clip, label, title, intro, under, children }: {
   clip: Clip;
   /** The pitch's accessible name. */
   label: string;
   title?: ReactNode;
   /** The caption before the first event is reached. */
   intro: string;
+  /** Drawn on the pitch under the players, for the frame shown at match second `tm`. */
+  under?: (frame: TrackingFrame, tm: number) => ReactNode;
   /** Under the caption: who was involved, how the clip was cut. */
   children?: ReactNode;
 }) {
@@ -149,7 +152,7 @@ export default function ClipPlayer({ clip, label, title, intro, children }: {
     pitch = (
       <Pitch frame={frame} actions={drawn} selected={null} who={people.who} stepMs={1} label={label}
         picked={pickedPlayer} onPick={setPickedPlayer} tag={people.tag} marked={new Set(clip.involved)}
-        under={<BallTrail frames={frames.filter((f) => f.t >= part[0])} pos={trailTo} now={frame} />}
+        under={<>{under?.(frame, tm)}<BallTrail frames={frames.filter((f) => f.t >= part[0])} pos={trailTo} now={frame} /></>}
         over={<Marks marks={reached} tm={tm} />} />
     );
   }
