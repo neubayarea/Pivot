@@ -59,7 +59,7 @@ def test_every_template_translates_with_names_and_numbers_as_written(template, l
 def test_a_possessive_after_a_plural_club_name_is_the_same_template():
     out = from_template("S. Katoo under pressure after 3 defeats in Northgate Rovers' last five league games", "es")
     assert out == "S. Katoo, bajo presión tras 3 derrotas en los últimos cinco partidos de liga de Northgate Rovers"
-    assert from_template("S. Katoo's Harbour City have won 4 of their last five", "zh") == "S. Katoo执教的Harbour City近五场赢了4场"
+    assert from_template("S. Katoo's Harbour City have won 4 of their last five", "zh") == "S. Katoo 执教的 Harbour City 近五场赢了 4 场"
 
 
 def test_every_sentence_of_every_seed_match_has_a_template():
@@ -75,7 +75,22 @@ def test_every_sentence_of_every_seed_match_has_a_template():
 def test_the_demo_headline_keeps_the_club_he_left_for():
     out = from_template("Harbour City fans plan a hostile welcome for A. Bersaro, who left the club for Rovers on bad "
                         "terms in 2024", "zh")
-    assert out == "Harbour City球迷准备给A. Bersaro一个不友好的“欢迎”：他2024年与球队闹翻后转投Rovers"
+    assert out == "Harbour City 球迷准备给 A. Bersaro 一个不友好的“欢迎”：他 2024 年与球队闹翻后转投 Rovers"
+
+
+def test_chinese_puts_a_space_between_names_or_numbers_and_characters():
+    # #358: as Chinese text is set; the coordinator's example, word for word.
+    assert from_template("E. Darsaviker faces Harbour City for the first time since leaving the club in 2021", "zh") ==         "E. Darsaviker 自 2021 年离队后首次面对 Harbour City"
+    for template in TEMPLATES:
+        for english, _ in examples(template):
+            out = from_template(english, "zh")
+            assert not re.search(r"[一-鿿][A-Za-z0-9]|[A-Za-z0-9'][一-鿿]", out), out
+            assert "  " not in out
+
+
+def test_the_writers_are_told_to_space_latin_from_chinese():
+    from pivot_worker.languages import INSTRUCTIONS
+    assert "Put a space between a Latin name or a number and the Chinese characters" in INSTRUCTIONS["zh"]
 
 
 def test_a_sentence_no_template_knows_is_left_in_english():
@@ -106,7 +121,7 @@ def test_the_model_translates_the_rest_and_a_kept_translation_is_cached(odd_matc
     models = ScriptedModelClient(standard=[json.dumps({"texts": ["Harbour City为Northgate Rovers的来访多卖出2,000张票"]})])
     pretext = PreText(models)
     out = asyncio.run(pretext.translate(odd_match, "zh"))
-    assert out.texts[ODD] == "Harbour City为Northgate Rovers的来访多卖出2,000张票" and out.untranslated == []
+    assert out.texts[ODD] == "Harbour City 为 Northgate Rovers 的来访多卖出 2,000 张票" and out.untranslated == []
     assert json.loads(models.calls[0][1][1]["content"]) == {"texts": [ODD]}    # only what no template knows
     again = asyncio.run(pretext.translate(odd_match, "zh"))
     assert again.texts[ODD] == out.texts[ODD] and len(models.calls) == 1

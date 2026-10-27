@@ -15,6 +15,8 @@ page asks for the translations beside it.
   as the pivot cards are (#222), and kept only if every name and number of the English is still there,
   no club name is translated, and it is in the right script. Kept translations are cached for the life
   of the process; a failed one is asked again after FAILED_RETRY_S.
+- Chinese has a space between a Latin name or a number and the characters around it, as Chinese text is
+  set (#358): "E. Darsaviker 自 2021 年离队后首次面对 Harbour City".
 - Without a model (`PIVOT_PIPELINE=fake`) such a sentence is left out of `texts`, so the page shows the
   English with its EN tag.
 """
@@ -187,6 +189,15 @@ TEMPLATES = (
 _COMPILED = [(t, t.pattern) for t in TEMPLATES]
 
 
+_CJK_THEN_LATIN = re.compile(r"(?<=[一-鿿])(?=[A-Za-z0-9])")
+_LATIN_THEN_CJK = re.compile(r"(?<=[A-Za-z0-9'′])(?=[一-鿿])")
+
+
+def spaced(text: str) -> str:
+    """Chinese with a space between a character and a Latin name or number next to it (#358)."""
+    return _LATIN_THEN_CJK.sub(" ", _CJK_THEN_LATIN.sub(" ", text))
+
+
 def _upper_first(text: str) -> str:
     return text[:1].upper() + text[1:]
 
@@ -199,7 +210,7 @@ def from_template(text: str, lang: Lang) -> str | None:
             continue
         params = {k: WORDS[k][v][LANGS.index(lang)] if k in WORDS else v for k, v in m.groupdict().items()}
         out = getattr(t, lang).format(**params)
-        return _upper_first(out) if lang == "es" else out
+        return _upper_first(out) if lang == "es" else spaced(out)
     return None
 
 
@@ -279,7 +290,7 @@ class PreText:
         names, clubs = names_of(match), [match.home.name, match.away.name]
         for source, t in zip(texts, got):
             if isinstance(t, str) and kept(source, t.strip(), lang, names, clubs):
-                out[source] = self._cache[lang, source] = t.strip()
+                out[source] = self._cache[lang, source] = spaced(t.strip()) if lang == "zh" else t.strip()
             else:
                 self._failed[lang, source] = time.monotonic() + FAILED_RETRY_S
         return out
