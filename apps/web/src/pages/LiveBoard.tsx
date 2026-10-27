@@ -3,8 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import MatchTabs from "../components/MatchTabs";
 import { useMatch } from "../data/match";
 import { useTab } from "../data/tab";
+import { LineupsTab } from "./match/LineupsTab";
 import { LiveTab } from "./match/LiveTab";
-import { PostMatchTab } from "./match/PostMatchTab";
+import { OverviewTab } from "./match/OverviewTab";
 import { PreMatchTab } from "./match/PreMatchTab";
 
 // S1 · Match board (Ax32), split Premier League style into before / during / after the match
@@ -15,6 +16,8 @@ export default function LiveBoard() {
   const { match, pivots } = useMatch();
   const tab = useTab();
   const [params, setParams] = useSearchParams();
+  // Ax69: the line-ups tab opens on `?tab=lineups` until the tab shell (#316) gives it a tab of its own.
+  const lineups = params.get("tab") === "lineups";
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   // Pivots still being checked get a mark on the line but no card yet; the checker's rejects get neither.
   const moments = pivots.filter((p) => p.status === "confirmed" || p.status === "degraded").sort((a, b) => a.minute - b.minute);
@@ -43,10 +46,11 @@ export default function LiveBoard() {
     <>
       <MatchTabs tab={tab} />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="board">
-        {tab === "pre" && <PreMatchTab />}
-        {tab === "live" && <LiveTab moments={moments} evidence={evidence} />}
+        {lineups && <LineupsTab />}
+        {!lineups && tab === "pre" && <PreMatchTab />}
+        {!lineups && tab === "live" && <LiveTab moments={moments} evidence={evidence} />}
         {tab === "post" && (
-          <PostMatchTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
+          <OverviewTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
             keySelected={key} onKey={setKey} />
         )}
       </div>

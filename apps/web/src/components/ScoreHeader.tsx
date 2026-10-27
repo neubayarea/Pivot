@@ -4,6 +4,8 @@
 // It sticks to the top of the window with the replay bar (App); on phones it keeps to one score row.
 // Scrolled past, it folds into a slim bar of names, score and clock (Ax66, data/headerFold.ts); a
 // button on each opens or folds it by hand.
+// Ax69: a ♥ beside each team's name, open or slim, picks it as the viewer's team and lets it go
+// again; under the open header a "Following: X ✕" chip while a ★ player is followed.
 import { useId, useLayoutEffect, useRef, type CSSProperties, type RefObject } from "react";
 import type { MatchEvent, ViewerPrefs } from "@pivot/contracts";
 import { useClock } from "../data/clock";
@@ -11,6 +13,7 @@ import { goalFor } from "../data/keyMoments";
 import { useMatch, type MatchView, type Side } from "../data/match";
 import { useT, type T } from "../i18n";
 import { surname } from "./FocusPickers";
+import FollowTeam, { FollowingChip } from "./FollowTeam";
 import Stamp from "./Stamp";
 
 const STATUS_TONE = { live: "live", paused: "warn", finished: "ok", scheduled: "line" } as const;
@@ -51,7 +54,7 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
         <span className="mh-crest" aria-hidden="true" />
         <span className="tm-full">{team.name}</span>
         <span className="tm-short">{team.short_name}</span>
-        {fav && <span className="mh-fav" role="img" aria-label={t("top.team.label")}>♥</span>}
+        <FollowTeam side={side} />
       </span>
       {goals.length > 0 && (
         <ul className="mh-goals" aria-label={t("header.scorers", { team: team.name })}>
@@ -77,7 +80,7 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
       <span className="mh-chip" aria-hidden="true" />
       <span className="tm-full">{teams[s].name}</span>
       <span className="tm-short">{teams[s].short_name}</span>
-      {favTeam === s && <span className="mh-fav" role="img" aria-label={t("top.team.label")}>♥</span>}
+      <FollowTeam side={s} />
     </span>
   );
   return (
@@ -157,6 +160,7 @@ export default function ScoreHeader({ prefs, fold }: Props) {
         </div>
         <TeamSide side="away" fav={prefs.focus_team === "away"} />
       </div>
+      <FollowingChip />
     </section>
   );
 }
