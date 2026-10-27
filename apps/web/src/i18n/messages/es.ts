@@ -278,6 +278,7 @@ export const es: Messages = {
   "whatif.notHere": "Aquí no es posible: {list}",
   "pics.player": "Qué jugador",
   "pics.wholeTeam": "Todo el equipo",
+  "pics.countPasses": "Cifras: pases dados hasta el minuto del reloj.",
   "ts.title": "Estadísticas de equipo",
   "ts.note": "Las mismas cifras que cita la IA y comprueba el verificador.",
   "ts.scope": "Parte del partido",

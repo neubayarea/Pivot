@@ -4,6 +4,7 @@
 import { useState } from "react";
 import type { Side } from "../data/match";
 import { useMatch } from "../data/match";
+import { roleGroup } from "../data/persona";
 import { usePrefs } from "../i18n";
 import FollowButton from "./FollowButton";
 import Segmented from "./Segmented";
@@ -33,6 +34,11 @@ export default function MatchPictures({ upTo }: { upTo: number | null }) {
   const who = picked && roster.some((p) => p.player_id === picked) ? picked
     : roster.some((p) => p.player_id === focus) ? focus : null;
   const whoName = who ? roster.find((p) => p.player_id === who)?.name ?? "" : "";
+  const fan = prefs.audience === "fan";
+  const pickable = (pic === "heat" || pic === "net") && roster.length > 0;
+  // The pass network's own count per player (the same report the picture draws), beside each name.
+  const nodes = pic === "net" ? net.data?.teams[side]?.nodes : undefined;
+  const count = nodes ? { of: new Map(nodes.map((n) => [n.player_id, n.passes])), total: nodes.reduce((a, n) => a + n.passes, 0) } : null;
 
   return (
     <div className="pics">
@@ -44,37 +50,48 @@ export default function MatchPictures({ upTo }: { upTo: number | null }) {
           // C12: average positions are an analyst's picture.
           ...(prefs.audience === "fan" ? [] : [{ value: "pos" as const, label: t("viz.pos.title") }]),
         ]} />
-        {(pic === "heat" || pic === "net") && (
-          <Segmented label={t("pics.side")} value={side} onChange={setSide} options={[
-            { value: "home", label: teams.home.name },
-            { value: "away", label: teams.away.name },
-          ]} />
-        )}
       </div>
-      {(pic === "heat" || pic === "net") && roster.length > 0 && (
-        <div className="pics-who">
-          <div className="pics-names" role="group" aria-label={t("pics.player")}>
-            <button type="button" className="chip" aria-pressed={who === null} onClick={() => setPicked(null)}>{t("pics.wholeTeam")}</button>
-            {roster.map((p) => (
-              <button key={p.player_id} type="button" className="chip" aria-pressed={who === p.player_id}
-                onClick={() => setPicked(p.player_id)}>
-                {p.shirt !== null && <small className="num">{p.shirt}</small>}
-                {p.name}
-              </button>
-            ))}
-          </div>
-          {who && <FollowButton playerId={who} name={whoName} />}
+      {/* C17 (#367): the chart takes two thirds and the picker sits beside it, sticky under the match
+          header, so a fan can switch player without scrolling away from the pitch (FotMob / Sofascore). */}
+      <div className={`pics-row${pickable ? " with-side" : ""}`}>
+        <div className="pics-bd">
+          {pic === "shots" && (
+            <VizBox state={shots}>
+              {(d) => <ShotMap data={d} squads={squads} teamNames={names} selected={shot} onPick={(e) => setShot(e === shot ? null : e)} />}
+            </VizBox>
+          )}
+          {pic === "heat" && <VizBox state={heat}>{(d) => <Heatmap data={d} side={side} playerId={who} squads={squads} teamNames={names} />}</VizBox>}
+          {pic === "net" && <VizBox state={net}>{(d) => <PassNetwork data={d} side={side} squads={squads} teamNames={names} focus={who ?? focus} />}</VizBox>}
+          {pic === "pos" && <VizBox state={pos}>{(d) => <AveragePositions data={d} squads={squads} teamNames={names} focus={focus} />}</VizBox>}
         </div>
-      )}
-      <div className="pics-bd">
-        {pic === "shots" && (
-          <VizBox state={shots}>
-            {(d) => <ShotMap data={d} squads={squads} teamNames={names} selected={shot} onPick={(e) => setShot(e === shot ? null : e)} />}
-          </VizBox>
+        {pickable && (
+          <aside className="pics-side">
+            <Segmented label={t("pics.side")} value={side} onChange={setSide} options={[
+              { value: "home", label: teams.home.name },
+              { value: "away", label: teams.away.name },
+            ]} />
+            <ol className="pics-list" aria-label={t("pics.player")}>
+              <li>
+                <button type="button" aria-pressed={who === null} onClick={() => setPicked(null)}>
+                  <span className="pl-name">{t("pics.wholeTeam")}</span>
+                  {count && <span className="pl-n num">{count.total}</span>}
+                </button>
+              </li>
+              {roster.map((p) => (
+                <li key={p.player_id}>
+                  <button type="button" aria-pressed={who === p.player_id} onClick={() => setPicked(p.player_id)}>
+                    <span className="pl-shirt num">{p.shirt ?? ""}</span>
+                    <span className="pl-name">{p.name}</span>
+                    <span className="pl-pos">{p.role ? (fan ? t(`role.${roleGroup(p.role)}`) : p.role) : ""}</span>
+                    {count && <span className="pl-n num">{count.of.get(p.player_id) ?? 0}</span>}
+                  </button>
+                </li>
+              ))}
+            </ol>
+            {count && <p className="pics-count muted">{t("pics.countPasses")}</p>}
+            {who && <FollowButton playerId={who} name={whoName} />}
+          </aside>
         )}
-        {pic === "heat" && <VizBox state={heat}>{(d) => <Heatmap data={d} side={side} playerId={who} squads={squads} teamNames={names} />}</VizBox>}
-        {pic === "net" && <VizBox state={net}>{(d) => <PassNetwork data={d} side={side} squads={squads} teamNames={names} focus={who ?? focus} />}</VizBox>}
-        {pic === "pos" && <VizBox state={pos}>{(d) => <AveragePositions data={d} squads={squads} teamNames={names} focus={focus} />}</VizBox>}
       </div>
     </div>
   );

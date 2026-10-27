@@ -277,6 +277,7 @@ export const zh: Messages = {
   "whatif.notHere": "这里用不了：{list}",
   "pics.player": "看哪名球员",
   "pics.wholeTeam": "全队",
+  "pics.countPasses": "数字：截至当前时间的传球次数。",
   "ts.title": "球队数据",
   "ts.note": "和 AI 解释里引用、核对员核对的是同一套数字。",
   "ts.scope": "比赛的哪一段",

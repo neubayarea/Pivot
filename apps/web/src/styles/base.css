@@ -730,15 +730,30 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .replay-go { display: flex; flex-wrap: wrap; gap: 8px; }
 .scn-off { margin: 8px 0 0; font-size: 13px; color: var(--pv-ink-2); }
 .ts-note { display: block; font-size: 12px; color: var(--pv-ink-2); }
-.ts-fan .ts-groups, .ts-fan .ts-teams { max-width: 760px; }
+/* C17 (#367): the fan's one table sits in the middle of the card, not on its left edge. */
+.ts-fan .ts-groups, .ts-fan .ts-teams { max-width: 760px; width: 100%; margin-inline: auto; }
 .pics { display: grid; gap: 16px; }
 .pics-ctl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
-.pics-bd { max-width: 820px; min-width: 0; }
-.pics-who { display: grid; gap: 10px; justify-items: start; }
-.pics-names { display: flex; flex-wrap: wrap; gap: 6px; }
-.pics-names .chip { padding: 4px 11px; font-size: 13px; }
-.pics-names .chip small { min-width: 1.4em; text-align: right; }
-.pics-names .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+/* C17 (#367): chart and side panel. The pitch is as tall as the screen under the sticky header allows. */
+.pics-row { display: grid; gap: 24px; align-items: start; justify-items: center; }
+.pics-row.with-side { grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); justify-items: stretch; }
+.pics-bd { width: 100%; min-width: 0; max-width: calc((100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - 150px) * 105 / 68); }
+.pics-row.with-side .pics-bd { justify-self: center; }
+.pics-side { position: sticky; top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + 12px); display: grid; gap: 12px; align-content: start;
+  max-height: calc(100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - 24px); min-height: 0; }
+.pics-side > .seg { justify-self: start; }
+.pics-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; border-top: 1px solid var(--pv-rule-hair); }
+.pics-list button { display: grid; grid-template-columns: 2em minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; width: 100%; padding: 7px 10px;
+  border: 0; border-bottom: 1px solid var(--pv-rule-hair); background: transparent; color: var(--pv-ink); text-align: left; font: inherit; font-size: 14px; cursor: pointer; }
+.pics-list button:hover { background: var(--pv-paper); }
+.pics-list button[aria-pressed="true"] { background: var(--pv-ink); color: var(--pv-sheet); }
+.pics-list button[aria-pressed="true"] .pl-pos { color: inherit; }
+.pics-list li:first-child button { grid-template-columns: minmax(0, 1fr) auto; font-weight: 700; }
+.pl-shirt { color: inherit; opacity: .7; text-align: right; }
+.pl-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-pos { font-size: 12px; color: var(--pv-ink-2); }
+.pl-n { font-weight: 700; min-width: 2.5ch; text-align: right; }
+.pics-count { font-size: 12px; margin: 0; }
 .spot-who .follow, .you-best .follow { margin-top: 6px; }
 .ts { display: grid; gap: 18px; min-width: 0; }
 .ts > .seg { justify-self: start; }
