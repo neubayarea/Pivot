@@ -689,6 +689,10 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .pics-bd { max-width: 820px; min-width: 0; }
 .ts { display: grid; gap: 18px; min-width: 0; }
 .ts > .seg { justify-self: start; }
+.ts-teams { display: flex; justify-content: space-between; margin: 0; font-weight: 700; font-size: var(--pv-fs-sm); }
+.ts-teams span { display: inline-flex; align-items: center; gap: 6px; }
+.ts-teams span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--tc); }
+.ts-teams .fav::after { content: "♥"; color: var(--tc); }
 .ts-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px 48px; align-items: start; }
 .ts-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ts-table caption { text-align: left; font-weight: 700; font-size: var(--pv-fs-md); padding-bottom: 6px; }
@@ -775,8 +779,12 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 
 /* ---------- What-if tab (C13 #316): the lab inside the board, on the board's own gutters ---------- */
 .wi-pivots .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); box-shadow: none; }
+.wi-pivots .chip { align-items: center; max-width: 380px; padding: 6px 14px 6px 8px; }
+.wi-pivots .chip .badge { width: 24px; height: 24px; font-size: 14px; flex: none; }
+.wi-pivots .chip .wi-hd { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.wi-pivots .chip[aria-pressed="true"] .badge { background: var(--pv-gold); color: var(--pv-on-gold); }
 .wi-tab .back, .wi-tab .headline, .wi-tab .grid3 { padding-inline: 0; }
-.wi-tab .back { padding-top: 0; }
+.wi-tab .back { display: none; }
 
 /* ---------- "How do you want to watch?" (C13 #316): once, under the site bar, blocking nothing ---------- */
 .ask { background: var(--pv-sheet); border-bottom: 1px solid var(--pv-hair); }

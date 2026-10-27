@@ -2,7 +2,7 @@
 // the Premier League way (attack, possession, defence, shape, physical), for the whole match or
 // one half. The same numbers the AI cites and the Verifier checks, so the page and the
 // explanations agree. Fans get the five that need no explaining; analysts get all of them.
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { StatMetricInfo, TeamStatsReport, TeamStatsScope } from "@pivot/contracts";
 import { useMatch } from "../data/match";
 import { FAN5 } from "../data/persona";
@@ -77,6 +77,14 @@ export default function TeamStats({ state }: { state: VizState<TeamStatsReport> 
         <Segmented label={t("ts.scope")} value={shown.scope} onChange={setScope}
           options={scopes.map((s) => ({ value: s.scope, label: t(`ts.scope.${s.scope as Exclude<typeof s.scope, "window">}`) }))} />
       )}
+      {/* C13: which column is which, the ♥ team marked in its kit colour. */}
+      <p className="ts-teams" aria-hidden="true">
+        {(["home", "away"] as const).map((side) => (
+          <span key={side} className={prefs.focus_team === side ? "fav" : undefined} style={{ "--tc": `var(--pv-${side})` } as CSSProperties}>
+            {teams[side].name}
+          </span>
+        ))}
+      </p>
       <div className="ts-groups">
         {groups.map((g) => (
           <table key={g} className="ts-table">
