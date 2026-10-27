@@ -101,8 +101,8 @@ def test_the_usual_xi_is_counted_from_the_season_and_compared_with_today():
     match = seed(SEEDS[0])
     rep = prematch(match, SEASON)
     xi = rep.teams["home"].usual_xi_today
-    assert (xi.regulars_starting, xi.regulars_benched, xi.newcomers) == (11, [], [])
-    assert rep.teams["home"].next_fixture.rotation_note.endswith("The usual starting XI all start today.")
+    assert (xi.regulars_starting, xi.regulars_benched, xi.newcomers, xi.usual_xi_named) == (11, [], [], True)
+    assert rep.teams["home"].next_fixture.rotation_note.lower().endswith("the coach names the usual xi.")
     sheet = match.home.sheet
     out, sub = sheet.starters[9], sheet.bench[0]
     starters = [*sheet.starters[:9], LineupSlot(player_id=sub, slot=out.slot, role=out.role, anchor=out.anchor),
@@ -110,7 +110,10 @@ def test_the_usual_xi_is_counted_from_the_season_and_compared_with_today():
     home = match.home.model_copy(update={"sheet": sheet.model_copy(update={"starters": starters,
                                                                          "bench": [out.player_id, *sheet.bench[1:]]})})
     xi = prematch(match.model_copy(update={"home": home}), SEASON).teams["home"].usual_xi_today
-    assert (xi.regulars_starting, xi.regulars_benched, xi.newcomers) == (10, [out.player_id], [sub])
+    assert (xi.regulars_starting, xi.regulars_benched, xi.newcomers, xi.usual_xi_named) == \
+        (10, [out.player_id], [sub], False)
+    note = prematch(match.model_copy(update={"home": home}), SEASON).teams["home"].next_fixture
+    assert note.rotation_note_key.endswith("_benched") and note.rotation_note.endswith("rests 1 regular starter.")
 
 
 def test_next_fixtures_come_from_the_schedule_and_the_seed(reports):

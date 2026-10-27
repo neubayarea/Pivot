@@ -4824,6 +4824,9 @@
         },
         "regulars_starting": {
           "type": "integer"
+        },
+        "usual_xi_named": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -4831,7 +4834,8 @@
         "regulars",
         "regulars_starting",
         "regulars_benched",
-        "newcomers"
+        "newcomers",
+        "usual_xi_named"
       ],
       "title": "PrematchUsualXi",
       "type": "object"

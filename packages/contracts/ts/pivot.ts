@@ -1572,6 +1572,7 @@ export interface PrematchUsualXi {
   regulars: string[];
   regulars_benched: string[];
   regulars_starting: number;
+  usual_xi_named: boolean;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

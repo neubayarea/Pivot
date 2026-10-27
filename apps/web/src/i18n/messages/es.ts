@@ -336,6 +336,10 @@ export const es: Messages = {
   "alarm.note": "Con el impulso de cada minuto (local por encima de cero), como lo lee la alarma.",
   "whatif.forYou": "Probabilidad de victoria de {team}: {was}% tal como fue, {now}% con el cambio.",
 
+  "follow.follow": "Seguir",
+  "follow.following": "Siguiendo",
+  "follow.label": "Seguir a {name}",
+  "follow.stopLabel": "Dejar de seguir a {name}",
   "player.title": "★ Siguiendo a {player}",
   "player.titleLoading": "★ Jugador que sigues",
   "player.loading": "Cargando sus números…",

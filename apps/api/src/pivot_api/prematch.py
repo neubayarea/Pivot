@@ -127,6 +127,7 @@ class PrematchUsualXi(Model):
     regulars_starting: int
     regulars_benched: list[str]
     newcomers: list[str]                      # starting today, not a regular
+    usual_xi_named: bool                      # every regular starts: show "usual XI", not a count of 0
 
 
 class PrematchTeam(Model):
@@ -326,10 +327,10 @@ def usual_xi(team: Team, results: list[dict]) -> PrematchUsualXi:
     by_shirt = {p.shirt_number: p.player_id for p in team.squad}
     regulars = [by_shirt[s] for s, k in sorted(starts.items()) if k >= REGULAR and s in by_shirt]
     today = [s.player_id for s in team.sheet.starters]
+    benched = [p for p in regulars if p not in today]
     return PrematchUsualXi(games=len(results), regulars=regulars,
-                           regulars_starting=sum(p in today for p in regulars),
-                           regulars_benched=[p for p in regulars if p not in today],
-                           newcomers=[p for p in today if p not in regulars])
+                           regulars_starting=sum(p in today for p in regulars), regulars_benched=benched,
+                           newcomers=[p for p in today if p not in regulars], usual_xi_named=not benched)
 
 
 # --- what comes next ---------------------------------------------------------------------------------
@@ -352,11 +353,13 @@ def rotation_risk(days: int, importance: Level, stakes: str) -> Level:
     return "high" if score >= 3 else "medium" if score >= 2 else "low"
 
 
-def _xi_sentence(xi: PrematchUsualXi) -> str:
+def _xi_sentence(xi: PrematchUsualXi, cup: bool) -> str:
+    """What the coach did about it: `cup` reads "…in 3 days, but the coach names the usual XI"."""
     n = len(xi.regulars_benched)
     if n == 0:
-        return "The usual starting XI all start today."
-    return f"{n} regular starter{'s' if n > 1 else ''} begin{'s' if n == 1 else ''} on the bench today."
+        return ", but the coach names the usual XI." if cup else ". The coach names the usual XI."
+    rest = f"the coach rests {_plural(n, 'regular starter')}."
+    return f", and {rest}" if cup else f". {rest[0].upper()}{rest[1:]}"
 
 
 def next_league(club: str, matchday: int, xi: PrematchUsualXi) -> PrematchFixture | None:
@@ -368,7 +371,7 @@ def next_league(club: str, matchday: int, xi: PrematchUsualXi) -> PrematchFixtur
         competition=LEAGUE, stage=None, matchday=matchday + 1, opponent=name, opponent_id=opponent, venue=venue,
         days_until=LEAGUE_DAYS, importance="medium", fictional=False, rotation_risk="low",
         rotation_note=f"Next league game: {name} ({'home' if venue == 'H' else 'away'}) in {LEAGUE_DAYS} days, "
-                      f"no midweek game. {_xi_sentence(xi)}",
+                      f"no midweek game{_xi_sentence(xi, cup=False)}",
         rotation_note_key="prematch.rotation.league_" + ("benched" if xi.regulars_benched else "all_start"),
         rotation_params={"opponent": name, "venue": venue, "days": LEAGUE_DAYS, "benched": len(xi.regulars_benched)})
 
@@ -391,7 +394,7 @@ def cup_tie(match: Match, side: Side, matchday: int, xi: PrematchUsualXi,
         days_until=days, importance=importance, fictional=True,
         rotation_risk=rotation_risk(days, importance, match.context.stakes),
         rotation_note=f"{CUP} {stage.lower()} {'at home to' if home else 'away to'} {name} in {days} days "
-                      f"(fictional schedule). {_xi_sentence(xi)}",
+                      f"(fictional schedule){_xi_sentence(xi, cup=True)}",
         rotation_note_key="prematch.rotation.cup_" + ("benched" if xi.regulars_benched else "all_start"),
         rotation_params={"competition": CUP, "stage": stage, "opponent": name, "venue": venue, "days": days,
                          "benched": len(xi.regulars_benched)})
