@@ -19,6 +19,8 @@ type Props = {
   keys?: { id: string; t: number; kind: KeyKind; side: Side; label: string }[];
   keySelected?: string | null;
   onKey?: (id: string) => void;
+  /** C11: the open pivot's before / after window, in seconds, shaded behind the line. */
+  windowAt?: readonly [number, number] | null;
 };
 
 // Geometry follows the S1 mock in docs/design/matchday-programme.html.
@@ -33,7 +35,7 @@ const TICKS = [0, 15, 30, 45, 60, 75, 90];
  * The axis runs on elapsed minutes, so stoppage time takes room, but reads the match clock:
  * each tick sits where the clock showed it, and the second half starts at its real kick-off.
  */
-export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick, keys = [], keySelected, onKey }: Props) {
+export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick, keys = [], keySelected, onKey, windowAt }: Props) {
   const clip = useId().replace(/[^\w-]/g, "");
   const t = useT();
   const { periods, minute } = useClock();
@@ -61,7 +63,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
     .join(", ");
 
   return (
-    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
+    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
       <defs>
         <clipPath id={`${clip}up`}>
           <rect x={0} y={0} width={W} height={MID} />
@@ -70,6 +72,9 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
           <rect x={0} y={MID} width={W} height={H} />
         </clipPath>
       </defs>
+      {windowAt && (
+        <rect className="mom-win" x={x(windowAt[0] / 60)} y={T} width={Math.max(2, x(windowAt[1] / 60) - x(windowAt[0] / 60))} height={H - T - B} />
+      )}
       <rect x={x(ht)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
       <text x={x(ht) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
         {t("chart.ht")}

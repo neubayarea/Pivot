@@ -1,7 +1,7 @@
 /* Match pictures (Bx12): shot map, heatmap, pass network, average positions. Desktop first. */
 .viz { margin: 0; display: flex; flex-direction: column; gap: 8px; color: var(--pv-ink); }
 .viz figcaption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
-.viz figcaption b { font-family: var(--pv-display); font-size: var(--pv-fs-sm); text-transform: uppercase; letter-spacing: 0.04em; }
+.viz figcaption b { font-family: var(--pv-display); font-size: var(--pv-fs-sm); letter-spacing: 0.04em; }
 .viz-pitch svg { display: block; width: 100%; height: auto; border: 1px solid var(--pv-hair); }
 .viz-arrow { margin: 2px 0 0; font-size: var(--pv-fs-xs); color: var(--pv-label); text-align: right; }
 .viz-note, .viz-empty { margin: 0; font-size: var(--pv-fs-xs); color: var(--pv-label); }
@@ -16,7 +16,7 @@
 .viz-shot:hover circle, .viz-shot:focus circle { stroke-width: 4; }
 .viz-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: var(--pv-fs-xs); color: var(--pv-label); }
 .viz-key i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -2px; border-radius: 50%;
-  border: 2px solid var(--pv-ink); }
+  border: 1px solid var(--pv-hair); }
 .viz-key.goal i { background: var(--pv-gold); }
 .viz-key.saved i { background: var(--pv-ink); }
 .viz-key.post i, .viz-key.off_target i, .viz-key.disallowed i { background: transparent; }

@@ -129,7 +129,8 @@ describe("key moments", () => {
 describe("board without pivots", () => {
   it("a finished match that never turned says so and leads with its key moments", () => {
     const html = render(view(SEED_404, "finished"));
-    expect(html).toContain("Full time · Harbour City 2–2 Northgate Rovers");
+    // C11: the score is in the header band; the page no longer repeats it in a kicker.
+    expect(html).not.toContain("Full time · Harbour City 2–2 Northgate Rovers");
     expect(html).toContain("No clear swing in momentum in this match");
     expect(html).not.toContain("Watching for the first pivot");
     expect(html).not.toContain("No pivots yet");

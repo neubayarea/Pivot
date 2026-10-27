@@ -281,7 +281,7 @@ export const es: Messages = {
   "stamp.verified": "Verificado ✓",
   "pivot.fallbackHeadline": "El impulso pasó a {team}",
   "pivot.severity": "Intensidad {n} de 3",
-  "pivot.momentumTo": "Impulso → {team}",
+  "pivot.momentumTo": "El impulso pasa a {team}",
   "pivots.empty": "Aún no hay giros. Vigilando la línea de impulso.",
   "pivots.checking": "Comprobando un cambio de impulso…",
 

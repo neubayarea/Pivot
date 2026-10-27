@@ -79,7 +79,7 @@ function KeyClip({ k }: { k: KeyMoment }) {
           <small className="muted">{t(`keys.clipHow.${k.kind}` as MessageKey, { span })}</small>
           {playback
             ? <button type="button" className="btn ghost" onClick={show}>{t("keys.inMain")}</button>
-            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")} →</a>}
+            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")}</a>}
         </p>
       </ClipPlayer>
     </div>

@@ -1,6 +1,6 @@
 // The board's numbered moments (Ax32): one card per pivot, and the one picked opened up with its
 // explanation, the pitch at that moment and the what-if chips. Layout follows docs/design/redesign-mockup.html.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
@@ -151,25 +151,26 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
         {state.phase === "failed" && <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={reset} />}
         {state.phase === "done" && <ScenarioResult state={state} option={option} teams={teams} onReset={() => { reset(); setChosen(null); }} source={source} />}
       </div>
-      <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")} →</Link>
+      <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")}</Link>
     </section>
   );
 }
 
-/** The one moment opened up: why it mattered and where everyone stood. What-if has its own section (Ax59). */
-export function OpenMoment({ pivot, n, evidence, onEvidence }: {
-  pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void;
+/** The one moment opened up: why it mattered, where everyone stood, and (C11) what-if for this moment under them. */
+export function OpenMoment({ pivot, n, evidence, onEvidence, children }: {
+  pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void; children?: ReactNode;
 }) {
   const { teams } = useMatch();
   const t = useT();
   const { minute } = useClock();
   const picked = [...evidence].at(-1) ?? null;
   return (
-    <section className="open-mo" aria-label={`${n} · ${minute(pivot.minute)}′`}>
+    <section className={`open-mo to-${pivot.direction}`} aria-labelledby="open-mo-hd">
       <div className="open-hd">
         <span className="badge" aria-hidden="true">{n}</span>
-        <h2>{minute(pivot.minute)}′ · {pivotHeadline(pivot, teams, t)}</h2>
-        <Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")} →</Link>
+        <span className="open-min num">{minute(pivot.minute)}′</span>
+        <h2 id="open-mo-hd">{pivotHeadline(pivot, teams, t)}</h2>
+        <Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link>
       </div>
       {pivot.status === "degraded" && (
         <div className="banner warn" role="status">
@@ -180,6 +181,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence }: {
         <WhyItTurned pivot={pivot} selected={evidence} onToggle={onEvidence} chipHint={t("moments.chipHint")} />
         <MomentPitch pivot={pivot} picked={picked} />
       </div>
+      {children && <div className="open-wi">{children}</div>}
     </section>
   );
 }

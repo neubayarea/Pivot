@@ -68,15 +68,19 @@ describe("what each tab holds", () => {
     expect(html).not.toContain("Key moments");
   });
 
-  it("post: six numbered sections in order, the pivots one line each until one is opened", () => {
+  it("post: momentum with the pivots under it, the first one open with its what-if, then the other sections (C11)", () => {
     const html = board("/?tab=post");
-    const order = ["Pivots", "Momentum", "Key moments", "Set pieces &amp; shots", "What if…", "AI work log"]
+    const order = ["Momentum", "Key moments", "Set pieces &amp; shots", "AI work log"]
       .map((h) => html.indexOf(`-hd">${h}</h2>`));
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(html).toContain("Back three steadied Harbour City");
-    expect(html).not.toContain("Why it turned");
     expect(html).not.toContain("More details");
+    // No pivot in the link: the first one is open, with what-if for that moment inside it.
+    const why = html.indexOf("Why it turned");
+    expect(why).toBeGreaterThan(order[0]);
+    expect(why).toBeLessThan(order[1]);
+    expect(html.indexOf("What if…", why)).toBeGreaterThan(why);
     const opened = board("/?tab=post&pivot=pv-74");
     expect(opened).toContain("Why it turned");
     expect(opened).toContain('aria-pressed="true"');

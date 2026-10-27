@@ -280,7 +280,7 @@ export const zh: Messages = {
   "stamp.verified": "已核实 ✓",
   "pivot.fallbackHeadline": "场面倒向 {team}",
   "pivot.severity": "强度 {n}/3",
-  "pivot.momentumTo": "势头 → {team}",
+  "pivot.momentumTo": "势头转向 {team}",
   "pivots.empty": "还没有转折点，正在盯着势头线。",
   "pivots.checking": "正在核查一次势头变化…",
 

@@ -280,7 +280,7 @@ export const en = {
   "stamp.verified": "Verified ✓",
   "pivot.fallbackHeadline": "Momentum swung to {team}",
   "pivot.severity": "Severity {n} of 3",
-  "pivot.momentumTo": "Momentum → {team}",
+  "pivot.momentumTo": "Swung to {team}",
   "pivots.empty": "No pivots yet. Watching the momentum line.",
   "pivots.checking": "Checking a momentum swing…",
 

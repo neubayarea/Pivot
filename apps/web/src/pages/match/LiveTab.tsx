@@ -51,7 +51,7 @@ function PivotAlert({ moments }: { moments: Pivot[] }) {
       <span className="pv-alert-k">{t("live.alert", { minute: minute(shown.minute) })}</span>
       <b className="pv-alert-hd">{pivotHeadline(shown, teams, t)}</b>
       <span className="pv-alert-ft">
-        <Link to={{ search: `?${q}` }} className="more-link">{t("live.alertOpen")} →</Link>
+        <Link to={{ search: `?${q}` }} className="more-link">{t("live.alertOpen")}</Link>
         <button type="button" className="btn ghost" onClick={() => setShown(null)}>{t("live.alertClose")}</button>
       </span>
     </aside>

@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import ConnectionBanner, { MissingMatchBanner } from "./components/ConnectionBanner";
+import KitColours from "./components/KitColours";
 import Playback from "./components/Playback";
 import ScoreHeader from "./components/ScoreHeader";
 import StartupScreen from "./components/StartupScreen";
@@ -30,6 +31,7 @@ export default function App() {
 
   return (
     <MatchProvider fallback={WAITING}>
+      <KitColours />
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <ConnectionBanner />
       <MissingMatchBanner />
