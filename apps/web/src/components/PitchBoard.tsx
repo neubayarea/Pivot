@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
 import { fixtureMode, useMatch } from "../data/match";
 import { useFrames, useFrameWindow } from "../data/live/frames";
-import { minuteAt, minuteLabel, PLAIN_PERIODS } from "../data/clock";
+import { minuteAt, minuteLabel, PLAIN_PERIODS, useClock } from "../data/clock";
 import { isRedCard, type Side, type SquadPlayer } from "../data/view";
 import { useT, type MessageKey } from "../i18n";
 import Card from "./Card";
 import { describe } from "./EventFeed";
 import Pitch, { whoFromSquads } from "./Pitch";
+import { PlayerNumbers, usePlayerReport } from "./PlayerCard";
 import { backLineX, frameShape, lineOf, lineupAt, meanShape, shapeLines, type Lineup, type Role, type Shape } from "./shape";
 import "../styles/pitch-board.css";
 
@@ -66,10 +67,15 @@ export default function PitchBoard() {
   const note = t("board.pitchNote", { team: teams.home.short_name });
 
   const names = { home: teams.home.short_name, away: teams.away.short_name };
+  // Ax59: a player picked in the list or on the pitch takes over the card until Back.
   const roster = (marked: ReadonlySet<string>) => (
     <Card title={t("board.roster")} className="more-roster">
-      <Roster squads={squads} frame={frame} now={now} events={events} roleOf={roleOf} picked={picked} marked={marked}
-        onPick={setPicked} names={names} />
+      {picked && players.has(picked) ? (
+        <PlayerDetail player={players.get(picked)!} role={roleOf(picked)} onBack={() => setPicked(null)} />
+      ) : (
+        <Roster squads={squads} frame={frame} now={now} events={events} roleOf={roleOf} picked={picked} marked={marked}
+          onPick={setPicked} names={names} />
+      )}
     </Card>
   );
   if (missing) {
@@ -213,6 +219,30 @@ export function ShapeTable({ frame, lineup, before, beforeLabel, isHome, names }
       <small className="muted">
         {before === undefined ? t("board.shapeNote") : before === null ? t("board.shapeLoading") : t("board.shapeVs", { when: beforeLabel })}
       </small>
+    </div>
+  );
+}
+
+/** One player in the line-ups card: who, where, and their numbers up to the clock (PlayerCard's). */
+export function PlayerDetail({ player, role, onBack }: { player: SquadPlayer; role: Role | undefined; onBack: () => void }) {
+  const { match, teams, playback, squads } = useMatch();
+  const t = useT();
+  const { at } = useClock();
+  const side: Side = squads.home.some((p) => p.player_id === player.player_id) ? "home" : "away";
+  // Whole minutes, so a running clock refetches once a minute; the whole match once it is over.
+  const upTo = match.status === "finished" && !playback ? null : Math.floor(match.clock / 60) * 60;
+  const report = usePlayerReport(match.match_id, player.player_id, upTo);
+  return (
+    <div className={`roster-detail ${side}`}>
+      <button type="button" className="btn ghost pd-back" onClick={onBack} autoFocus>← {t("board.rosterBack")}</button>
+      <div className="pd-hd">
+        <b className="pd-no num">{player.shirt ?? ""}</b>
+        <span>
+          <span className="pd-nm">{player.name}</span>
+          <small className="muted">{[teams[side].name, role ?? player.role].filter(Boolean).join(" · ")} · 0′–{at(upTo ?? match.clock)}′</small>
+        </span>
+      </div>
+      {report === null ? <p className="muted">{t("board.rosterNoStats")}</p> : <PlayerNumbers report={report} />}
     </div>
   );
 }

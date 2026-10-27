@@ -96,7 +96,7 @@ export const en = {
   "board.beforePivot": "the 5 minutes before the {minute}′ pivot",
   "board.beforeNow": "{from}′–{to}′",
   "board.roster": "Line-ups",
-  "board.rosterHint": "Tap a name to find the player on the pitch.",
+  "board.rosterHint": "Tap a name or a dot on the pitch for the player's numbers.",
   "board.status.cameOn": "on",
   "board.status.off": "off",
   "board.status.sentOff": "sent off",
@@ -589,4 +589,8 @@ export const en = {
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "Sources ({n})",
+
+  // Ax59 · a player in the line-ups card
+  "board.rosterBack": "Back",
+  "board.rosterNoStats": "No numbers for this player in this match yet.",
 };

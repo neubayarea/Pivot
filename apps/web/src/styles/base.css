@@ -414,8 +414,9 @@ details.more > summary small { font-weight: 600; letter-spacing: .04em; text-tra
 .more-roster { grid-area: roster; }
 .more-events { grid-area: events; }
 .more-events, .more-roster { max-height: var(--more-low); grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
-.more-events .feed, .more-roster .roster { min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+.more-events .feed, .more-roster .roster, .more-roster .roster-detail { min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
 .more-roster .roster { padding-right: 4px; }
+.more-roster { height: var(--more-low); }
 .pb-main { display: grid; gap: 8px; align-content: start; }
 @media (min-width: 720px) {
   /* The pitch keeps to under half the window's height; the caption and shape numbers sit beside it. */

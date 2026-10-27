@@ -96,7 +96,7 @@ export const zh: Messages = {
   "board.beforePivot": "{minute}′ 转折点前 5 分钟",
   "board.beforeNow": "{from}′–{to}′",
   "board.roster": "两队名单",
-  "board.rosterHint": "点名字，球场上会圈出这名球员。",
+  "board.rosterHint": "点名字或球场上的圆点，看这名球员的数据。",
   "board.status.cameOn": "替补上场",
   "board.status.off": "已换下",
   "board.status.sentOff": "红牌罚下",
@@ -588,4 +588,8 @@ export const zh: Messages = {
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "依据（{n}）",
+
+  // Ax59 · a player in the line-ups card
+  "board.rosterBack": "返回",
+  "board.rosterNoStats": "这场比赛暂时没有这名球员的数据。",
 };

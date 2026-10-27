@@ -97,7 +97,7 @@ export const es: Messages = {
   "board.beforePivot": "los 5 minutos antes del giro del {minute}′",
   "board.beforeNow": "{from}′–{to}′",
   "board.roster": "Alineaciones",
-  "board.rosterHint": "Toca un nombre para encontrar al jugador en el campo.",
+  "board.rosterHint": "Toca un nombre o un punto del campo para ver los datos del jugador.",
   "board.status.cameOn": "entró",
   "board.status.off": "sustituido",
   "board.status.sentOff": "expulsado",
@@ -590,4 +590,8 @@ export const es: Messages = {
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "Fuentes ({n})",
+
+  // Ax59 · a player in the line-ups card
+  "board.rosterBack": "Volver",
+  "board.rosterNoStats": "Aún no hay datos de este jugador en este partido.",
 };
