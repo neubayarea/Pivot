@@ -10,6 +10,7 @@ import { api } from "../data/live/api";
 import { fixtureMode, useMatch } from "../data/match";
 import { type MessageKey, usePrefs } from "../i18n";
 import Card from "./Card";
+import FollowButton from "./FollowButton";
 
 type Key = "minutes_played" | "rating" | "goals" | "assists" | "shots" | "xg" | "passes" | "key_passes" | "tackles_won"
   | "interceptions" | "duels_won" | "distance_km" | "top_speed_kmh";
@@ -73,6 +74,7 @@ export function PlayerCardView({ report, upTo, numbered = [], onPivot }: Props &
     ` · 0′–${at(upTo ?? match.clock)}′`;
   return (
     <Card title={title} note={note} className="player-card">
+      {report && <FollowButton playerId={report.player_id} name={report.name} />}
       <PlayerNumbers report={report} numbered={numbered} onPivot={onPivot} />
     </Card>
   );
