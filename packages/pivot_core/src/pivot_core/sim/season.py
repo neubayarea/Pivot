@@ -29,7 +29,7 @@ from ..domain import (
     CareerStint, HeadToHead, Match, OffFieldEvent, PastMeeting, PreMatchCondition, Relationship, Team, TeamForm,
 )
 from ..domain.common import PITCH_LENGTH, PITCH_WIDTH
-from .effects import can_combine
+from .effects import can_combine, with_effects
 from .engine import simulate
 from .world import BY_ID, CLUB_NAMES, DEMO_MATCHDAY, HBC, ROV, SEASON, Fixture, fixture_match, with_careers
 
@@ -315,17 +315,19 @@ def derived_news(teams: list[Team], results: list[dict], stats: dict) -> list[Of
         if goals >= 5:
             out.append(OffFieldEvent(news_id=f"news-{best.player_id}-goals", subject_id=best.player_id,
                                      kind="milestone", hours_before_kickoff=72, sentiment="positive",
-                                     headline=f"{best.name} has {goals} league goals this season, "
-                                              f"the most at {team.name}"))
+                                     # no count: the simulator's strikers score more than real ones do
+                                     headline=f"{best.name} is {team.name}'s top scorer in the league this season"))
     return out
 
 
-def with_season(match: Match, season: dict) -> Match:
-    """The demo match with its careers and pre-match context filled from the season so far."""
+def with_season(match: Match, season: dict, matchday: int = DEMO_MATCHDAY) -> Match:
+    """A Harbour City v Northgate Rovers match with its careers and pre-match context filled from the
+    season up to `matchday`: form, table, head-to-head and the season's numbers count the rounds before
+    it. The demo is round 30; the site's simulated matches are set on other rounds (`site_matchday`)."""
     assert (match.home.club_id, match.away.club_id) == (HBC.club_id, ROV.club_id), "only the demo fixture"
-    results = [r for r in season["results"] if r["season"] == SEASON and r["matchday"] < DEMO_MATCHDAY]
+    results = [r for r in season["results"] if r["season"] == SEASON and r["matchday"] < matchday]
     stats = season_stats(results)
-    played = DEMO_MATCHDAY - 1
+    played = matchday - 1
     home, away = _story_team(match.home, stats, played), _story_team(match.away, stats, played)
     standings = table(results)
     clubs = (HBC.club_id, ROV.club_id)
@@ -340,3 +342,19 @@ def with_season(match: Match, season: dict) -> Match:
         "conditions": recent_form(home, results) + recent_form(away, results),
     })
     return match.model_copy(update={"home": home, "away": away, "context": context})
+
+
+SITE_ROUNDS = tuple(range(21, DEMO_MATCHDAY + 1))   # rounds the site's simulated matches are set on
+
+
+def site_matchday(seed: int) -> int:
+    """The round a simulated match of the site is set on, from its seed (21 to 30), so the matches open
+    on different tables, form and stakes, all from the same fictional season."""
+    return SITE_ROUNDS[seed % len(SITE_ROUNDS)]
+
+
+def with_prematch(match: Match, season: dict, matchday: int) -> Match:
+    """Season stories plus the context effects they give (B14), for a match that has been played. Only the
+    careers and the context change, so the events, the score and the frames stay what they were; the
+    effects are notes for the page and the writers (the engine plays by them only with the B14 switch)."""
+    return with_effects(with_season(match, season, matchday))
