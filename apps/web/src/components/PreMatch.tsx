@@ -1,7 +1,7 @@
 // The pre-match tab (Ax60): what the API sends about the match before kick-off and the page used to
 // drop (#276): the occasion, form and table, head-to-head, the news, what could tip the players, and
 // the ties between the two squads. A subject the match has no data for is left out, never shown as
-// zeros. Headlines and effect notes are written by the simulator in English.
+// zeros. Headlines and effect notes are written by the simulator in English; the API translates them (#355).
 // C11 (Ax63): a match preview's order. `PreMatchTop` is the tale of the tape (table, form,
 // head-to-head) under one strip of match facts; `PreMatchStories` is the news and the context
 // effects, then the ties. Each person and team carries a small swatch in its own kit colour.
@@ -11,6 +11,7 @@ import { usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import LangTag from "./LangTag";
 import { numberLocale } from "../data/motion";
+import { usePreMatchText } from "../data/prematch";
 import "../styles/prematch.css";
 
 const SIDES: Side[] = ["home", "away"];
@@ -28,8 +29,9 @@ const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", 
 export const Kit = ({ side }: { side: Side | undefined }) => (side ? <i className={`pre-kit ${side}`} aria-hidden="true" /> : null);
 
 function usePre() {
-  const { preMatch, teams, squads, playerName } = useMatch();
+  const { preMatch, teams, squads, playerName, match } = useMatch();
   const { prefs, t } = usePrefs();
+  const said = usePreMatchText(match.match_id);
   if (!preMatch) return null;
   const { plans } = preMatch;
   const fan = prefs.audience === "fan";
@@ -40,7 +42,7 @@ function usePre() {
     [s, s] as const, [plans[s].coach.coach_id, s] as const, ...squads[s].map((p) => [p.player_id, s] as const),
   ]));
   const name = (id: string) => (id === "home" || id === "away" ? teams[id].name : (coaches.get(id) ?? playerName(id)));
-  return { ...preMatch, teams, t, fan, title, name, teamOf: (id: string) => teamOf.get(id) };
+  return { ...preMatch, teams, t, fan, title, name, said, teamOf: (id: string) => teamOf.get(id) };
 }
 
 /** The occasion, then both sides' place, points and form facing each other, and the head-to-head. */
@@ -63,14 +65,14 @@ export function PreMatchTop() {
 export function PreMatchStories() {
   const pre = usePre();
   if (!pre) return null;
-  const { context, t, title, name, teamOf, fan } = pre;
+  const { context, t, title, name, teamOf, fan, said } = pre;
   const news = context.news.filter((n) => n.public).sort((a, b) => a.hours_before_kickoff - b.hours_before_kickoff);
   // Ties across the two squads only: a reunion with an opponent is the story, not two teammates.
   const across = context.relationships.filter((r) => teamOf(r.person_id) && teamOf(r.other_id) && teamOf(r.person_id) !== teamOf(r.other_id));
   const reunions = strongest(context.effects, (e) => e.source === "former_club", MAX_TIES);
   const effects = strongest(context.effects, (e) => !TIE_SOURCES.has(e.source) && !ROUTINE_SOURCES.has(e.source) && e.delta !== 0, MAX_FACTORS);
   if (!news.length && !across.length && !reunions.length && !effects.length) return null;
-  const people = { t, name, teamOf };
+  const people = { t, name, teamOf, said };
   return (
     <section className="post-sec" aria-labelledby="pre-stories-hd">
       <header className="sec-hd">
@@ -89,7 +91,13 @@ export function PreMatchStories() {
 type Part = { t: T; title: string };
 type NewsItem = MatchContext["news"][number];
 type Relationship = MatchContext["relationships"][number];
-type People = { name: (id: string) => string; teamOf: (id: string) => Side | undefined };
+type People = { name: (id: string) => string; teamOf: (id: string) => Side | undefined; said: (en: string) => string | null };
+
+/** A sentence from the API in the page's language (#355), or the English with its EN tag when there is none. */
+const Said = ({ text, said }: { text: string; said: People["said"] }) => {
+  const there = said(text);
+  return there ? <>{there}</> : <>{text} <LangTag lang="en" /></>;
+};
 
 function Occasion({ context: c, t }: { context: MatchContext; t: T }) {
   const rows: [string, string][] = [
@@ -219,7 +227,7 @@ function HeadToHead({ context, plans, t, title, short }: Part & {
 /** One rule in every language: hours under 48 h before kick-off, whole days from then on. */
 const when = (t: T, hours: number) => (hours < 48 ? t("pre.hoursBefore", { n: hours }) : t("pre.daysBefore", { n: Math.floor(hours / 24) }));
 
-function News({ news, t, title, name, teamOf }: Part & People & { news: NewsItem[] }) {
+function News({ news, t, title, name, teamOf, said }: Part & People & { news: NewsItem[] }) {
   if (!news.length) return null;
   return (
     <Card title={title} className="pre-news">
@@ -233,7 +241,7 @@ function News({ news, t, title, name, teamOf }: Part & People & { news: NewsItem
               <span className="pre-when muted">{when(t, n.hours_before_kickoff)}</span>
             </p>
             <p className="pre-headline">
-              {n.headline} <LangTag lang="en" />
+              <Said text={n.headline} said={said} />
             </p>
           </li>
         ))}
@@ -261,7 +269,7 @@ function strongest(effects: ContextEffect[], keep: (e: ContextEffect) => boolean
 const pct = (d: number) =>
   `${d > 0 ? "+" : "−"}${Math.abs(d * 100).toLocaleString(numberLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
-function Factors({ effects, t, title, name, teamOf, fan }: Part & People & { effects: ContextEffect[]; fan: boolean }) {
+function Factors({ effects, t, title, name, teamOf, fan, said }: Part & People & { effects: ContextEffect[]; fan: boolean }) {
   if (!effects.length) return null;
   return (
     <Card title={title} note={t("pre.factorsNote")} className="pre-factors">
@@ -279,7 +287,7 @@ function Factors({ effects, t, title, name, teamOf, fan }: Part & People & { eff
                   ? t(e.delta > 0 ? "pre.effectUp" : "pre.effectDown", { what: t(`pre.affects.${e.target}`) })
                   : t("pre.effectSize", { size: pct(e.delta), what: t(`pre.affects.${e.target}`) })}
               </span>
-              <span className="pre-note">{e.note} <LangTag lang="en" /></span>
+              <span className="pre-note"><Said text={e.note} said={said} /></span>
             </span>
           </li>
         ))}
@@ -288,7 +296,7 @@ function Factors({ effects, t, title, name, teamOf, fan }: Part & People & { eff
   );
 }
 
-function Ties({ across, reunions, t, title, name, teamOf }: Part & People & { across: Relationship[]; reunions: ContextEffect[] }) {
+function Ties({ across, reunions, t, title, name, teamOf, said }: Part & People & { across: Relationship[]; reunions: ContextEffect[] }) {
   if (!across.length && !reunions.length) return null;
   return (
     <Card title={title} className="pre-ties">
@@ -298,7 +306,7 @@ function Ties({ across, reunions, t, title, name, teamOf }: Part & People & { ac
             <span className="pre-chip">{t("pre.formerClub")}</span>
             <span>
               <b className="pre-who"><Kit side={teamOf(e.subject_id)} />{name(e.subject_id)}</b>
-              <span className="pre-note">{e.note} <LangTag lang="en" /></span>
+              <span className="pre-note"><Said text={e.note} said={said} /></span>
             </span>
           </li>
         ))}
