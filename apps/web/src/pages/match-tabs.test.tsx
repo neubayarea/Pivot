@@ -1,11 +1,11 @@
-// Ax59: the match page is three tabs, each with its own link (`?tab=pre|live|post`), the live one
-// by default; the open pivot is in the link too. Static HTML on the fixture, no DOM.
+// C13 (#316): the match page is six tabs by content, each with its own link (`?tab=`), opening where
+// the match is; old Ax59 links (`?tab=pre|live|post`) still land. Static HTML on the fixture, no DOM.
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import WhyItTurned from "../components/WhyItTurned";
 import { FixtureProvider } from "../data/match";
-import { DEFAULT_TAB, tabFrom, tabSearch } from "../data/tab";
+import { defaultTab, tabFrom, tabSearch } from "../data/tab";
 import { DEMO_1021 } from "../fixtures/demo-1021";
 import { PrefsProvider } from "../i18n";
 import LiveBoard from "./LiveBoard";
@@ -33,65 +33,78 @@ const board = (path: string) => {
 const selected = (html: string) => html.match(/id="tab-(\w+)" role="tab" aria-selected="true"/)?.[1];
 
 describe("tab links", () => {
-  it("reads the tab from the link, live when it is missing or unknown", () => {
-    expect(DEFAULT_TAB).toBe("live");
-    expect(tabFrom("")).toBe("live");
-    expect(tabFrom("?match=M-seed-101&tab=pre")).toBe("pre");
-    expect(tabFrom("?tab=post")).toBe("post");
-    expect(tabFrom("?tab=stats")).toBe("live");
+  it("opens where the match is when the link names no tab", () => {
+    expect(defaultTab("scheduled")).toBe("preview");
+    expect(defaultTab("live")).toBe("replay");
+    expect(defaultTab("paused")).toBe("replay");
+    expect(defaultTab("finished")).toBe("overview");
+    expect(tabFrom("", "finished")).toBe("overview");
+    expect(tabFrom("?tab=nonsense", "scheduled")).toBe("preview");
+    expect(tabFrom("?match=M-seed-101&tab=stats", "finished")).toBe("stats");
+  });
+
+  it("sends old links to the tab that holds the same things now", () => {
+    expect(tabFrom("?tab=pre", "finished")).toBe("preview");
+    expect(tabFrom("?tab=live", "finished")).toBe("replay");
+    expect(tabFrom("?tab=post", "live")).toBe("overview");
   });
 
   it("keeps the match, the replay and the viewer settings when switching", () => {
-    expect(tabSearch("?match=M-seed-101&from=0&mode=fan", "post")).toBe("?match=M-seed-101&from=0&mode=fan&tab=post");
-    expect(tabSearch("?tab=pre&match=m1", "live")).toBe("?tab=live&match=m1");
+    expect(tabSearch("?match=M-seed-101&from=0&mode=fan", "overview")).toBe("?match=M-seed-101&from=0&mode=fan&tab=overview");
+    expect(tabSearch("?tab=pre&match=m1", "whatif")).toBe("?tab=whatif&match=m1");
   });
 
-  it("renders the three tabs as links, the open one selected", () => {
-    const html = board("/?match=demo-1021");
-    expect(selected(html)).toBe("live");
-    expect(html).toContain('href="/?match=demo-1021&amp;tab=pre"');
-    expect(html).toContain('href="/?match=demo-1021&amp;tab=post"');
-    expect(html).toContain(">Pre-match</a>");
-    expect(html).toContain(">Live</a>");
-    expect(html).toContain(">Post-match</a>");
-    expect(html).toContain('role="tabpanel" id="panel-live" aria-labelledby="tab-live"');
-    expect(selected(board("/?tab=post"))).toBe("post");
-    expect(selected(board("/?tab=pre"))).toBe("pre");
+  it("renders the six tabs as links in content order, the open one selected", () => {
+    const html = board("/?match=demo-1021&tab=stats");
+    expect(selected(html)).toBe("stats");
+    const labels = ["Overview", "What if", "Live|Replay", "Stats", "Line-ups", "Preview"]
+      .map((l) => html.search(new RegExp(`>(${l})</a>`)));
+    expect(labels.every((i) => i > 0)).toBe(true);
+    expect([...labels].sort((a, b) => a - b)).toEqual(labels);
+    expect(html).toContain('href="/?match=demo-1021&amp;tab=whatif"');
+    expect(html).toContain('role="tabpanel" id="panel-stats" aria-labelledby="tab-stats"');
+    expect(selected(board("/?tab=post"))).toBe("overview");
+    expect(selected(board("/?tab=pre"))).toBe("preview");
   });
 });
 
 describe("what each tab holds", () => {
-  it("live: the pitch, stats, events and line-ups, no analysis", () => {
-    const html = board("/?tab=live");
+  it("replay: the pitch, key stats, events and line-ups, no analysis and no full stats table", () => {
+    const html = board("/?tab=replay");
     for (const part of ["On the pitch", "Match stats", "Events", "Line-ups"]) expect(html).toContain(part);
     expect(html).not.toContain("Why it turned");
     expect(html).not.toContain("Key moments");
+    expect(html).not.toContain("Shots, heat and passing");
   });
 
-  it("post: momentum with the pivots under it, the first one open with its what-if, then the other sections (C11)", () => {
-    const html = board("/?tab=post");
-    const order = ["Momentum", "Key moments", "Set pieces &amp; shots", "AI work log"]
-      .map((h) => html.indexOf(`-hd">${h}</h2>`));
-    expect(order.every((i) => i > 0)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(html).toContain("Back three steadied Harbour City");
-    expect(html).not.toContain("More details");
-    // No pivot in the link: the first one is open, with what-if for that moment inside it.
-    const why = html.indexOf("Why it turned");
-    expect(why).toBeGreaterThan(order[0]);
-    expect(why).toBeLessThan(order[1]);
-    expect(html.indexOf("What if…", why)).toBeGreaterThan(why);
-    const opened = board("/?tab=post&pivot=pv-74");
-    expect(opened).toContain("Why it turned");
-    expect(opened).toContain('aria-pressed="true"');
-  });
-
-  it("pre: the line-ups; the fixture has no pre-match data, so no build-up section (Ax60)", () => {
-    const html = board("/?tab=pre");
-    expect(html).toContain("Line-ups");
-    expect(html).toContain("Harbour City");
-    expect(html).not.toContain('data-slot="prematch"');
+  it("stats: the team stats and the match pictures", () => {
+    const html = board("/?tab=stats");
+    expect(html).toContain("Team stats");
+    expect(html).toContain("Shots, heat and passing");
     expect(html).not.toContain("On the pitch");
+  });
+
+  it("overview: the turning points and their explanation", () => {
+    const html = board("/?tab=overview");
+    expect(html).toContain("Back three steadied Harbour City");
+    expect(html).toContain("Key moments");
+    expect(board("/?tab=overview&pivot=pv-74")).toContain("Why it turned");
+  });
+
+  it("what-if: the lab for the first turning point, each turning point a chip", () => {
+    const html = board("/?tab=whatif");
+    expect(html).toContain('class="wi-tab"');
+    expect(html).toMatch(/class="chip" aria-pressed="true"/);
+  });
+
+  it("line-ups: both XIs; preview: says so when the match has no pre-match data (the fixture has none)", () => {
+    const lu = board("/?tab=lineups");
+    expect(lu).toContain("Line-ups");
+    expect(lu).toContain("Harbour City");
+    const pre = board("/?tab=preview");
+    expect(pre).not.toContain('data-slot="prematch"');
+    expect(pre).toContain("No pre-match information for this match.");
+    expect(pre).not.toContain("On the pitch");
   });
 });
 
