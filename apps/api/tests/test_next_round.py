@@ -73,3 +73,24 @@ def test_the_hub_lists_the_round_and_the_fixtures_open_before_kick_off(monkeypat
         match = client.get(f"/api/matches/{ids[0]}").json()
         assert match["status"] == "scheduled"
         assert client.get(f"/api/matches/{ids[0]}/prematch").json()["matchday"] == 31
+
+
+def test_the_schedule_is_every_round_still_to_come_a_week_apart(monkeypatch):
+    """C15: matchdays 31-38, ten fixtures each, every club once a round, and odds only where worked out."""
+    for name in ("PIVOT_PROFILE", "PIVOT_DEMO", "PIVOT_FOUNDRY_ENDPOINT", "PIVOT_NEXT_ROUND"):
+        monkeypatch.delenv(name, raising=False)
+    with TestClient(app) as client:
+        body = client.get("/api/hub").json()
+        rounds = body["schedule"]
+        assert [r["matchday"] for r in rounds] == list(range(31, nextround.LAST_MATCHDAY + 1))
+        assert body["next"]["matchday"] == 31 and body["next"]["fixtures"] == rounds[0]["fixtures"]
+        assert [r["date"] for r in rounds[:2]] == ["2026-10-28", "2026-11-04"]
+        for r in rounds:
+            clubs = [f[s]["short_name"] for f in r["fixtures"] for s in ("home", "away")]
+            assert len(r["fixtures"]) == 10 and len(set(clubs)) == 20
+            worked_out = nextround.path_for(r["matchday"]).is_file()
+            assert all((f["prediction"] is not None) == worked_out for f in r["fixtures"])
+        later = rounds[-1]["fixtures"][0]["match_id"]
+        assert client.get(f"/api/matches/{later}").json()["status"] == "scheduled"
+        assert client.get(f"/api/matches/{later}/prematch").json()["matchday"] == nextround.LAST_MATCHDAY
+        assert later not in [m["match_id"] for m in client.get("/api/matches").json()]

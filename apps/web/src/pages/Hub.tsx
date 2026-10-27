@@ -1,14 +1,14 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import Segmented from "../components/Segmented";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
 import {
-  byMatchday, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubLive, type HubNext, type HubPrediction, type HubTeam,
+  byMatchday, clubGames, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubLive, type HubNext, type HubPrediction, type HubTeam,
 } from "../data/hub";
 import { liveHref } from "../data/liveClock";
-import { usePrefs, useT } from "../i18n";
+import { useLang, usePrefs, useT } from "../i18n";
 import "../styles/hub.css";
 
 // The home page (C14, #354): a match centre like FotMob's, Sofascore's or the Premier League
@@ -218,6 +218,82 @@ function NextRound({ next, fav, fan }: { next: HubNext; fav: string | null; fan:
   );
 }
 
+const LOCALES = { en: "en-GB", zh: "zh-CN", es: "es-ES" } as const;
+
+/** "Wed 28 Oct" / "10月28日周三": the round's day in the fictional calendar. */
+function useRoundDate() {
+  const lang = useLang();
+  return (iso?: string) => iso
+    ? new Date(`${iso}T12:00:00Z`).toLocaleDateString(LOCALES[lang], { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })
+    : "";
+}
+
+/** One future fixture in the schedule: the two kits, the ground, and the prediction only when one was worked out. */
+function ScheduleRow({ f, fav, label }: { f: HubFixture; fav: string | null; label?: string }) {
+  const t = useT();
+  const p = f.prediction;
+  return (
+    <li>
+      <Link to={`/?match=${encodeURIComponent(f.match_id)}&tab=preview`} className="hub-sched-row"
+        aria-label={t("hub.next.open", { home: f.home.name, away: f.away.name })}>
+        <span className="hub-meta">{label}</span>
+        <TeamName team={f.home} fav={fav} />
+        <span className="hub-v" aria-hidden="true">v</span>
+        <TeamName team={f.away} fav={fav} />
+        <span className="hub-meta">{f.venue}</span>
+        {p ? <PredictionBar p={p} home={f.home} away={f.away} fan /> : <span className="hub-meta">{t("hub.sched.later")}</span>}
+      </Link>
+    </li>
+  );
+}
+
+/** C15: matchdays 31-38, a round at a time, or the viewer's club's games over all of them. */
+function Schedule({ rounds, fav }: { rounds: HubNext[]; fav: string | null }) {
+  const t = useT();
+  const day = useRoundDate();
+  const [picked, setPicked] = useState(String(rounds[0].matchday));
+  const [mine, setMine] = useState(false);
+  const round = rounds.find((r) => String(r.matchday) === picked) ?? rounds[0];
+  const runs = round.fixtures.find((f) => f.prediction)?.prediction?.n_runs;
+  const onlyMine = mine && fav !== null;
+  return (
+    <section className="hub-sched" aria-labelledby="hub-sched-h">
+      <div className="hub-section-head">
+        <h2 id="hub-sched-h">{t("hub.sched.title")}</h2>
+        <span className="hub-note">
+          {t("hub.sched.note", { from: rounds[0].matchday, to: rounds[rounds.length - 1].matchday })}
+        </span>
+      </div>
+      <div className="hub-sched-pick">
+        {!onlyMine && (
+          <Segmented label={t("hub.sched.round")} value={picked} onChange={setPicked}
+            options={rounds.map((r) => ({ value: String(r.matchday), label: String(r.matchday) }))} />
+        )}
+        {fav && (
+          <Segmented label={t("hub.sched.show")} value={onlyMine ? "mine" : "all"} onChange={(v) => setMine(v === "mine")}
+            options={[{ value: "all", label: t("hub.sched.all") }, { value: "mine", label: t("hub.sched.mine", { team: fav }) }]} />
+        )}
+      </div>
+      <div className="hub-day">
+        {onlyMine ? (
+          <ul>
+            {clubGames(rounds, fav).map(({ round: r, fixture }) => (
+              <ScheduleRow key={fixture.match_id} f={fixture} fav={fav}
+                label={t("hub.sched.day", { n: r.matchday, date: day(r.date) })} />
+            ))}
+          </ul>
+        ) : (
+          <>
+            <h3>{t("hub.sched.day", { n: round.matchday, date: day(round.date) })}</h3>
+            {runs && <p className="hub-note hub-sched-runs">{t("hub.sched.runs", { n: runs })}</p>}
+            <ul>{pinned(round.fixtures, fav).map((f) => <ScheduleRow key={f.match_id} f={f} fav={fav} />)}</ul>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Hub() {
   const { prefs, setPrefs } = usePrefs();
   const t = useT();
@@ -239,6 +315,7 @@ export default function Hub() {
         {!data && !failed && <p className="hub-note" role="status">{t("hub.loading")}</p>}
         {data?.live && liveLine && <LiveNow live={data.live} line={liveLine} fav={fav} />}
         {data?.next && data.next.fixtures.length > 0 && <NextRound next={data.next} fav={fav} fan={fan} />}
+        {data?.schedule && data.schedule.length > 0 && <Schedule rounds={data.schedule} fav={fav} />}
         {data && (
           <section className="hub-results" aria-labelledby="hub-results-h">
             <div className="hub-section-head">

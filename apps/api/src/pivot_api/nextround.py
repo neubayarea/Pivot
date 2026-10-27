@@ -14,6 +14,11 @@ pre-match prediction.
 
 At startup the API stores the fixtures as scheduled matches, so `/?match=S2026-31-…` opens their
 Preview and Line-ups (#327's `/prematch` covers them through `prematch.matchday_of`).
+
+The schedule (C15, #363): every round still to come, matchdays 31 to 38 (80 fixtures), is stored the
+same way and listed on the match centre with its date (the fictional calendar: one round a week
+after the demo's matchday 30 on 21 October). A round has predictions only when its file
+(`matchday-<n>.json`) was worked out; the others are listed without one, never with made-up odds.
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import Counter
+from datetime import date, timedelta
 from pathlib import Path
 
 from pivot_core.domain import Match
@@ -37,7 +43,22 @@ NEXT_MATCHDAY = DEMO_MATCHDAY + 1
 N_RUNS = 200
 SHOWN = 10                   # the whole round
 TOP_SCORELINES = 3
-PATH = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "next-round" / f"matchday-{NEXT_MATCHDAY}.json"
+LAST_MATCHDAY = max(fx.matchday for fx in schedule())
+DEMO_DATE = date(2026, 10, 21)          # matchday 30, the demo (world.py)
+ROUND_DAYS = 7
+FILES = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "next-round"
+
+
+def path_for(matchday: int) -> Path:
+    return FILES / f"matchday-{matchday}.json"
+
+
+PATH = path_for(NEXT_MATCHDAY)
+
+
+def round_date(matchday: int) -> date:
+    """The fictional calendar: one round a week after the demo's."""
+    return DEMO_DATE + timedelta(days=ROUND_DAYS * (matchday - DEMO_MATCHDAY))
 
 
 def fixtures(matchday: int = NEXT_MATCHDAY, shown: int = SHOWN) -> list[Fixture]:
@@ -89,16 +110,22 @@ def read(path: Path, version: str) -> dict[str, dict]:
     return {f["match_id"]: f["prediction"] for f in data["fixtures"]}
 
 
-async def load_next_round(app_state, path: Path = PATH) -> list[str]:
-    """Store the next round's fixtures as scheduled matches and keep their predictions for the hub."""
+async def load_next_round(app_state, files: Path = FILES) -> list[str]:
+    """Store every round still to come as scheduled matches, and keep the rounds and the predictions
+    worked out for them for the hub. `order` is every future fixture (routes.py keeps them out of
+    /api/matches); `rounds` lists them by matchday, the next one first."""
     from .whatif import portable_sim_version
 
-    season = sims._season()
-    matches = [next_match(fx, season) for fx in fixtures()]
-    for m in matches:
-        await app_state.adapters.matches.upsert_match(m)
-    predictions = read(path, portable_sim_version())
-    app_state.next_round = {"matchday": NEXT_MATCHDAY, "order": [m.match_id for m in matches], "predictions": predictions}
-    log.info("next round: %d fixtures of matchday %d, %d with a prediction", len(matches), NEXT_MATCHDAY,
-             len(predictions))
-    return [m.match_id for m in matches]
+    season, version = sims._season(), portable_sim_version()
+    rounds, predictions = [], {}
+    for md in range(NEXT_MATCHDAY, LAST_MATCHDAY + 1):
+        matches = [next_match(fx, season) for fx in fixtures(md)]
+        for m in matches:
+            await app_state.adapters.matches.upsert_match(m)
+        predictions.update(read(files / f"matchday-{md}.json", version))
+        rounds.append({"matchday": md, "date": round_date(md).isoformat(), "ids": [m.match_id for m in matches]})
+    order = [i for r in rounds for i in r["ids"]]
+    app_state.next_round = {"matchday": NEXT_MATCHDAY, "order": order, "rounds": rounds, "predictions": predictions}
+    log.info("schedule: %d fixtures of matchdays %d-%d, %d with a prediction", len(order), NEXT_MATCHDAY,
+             LAST_MATCHDAY, len(predictions))
+    return order

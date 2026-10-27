@@ -45,9 +45,17 @@ export type HubPrediction = {
 
 export type HubFixture = { match_id: string; home: HubTeam; away: HubTeam; venue: string; prediction: HubPrediction | null };
 
-export type HubNext = { matchday: number; fixtures: HubFixture[] };
+/** A round still to come (C15): its date (`2026-10-28`, the fictional calendar) and its fixtures. */
+export type HubNext = { matchday: number; date?: string; fixtures: HubFixture[] };
 
-export type HubData = { matches: HubLine[]; live: HubLive | null; generating: boolean; next: HubNext | null };
+export type HubData = {
+  matches: HubLine[]; live: HubLive | null; generating: boolean; next: HubNext | null; schedule?: HubNext[];
+};
+
+/** The viewer's club's games over the whole schedule, one line per round. */
+export const clubGames = (rounds: HubNext[], club: string) =>
+  rounds.flatMap((r) => r.fixtures.filter((f) => [f.home.short_name, f.away.short_name].includes(club))
+    .map((f) => ({ round: r, fixture: f })));
 
 /** The viewer's club's games first, the rest in the round's order. */
 export const pinned = <T extends { home: HubTeam; away: HubTeam }>(items: T[], fav: string | null) =>

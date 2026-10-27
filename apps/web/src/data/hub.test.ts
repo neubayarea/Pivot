@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isHubPage } from "../pages/Hub";
-import { byMatchday, liveNow, pinned, type HubLine, type HubLive } from "./hub";
+import { byMatchday, clubGames, liveNow, pinned, type HubLine, type HubLive } from "./hub";
 import { TABS, tabFrom, tabOpen } from "./tab";
 import { LIVE_ANCHOR, LIVE_BREAK_S, boardHref, liveClock } from "./liveClock";
 
@@ -65,5 +65,17 @@ describe("the next round (C14 PR 2)", () => {
     const games = [["LUN", "ELM"], ["ROV", "GRE"], ["THO", "HBC"]].map(([h, a]) => ({ home: team(h), away: team(a) }));
     expect(pinned(games, "HBC").map((g) => g.home.short_name)).toEqual(["THO", "LUN", "ROV"]);
     expect(pinned(games, null)).toBe(games);
+  });
+});
+
+describe("the schedule (C15)", () => {
+  it("finds the viewer's club's game in every round", () => {
+    const team = (short_name: string) => ({ name: short_name, short_name, color: "#000000" });
+    const fx = (id: string, h: string, a: string) => ({ match_id: id, home: team(h), away: team(a), venue: "", prediction: null });
+    const rounds = [
+      { matchday: 31, fixtures: [fx("a", "LUN", "HBC"), fx("b", "ROV", "GRE")] },
+      { matchday: 32, fixtures: [fx("c", "GRE", "LUN"), fx("d", "HBC", "ROV")] },
+    ];
+    expect(clubGames(rounds, "HBC").map((g) => [g.round.matchday, g.fixture.match_id])).toEqual([[31, "a"], [32, "d"]]);
   });
 });
