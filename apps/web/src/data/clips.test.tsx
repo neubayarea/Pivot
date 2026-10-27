@@ -6,7 +6,8 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { Match, MatchEvent } from "@pivot/contracts";
 import KeyMoments from "../components/KeyMoments";
-import demo from "../../../../eval/fixtures/demo-1021.json";
+// a recorded match that never changes (eval/frozen/README.md: M-seed-29 before Ax44)
+import demo from "../../../../eval/frozen/m-seed-29-before-ax44.json";
 import { advance, clipLength, fromShot, keyClip, MAX_STEP_MS, nextRate, partAt, penaltyKick, RATES, toClip, toMatch } from "./clips";
 import { keyMoments } from "./keyMoments";
 import { toView } from "./live/provider";

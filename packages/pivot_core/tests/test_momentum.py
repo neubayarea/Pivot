@@ -1,4 +1,4 @@
-"""Per-minute momentum, the Opta way (MET-024, ADR-0010), and the demo match's turning points."""
+"""Per-minute momentum, the Opta way (MET-024, ADR-0010), and the turning points on recorded matches."""
 
 import json
 from pathlib import Path
@@ -15,6 +15,8 @@ DECAY = 0.5 ** (1 / HALF_LIFE_MIN)
 GOAL = (PITCH_LENGTH - 1, PITCH_WIDTH / 2)          # right in front of the away goal: far above the cap
 MIDFIELD = (PITCH_LENGTH / 2, PITCH_WIDTH / 2)
 FIXTURE = Path(__file__).resolve().parents[3] / "eval" / "fixtures" / "demo-1021.json"
+# a recorded match that never changes (eval/frozen/README.md), for checks on one specific match
+FROZEN = Path(__file__).resolve().parents[3] / "eval" / "frozen" / "m-seed-29-before-ax44.json"
 
 _seq = iter(range(1, 100_000))
 
@@ -105,12 +107,16 @@ def test_b02_demo_metrics_and_candidates_are_the_ones_the_code_gives(demo):
     assert [c.model_dump(mode="json", round_trip=True) for c in cands] == data["candidates"]
 
 
-def test_b06_demo_red_card_and_planted_substitution_are_turning_points(demo):
-    data, events = demo
+def test_b06_red_card_and_planted_substitution_are_turning_points_in_the_frozen_match():
+    """On the frozen match (eval/frozen, the demo before Ax44) the detector, as it is now, still finds
+    the red card and the planted substitution."""
+    data = json.loads(FROZEN.read_text(encoding="utf-8"))
+    events = [MatchEvent.model_validate(e) for e in data["events"]]
     red = next(e for e in events if e.type == "card" and e.foul and e.foul.card == "red")
     sub = next(e for e in events if e.type == "substitution" and e.substitution.reason == "tactical"
                and e.team == "home")
-    cands = data["candidates"]
+    metrics = momentum_series(data["match"]["match_id"], events)
+    cands = [c.model_dump(mode="json") for c in detect_candidates(data["match"]["match_id"], metrics, events)]
     # Rovers (away) down to ten: momentum turns towards Harbour City (home) ...
     assert any(c["direction"] == "home" and red.minute - 2 <= c["minute"] <= red.minute + 4
                and red.event_id in c["key_event_ids"] for c in cands)
