@@ -35,14 +35,13 @@ log = logging.getLogger(__name__)
 
 NEXT_MATCHDAY = DEMO_MATCHDAY + 1
 N_RUNS = 200
-SHOWN = 5
+SHOWN = 10                   # the whole round
 TOP_SCORELINES = 3
 PATH = Path(__file__).resolve().parents[4] / "eval" / "fixtures" / "next-round" / f"matchday-{NEXT_MATCHDAY}.json"
 
 
 def fixtures(matchday: int = NEXT_MATCHDAY, shown: int = SHOWN) -> list[Fixture]:
-    """The round's first `shown` fixtures, the site's two clubs' games first (a full match takes about
-    15 s to play, so 200 plays of all ten would take the laptop most of an hour)."""
+    """The round's fixtures (the first `shown`), the site's two clubs' games first."""
     ours = {HBC.club_id, ROV.club_id}
     round_ = sorted((fx for fx in schedule() if fx.matchday == matchday), key=lambda fx: not ({fx.home, fx.away} & ours))
     return round_[:shown]
