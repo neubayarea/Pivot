@@ -53,6 +53,101 @@ export interface VerifierIssue {
   sentence_index: number | null;
 }
 /**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisDeserved".
+ */
+export interface AnalysisDeserved {
+  away_win: number;
+  draw: number;
+  home_win: number;
+  n_sims: number;
+  xpts: {
+    [k: string]: number;
+  };
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisGameState".
+ */
+export interface AnalysisGameState {
+  away: AnalysisStateTeam;
+  home: AnalysisStateTeam;
+  minutes: number;
+  state: "level" | "home_leading" | "away_leading";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisStateTeam".
+ */
+export interface AnalysisStateTeam {
+  field_tilt_pct: number | null;
+  possession_pct: number | null;
+  xg_per90: number | null;
+  xga_per90: number | null;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisLane".
+ */
+export interface AnalysisLane {
+  entries: number;
+  final_third_entries: number;
+  xg: number;
+}
+/**
+ * `from` / `to`: the spell on the match clock (45 is the second half's kick-off); `window`: the
+ * elapsed minutes it covers (from <= minute < to).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisPhase".
+ */
+export interface AnalysisPhase {
+  away: AnalysisPhaseTeam;
+  from: number;
+  home: AnalysisPhaseTeam;
+  to: number;
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  window: [number, number];
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisPhaseTeam".
+ */
+export interface AnalysisPhaseTeam {
+  field_tilt_pct: number | null;
+  possession_pct: number | null;
+  ppda: number | null;
+  shots: number | null;
+  xg: number | null;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisProfile".
+ */
+export interface AnalysisProfile {
+  away: (number | null)[];
+  away_values: (number | null)[];
+  baseline_matches: number;
+  home: (number | null)[];
+  home_values: (number | null)[];
+  metrics: string[];
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisShotQuality".
+ */
+export interface AnalysisShotQuality {
+  big_chances: number;
+  by_source: {
+    [k: string]: number;
+  };
+  shots: number;
+  xg_per_shot: number | null;
+}
+/**
  * Why an arm came out as it did: its final scores and each team's numbers after the replay start.
  *
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -873,6 +968,26 @@ export interface Score {
   away_penalties: number | null;
   home: number;
   home_penalties: number | null;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "MatchAnalysis".
+ */
+export interface MatchAnalysis {
+  deserved: AnalysisDeserved;
+  game_state: AnalysisGameState[];
+  lanes: {
+    [k: string]: {
+      [k: string]: AnalysisLane;
+    };
+  };
+  match_id: string;
+  phases: AnalysisPhase[];
+  profile: AnalysisProfile;
+  shot_quality: {
+    [k: string]: AnalysisShotQuality;
+  };
+  up_to_t: number;
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema

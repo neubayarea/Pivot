@@ -16,13 +16,14 @@ from pathlib import Path
 
 from pydantic.json_schema import models_json_schema
 
+from pivot_api.analysis import CONTRACT_MODELS as ANALYSIS_MODELS
 from pivot_api.prematch import CONTRACT_MODELS as PREMATCH_MODELS
 from pivot_api.pretext import CONTRACT_MODELS as PRETEXT_MODELS
 from pivot_core.domain import CONTRACT_MODELS as DOMAIN_MODELS
 
 # The domain models, then the API's own responses that are not domain models (the pre-match page, Bx15,
-# and its sentences in the page's language, Bx19).
-CONTRACT_MODELS = (*DOMAIN_MODELS, *PREMATCH_MODELS, *PRETEXT_MODELS)
+# its sentences in the page's language, Bx19, and the analyst's report, C19).
+CONTRACT_MODELS = (*DOMAIN_MODELS, *PREMATCH_MODELS, *PRETEXT_MODELS, *ANALYSIS_MODELS)
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "packages" / "contracts" / "schema" / "pivot.schema.json"
