@@ -39,3 +39,16 @@ def test_seeding_traces_twice_changes_nothing():
         await seed_demo(repo, traces)
         assert len(await traces.list_traces(DEMO_MATCH_ID)) == len(demo_traces())
     asyncio.run(run())
+
+
+def test_ax54_the_site_does_not_list_the_hand_made_sample(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from pivot_api.app import app
+
+    monkeypatch.delenv("PIVOT_SAMPLE_MATCH")
+    with TestClient(app) as client:
+        assert DEMO_MATCH_ID not in [m["match_id"] for m in client.get("/api/matches").json()]
+    monkeypatch.setenv("PIVOT_SAMPLE_MATCH", "1")
+    with TestClient(app) as client:
+        assert DEMO_MATCH_ID in [m["match_id"] for m in client.get("/api/matches").json()]

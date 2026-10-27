@@ -20,7 +20,8 @@
 
 - 换别的文件：设 `PIVOT_DEMO_FIXTURE`；
 - 不要这场：设 `PIVOT_DEMO_FIXTURE=0`；
-- `PIVOT_DEMO=0` 时，它和手写样例 `M-api-demo` 都不加载。
+- `PIVOT_DEMO=0` 时不加载它。
+- 手写的样例比赛 `M-api-demo`（`apps/api/src/pivot_api/demo.py`，解说是手写的，没经过 AI 和核对员）只给自动测试用，网站上默认不放；本机前端调试要它，设 `PIVOT_SAMPLE_MATCH=1`。
 - 重新生成它用 `uv run scripts/make_demo.py --seed 29`。
 
 **虚构联赛的赛季结果（season-2026.json）也提交了**：演示比赛的近况、积分榜、交锋记录、生涯和新闻都从它算出来（B13，见《数据定义说明》CTX-005）。它只有 294 场的比分、进球人、红牌、换人和每个上场球员的评分，没有事件和跑位帧，约 270 KB。提交它是为了让这个世界固定下来：模拟器以后改了，演示比赛的背景也不会跟着变。要重算就先跑 `uv run scripts/make_season.py`（12 核电脑上 3 到 6 分钟），再跑 `make_demo.py --seed 29`。
@@ -54,7 +55,7 @@ AI 小组给每个转折点写的东西，也存在同一块硬盘上，重启�
 - 只重写一场：删掉 `/data/results/<比赛>/` 这个文件夹（比如 `M-seed-101`），再重启。
 - 完全不存（每次重启都重新写）：`PIVOT_RESULTS=0`。
 
-手写的样例比赛 `M-api-demo` 本来就是写死的，不存。代码在 `packages/pivot_adapters/src/pivot_adapters/local/results.py`。
+手写的样例比赛 `M-api-demo`（只在 `PIVOT_SAMPLE_MATCH=1` 时加载）本来就是写死的，不存。代码在 `packages/pivot_adapters/src/pivot_adapters/local/results.py`。
 
 ### 存到 Azure Cosmos DB
 
