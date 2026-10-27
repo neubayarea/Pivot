@@ -43,7 +43,11 @@ export function PlayerPicker({ prefs, onPrefsChange }: Props) {
   useEffect(() => {
     if (!open) return;
     const close = (e: Event) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !root.current?.contains(e.target as Node)) setOpen(false);
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !root.current?.contains(e.target as Node)) {
+        setOpen(false);
+        // Escape hands focus back to the button that opened the list.
+        if (e instanceof KeyboardEvent) root.current?.querySelector<HTMLElement>("button, [tabindex]")?.focus();
+      }
     };
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", close);

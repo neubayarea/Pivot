@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { Claim, StatRef } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { useMatch } from "../data/match";
@@ -21,10 +21,11 @@ export default function Sourced({ claim, className = "", children }: { claim: Cl
   const t = useT();
   const { span } = useClock();
   const { metric, team, player_id, window } = claim.stat_ref;
+  const tip = useId();
   return (
-    <span className={`src ${className}`.trim()} tabIndex={0}>
+    <span className={`src ${className}`.trim()} tabIndex={0} aria-describedby={tip}>
       {children}
-      <span className="tip" role="tooltip">
+      <span className="tip" role="tooltip" id={tip}>
         <b>{metricLabel(metric, t)}</b>
         <span>{teams[team].name}{player_id ? ` · ${playerName(player_id)}` : ""}</span>
         <span>

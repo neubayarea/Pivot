@@ -2,6 +2,7 @@
 // the left. Analyst: circle size is the chance's xG and the tooltip gives it. Fan: one size, no xG,
 // and the legend says in words what each mark means. Clicking a shot hands its event id to the
 // page (`onPick`), which can open the clip.
+import type { KeyboardEvent } from "react";
 import type { ShotMap as ShotMapData, ShotMapShot } from "@pivot/contracts";
 import type { Side, SquadPlayer } from "../../data/view";
 import { usePrefs, type MessageKey } from "../../i18n";
@@ -22,7 +23,12 @@ function Mark({ s, fan, label, on, onPick }: {
   const r = shotRadius(s.xg, fan);
   const color = teamColor(s.team);
   const pick = onPick ? () => onPick(s.event_id) : undefined;
-  const common = { className: `viz-shot ${s.outcome ?? ""}${on ? " on" : ""}`, onClick: pick, tabIndex: pick ? 0 : undefined };
+  // C11: a clickable shot is a button for the keyboard and screen readers too (Enter or Space picks it).
+  const common = {
+    className: `viz-shot ${s.outcome ?? ""}${on ? " on" : ""}`, onClick: pick, tabIndex: pick ? 0 : undefined,
+    role: pick ? "button" : undefined, "aria-label": pick ? label : undefined, "aria-pressed": pick ? on : undefined,
+    onKeyDown: pick ? (e: KeyboardEvent<SVGGElement>) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick()) : undefined,
+  };
   if (s.outcome === "blocked") {
     return (
       <g {...common}>
