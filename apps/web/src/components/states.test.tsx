@@ -115,7 +115,8 @@ describe("live board states", () => {
     const html = render(<LiveBoard />, matchView({}, "scheduled"));
     expect(html).toContain("Kick-off pending");
     expect(html).toContain("Start match");
-    expect(html).toContain("No events yet");
+    // C13: a scheduled match opens on the preview; the replay tab has the empty event list.
+    expect(render(<LiveBoard />, matchView({}, "scheduled"), "/?tab=replay")).toContain("No events yet");
     const post = render(<LiveBoard />, matchView({}, "scheduled"), "/?tab=post");
     expect(post).toContain("Kick-off pending");
     expect(post).toContain("Start match");

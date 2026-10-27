@@ -907,6 +907,13 @@ export const en = {
 
   // Ax59 · match tabs
   "tabs.label": "Match sections",
+  "tabs.overview": "Overview",
+  "tabs.whatif": "What if",
+  "tabs.replay": "Replay",
+  "tabs.stats": "Stats",
+  "tabs.lineups": "Line-ups",
+  "tabs.preview": "Preview",
+  "tabs.previewNone": "No pre-match information for this match.",
   "tabs.pre": "Pre-match",
   "tabs.live": "Live",
   "tabs.post": "Post-match",

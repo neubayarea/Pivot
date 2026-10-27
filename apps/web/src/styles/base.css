@@ -772,3 +772,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .follow { display: inline-flex; align-items: center; gap: 6px; justify-self: start; font-weight: 600; font-size: var(--pv-fs-sm); padding: 3px 12px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; }
 .follow:hover { border-color: var(--pv-ink-2); }
 .follow.on { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+
+/* ---------- What-if tab (C13 #316): the lab inside the board, on the board's own gutters ---------- */
+.wi-pivots .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); box-shadow: none; }
+.wi-tab .back, .wi-tab .headline, .wi-tab .grid3 { padding-inline: 0; }
+.wi-tab .back { padding-top: 0; }
