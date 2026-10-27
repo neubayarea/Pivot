@@ -130,7 +130,7 @@ describe("a run from queued to result", () => {
     expect(html).toMatch(/HCY \d+% \(\d+–\d+\)/);
     expect(html).toContain("Clear difference");
     expect(html).toContain("◆");
-    expect(html).toMatch(/<b>Harbour City&#x27;s win chance up \d+ points<\/b>/);
+    expect(html).toMatch(/<b>Win chance for Harbour City up \d+ points<\/b>/);
     expect(html).toContain("Try another");
     expect(html).not.toContain("simulated before");
     const cached = render(<ScenarioResult state={{ ...state, cached: true }} option={undefined} teams={view.teams} onReset={() => {}} source={source} />);
@@ -294,7 +294,7 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
 
   it("tells it in a sentence built from the result's own numbers, in every language", () => {
     expect(storyLine(input, en)).toBe(
-      "Without the 38′ red card, Harbour City's chance of winning falls from 82% to 46%, and the most likely score goes from 3–1 to 1–1.");
+      "Without the 38′ red card, the chance of Harbour City winning falls from 82% to 46%, and the most likely score goes from 3–1 to 1–1.");
     expect(storyLine(input, translator("zh"))).toBe("如果没有 38′ 这张红牌，Harbour City 赢球的机会从 82% 掉到 46%，最常见的比分从 3–1 变成 1–1。");
     expect(storyLine(input, translator("es"))).toBe(
       "Sin la roja del 38′, las opciones de victoria de Harbour City bajan del 82% al 46%, y el resultado más probable pasa de 3–1 a 1–1.");
@@ -302,7 +302,7 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
 
   it("drops the score for a result stored before the stats, and names other changes plainly", () => {
     const old = { ...input, result: { ...withStats, baseline_stats: null, counterfactual_stats: undefined } };
-    expect(storyLine(old, en)).toBe("Without the 38′ red card, Harbour City's chance of winning falls from 82% to 46%.");
+    expect(storyLine(old, en)).toBe("Without the 38′ red card, the chance of Harbour City winning falls from 82% to 46%.");
     expect(storyLine({ ...input, type: "change_press", pressLower: true }, translator("zh"))).toMatch(/^如果从 38′ 起压得更低，/);
     expect(storyLine({ ...input, type: "change_formation", change: "Switch to 3-5-2" }, en)).toMatch(/^With the change \(Switch to 3-5-2\), /);
     const same = { ...input, result: { ...withStats, counterfactual_stats: { ...withStats.counterfactual_stats, top_scores: withStats.baseline_stats.top_scores } } };
@@ -331,7 +331,7 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
     const props = { option: mockOptions(view, "p63")[0], teams: view.teams, onReset: () => {}, source };
     const plain = render(<ScenarioResult state={state} {...props} />);
     expect(plain).not.toContain("Side by side");
-    expect(plain).toMatch(/Without the 63′ substitution, Harbour City&#x27;s chance of winning (rises|falls) from \d+% to \d+%\./);
+    expect(plain).toMatch(/Without the 63′ substitution, the chance of Harbour City winning (rises|falls) from \d+% to \d+%\./);
     const rich = { ...state, scenario: { ...scenario, result: { ...scenario.result!, ...withStats } } };
     const html = render(<ScenarioResult state={rich} {...props} />);
     expect(html).toContain("Side by side");
