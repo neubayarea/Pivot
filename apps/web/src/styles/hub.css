@@ -113,3 +113,4 @@ a.hub-past-row:hover { background: var(--pv-sunk); }
   .hub-past-row > .hub-meta { grid-column: 1 / -1; }
   .hub-past-row > .hub-meta:empty { display: none; }
 }
+.hub-ph { margin-block: var(--pv-s3, 16px); max-width: 960px; }

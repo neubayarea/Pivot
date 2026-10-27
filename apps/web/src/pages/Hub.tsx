@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import Segmented from "../components/Segmented";
+import { Placeholder } from "../components/Skeleton";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
 import {
@@ -386,7 +387,7 @@ export default function Hub() {
       <main className="page hub">
         <h1>{t("hub.title")}</h1>
         {failed && <StateCard title={t("hub.failed.title")} tone="error">{t("hub.failed")}</StateCard>}
-        {!data && !failed && <p className="hub-note" role="status">{t("hub.loading")}</p>}
+        {!data && !failed && <Placeholder className="hub-ph" label={t("hub.loading")} block={180} lines={6} />}
         {data?.live && liveLine && <LiveNow live={data.live} line={liveLine} fav={fav} />}
         {data?.next && data.next.fixtures.length > 0 && <NextRound next={data.next} fav={fav} fan={fan} />}
         {data?.schedule && data.schedule.length > 0 && <Schedule rounds={data.schedule} fav={fav} />}

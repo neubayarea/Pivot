@@ -16,6 +16,7 @@ import Button from "./Button";
 import { describe } from "./EventFeed";
 import Pitch, { whoFromSquads } from "./Pitch";
 import { PivotStamp, pivotHeadline } from "./PivotList";
+import { Placeholder } from "./Skeleton";
 import { RunFailed, RunProgress, ScenarioResult } from "./WhatIf";
 import WhyItTurned from "./WhyItTurned";
 
@@ -157,7 +158,7 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
       {failed ? (
         <p className="muted">{t("whatif.optionsError")}</p>
       ) : !options ? (
-        <p className="muted" role="status">{t("whatif.loadingOptions")}</p>
+        <Placeholder label={t("whatif.loadingOptions")} chips={4} lines={0} />
       ) : !enabled.length ? (
         <p className="muted">{t("whatif.noOptions")}</p>
       ) : (

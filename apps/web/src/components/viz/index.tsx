@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { VizState } from "../../data/viz";
 import { useT } from "../../i18n";
+import { Placeholder } from "../Skeleton";
 
 export { default as ShotMap, shotRadius } from "./ShotMap";
 export { default as Heatmap, heatCells } from "./Heatmap";
@@ -15,5 +16,6 @@ export { useAveragePositions, useHeatmaps, usePassNetwork, useShotMap } from "..
 export function VizBox<T>({ state, children }: { state: VizState<T>; children: (data: T) => ReactNode }) {
   const t = useT();
   if (state.data) return <>{children(state.data)}</>;
-  return <p className="viz-empty">{t(state.error ? "viz.error" : "viz.loading")}</p>;
+  if (state.error) return <p className="viz-empty">{t("viz.error")}</p>;
+  return <Placeholder label={t("viz.loading")} block={220} lines={0} />;
 }

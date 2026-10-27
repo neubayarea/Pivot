@@ -1004,6 +1004,7 @@ export const zh: Messages = {
   "tabs.stats": "数据",
   "tabs.lineups": "阵容",
   "tabs.preview": "赛前",
+  "pre.navLabel": "本页内容",
   "tabs.previewNone": "这场比赛没有赛前资料。",
   "tabs.pre": "赛前",
   "tabs.live": "赛中",

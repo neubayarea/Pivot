@@ -296,6 +296,14 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 800; font-size: 1
 .sk-line:nth-child(odd) { width: 82%; }
 .sk-block { height: 220px; background: transparent; border: 1px dashed var(--pv-hair); animation: none; }
 @keyframes sk-pulse { 50% { opacity: .45; } }
+/* Ax79: Placeholder, the shared loading shape. Neutral grey (yellow is for AI only), a soft sweep. */
+.ph-body { display: grid; gap: 8px; }
+.sk-shim { border-radius: 4px; background: linear-gradient(90deg, var(--pv-hair) 0%, color-mix(in oklab, var(--pv-hair) 45%, transparent) 50%, var(--pv-hair) 100%) 0 0 / 200% 100%; animation: sk-shim 1.8s ease-in-out infinite; }
+.ph-block { width: 100%; border-radius: var(--pv-r-ctl, 6px); }
+.ph-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ph-chip { width: 96px; height: 30px; border-radius: 999px; }
+.ph-chip:nth-child(3n+2) { width: 128px; }
+@keyframes sk-shim { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .empty-box { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; min-height: 220px; border: 1px dashed var(--pv-hair); font-family: var(--pv-label); font-weight: 700; text-align: center; padding: 12px; }
 .state-page { display: grid; justify-items: center; padding: 48px 20px; }
 .state-card { width: min(560px, 100%); gap: 12px; }
@@ -314,7 +322,7 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 800; font-size: 1
   .s2-head .acts { grid-row: auto; grid-column: 1 / -1; flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .stamp.live::before, .mom .mom-pending, .headline .latest, .feed div, .pv, .sk, .run-bar i.wait { animation: none; }
+  .stamp.live::before, .mom .mom-pending, .headline .latest, .feed div, .pv, .sk, .sk-shim, .run-bar i.wait { animation: none; }
   .run-bar i { transition: none; }
   .stat .bar i, .pitch .pl { transition: none; }
   .btn.pri:active { transform: none; }
@@ -915,3 +923,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ask-opt span { font-size: 13px; color: var(--pv-ink-2); }
 .ask-where { font-size: 13px; color: var(--pv-ink-2); flex: 0 1 13em; margin-left: auto; }
 .ask-later { padding-inline: 4px; }
+
+/* Ax78 (#374): the Preview tab's "on this page" row: the What-if chip row, its stops in text weight. */
+.pv-body { display: contents; }
+.pv-nav .chip { padding: 6px 14px; font-weight: 500; white-space: nowrap; }
+.pv-nav .chip[aria-current="location"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
