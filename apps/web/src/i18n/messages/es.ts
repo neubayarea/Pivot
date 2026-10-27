@@ -1002,6 +1002,7 @@ export const es: Messages = {
   "tabs.stats": "Estadísticas",
   "tabs.lineups": "Alineaciones",
   "tabs.preview": "Previa",
+  "pre.navLabel": "En esta página",
   "tabs.previewNone": "No hay información previa de este partido.",
   "tabs.pre": "Previa",
   "tabs.live": "En directo",
