@@ -7,15 +7,17 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useHeightVar } from "../data/headerFold";
 import { useMatch } from "../data/match";
 import { TABS, tabOpen, tabSearch, type MatchTab } from "../data/tab";
+import { onAir } from "../data/view";
 import { useT } from "../i18n";
 
 export default function MatchTabs({ tab }: { tab: MatchTab }) {
   const { search } = useLocation();
   const navigate = useNavigate();
   const t = useT();
-  // C13: the replay is "Live" while the match is being played.
-  const { status, match_id } = useMatch().match;
-  const live = ["live", "paused"].includes(status);
+  // C13: the replay is "Live" while the match is being played; a finished match replayed is "Replay" (#354).
+  const view = useMatch();
+  const { status, match_id } = view.match;
+  const live = onAir(view);
   // C14: before kick-off only the preview and the line-ups have anything to show.
   const open = TABS.filter((id) => tabOpen(id, status, match_id));
   const list = useRef<HTMLDivElement>(null);

@@ -41,10 +41,20 @@ export function initialMatch(search: string, saved: string | null): MatchChoice 
   return asked ? { id: asked, fromUrl: true } : { id: saved, fromUrl: false };
 }
 
+/** The matchday of a season fixture, from its id ("S2026-31-LUN-HBC" is matchday 31); null for any other match. */
+export const matchdayOf = (id: string): number | null => {
+  const m = /^S\d{4}-(\d+)-/.exec(id);
+  return m ? Number(m[1]) : null;
+};
+
 /** "HBC 4–5 ROV (game 101)"; the recorded demo and the hand-made sample say so instead of a seed. */
 export function matchLabel(m: Match, t: T): string {
-  // C14: a fixture of the next round has no score and no seed worth showing yet.
-  if (m.status === "scheduled") return `${m.home.short_name} v ${m.away.short_name} (${t("picker.next")})`;
+  // C14: a fixture of the next round has no score and no seed worth showing yet:
+  // "Lunsford Sporting v Harbour City · MD31" (#354), never its id.
+  if (m.status === "scheduled") {
+    const md = matchdayOf(m.match_id);
+    return `${m.home.name} v ${m.away.name} · ${md === null ? t("picker.next") : t("picker.matchday", { n: md })}`;
+  }
   const tag = isRecordedDemo(m)
     ? t("picker.demo")
     : m.match_id === DEMO_MATCH_ID

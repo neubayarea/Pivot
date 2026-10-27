@@ -181,8 +181,8 @@ describe("the form in detail", () => {
     expect(out).toContain("5 场 3 次");
     expect(out).toContain("半场比分是估算的");
     expect(out).toContain("半场比分是按进球分钟估算的");
-    expect(out).toContain("客场对Eastmoor打Freeland Cup 1/4 决赛（虚构赛程），主教练让 3 名主力休息。");
-    expect(text(html(fx))).toContain("7 天后客场对Tessmouth United，中间没有周中比赛。主教练派出惯用首发。");
+    expect(out).toContain("客场对 Eastmoor 打 Freeland Cup 1/4 决赛（虚构赛程），主教练让 3 名主力休息。");
+    expect(text(html(fx))).toContain("7 天后客场对 Tessmouth United，中间没有周中比赛。主教练派出惯用首发。");
     expect(out).not.toContain(" · ");
   });
 });

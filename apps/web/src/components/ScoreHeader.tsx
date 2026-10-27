@@ -12,6 +12,7 @@ import { useClock } from "../data/clock";
 import { slimShown, useHeaderFold, type HeaderFold } from "../data/headerFold";
 import { goalFor } from "../data/keyMoments";
 import { useMatch, type MatchView, type Side } from "../data/match";
+import { shownStatus } from "../data/view";
 import { useT, type T } from "../i18n";
 import { surname } from "./FocusPickers";
 import FollowTeam, { FollowingChip } from "./FollowTeam";
@@ -70,7 +71,9 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
   button: RefObject<HTMLButtonElement | null>;
   track: { onFocus: () => void; onBlur: () => void };
 }) {
-  const { match, teams } = useMatch();
+  const { match, teams, playback } = useMatch();
+  // #354: only a match on air says Live; a finished one played again says Replay.
+  const shown = shownStatus({ match, playback });
   const t = useT();
   const side = (s: Side) => (
     <span className={`mh-bar-team ${s}${favTeam === s ? " fav" : ""}`} style={{ "--tc": teams[s].color } as CSSProperties} title={teams[s].name}>
@@ -90,7 +93,7 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
           <span>{match.score.away}</span>
         </span>
         {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
-        <Stamp tone={STATUS_TONE[match.status]}>{t(`status.${match.status}`)}</Stamp>
+        <Stamp tone={shown === "replay" ? "line" : STATUS_TONE[shown]}>{t(shown === "replay" ? "tabs.replay" : `status.${shown}`)}</Stamp>
       </span>
       {side("away")}
       <button ref={button} type="button" className="mh-toggle open" aria-expanded={false} aria-controls={controls}
@@ -109,7 +112,9 @@ type Fold = Pick<HeaderFold, "mode" | "stuck" | "expand" | "collapse"> & Partial
  * replay bar). How they share the top of the window is in data/headerFold.ts.
  */
 export default function ScoreHeader({ prefs, fold, children }: Props & { fold?: Fold; children?: ReactNode }) {
-  const { match, teams } = useMatch();
+  const { match, teams, playback } = useMatch();
+  // #354: only a match on air says Live; a finished one played again says Replay.
+  const shown = shownStatus({ match, playback });
   const t = useT();
   const id = useId();
   const mode = fold?.mode ?? "auto";
@@ -151,7 +156,7 @@ export default function ScoreHeader({ prefs, fold, children }: Props & { fold?: 
           </span>
           <span className="mh-state">
             {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
-            <Stamp tone={STATUS_TONE[match.status]}>{t(`status.${match.status}`)}</Stamp>
+            <Stamp tone={shown === "replay" ? "line" : STATUS_TONE[shown]}>{t(shown === "replay" ? "tabs.replay" : `status.${shown}`)}</Stamp>
           </span>
         </div>
         <TeamSide side="away" fav={prefs.focus_team === "away"} />

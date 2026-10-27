@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import MatchTabs from "../components/MatchTabs";
 import { useMatch } from "../data/match";
 import { useTab } from "../data/tab";
+import { onAir } from "../data/view";
 import { useT } from "../i18n";
 import { LineupsTab } from "./match/LineupsTab";
 import { LiveTab, StatsTab } from "./match/LiveTab";
@@ -15,10 +16,11 @@ import { WhatIfTab } from "./match/WhatIfTab";
 // preview. Each tab is its own link (`?tab=`, data/tab.ts), and the open pivot is in the link too
 // (`&pivot=pv-…`) so a pivot alert on the replay can open its explanation on the overview.
 export default function LiveBoard() {
-  const { match, pivots } = useMatch();
+  const view = useMatch();
+  const { match, pivots } = view;
   const tab = useTab();
   const t = useT();
-  const tabName = t(tab === "replay" && ["live", "paused"].includes(match.status) ? "tabs.live" : `tabs.${tab}`);
+  const tabName = t(tab === "replay" && onAir(view) ? "tabs.live" : `tabs.${tab}`);
   const [params, setParams] = useSearchParams();
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   // Pivots still being checked get a mark on the line but no card yet; the checker's rejects get neither.
