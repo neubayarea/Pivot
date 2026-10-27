@@ -1,4 +1,4 @@
-type Option<T extends string> = { value: T; label: string };
+type Option<T extends string> = { value: T; label: string; lang?: string };
 
 type Props<T extends string> = {
   label: string;
@@ -11,7 +11,7 @@ export default function Segmented<T extends string>({ label, options, value, onC
   return (
     <span className="seg" role="group" aria-label={label}>
       {options.map((o) => (
-        <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}>
+        <button key={o.value} type="button" lang={o.lang} aria-pressed={o.value === value} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}
