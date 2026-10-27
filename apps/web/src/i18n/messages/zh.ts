@@ -232,6 +232,8 @@ export const zh: Messages = {
   "ts.key": "最要紧的几项",
   "ts.ppdaNote": "越低说明逼抢越凶",
   "whatif.notHere": "这里用不了：{list}",
+  "pics.player": "看哪名球员",
+  "pics.wholeTeam": "全队",
   "ts.title": "球队数据",
   "ts.note": "和 AI 解释里引用、核对员核对的是同一套数字。",
   "ts.scope": "比赛的哪一段",

@@ -7,6 +7,7 @@ import type { TeamStatsReport } from "@pivot/contracts";
 import { useMatch } from "../data/match";
 import { bestPlayer, other, result, strengthsAndWeaknesses, teamLine, usePersona, usePlayers, type StatEdge } from "../data/persona";
 import { isMessageKey, usePrefs, type T } from "../i18n";
+import FollowButton from "./FollowButton";
 import { statText, useTeamStats } from "./TeamStats";
 
 /** The stat's name in the viewer's words: plain for fans where there is a plain one. */
@@ -73,6 +74,7 @@ export default function YourTeamSummary({ report, upTo = null }: { report?: Team
               <h3>{t("you.best")}</h3>
               <p><span className="you-shirt num">{best.shirt_number}</span> <b>{best.name}</b></p>
               <p className="you-rating num">{best.stats.rating.toFixed(1)}</p>
+              <FollowButton playerId={best.player_id} name={best.name} />
             </div>
           )}
         </div>

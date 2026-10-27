@@ -232,6 +232,8 @@ export const en = {
   "ts.key": "The key numbers",
   "ts.ppdaNote": "lower means a harder press",
   "whatif.notHere": "Not possible here: {list}",
+  "pics.player": "Which player",
+  "pics.wholeTeam": "Whole team",
   "ts.title": "Team stats",
   "ts.note": "The same numbers the AI cites and the checker verifies.",
   "ts.scope": "Part of the match",
