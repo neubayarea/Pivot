@@ -109,7 +109,7 @@ export default function PivotDetail() {
       </div>
       <div className="s2-head">
         <span className="min">{minute(pivot.minute)}′</span>
-        <h2>{pivotHeadline(pivot, teams, tr)}</h2>
+        <h1>{pivotHeadline(pivot, teams, tr)}</h1>
         <span className="acts">
           <Link to={`/trace/${pivot.pivot_id}`} className="btn">
             {tr("trace.kicker")}

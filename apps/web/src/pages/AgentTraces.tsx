@@ -8,6 +8,7 @@ import { pivotHeadline } from "../components/PivotList";
 import Stamp from "../components/Stamp";
 import { useClock } from "../data/clock";
 import { useFixture, useMatch } from "../data/match";
+import { numberLocale } from "../data/motion";
 import {
   fixtureTraceSource, liveTraceSource, refMinute, useTraceChains, type TraceChain, type TraceState,
 } from "../data/traces";
@@ -23,7 +24,7 @@ const OUTCOME_TONE = { confirmed: "ok", degraded: "warn", rejected: "line", runn
 /** Long feedback (a schema error lists every metric) is cut in the row; the verdict below has it whole. */
 const clip = (text: string, max = 140) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 
-const seconds = (ms: number) => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`);
+const seconds = (ms: number) => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`);
 
 /** A key that exists for some codes only (agents, statuses, issue codes); the raw value otherwise. */
 function label(t: T, prefix: string, value: string): string {
@@ -120,7 +121,7 @@ function Step({ s, offset, draft }: { s: AgentTrace; offset: number; draft: numb
         <dt>{t("trace.field.status")}</dt><dd>{label(t, "trace.status", s.status)}</dd>
         <dt>{t("trace.field.model")}</dt><dd>{s.model ?? t("trace.rules")}</dd>
         <dt>{t("trace.field.prompt")}</dt><dd className="num">{s.prompt_hash ?? "—"}</dd>
-        <dt>{t("trace.field.tokens")}</dt><dd className="num">{s.tokens.toLocaleString("en")}</dd>
+        <dt>{t("trace.field.tokens")}</dt><dd className="num">{s.tokens.toLocaleString(numberLocale())}</dd>
         {s.verdict && (<><dt>{t("trace.field.verdict")}</dt><dd><pre>{JSON.stringify(s.verdict, null, 1)}</pre></dd></>)}
       </dl>
     </details>
@@ -207,7 +208,7 @@ export function TraceList({ state, pivotId: id, onRetry }: { state: TraceState; 
       </div>
       <div className="headline">
         <Kicker>{t("trace.kicker")}</Kicker>
-        <span className="x">{t("trace.title")}</span>
+        <h1 className="x">{t("trace.title")}</h1>
         <span className="sp" />
         {id && <Link to="/trace">{t("trace.all")}</Link>}
       </div>
