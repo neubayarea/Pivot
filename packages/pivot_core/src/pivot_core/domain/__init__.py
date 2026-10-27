@@ -23,6 +23,8 @@ from .officials import FoulDetail, InjuryInfo, Referee, VarReview
 from .outputs import (
     OVERLAY_CARD_SECONDS, OverlayCard, OverlayFeed, OverlayFrame, OverlayItem, OverlayScoreboard,
     OverlayTimeline, PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport, Recap,
+    AveragePosition, AveragePositionsReport, HeatGrid, HeatmapReport, PassNetworkEdge, PassNetworkNode,
+    PassNetworkReport, PitchPoint, PlayerHeat, ShotMap, ShotMapShot, TeamPassNetwork,
 )
 from .people import (
     ROLE_POSITION, AttackingAttributes, AttributeSummary, CareerStint, Coach, CoachAttributes,
@@ -57,6 +59,8 @@ CONTRACT_MODELS = (
     ScenarioSpec, PlantSpec, OutcomeDist, Spread, TeamRunStats, ScoreShare, ArmStats, SimResult, Scenario,
     OverlayItem, OverlayFeed, OverlayCard, OverlayScoreboard, OverlayFrame, OverlayTimeline,
     PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport, Recap,
+    ShotMapShot, ShotMap, HeatGrid, PlayerHeat, HeatmapReport, PitchPoint, AveragePosition, AveragePositionsReport,
+    PassNetworkNode, PassNetworkEdge, TeamPassNetwork, PassNetworkReport,
     VerifierIssue, Verdict, AgentTrace,
     Envelope,
 )
@@ -71,7 +75,9 @@ __all__ = [
     "GoalkeepingAttributes", "Lane", "Language", "LineupSlot", "Match", "MatchContext",
     "MatchEvent", "MentalityAttributes", "MinuteMetric", "MovementAttributes", "Narrative",
     "OffFieldEvent", "OutcomeDist", "PastMeeting", "PlayerMatchStats", "PlayerPivotLink", "PlayerReport",
-    "PlayerStatsReport", "Referee", "SetPieceTactics",
+    "PlayerStatsReport", "Referee",
+    "AveragePosition", "AveragePositionsReport", "HeatGrid", "HeatmapReport", "PassNetworkEdge", "PassNetworkNode",
+    "PassNetworkReport", "PitchPoint", "PlayerHeat", "ShotMap", "ShotMapShot", "TeamPassNetwork", "SetPieceTactics",
     "TeamForm", "VarReview", "OverlayCard", "OverlayFeed", "OverlayFrame", "OverlayItem",
     "OverlayScoreboard", "OverlayTimeline", "PassHeight", "PassTechnique", "PassType", "ShotTechnique",
     "Period", "PeriodInfo",

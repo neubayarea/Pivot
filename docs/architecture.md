@@ -565,6 +565,10 @@ verify(draft, match, pivot):
 | GET | `/api/matches/{id}/timeline?from=&to=&sinceSeq=` | 分钟指标和事件，用于断线补齐 | — |
 | GET | `/api/matches/{id}/pivots` | 转折点列表 | — |
 | GET | `/api/matches/{id}/stats?scope=&from=&to=&up_to=` | 两队 23 项数据（MET-001…023），按全场和每个半场（或一个分钟窗口），带编号、单位、分组和两种说法；没答案的是空；只读，不经过 AI | — |
+| GET | `/api/matches/{id}/shots?up_to=&period=` | 射门图：每次射门的位置、去向、xG、结果、事件编号（每队都按自己向右进攻）；只读 | — |
+| GET | `/api/matches/{id}/heatmaps?up_to=&period=` | 热区图：每队（不含门将）和每名球员在 21 × 14 格上的时间分布，来自跟踪帧（没有帧时用持球事件）；只读 | — |
+| GET | `/api/matches/{id}/pass-network?up_to=&period=&min_passes=` | 传球网络：每队首发控球时的平均位置和两人之间的成功传球；只读 | — |
+| GET | `/api/matches/{id}/positions?up_to=&period=` | 平均站位：每名上场球员控球和不控球时的平均位置；只读 | — |
 | GET | `/api/matches/{id}/players/stats?up_to=&player=` | 每名球员到第 `up_to` 秒为止的数据（RAT-001）、参与的事件、卷入的转折点；只读，不经过 AI | — |
 | GET | `/api/matches/{id}/pivots/{pivotId}` | 转折点详情 | — |
 | POST | `/api/matches/{id}/pivots/{pivotId}/feedback` | 标记“不是转折点”（Won't，接口先预留） | — |
