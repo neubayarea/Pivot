@@ -93,7 +93,7 @@ from pivot_worker.scenarios import CATALOG, PRIME, ScenarioOption, move_minute_v
 
 from .personalize import MAX_CHECKS as MAX_TRANSLATIONS
 from .personalize import translated_narrative, translation_messages
-from .sims import Replay
+from .sims import FIXTURE, Replay
 
 log = logging.getLogger("uvicorn.error")
 
@@ -162,6 +162,30 @@ def with_params(option: ScenarioOption, params: dict[str, int | str], target_min
 def precomputed_path(fixture: Path) -> Path:
     """`demo-1021.json` -> `demo-1021.whatif.json`: the chips of a recorded match run ahead of time."""
     return fixture.with_name(fixture.name.removesuffix(".json") + ".whatif.json")
+
+
+# The site's simulated matches (Bx14): one file per match, keyed by the version its results belong to.
+SEED_PRECOMPUTED_DIR = FIXTURE.parent / "whatif"
+
+
+def seed_precomputed_path(match_id: str) -> Path:
+    """`M-seed-101` -> `eval/fixtures/whatif/M-seed-101.whatif.json`."""
+    return SEED_PRECOMPUTED_DIR / f"{match_id}.whatif.json"
+
+
+def portable_sim_version() -> str:
+    """`sims.SIM_VERSION` as a checkout with LF line endings (the Linux server, CI) works it out. On a
+    Windows checkout (CRLF) `SIM_VERSION` hashes other bytes, so a file computed there would carry a
+    version the server never matches; scripts/make_whatif_fixture.py writes this one instead."""
+    import pivot_core.analytics as analytics_pkg
+    import pivot_core.sim as sim_pkg
+
+    h = hashlib.sha256()
+    for pkg in (sim_pkg, analytics_pkg):
+        for path in sorted(Path(pkg.__file__).parent.glob("*.py")):
+            h.update(path.name.encode())
+            h.update(path.read_bytes().replace(b"\r\n", b"\n"))
+    return h.hexdigest()[:12]
 
 
 def load_precomputed(path: Path, version: str) -> dict[str, Scenario]:
@@ -657,5 +681,6 @@ async def get_scenario(request: Request, scenario_id: str, lang: Language = "en"
     return await whatif.in_language(scenario, lang)
 
 
-__all__ = ["WhatIf", "chip", "cache_key", "load_precomputed", "precomputed_path", "router", "seed_base",
+__all__ = ["WhatIf", "chip", "cache_key", "load_precomputed", "portable_sim_version", "precomputed_path", "router",
+           "seed_base", "seed_precomputed_path",
            "with_params", "write_precomputed"]
