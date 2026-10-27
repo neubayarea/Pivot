@@ -12,6 +12,7 @@ import MatchPictures from "../../components/MatchPictures";
 import MatchStats from "../../components/MatchStats";
 import PitchBoard from "../../components/PitchBoard";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
+import PlayerTable from "../../components/PlayerTable";
 import { pivotHeadline } from "../../components/PivotList";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
@@ -152,6 +153,12 @@ export function StatsTab() {
         </header>
         <div className="card"><MatchPictures key={match.match_id} upTo={upTo} /></div>
       </section>
+      {!fan && (
+        <section className="live-sec" aria-labelledby="live-pt-hd">
+          <header className="live-hd"><h2 id="live-pt-hd">{t("pt.title")}</h2></header>
+          <div className="card"><PlayerTable upTo={upTo} /></div>
+        </section>
+      )}
       {!fan && mine}
     </>
   );
