@@ -14,6 +14,7 @@ from pivot_worker.models import model_client_from_env
 
 from .demo import seed_demo
 from .personalize import personalizer_from_env
+from .pictures import router as pictures_router
 from .players import router as players_router
 from .realtime import router as realtime_router
 from .routes import router
@@ -40,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.fixture_files = {}
     # matchdata.py (players.py, team_stats.py): each match's frames and calculators, read once on first use
     app.state.player_lines, app.state.match_calcs, app.state.match_calcs_cut = {}, {}, None
-    app.state.team_stats = {}
+    app.state.team_stats, app.state.pictures = {}, None
     app.state.match_inputs, app.state.match_inputs_lock = {}, asyncio.Lock()
     replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
     precomputed = {}                          # the recorded demo's what-ifs, run ahead of time (Bx11)
@@ -133,6 +134,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(players_router)
 app.include_router(team_stats_router)
+app.include_router(pictures_router)
 app.include_router(realtime_router)
 app.include_router(whatif_router)
 

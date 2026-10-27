@@ -214,6 +214,102 @@
       "title": "AttributeSummary",
       "type": "object"
     },
+    "AveragePosition": {
+      "additionalProperties": false,
+      "properties": {
+        "in_possession": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PitchPoint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "out_of_possession": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PitchPoint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "seconds": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "player_id",
+        "team",
+        "seconds",
+        "in_possession",
+        "out_of_possession"
+      ],
+      "title": "AveragePosition",
+      "type": "object"
+    },
+    "AveragePositionsReport": {
+      "additionalProperties": false,
+      "description": "GET /api/matches/{id}/positions: everyone who played, from the tracking frames.",
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/AveragePosition"
+          },
+          "type": "array"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "period",
+        "players"
+      ],
+      "title": "AveragePositionsReport",
+      "type": "object"
+    },
     "BallPosition": {
       "additionalProperties": false,
       "properties": {
@@ -884,6 +980,106 @@
         "last_meetings"
       ],
       "title": "HeadToHead",
+      "type": "object"
+    },
+    "HeatGrid": {
+      "additionalProperties": false,
+      "properties": {
+        "cells": {
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "samples": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "samples",
+        "cells"
+      ],
+      "title": "HeatGrid",
+      "type": "object"
+    },
+    "HeatmapReport": {
+      "additionalProperties": false,
+      "description": "GET /api/matches/{id}/heatmaps: where each team and player spent their time.",
+      "properties": {
+        "cols": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerHeat"
+          },
+          "type": "array"
+        },
+        "rows": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "source": {
+          "enum": [
+            "frames",
+            "events"
+          ],
+          "type": "string"
+        },
+        "teams": {
+          "additionalProperties": {
+            "$ref": "#/$defs/HeatGrid"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "period",
+        "source",
+        "cols",
+        "rows",
+        "teams",
+        "players"
+      ],
+      "title": "HeatmapReport",
       "type": "object"
     },
     "InjuryInfo": {
@@ -2631,6 +2827,120 @@
       "title": "OverlayTimeline",
       "type": "object"
     },
+    "PassNetworkEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "from_id": {
+          "type": "string"
+        },
+        "passes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "to_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_id",
+        "to_id",
+        "passes"
+      ],
+      "title": "PassNetworkEdge",
+      "type": "object"
+    },
+    "PassNetworkNode": {
+      "additionalProperties": false,
+      "properties": {
+        "passes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "received": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "x": {
+          "maximum": 105.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "y": {
+          "maximum": 68.0,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "player_id",
+        "x",
+        "y",
+        "passes",
+        "received"
+      ],
+      "title": "PassNetworkNode",
+      "type": "object"
+    },
+    "PassNetworkReport": {
+      "additionalProperties": false,
+      "description": "GET /api/matches/{id}/pass-network: each side's starting eleven and who passed to whom.",
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "min_passes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "teams": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TeamPassNetwork"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "period",
+        "min_passes",
+        "teams"
+      ],
+      "title": "PassNetworkReport",
+      "type": "object"
+    },
     "PastMeeting": {
       "additionalProperties": false,
       "properties": {
@@ -2803,6 +3113,27 @@
         "controversy"
       ],
       "title": "Personality",
+      "type": "object"
+    },
+    "PitchPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "maximum": 105.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "y": {
+          "maximum": 68.0,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "PitchPoint",
       "type": "object"
     },
     "Pivot": {
@@ -3233,6 +3564,41 @@
         "summary"
       ],
       "title": "PlayerAttributes",
+      "type": "object"
+    },
+    "PlayerHeat": {
+      "additionalProperties": false,
+      "properties": {
+        "cells": {
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "player_id": {
+          "type": "string"
+        },
+        "samples": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "samples",
+        "cells",
+        "player_id",
+        "team"
+      ],
+      "title": "PlayerHeat",
       "type": "object"
     },
     "PlayerInstruction": {
@@ -4155,6 +4521,252 @@
       "title": "SetPieceTactics",
       "type": "object"
     },
+    "ShotMap": {
+      "additionalProperties": false,
+      "description": "GET /api/matches/{id}/shots: every shot so far (the shootout left out).",
+      "properties": {
+        "match_id": {
+          "type": "string"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shots": {
+          "items": {
+            "$ref": "#/$defs/ShotMapShot"
+          },
+          "type": "array"
+        },
+        "up_to_t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "period",
+        "shots"
+      ],
+      "title": "ShotMap",
+      "type": "object"
+    },
+    "ShotMapShot": {
+      "additionalProperties": false,
+      "description": "One shot: where from and where to, from the shooter's side, the goal they attack at x = 105.",
+      "properties": {
+        "body_part": {
+          "anyOf": [
+            {
+              "enum": [
+                "left_foot",
+                "right_foot",
+                "head",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clock_label": {
+          "type": "string"
+        },
+        "end_x": {
+          "anyOf": [
+            {
+              "maximum": 105.0,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "end_y": {
+          "anyOf": [
+            {
+              "maximum": 68.0,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "type": "string"
+        },
+        "first_time": {
+          "default": false,
+          "type": "boolean"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "enum": [
+                "goal",
+                "saved",
+                "off_target",
+                "blocked",
+                "post",
+                "disallowed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "type": "integer"
+        },
+        "play_pattern": {
+          "anyOf": [
+            {
+              "enum": [
+                "open_play",
+                "counter",
+                "corner",
+                "free_kick",
+                "throw_in",
+                "goal_kick",
+                "kick_off",
+                "penalty"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "t": {
+          "maximum": 10800,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "technique": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal",
+                "volley",
+                "half_volley",
+                "lob",
+                "backheel",
+                "diving_header",
+                "overhead_kick"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "under_pressure": {
+          "default": false,
+          "type": "boolean"
+        },
+        "x": {
+          "maximum": 105.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "xg": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "y": {
+          "maximum": 68.0,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "event_id",
+        "t",
+        "period",
+        "clock_label",
+        "team",
+        "player_id",
+        "x",
+        "y",
+        "end_x",
+        "end_y",
+        "xg",
+        "outcome",
+        "body_part",
+        "play_pattern",
+        "technique",
+        "under_pressure",
+        "first_time"
+      ],
+      "title": "ShotMapShot",
+      "type": "object"
+    },
     "SimResult": {
       "additionalProperties": false,
       "properties": {
@@ -4626,6 +5238,37 @@
         "points"
       ],
       "title": "TeamForm",
+      "type": "object"
+    },
+    "TeamPassNetwork": {
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/PassNetworkEdge"
+          },
+          "type": "array"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/PassNetworkNode"
+          },
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "frames",
+            "events"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "nodes",
+        "edges"
+      ],
+      "title": "TeamPassNetwork",
       "type": "object"
     },
     "TeamRunStats": {
