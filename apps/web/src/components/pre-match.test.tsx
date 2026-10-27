@@ -80,6 +80,12 @@ describe("the pre-match cards", () => {
     expect(out.match(/Ex-teammates/g)).toHaveLength(4);
     // The routine per-player effects (form, big-match rating) stay out of the factors card.
     expect(out).toContain("Card risk ▲");
+    // Each effect says what it would change and by how much; the form strip marks the newest result.
+    expect(out).toMatch(/\+\d+\.\d% to chance of a card/);
+    expect(out).toContain("Latest");
+    expect(out).not.toContain("Most recent result on the right");
+    // One time rule: hours under 48 h, days after, both "before kick-off".
+    expect(out).not.toMatch(/\d+ days before(?! kick-off)/);
     expect(out).not.toContain("average rating");
   });
 
@@ -105,6 +111,7 @@ describe("the pre-match cards", () => {
     expect(out).toContain("How they come in");
     expect(out).toContain("When they last met");
     expect(out).not.toMatch(/[+−]\d+\.\d%/);
+    expect(out).toMatch(/Slightly (more|less): /);
   });
 
   it("speak the page's language", () => {

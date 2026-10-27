@@ -35,10 +35,14 @@
 .pre-place small { font-size: var(--pv-fs-md); font-weight: 600; color: var(--pv-ink-2); }
 .pre-wdl { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
 .pre-wdl li { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--pv-r-ctl); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
-.pre-wdl .r-W { background: var(--pv-ink); color: var(--pv-sheet); }
-.pre-wdl .r-D { background: var(--pv-draw); color: var(--pv-ink); }
-.pre-wdl .r-L { background: var(--pv-sheet); color: var(--pv-ink-2); box-shadow: inset 0 0 0 1px var(--pv-hair); }
-.pre-wdl li:last-child { outline: 2px solid var(--pv-ink); outline-offset: 2px; }
+:is(.pre-wdl li, .pre-res).r-W { background: var(--pv-win); color: var(--pv-on-win); }
+:is(.pre-wdl li, .pre-res).r-D { background: var(--pv-draw); color: var(--pv-ink); }
+:is(.pre-wdl li, .pre-res).r-L { background: var(--pv-loss); color: var(--pv-on-loss); }
+/* The newest result: ringed in ink, with "Latest" under it. */
+.pre-wdl { padding-bottom: 18px; }
+.pre-wdl li { position: relative; }
+.pre-wdl li.latest { outline: 2px solid var(--pv-ink); outline-offset: 2px; }
+.pre-wdl .pre-latest { position: absolute; top: calc(100% + 5px); left: 50%; transform: translateX(-50%); font-family: var(--pv-body); font-size: var(--pv-fs-xs); font-weight: 600; line-height: 1; color: var(--pv-ink-2); white-space: nowrap; }
 .pre-goals { font-size: var(--pv-fs-sm); }
 .pre-hint { font-size: var(--pv-fs-xs); }
 
@@ -86,6 +90,7 @@
 .pre-list li:last-child { padding-bottom: 0; }
 .pre-chip { justify-self: start; }
 .pre-chip small { color: var(--pv-ink-2); font-size: inherit; }
+.pre-effect { display: block; margin-top: 2px; font-size: var(--pv-fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
 .pre-list .pre-who { display: flex; }
 .pre-note { display: block; margin-top: 2px; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
 .pre-pair { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
@@ -212,9 +217,6 @@
 .pre-games li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--pv-hair); }
 .pre-games li:first-child { border-top: 0; padding-top: 2px; }
 .pre-res { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--pv-r-ctl); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
-.pre-res.r-W { background: var(--pv-ink); color: var(--pv-sheet); }
-.pre-res.r-D { background: var(--pv-draw); color: var(--pv-ink); }
-.pre-res.r-L { background: var(--pv-sheet); color: var(--pv-ink-2); box-shadow: inset 0 0 0 1px var(--pv-hair); }
 .pre-game { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; }
 .pre-opp { font-weight: 600; flex: 1 1 10em; min-width: 0; }
 .pre-score { display: inline-flex; gap: 10px; font-size: var(--pv-fs-sm); white-space: nowrap; font-variant-numeric: tabular-nums; }
