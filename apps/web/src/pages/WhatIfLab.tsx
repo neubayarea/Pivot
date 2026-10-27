@@ -11,6 +11,7 @@ import { useClock } from "../data/clock";
 import { useFixture, useMatch } from "../data/match";
 import { mockScenarioApi } from "../data/scenarioMock";
 import { numberLocale } from "../data/motion";
+import { forYourTeam, usePersona } from "../data/persona";
 import {
   DEFAULT_RUNS, MOVE_RANGE, RUN_COUNTS, clockMinute, liveScenarioApi, optionLabel, useOptionMinute, useScenarioRun, type RunCount,
   type ScenarioApi, type ScenarioOption, type StartScenario,
@@ -49,6 +50,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
   const { t } = usePrefs();
   const { minute } = useClock();
   const minuteOf = useOptionMinute();
+  const { side } = usePersona();
   const pivot = pivotDetail(pivotId)?.pivot;
   const [opts, setOpts] = useState<Options>({ kind: "loading" });
   const [reload, setReload] = useState(0);
@@ -67,7 +69,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
         if (!alive) return;
         setOpts({ kind: "ready", options });
         // The pivot's own trigger comes first: have it ready to run.
-        setSelected((s) => s ?? options.find((o) => o.enabled)?.type ?? null);
+        setSelected((s) => s ?? forYourTeam(options, side).find((o) => o.enabled)?.type ?? null);
         setMoveTo(defaultMoveTo(options));
       },
       (error) => alive && setOpts({ kind: "error", error }),
@@ -90,7 +92,8 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
     );
   }
 
-  const options = opts.kind === "ready" ? opts.options : [];
+  // C12: with a ♥ team, what would have helped it comes first.
+  const options = forYourTeam(opts.kind === "ready" ? opts.options : [], side);
   const option = options.find((o) => o.type === selected && o.enabled);
   const busy = state.phase === "starting" || state.phase === "running";
   const ranOption = "body" in state ? options.find((o) => o.type === state.body.type) : undefined;

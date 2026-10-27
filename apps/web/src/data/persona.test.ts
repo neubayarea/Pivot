@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PlayerReport, StatMetricInfo, TeamStatsReport } from "@pivot/contracts";
 import { en } from "../i18n/messages/en";
 import { zh } from "../i18n/messages/zh";
-import { bestPlayer, coreStats, lean, listOf, result, strengthsAndWeaknesses, teamLine, teamRating } from "./persona";
+import { bestPlayer, coreStats, forYourTeam, lean, listOf, result, strengthsAndWeaknesses, swingAt, teamLine, teamRating } from "./persona";
 
 const metric = (m: string, unit: StatMetricInfo["unit"] = "count"): StatMetricInfo => ({
   metric: m, definition_id: "MET-000", unit, decimals: 0, group: "attack", label: m, fan_label: m, description: "", higher_means: "",
@@ -108,5 +108,35 @@ describe("fans' summary", () => {
     const { strengths, weaknesses } = strengthsAndWeaknesses(r, "home", 3, new Set(["shots", "duels_won"]));
     expect(strengths.map((e) => e.metric)).toEqual(["shots"]);
     expect(weaknesses.map((e) => e.metric)).toEqual(["duels_won"]);
+  });
+});
+
+describe("what-if choices for your team", () => {
+  const opts = [
+    { type: "cancel_substitution", team: "home" as const },
+    { type: "remove_goal", team: "away" as const },
+    { type: "change_press", team: "away" as const },
+    { type: "remove_red_card", team: "home" as const },
+  ];
+  it("puts what would have helped your team first, then your own decisions", () => {
+    expect(forYourTeam(opts, "home").map((o) => o.type)).toEqual(["remove_goal", "remove_red_card", "cancel_substitution", "change_press"]);
+    expect(forYourTeam(opts, "away").map((o) => o.type)).toEqual(["change_press", "cancel_substitution", "remove_goal", "remove_red_card"]);
+  });
+  it("keeps the order with no team picked", () => {
+    expect(forYourTeam(opts, null)).toEqual(opts);
+  });
+});
+
+describe("the alarm's swing", () => {
+  const metrics = Array.from({ length: 20 }, (_, m) => ({ minute: m, momentum: m < 10 ? -0.2 : 0.3 }));
+  it("is after minus before, signed towards the side it turned to", () => {
+    const s = swingAt(metrics, 10, "home");
+    expect(s.before).toBeCloseTo(-0.2);
+    expect(s.after).toBeCloseTo(0.3);
+    expect(s.swing).toBeCloseTo(0.5);
+    expect(swingAt(metrics, 10, "away").swing).toBeCloseTo(-0.5);
+  });
+  it("is unknown without minutes on both sides", () => {
+    expect(swingAt(metrics, 0, "home").swing).toBeNull();
   });
 });
