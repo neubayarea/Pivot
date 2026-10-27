@@ -1,8 +1,8 @@
 // REST client for the endpoints in apps/api/src/pivot_api/routes.py. Paths are relative, so the
 // Vite dev server proxies them to the local API and a same-origin deploy needs nothing else.
 import type {
-  AgentTrace, Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, Scenario, ScenarioSpec, TrackingFrame,
-  ViewerPrefs,
+  AgentTrace, Match, MatchEvent, MinuteMetric, OverlayFrame, OverlayTimeline, Pivot1 as Pivot, PlayerStatsReport, Scenario, ScenarioSpec,
+  TrackingFrame, ViewerPrefs,
 } from "@pivot/contracts";
 
 export class ApiError extends Error {
@@ -95,6 +95,9 @@ export const api = {
     servedList(await request<Parameters<typeof servedList>[0]>(`${m(id)}/pivots${prefs ? prefsQuery(prefs) : ""}`)),
   getPivot: async (pivotId: string, prefs?: ViewerPrefs) =>
     withServedPrefs(await request<Served>(`/pivots/${encodeURIComponent(pivotId)}${prefs ? prefsQuery(prefs) : ""}`)),
+  /** One player's numbers, events and pivots up to elapsed second `upTo` (the whole match when null); 404 without frames (#226). */
+  playerStats: (id: string, player: string, upTo: number | null) =>
+    request<PlayerStatsReport>(`${m(id)}/players/stats?player=${encodeURIComponent(player)}${upTo === null ? "" : `&up_to=${upTo}`}`),
   /** Score bug and card at elapsed second `clock`; the match's current clock when left out. */
   getOverlay: (id: string, clock?: number) =>
     request<OverlayFrame>(`${m(id)}/overlay${clock === undefined ? "" : `?clock=${clock}`}`),

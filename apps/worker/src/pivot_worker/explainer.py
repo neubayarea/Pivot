@@ -65,14 +65,21 @@ def audience_brief(prefs: ViewerPrefs, team_names: Mapping[str, str],
             "changed the game. Use everyday words and the fan wording from the stat table. Never use "
             f"abbreviations or tactics jargon ({', '.join(jargon(prefs.language))}). Use at most one number per "
             "sentence, and only if it makes the story clearer: keep both claims of a change, but write only the "
-            "newer value (\"rose to 9\").")
+            "newer value (\"rose to 9\"). Let the feeling of the moment come through (the lift of a goal, the "
+            "sting of a red card) in plain words, without adding any fact the sheet does not give.")
     else:
         lines.append(
             "A match analyst. Be precise and tactical: name the mechanism (shape, pressing, space, "
             "overloads) and back each step with a stat from the sheet. Use the analyst labels from the table.")
     if prefs.focus_team:
-        lines.append(f"Tell it from {possessive(team_names[prefs.focus_team])} point of view: what they gained or lost here, "
-                     "even when the match turned against them.")
+        team = team_names[prefs.focus_team]
+        lines.append(f"The viewer supports {team}. Tell it from {possessive(team)} point of view: what they gained or "
+                     f"lost here, even when the match turned against them. The headline is about {team} too: name "
+                     f"them, or what happened to them, so their supporters read it as their own story, never as "
+                     f"the other side's win.")
+        if prefs.audience == "fan":
+            lines.append(f"Write as one of the {team} supporters would feel it: glad when it went their way, "
+                         "frustrated when it did not.")
     if prefs.focus_player_id:
         name = (player_names or {}).get(prefs.focus_player_id, prefs.focus_player_id)
         lines.append(f"The viewer follows {name} (`{prefs.focus_player_id}`). Mention them when the evidence "

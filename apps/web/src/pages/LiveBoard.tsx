@@ -8,6 +8,7 @@ import MatchStats from "../components/MatchStats";
 import MomentumChart from "../components/MomentumChart";
 import { MomentCards, OpenMoment } from "../components/Moments";
 import PitchBoard from "../components/PitchBoard";
+import PlayerCard from "../components/PlayerCard";
 import SetPiecesAndShots from "../components/SetPieces";
 import StartDemoButton from "../components/StartDemoButton";
 import { useClock } from "../data/clock";
@@ -124,6 +125,10 @@ export default function LiveBoard() {
         {!moments.length && !finished && <p className="muted">{t("pivots.empty")}</p>}
         {moments.length > 0 && <MomentCards pivots={moments} selected={open?.pivot_id ?? null} onPick={pick} />}
         {open && <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={toggle} />}
+        {/* The ★ player's numbers so far, whole minutes so a live clock refetches once a minute. */}
+        {!scheduled && (
+          <PlayerCard upTo={finished ? null : Math.floor(match.clock / 60) * 60} numbered={moments.map((p) => p.pivot_id)} onPivot={pick} />
+        )}
         {!scheduled && (
           <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={key} onPick={pickKey} />
         )}
