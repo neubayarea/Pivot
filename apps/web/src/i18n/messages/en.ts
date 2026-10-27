@@ -714,7 +714,7 @@ export const en = {
   "clip.banner.penalty": "PENALTY",
   "clip.banner.var": "VAR",
   "clip.replay": "Play again",
-  "clip.keys": "Keys: Space play/pause · ←/→ a second (Shift: five) · Home start · R again · −/+ speed",
+  "clip.keys": "Keys: Space plays or pauses, ←/→ moves a second (five with Shift), Home goes to the start, R plays again, −/+ change the speed.",
   "ctl.label": "Replay controls",
   "ctl.back": "Back {s} seconds",
   "ctl.on": "Forward {s} seconds",

@@ -210,7 +210,7 @@ export const es: Messages = {
   "keys.legendRed": "Tarjeta roja",
   "keys.legendOther": "Penalti o VAR",
 
-  "chart.ht": "DESC.",
+  "chart.ht": "Desc.",
   "chart.label": "Gráfico de impulso. Giros: {list}.",
   "chart.none": "ninguno todavía",
   "chart.towards": "{minute}′ hacia {team}",
@@ -715,7 +715,7 @@ export const es: Messages = {
   "clip.banner.penalty": "PENALTI",
   "clip.banner.var": "VAR",
   "clip.replay": "Repetir",
-  "clip.keys": "Teclas: Espacio reproducir/pausa · ←/→ un segundo (Mayús: cinco) · Inicio al principio · R repetir · −/+ velocidad",
+  "clip.keys": "Teclas: Espacio reproduce o pausa, ←/→ mueve un segundo (cinco con Mayús), Inicio vuelve al principio, R repite, −/+ cambian la velocidad.",
   "ctl.label": "Controles de la repetición",
   "ctl.back": "Atrás {s} segundos",
   "ctl.on": "Adelante {s} segundos",

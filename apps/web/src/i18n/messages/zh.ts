@@ -713,7 +713,7 @@ export const zh: Messages = {
   "clip.banner.penalty": "点球",
   "clip.banner.var": "VAR",
   "clip.replay": "重播",
-  "clip.keys": "键盘：空格 播放/暂停 · ←/→ 退/进 1 秒（按住 Shift 5 秒）· Home 回到开头 · R 重播 · −/+ 调速度",
+  "clip.keys": "键盘：空格播放或暂停，←/→ 后退或前进 1 秒（按住 Shift 是 5 秒），Home 回到开头，R 重播，−/+ 调速度。",
   "ctl.label": "回放控制",
   "ctl.back": "后退 {s} 秒",
   "ctl.on": "前进 {s} 秒",
