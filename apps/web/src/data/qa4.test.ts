@@ -8,7 +8,7 @@ import { es } from "../i18n/messages/es";
 import { zh } from "../i18n/messages/zh";
 import { matchLabel, matchdayOf } from "./choice";
 import { savedClub, sideOfClub } from "./followClub";
-import { onAir, type MatchView } from "./view";
+import { onAir, shownStatus, type MatchView } from "./view";
 
 const HBC_ROV = { home: { short_name: "HBC" }, away: { short_name: "ROV" } };
 const LUN_HBC = { home: { short_name: "LUN" }, away: { short_name: "HBC" } };
@@ -40,6 +40,12 @@ describe("only a match being played says Live (#354)", () => {
     expect(onAir(at("paused", controls))).toBe(false);
     expect(onAir(at("finished", null))).toBe(false);
   });
+  it("labels the replay Replay in the score header and keeps every other status", () => {
+    expect(shownStatus(at("live", controls))).toBe("replay");
+    expect(shownStatus(at("live", { ...controls, goLive: () => {} }))).toBe("live");
+    expect(shownStatus(at("finished", controls))).toBe("finished");
+    expect(shownStatus(at("scheduled", null))).toBe("scheduled");
+  });
 });
 
 describe("the picker names a next-round fixture (#354)", () => {
@@ -50,6 +56,10 @@ describe("the picker names a next-round fixture (#354)", () => {
   it("by its clubs and matchday, never its id", () => {
     expect(matchLabel(fixture, translator("en"))).toBe("Lunsford Sporting v Harbour City · MD31");
     expect(matchLabel(fixture, translator("zh"))).toBe("Lunsford Sporting v Harbour City · 第 31 轮");
+    // Every round's fixtures (#368 adds matchdays 31 to 38).
+    const last = { ...fixture, match_id: "S2026-38-HBC-PEL", home: { name: "Harbour City", short_name: "HBC" },
+      away: { name: "Pelham Rovers", short_name: "PEL" } } as unknown as Match;
+    expect(matchLabel(last, translator("es"))).toBe("Harbour City v Pelham Rovers · J38");
     expect(matchdayOf("M-seed-101")).toBeNull();
   });
 });

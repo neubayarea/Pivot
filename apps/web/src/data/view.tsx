@@ -65,6 +65,10 @@ export type MatchView = {
 export const onAir = (v: Pick<MatchView, "match" | "playback">) =>
   ["live", "paused"].includes(v.match.status) && (!v.playback || !!v.playback.goLive);
 
+/** The match's status for its label: "replay" while a match that is not on air is played again. */
+export const shownStatus = (v: Pick<MatchView, "match" | "playback">): MatchView["match"]["status"] | "replay" =>
+  ["live", "paused"].includes(v.match.status) && !onAir(v) ? "replay" : v.match.status;
+
 /** Why the live feed has no match to show yet; StartupScreen turns it into a message and a next step. */
 export type LoadProblem =
   | { kind: "no-matches" }
