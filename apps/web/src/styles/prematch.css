@@ -269,6 +269,7 @@
 .pre-who-list { flex-direction: column; gap: 6px; }
 .pre-who-list dd { font-weight: 600; }
 .pre-next .pre-hint { margin-top: 2px; }
+.pre-about { font-size: var(--pv-fs-xs); max-width: 70ch; }
 
 @media (max-width: 560px) {
   .pre-cols { grid-template-columns: minmax(0, 1fr); }

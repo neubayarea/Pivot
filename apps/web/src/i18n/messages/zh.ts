@@ -1027,4 +1027,8 @@ export const zh: Messages = {
   "pre.stage.quarter_final": "1/4 决赛",
   "pre.stage.semi_final": "半决赛",
   "pre.stage.final": "决赛",
+  "prematch.about": "这些只是赛前背景：杯赛赛程是虚构的，半场比分是估算的，都不会改变模拟器怎么踢这场比赛。",
+  "pre.thenLeagueHome": "之后的联赛：主场对{team}，{n} 天后。",
+  "pre.thenLeagueAway": "之后的联赛：客场对{team}，{n} 天后。",
+  "pre.usualFrom": "惯用首发：最近 {n} 场联赛里至少首发 3 场的球员。",
 };

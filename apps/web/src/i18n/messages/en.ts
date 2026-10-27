@@ -1028,4 +1028,8 @@ export const en = {
   "pre.stage.quarter_final": "quarter-final",
   "pre.stage.semi_final": "semi-final",
   "pre.stage.final": "final",
+  "prematch.about": "Pre-match context only: the cup fixtures are made up and the half-time scores are estimated; none of it changes how the simulator plays the match.",
+  "pre.thenLeagueHome": "Then in the league: {team} at home, in {n} days.",
+  "pre.thenLeagueAway": "Then in the league: away to {team}, in {n} days.",
+  "pre.usualFrom": "The usual XI: whoever started at least 3 of the last {n} league games.",
 };

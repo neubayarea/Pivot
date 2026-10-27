@@ -1029,4 +1029,8 @@ export const es: Messages = {
   "pre.stage.quarter_final": "cuartos de final",
   "pre.stage.semi_final": "semifinal",
   "pre.stage.final": "final",
+  "prematch.about": "Solo es contexto previo: los partidos de copa son inventados y los resultados al descanso son estimados; nada de esto cambia cómo juega el simulador.",
+  "pre.thenLeagueHome": "Después, en liga: {team} en casa, dentro de {n} días.",
+  "pre.thenLeagueAway": "Después, en liga: en campo de {team}, dentro de {n} días.",
+  "pre.usualFrom": "El once de siempre: quienes fueron titulares en al menos 3 de las últimas {n} jornadas de liga.",
 };

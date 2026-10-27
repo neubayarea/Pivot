@@ -81,7 +81,13 @@ describe("the form in detail", () => {
     for (const id of ["h12", "h13", "h14"]) expect(out).toContain(view.playerName(id));
     expect(out).toContain("Northgate Rovers start with their usual XI.");
     expect(out).toContain("the simulation does not take the next match into account");
-    expect(out).toContain("made up for this demo season");
+    // A cup tie comes first, so the next league game is named too; the usual XI says how it was found.
+    expect(out).toContain("Then in the league: Kingsbridge at home, in 7 days.");
+    expect(out).toContain("started at least 3 of the last 5 league games");
+    // The API's one-line caveat (about_key) closes the section, and stands in for the made-up note.
+    expect(out).toContain("the half-time scores are estimated");
+    expect(out).not.toContain("made up for this demo season");
+    expect(text(html({ ...fx, about: null }))).toContain("made up for this demo season");
   });
 
   it("leaves out each block without its data, never showing zeros", () => {
@@ -134,6 +140,7 @@ describe("the form in detail", () => {
     expect(out).toContain("领先被追平");
     expect(out).toContain("Freeland Cup 1/4 决赛");
     expect(out).toContain("5 场 1 次");
+    expect(out).toContain("半场比分是估算的");
     expect(out).not.toContain(" · ");
   });
 });

@@ -50,7 +50,7 @@ export function PreMatchDeepView({ report }: { report: PreMatchReport }) {
     <Venue key="venue" at={at} h2h={report.head_to_head} homeClub={homeClub} venue={preMatch?.context.venue ?? null} title={title("venueRecord")} {...ctx} />,
     <LastFive key="last5" at={at} title={title("last5")} {...ctx} />,
     <Numbers key="numbers" at={at} title={title("numbers")} {...ctx} />,
-    <NextUp key="next" at={at} title={title("nextUp")} {...ctx} />,
+    <NextUp key="next" at={at} title={title("nextUp")} about={!!report.about} {...ctx} />,
   ];
   const order = fan ? [3, 1, 2, 0] : [0, 1, 2, 3];
   if (!SIDES.some((s) => hasAny(at[s])) && !report.head_to_head?.at_this_ground?.played) return null;
@@ -61,8 +61,14 @@ export function PreMatchDeepView({ report }: { report: PreMatchReport }) {
         <p className="muted">{t(mine ? "pre.deepNoteMine" : "pre.deepNote", { team: mine ? teams[mine].name : "" })}</p>
       </header>
       <div className="pre-deep-grid">{order.map((i) => blocks[i])}</div>
+      {report.about && <About text={report.about} k={report.about_key} t={t} />}
     </section>
   );
+}
+
+/** The API's one-line caveat, in the page's language when we have its key. */
+function About({ text, k, t }: { text: string; k: string | null | undefined; t: T }) {
+  return <p className="pre-about muted">{k && isMessageKey(k) ? t(k) : <>{text} <LangTag lang="en" /></>}</p>;
 }
 
 const hasAny = (x: TeamPreMatch | null) =>
@@ -92,7 +98,8 @@ function Venue({ at, h2h, homeClub, venue, title, ...c }: Ctx & {
 }) {
   const sides = SIDES.filter((s) => played(at[s]?.overall) || played(at[s]?.[today[s]]));
   const ground = h2h?.at_this_ground;
-  const meetings = (h2h?.meetings ?? []).filter((m) => homeClub && m.venue_club === homeClub).slice().reverse();
+  // Oldest first from the API; `ft` is [that game's home club, away club], so at this ground [today's home, away].
+  const meetings = (h2h?.meetings ?? []).filter((m) => homeClub && (m.home_club ?? m.venue_club) === homeClub).slice().reverse();
   if (!sides.length && !ground?.played) return null;
   return (
     <Card title={title} className="pre-venue">
@@ -204,7 +211,7 @@ function LastFive({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; titl
           <div key={s} className={`pre-col ${s}${pickClass(s, c.mine)}`}>
             <TeamHead side={s} {...c} />
             <ol className="pre-games">
-              {at[s]!.last5.slice().reverse().map((g) => <Game key={g.matchday} g={g} {...c} />)}
+              {at[s]!.last5.map((g) => <Game key={`${g.season ?? ""}-${g.matchday}`} g={g} {...c} />)}
             </ol>
           </div>
         ))}
@@ -245,7 +252,7 @@ const ALL_STATS: StatKey[] = ["gf_avg", "ga_avg", "clean_sheets", "failed_to_sco
 function Numbers({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; title: string }) {
   const { t, fan, mine, num } = c;
   const stats = (s: Side) => at[s]?.last5_stats ?? null;
-  const games = (s: Side) => at[s]?.last5.length || 5;
+  const games = (s: Side) => stats(s)?.games ?? (at[s]?.last5.length || 5);
   const rows = (fan ? FAN_STATS : ALL_STATS).filter((k) => SIDES.some((s) => stats(s)?.[k] != null));
   const periods = !fan && SIDES.some((s) => stats(s)?.goals_by_period || stats(s)?.conceded_by_period);
   if (!rows.length && !periods) return null;
@@ -344,7 +351,7 @@ function Periods({ side, stats, t, mine, short }: Ctx & { side: Side; stats: Rec
 
 // 4. What comes next, and who rests. -------------------------------------------------------------
 
-function NextUp({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; title: string }) {
+function NextUp({ at, title, about, ...c }: Ctx & { at: PreMatchReport["teams"]; title: string; about: boolean }) {
   const sides = SIDES.filter((s) => at[s]?.next_fixture || at[s]?.usual_xi_today);
   if (!sides.length) return null;
   const madeUp = sides.some((s) => at[s]?.next_fixture?.fictional);
@@ -354,14 +361,14 @@ function NextUp({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; title:
         {sides.map((s) => (
           <div key={s} className={`pre-col ${s}${pickClass(s, c.mine)}`}>
             <TeamHead side={s} {...c} />
-            {at[s]!.next_fixture && <Fixture side={s} f={at[s]!.next_fixture!} {...c} />}
+            {at[s]!.next_fixture && <Fixture side={s} f={at[s]!.next_fixture!} league={at[s]!.next_league ?? null} {...c} />}
             {at[s]!.usual_xi_today && <Rotation side={s} xi={at[s]!.usual_xi_today!} {...c} />}
           </div>
         ))}
       </div>
       <p className="pre-hint muted">
         {c.t("pre.nextNote")}
-        {madeUp && ` ${c.t("pre.nextMadeUp")}`}
+        {madeUp && !about && ` ${c.t("pre.nextMadeUp")}`}
       </p>
     </Card>
   );
@@ -373,7 +380,9 @@ function Stage({ stage, t }: { stage: string; t: T }) {
   return isMessageKey(key) ? <>{t(key)}</> : <>{stage} <LangTag lang="en" /></>;
 }
 
-function Fixture({ f, t, fan }: Ctx & { side: Side; f: NextFixture }) {
+function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: NextFixture; league: NextFixture | null }) {
+  // A cup tie comes first: say when the next league game is too, for the analyst.
+  const then = !fan && league && f.fictional && (league.opponent !== f.opponent || league.days_until !== f.days_until) ? league : null;
   return (
     <div className="pre-fixture">
       <p className="pre-fx-what">
@@ -384,6 +393,11 @@ function Fixture({ f, t, fan }: Ctx & { side: Side; f: NextFixture }) {
         {t(f.venue === "H" ? "pre.nextHome" : "pre.nextAway", { team: f.opponent })}{" "}
         <b className="num">{t("pre.inDays", { n: f.days_until })}</b>
       </p>
+      {then && (
+        <p className="pre-line muted">
+          {t(then.venue === "H" ? "pre.thenLeagueHome" : "pre.thenLeagueAway", { team: then.opponent, n: then.days_until })}
+        </p>
+      )}
       {fan ? (
         f.rotation_risk !== "low" && <p className="pre-line">{t(`pre.fan.risk.${f.rotation_risk}`)}</p>
       ) : (
@@ -397,7 +411,7 @@ function Fixture({ f, t, fan }: Ctx & { side: Side; f: NextFixture }) {
 }
 
 /** How many of the usual starters begin today, who sits out, who comes in; worked out from the season. */
-function Rotation({ side, xi, t, playerName, name, names }: Ctx & { side: Side; xi: UsualXi }) {
+function Rotation({ side, xi, t, fan, playerName, name, names }: Ctx & { side: Side; xi: UsualXi }) {
   const benched = xi.regulars_benched.map(playerName);
   const fresh = xi.newcomers.map(playerName);
   return (
@@ -413,6 +427,7 @@ function Rotation({ side, xi, t, playerName, name, names }: Ctx & { side: Side; 
           {fresh.length > 0 && <div><dt>{t("pre.inFor")}</dt><dd>{names(fresh)}</dd></div>}
         </dl>
       )}
+      {!fan && xi.games ? <p className="pre-hint muted">{t("pre.usualFrom", { n: xi.games })}</p> : null}
     </div>
   );
 }
