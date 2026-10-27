@@ -48,8 +48,17 @@ export type HubFixture = { match_id: string; home: HubTeam; away: HubTeam; venue
 /** A round still to come (C15): its date (`2026-10-28`, the fictional calendar) and its fixtures. */
 export type HubNext = { matchday: number; date?: string; fixtures: HubFixture[] };
 
+/** A game of the season so far (#364): the score from the season file; `match_id` only when its full match is stored. */
+export type HubPast = {
+  home: HubTeam; away: HubTeam; score: Score; reds: { home: number; away: number }; match_id: string | null;
+};
+
+/** A round already played (#364), latest first. */
+export type HubRound = { matchday: number; date?: string; results: HubPast[] };
+
 export type HubData = {
   matches: HubLine[]; live: HubLive | null; generating: boolean; next: HubNext | null; schedule?: HubNext[];
+  history?: HubRound[];
 };
 
 /** The viewer's club's games over the whole schedule, one line per round. */

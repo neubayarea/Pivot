@@ -99,4 +99,18 @@
 .hub-alt > .hub-note { padding: var(--pv-s3) var(--pv-s2) 0; }
 .hub-alt > ul { list-style: none; margin: 0; padding: 0 0 0 var(--pv-s4); border-left: 3px solid var(--pv-hair); }
 .hub-alt > ul > li + li { border-top: 1px solid var(--pv-hair); }
+
+/* #364: the season so far, a round at a time. */
+.hub-hist-pick { display: inline-flex; align-items: center; gap: var(--pv-s2); }
+.hub-hist-pick select { font: inherit; font-size: var(--pv-fs-sm); color: var(--pv-ink); background: var(--pv-paper, transparent); border: 1px solid var(--pv-hair); padding: 4px 8px; cursor: pointer; }
+.hub-past-row { display: grid; grid-template-columns: 0 minmax(0, 1fr) 64px minmax(0, 1fr) 120px 150px; align-items: center; column-gap: var(--pv-s3); padding: var(--pv-s2); color: inherit; text-decoration: none; }
+.hub-past-row:has(> .hub-meta:first-child:not(:empty)) { grid-template-columns: 200px minmax(0, 1fr) 64px minmax(0, 1fr) 120px 150px; }
+.hub-past-row > .hub-team:nth-child(2) { justify-content: flex-end; }
+.hub-past-row .hub-score { font-size: var(--pv-fs-lg, 1.125rem); }
+a.hub-past-row:hover { background: var(--pv-sunk); }
+@media (max-width: 720px) {
+  .hub-past-row, .hub-past-row:has(> .hub-meta:first-child:not(:empty)) { grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); }
+  .hub-past-row > .hub-meta { grid-column: 1 / -1; }
+  .hub-past-row > .hub-meta:empty { display: none; }
+}
 .hub-ph { margin-block: var(--pv-s3, 16px); max-width: 960px; }

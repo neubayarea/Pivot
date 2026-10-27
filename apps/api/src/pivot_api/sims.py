@@ -27,6 +27,11 @@ Every seed match is built by `seed_match` (Bx13): each coach gets a style and ta
 it (`pivot_core.sim.tactics`), and the match gets its careers, pre-match context and context effects
 from the season so far (`with_seed_season`, from `eval/fixtures/season-2026.json`).
 
+A season fixture can be stored the same way (#364, `FixtureSpec`): `world.fixture_match(fx)` with the
+season's own id and seed (`S2026-07-COR-TES`), exactly as `season.play` built it for
+eval/fixtures/season-2026.json, so the full match ends with the season file's score. None are loaded by
+default; `PIVOT_SIM_FIXTURES=S2026-07-COR-TES,S2026-12-HOL-PEL` adds them after the seed matches.
+
 Each stored match also gets a `Replay`: how it was simulated (match, seed, plants) and the version its
 results belong to, so a what-if (A09, `whatif.py`) replays the very same match.
 """
@@ -59,6 +64,7 @@ from pivot_core.ports import PIVOT_CANDIDATES
 from pivot_core.sim import PRESETS, build_demo_match, simulate
 from pivot_core.sim.season import load_season, with_seed_season
 from pivot_core.sim.tactics import styled
+from pivot_core.sim.world import BY_ID, Fixture, fixture_match, schedule
 
 log = logging.getLogger("uvicorn.error")
 
@@ -91,9 +97,45 @@ class SimSpec:
     def match_id(self) -> str:
         return f"M-seed-{self.seed}"
 
+    def build(self) -> Match:
+        return seed_match(self.seed, self.home_strength, self.away_strength, self.home_formation, self.away_formation)
+
     def replay(self) -> Replay:
         return Replay(SIM_VERSION, partial(seed_match, self.seed, self.home_strength, self.away_strength,
                                        self.home_formation, self.away_formation))
+
+
+@dataclass(frozen=True)
+class FixtureSpec:
+    """A season fixture played in full (#364): the match `season.play` simulated for the season file."""
+
+    season: int
+    matchday: int
+    home: str                                 # club ids, as in world.CLUBS
+    away: str
+    seed: int
+
+    @classmethod
+    def from_id(cls, match_id: str) -> FixtureSpec:
+        """`S2026-07-COR-TES`: that season fixture from world.schedule (ValueError if there is none)."""
+        for fx in schedule():
+            if (spec := cls(fx.season, fx.matchday, fx.home, fx.away, fx.seed)).match_id == match_id:
+                return spec
+        raise ValueError(f"no season fixture {match_id!r}")
+
+    @property
+    def fixture(self) -> Fixture:
+        return Fixture(self.season, self.matchday, self.home, self.away, self.seed)
+
+    @property
+    def match_id(self) -> str:                # as world.fixture_match names it
+        return f"S{self.season}-{self.matchday:02d}-{BY_ID[self.home].short}-{BY_ID[self.away].short}"
+
+    def build(self) -> Match:
+        return fixture_match(self.fixture)
+
+    def replay(self) -> Replay:
+        return Replay(SIM_VERSION, partial(fixture_match, self.fixture))
 
 
 # The recorded demo (B02) and the season it ends (B13): committed to the repo, so every machine shows the
@@ -141,9 +183,24 @@ def _source_hash() -> str:
 SIM_VERSION = _source_hash()
 
 
-def specs_from_env() -> list[SimSpec]:
+Spec = SimSpec | FixtureSpec
+
+
+def specs_from_env() -> list[Spec]:
     """The first `PIVOT_SIM_MATCHES` specs; past the six listed ones, even strengths and seeds 707, 808, ..."""
-    return specs_first(int(os.getenv("PIVOT_SIM_MATCHES", str(DEFAULT_MATCHES))))
+    return [*specs_first(int(os.getenv("PIVOT_SIM_MATCHES", str(DEFAULT_MATCHES)))), *fixture_specs_from_env()]
+
+
+def fixture_specs_from_env() -> list[FixtureSpec]:
+    """The season fixtures `PIVOT_SIM_FIXTURES` names (comma-separated ids); none by default."""
+    ids = [i.strip() for i in os.getenv("PIVOT_SIM_FIXTURES", "").split(",") if i.strip()]
+    out = []
+    for i in ids:
+        try:
+            out.append(FixtureSpec.from_id(i))
+        except ValueError:
+            log.warning("PIVOT_SIM_FIXTURES: %s is not a fixture of the season; skipped", i)
+    return out
 
 
 def specs_first(n: int) -> list[SimSpec]:
@@ -156,7 +213,7 @@ def data_dir_from_env() -> Path:
     return Path(os.getenv("PIVOT_DATA_DIR") or ".pivot-data") / "sims"
 
 
-def paths(data_dir: Path, spec: SimSpec, version: str = SIM_VERSION) -> tuple[Path, Path]:
+def paths(data_dir: Path, spec: Spec, version: str = SIM_VERSION) -> tuple[Path, Path]:
     stem = data_dir / f"{spec.match_id}.{version}"
     return stem.with_name(stem.name + ".json.gz"), stem.with_name(stem.name + ".frames.json.gz")
 
@@ -168,13 +225,13 @@ def _write_json_gz(path: Path, data: object) -> None:
     tmp.replace(path)                          # a half-written file never looks cached
 
 
-def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool:
+def build_one(spec: Spec, data_dir: Path, version: str = SIM_VERSION) -> bool:
     """Simulate one match and write its files, unless this version is on disk. True if it simulated."""
     data_path, frames_path = paths(data_dir, spec, version)
     if data_path.is_file() and frames_path.is_file():
         return False
     data_dir.mkdir(parents=True, exist_ok=True)
-    match = seed_match(spec.seed, spec.home_strength, spec.away_strength, spec.home_formation, spec.away_formation)
+    match = spec.build()
     out = simulate(match)
     events = out.events_as_models()
     frames = out.frames_as_models()
@@ -194,7 +251,7 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     return True
 
 
-def drop_old_versions(data_dir: Path, spec: SimSpec, version: str) -> None:
+def drop_old_versions(data_dir: Path, spec: Spec, version: str) -> None:
     keep = paths(data_dir, spec, version)
     for old in data_dir.glob(f"{spec.match_id}.*.gz"):
         if old not in keep:
@@ -214,7 +271,7 @@ def _file_ok(path: Path, version: str, match_id: str | None) -> bool:
             and all(k in data for k in ("events", "metrics", "candidates")))
 
 
-async def fetch_from_store(store: SimStore, spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool:
+async def fetch_from_store(store: SimStore, spec: Spec, data_dir: Path, version: str = SIM_VERSION) -> bool:
     """Download this match's two files into the cache, if the store has both whole. True if they are now on disk.
 
     Each file is written to a temporary name and checked before it is renamed, the frames first, so a
@@ -242,7 +299,7 @@ async def fetch_from_store(store: SimStore, spec: SimSpec, data_dir: Path, versi
             tmp.unlink(missing_ok=True)
 
 
-async def push_to_store(store: SimStore, spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool:
+async def push_to_store(store: SimStore, spec: Spec, data_dir: Path, version: str = SIM_VERSION) -> bool:
     """Write the cached files of this match through to the store (frames first, so the match file means both
     are there). False, with a warning, if that did not work: the match is still served from the disk."""
     data_path, frames_path = paths(data_dir, spec, version)
@@ -380,7 +437,7 @@ async def _connect_store(store: SimStore | None) -> SimStore | None:
         return None
 
 
-async def load_sims(adapters: Adapters, specs: list[SimSpec], data_dir: Path, status: SimStatus,
+async def load_sims(adapters: Adapters, specs: list[Spec], data_dir: Path, status: SimStatus,
                     executor: Executor | None = None, store: SimStore | None = None) -> None:
     """Get every spec's files (disk cache, else the store, else simulated and written through to the store)
     off the event loop and store each match as soon as it is ready."""
@@ -394,7 +451,7 @@ async def load_sims(adapters: Adapters, specs: list[SimSpec], data_dir: Path, st
     loop = asyncio.get_running_loop()
     started = time.monotonic()
 
-    async def one(spec: SimSpec) -> None:
+    async def one(spec: Spec) -> None:
         try:
             how = "loaded cached"
             if store is not None and not all(p.is_file() for p in paths(data_dir, spec)):
