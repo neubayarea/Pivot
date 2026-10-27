@@ -4,11 +4,12 @@
 // at that moment and what-if for that same moment. Key moments, set pieces and shots and the AI's
 // work log follow, quieter. Styles in styles/post.css.
 // 概况 · Overview (Ax69, #316 #322): the tab that opens after the match, and it changes with who is
-// watching (data/persona.ts). A fan gets their ♥ team's match, the ★ player and the story of the
-// match in cards; an analyst gets the momentum line with the turning points and the open one. Both
-// get the key moments and the five core team stats, and the AI's work log is a link at the bottom.
-import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+// watching: its blocks run in `ORDER.fan.post` / `ORDER.analyst.post` (data/persona.ts). A fan starts
+// with their ♥ team's match, the ★ player and the story of the match in cards, then the momentum line;
+// an analyst starts with the momentum line and the open turning point. Both get the key moments and
+// the five core team stats, and the AI's work log is a link at the bottom.
+import { Fragment, type ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import KeyMoments, { KeyLegend, keyId, keyWhat } from "../../components/KeyMoments";
 import MomentumChart from "../../components/MomentumChart";
@@ -64,10 +65,16 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   const n = shown ? moments.indexOf(shown) + 1 : 0;
   // Picking the one already open keeps it open; the prototype has no folded state.
   const pick = (id: string) => id !== shown?.pivot_id && onPick(id);
-  const { fan, side } = usePersona();
+  const persona = usePersona();
+  const { fan, side } = persona;
+  const navigate = useNavigate();
+  const location = useLocation();
   // The team stats follow the replay or the live clock, whole minutes, like the live tab's.
   const upTo = finished ? null : Math.floor(match.clock / 60) * 60;
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
+
+  // A fan has no open turning point on this tab: a pivot picked on the line opens its own page.
+  const pickFor = fan ? (id: string) => navigate({ pathname: `/pivot/${id}`, search: location.search }) : pick;
 
   if (scheduled) {
     return (
@@ -77,38 +84,17 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
     );
   }
 
-  return (
-    <div className={`post ${fan ? "fan" : "analyst"}`} data-audience={fan ? "fan" : "analyst"}>
-      <header className="post-lead">
-        <div>
-          <h1>
-            {moments.length
-              ? t(finished ? "moments.title" : "moments.titleLive", { n: moments.length })
-              : t(finished ? "board.noSwing" : "board.watching")}
-          </h1>
-          <p className="lede">
-            {moments.length
-              ? t(fan ? (side ? "ov.ledeFanTeam" : "ov.ledeFan") : "moments.lede")
-              : t(finished ? "board.noSwingLede" : "board.phaseScore", {
-                phase: t(phase === "halfTime" ? "board.halfTime" : "board.kickoff"),
-                home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}`,
-              })}
-          </p>
-        </div>
-        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
-      </header>
-
-      {/* The ♥ team's match leads for everyone who picked one. */}
-      <YourTeamSummary report={report.data} upTo={upTo} />
-      {/* A fan has no open turning point here: the spotlight links to its own page. */}
-      {fan && <PlayerSpotlight upTo={upTo} />}
-      {fan && (
-        <Section id="post-story" title={t("story.title")} note={t("story.note")}>
-          <MatchStory />
-        </Section>
-      )}
-
-      {!fan && <section className="turns" aria-labelledby="post-momentum-hd" id="post-momentum">
+  const blocks: Record<string, ReactNode> = {
+    // C12: the ♥ team's match, then (ORDER) the story for a fan and the numbers for an analyst.
+    yourTeam: <YourTeamSummary report={report.data} upTo={upTo} />,
+    spotlight: <PlayerSpotlight upTo={upTo} onPivot={fan ? undefined : pick} />,
+    story: (
+      <Section id="post-story" title={t("story.title")} note={t("story.note")}>
+        <MatchStory />
+      </Section>
+    ),
+    momentum: (
+      <section className="turns" aria-labelledby="post-momentum-hd" id="post-momentum">
         <header className="turns-hd">
           <h2 id="post-momentum-hd">{t("board.momentum")}</h2>
           <span className="kit-key" aria-hidden="true">
@@ -123,9 +109,9 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
             homeLabel={teams.home.short_name}
             awayLabel={teams.away.short_name}
             numbered={moments.map((p) => p.pivot_id)}
-            selected={shown?.pivot_id ?? null}
-            onPick={pick}
-            windowAt={shown ? pivotDetail(shown.pivot_id)?.window ?? null : null}
+            selected={fan ? null : shown?.pivot_id ?? null}
+            onPick={pickFor}
+            windowAt={!fan && shown ? pivotDetail(shown.pivot_id)?.window ?? null : null}
             keys={keys.map((k) => ({
               id: keyId(k), t: k.event.t, kind: k.kind, side: k.side,
               label: t("keys.open", { minute: k.event.clock_label.replace(/'$/, ""), what: keyWhat(k, t, playerName, (s) => teams[s].short_name) }),
@@ -139,41 +125,68 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
         {metrics.length > 0 && keys.length > 0 && <KeyLegend kinds={new Set(keys.map((k) => k.kind))} pivots={moments.length > 0} />}
         <div id="post-pivots" role="group" aria-label={t("post.pivots")}>
           {moments.length ? (
-            <MomentCards pivots={moments} selected={shown?.pivot_id ?? null} onPick={pick} />
+            <MomentCards pivots={moments} selected={fan ? null : shown?.pivot_id ?? null} onPick={pickFor} />
           ) : (
             <p className="muted">{t(finished ? "board.noSwingLede" : "pivots.empty")}</p>
           )}
         </div>
-      </section>}
-
-      {!fan && shown && (
-        <OpenMoment key={shown.pivot_id} pivot={shown} n={n} evidence={evidence} onEvidence={onEvidence}
-          onPrev={n > 1 ? () => onPick(moments[n - 2].pivot_id) : undefined}
-          onNext={n < moments.length ? () => onPick(moments[n].pivot_id) : undefined}>
-          <WhatIfInline key={shown.pivot_id} pivot={shown} />
-        </OpenMoment>
-      )}
-      {/* The ★ player's spotlight (C12) after the turning points for an analyst, whole minutes so a live clock refetches once a minute. */}
-      {!fan && <PlayerSpotlight upTo={upTo} onPivot={pick} />}
-
-      <Section id="post-keys" title={t("keys.title")} note={t("keys.note")}>
-        <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={keySelected} onPick={onKey} heading={false} />
-      </Section>
-
+      </section>
+    ),
+    pivots: shown && (
+      <OpenMoment key={shown.pivot_id} pivot={shown} n={n} evidence={evidence} onEvidence={onEvidence}
+        onPrev={n > 1 ? () => onPick(moments[n - 2].pivot_id) : undefined}
+        onNext={n < moments.length ? () => onPick(moments[n].pivot_id) : undefined}>
+        <WhatIfInline key={shown.pivot_id} pivot={shown} />
+      </OpenMoment>
+    ),
+    teamStats: (
       <Section id="post-core" title={t("ov.core")} note={t(fan ? "ov.coreNoteFan" : "ov.coreNote")}>
         <div className="card"><TeamStats state={report} only={CORE} /></div>
       </Section>
-
-      {!fan && (
-        <Section id="post-set-pieces" title={t("sp.title")}>
-          <SetPiecesAndShots key={match.match_id} folded={false} />
-        </Section>
-      )}
-
+    ),
+    keys: (
+      <Section id="post-keys" title={t("keys.title")} note={t("keys.note")}>
+        <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={keySelected} onPick={onKey} heading={false} />
+      </Section>
+    ),
+    setPieces: (
+      <Section id="post-set-pieces" title={t("sp.title")}>
+        <SetPiecesAndShots key={match.match_id} folded={false} />
+      </Section>
+    ),
+    trace: (
       <Section id="post-trace" title={t("post.trace")} className="post-trace">
         <p>{t("moments.traceNote")}</p>
         <Link to="/trace" className="btn">{t("top.trace", { n: pivots.length })}</Link>
       </Section>
+    ),
+  };
+  // The blocks in the order each audience reads them (data/persona.ts); a fan also gets the core five, after the key moments.
+  const order: string[] = [...persona.order.post];
+  if (fan && !order.includes("teamStats")) order.splice(order.indexOf("keys") + 1, 0, "teamStats");
+
+  return (
+    <div className={`post ${fan ? "fan" : "analyst"}`} data-audience={fan ? "fan" : "analyst"}>
+      <header className="post-lead">
+        <div>
+          <h1>
+            {moments.length
+              ? t(fan && finished ? "ov.titleFan" : finished ? "moments.title" : "moments.titleLive", { n: moments.length })
+              : t(finished ? "board.noSwing" : "board.watching")}
+          </h1>
+          <p className="lede">
+            {moments.length
+              ? t(fan ? (side ? "ov.ledeFanTeam" : "ov.ledeFan") : "moments.lede")
+              : t(finished ? "board.noSwingLede" : "board.phaseScore", {
+                phase: t(phase === "halfTime" ? "board.halfTime" : "board.kickoff"),
+                home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}`,
+              })}
+          </p>
+        </div>
+        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
+      </header>
+
+      {order.map((id) => <Fragment key={id}>{blocks[id]}</Fragment>)}
     </div>
   );
 }

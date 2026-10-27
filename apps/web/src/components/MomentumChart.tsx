@@ -1,6 +1,7 @@
 import { useId, type CSSProperties } from "react";
 import type { MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
+import { usePersona } from "../data/persona";
 import type { KeyKind } from "../data/keyMoments";
 import type { Side } from "../data/view";
 import { useT } from "../i18n";
@@ -39,6 +40,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
   const clip = useId().replace(/[^\w-]/g, "");
   const t = useT();
   const { periods, minute } = useClock();
+  const { lean } = usePersona();
   const ht = (periods.find((p) => p.period === 2)?.start_t ?? 45 * 60) / 60;
   const end = Math.max(ht + 45, ...metrics.map((m) => m.minute + 1), ...pivots.map((p) => p.minute + 1));
   const x = (m: number) => L + ((W - L - R) * m) / end;
@@ -106,12 +108,15 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
           const open = () => onPick(p.pivot_id);
           return (
             <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} style={{ "--at": p.minute / end } as CSSProperties} role="button" tabIndex={0}
-              aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) })}
+              aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) }) + (lean(p) ? `, ${t(lean(p) === "for" ? "you.for" : "you.against")}` : "")}
               onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
               <line x1={cx} x2={cx} y1={T + 2} y2={H - B} />
+              {/* C12: with a ♥ team, a ring in the colour of the side it went to, and whether that was your way. */}
+              {lean(p) && <circle className={`mk-lean ${lean(p)}`} cx={cx} cy={T - 2} r={18} style={{ stroke: `var(--pv-${p.direction})` }} />}
               <circle cx={cx} cy={T - 2} r={14} />
               <text x={cx} y={T + 3} textAnchor="middle">{n + 1}</text>
-              <text className="mk-min" x={cx + 18} y={T - 4}>{label}</text>
+              <text className="mk-min" x={cx + (lean(p) ? 22 : 18)} y={T - 4}>{label}</text>
+              {lean(p) && <text className={`mk-lean-txt ${lean(p)}`} x={cx + 22} y={T + 10} style={{ fill: `var(--pv-${p.direction})` }}>{t(lean(p) === "for" ? "you.forShort" : "you.againstShort")}</text>}
             </g>
           );
         }
