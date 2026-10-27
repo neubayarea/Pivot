@@ -668,7 +668,7 @@ export const zh: Messages = {
   "pre.kind.charity": "公益",
   "pre.kind.milestone": "里程碑",
   "pre.kind.new_contract": "续约",
-  "pre.factorsNote": "模拟器开球时实际计入的影响",
+  "pre.factorsNote": "可能影响球员的因素（仅作背景说明，比赛模拟时不计入）",
   "pre.target.composure": "冷静",
   "pre.target.motivation": "斗志",
   "pre.target.concentration": "专注",
@@ -798,6 +798,10 @@ export const zh: Messages = {
   "pre.captain": "队长",
   "pre.buildUp": "赛前看点",
   "pre.buildUpNote": "两队带着怎样的状态来，两位教练打算怎么踢。",
+  "pre.h2hWins": "{team} 胜",
+  "pre.h2hDraws": "平局",
+  "pre.stories": "赛前故事",
+  "pre.storiesNote": "开赛前的新闻、可能影响球员的因素，以及谁要面对老东家和老队友。",
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "依据（{n}）",

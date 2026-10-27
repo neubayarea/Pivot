@@ -11,7 +11,7 @@ import { toView } from "../data/live/provider";
 import { MatchContext, type MatchView } from "../data/match";
 import { PrefsProvider } from "../i18n";
 import { PreMatchTab } from "../pages/match/PreMatchTab";
-import PreMatch from "./PreMatch";
+import { PreMatchStories, PreMatchTop } from "./PreMatch";
 import TeamTactics from "./TeamTactics";
 
 const g = globalThis as { window?: { location: { search: string }; localStorage: Pick<Storage, "getItem" | "setItem" | "removeItem"> } };
@@ -33,6 +33,13 @@ const render = (view: MatchView, node: ReactNode) =>
       <MatchContext.Provider value={view}>{node}</MatchContext.Provider>
     </PrefsProvider>,
   );
+/** Every pre-match card: the tale of the tape and the storylines. */
+const PreMatch = () => (
+  <>
+    <PreMatchTop />
+    <PreMatchStories />
+  </>
+);
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 /** What a simulated match on the site sends before kick-off: the occasion, no season around it. */
@@ -53,8 +60,8 @@ describe("the pre-match cards", () => {
   it("show form, table, head-to-head, news and ties from a recorded match", () => {
     const out = text(render(viewOf(full), <PreMatch />));
     // Harbour City 2nd on 57, Rovers 5th on 47; last five L L W W W, newest last.
-    expect(out).toContain("2nd · 57 pts");
-    expect(out).toContain("5th · 47 pts");
+    expect(out).toContain("2nd 57 pts");
+    expect(out).toContain("5th 47 pts");
     expect(out).toContain("10 points apart");
     expect(out).toContain("L L W W W");
     expect(out).toContain("Last 5: 13 scored, 9 conceded");
@@ -66,7 +73,7 @@ describe("the pre-match cards", () => {
     expect(out).toContain("Title race");
     // News newest first, with whom it is about; a coach is named too.
     expect(out).toContain("Harbour City fans plan a hostile welcome");
-    expect(out).toContain(`${full.away.coach.name} · Under fire`);
+    expect(out).toContain(`${full.away.coach.name} Under fire`);
     // The ties: a04 back at his former club, and teammates now on opposite sides; not two current teammates.
     expect(out).toContain("away at former club Harbour City, left on bad terms");
     // h07, h09 and h14 with a04, h13 with a11; the ten pairs of current teammates are left out.
@@ -148,11 +155,20 @@ describe("the coach's plan", () => {
 });
 
 describe("the pre-match tab", () => {
-  it("puts the build-up and the coach's plan in its slot, after the line-ups", () => {
+  it("opens on the table, form and head-to-head, then the coach's plan, the line-ups and the storylines (Ax63)", () => {
     const html = render(viewOf(full), <PreMatchTab />);
-    const slot = html.indexOf('data-slot="prematch"');
-    expect(slot).toBeGreaterThan(html.indexOf("Line-ups"));
-    expect(html.indexOf("Form &amp; table")).toBeGreaterThan(slot);
-    expect(html.indexOf("The coach&#x27;s plan")).toBeGreaterThan(slot);
+    const at = (s: string) => html.indexOf(s);
+    expect(at('data-slot="prematch"')).toBeGreaterThan(-1);
+    expect(at("Form &amp; table")).toBeGreaterThan(at('data-slot="prematch"'));
+    expect(at("Head-to-head")).toBeGreaterThan(at("Form &amp; table"));
+    expect(at("The coach&#x27;s plan")).toBeGreaterThan(at("Head-to-head"));
+    expect(at("Line-ups")).toBeGreaterThan(at("The coach&#x27;s plan"));
+    expect(at("Storylines")).toBeGreaterThan(at("Line-ups"));
+    expect(at("News &amp; storylines")).toBeGreaterThan(at("Storylines"));
+  });
+
+  it("chains nothing with a middle dot and leaves the storylines out when there are none (Ax63)", () => {
+    expect(text(render(viewOf(full), <PreMatchTab />))).not.toContain(" · ");
+    expect(render(viewOf(basic), <PreMatchTab />)).not.toContain("Storylines");
   });
 });
