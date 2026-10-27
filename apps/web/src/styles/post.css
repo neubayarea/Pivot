@@ -226,3 +226,8 @@
 .post .mom-mk .mk-lean-txt { font-family: var(--pv-body); font-weight: 700; font-size: 11px; }
 .post .pr .lean-tag { font-size: 12px; padding: 1px 8px; white-space: nowrap; justify-self: end; }
 .post .pr .lean-tag.against { background: transparent; color: var(--pv-ink); box-shadow: inset 0 0 0 1.5px var(--tc); }
+
+/* C18 (#366): the real numbers under the coach's plan, and the average positions. */
+.plan-real { display: block; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin-top: 2px; cursor: help; }
+/* The pitch is as tall as the screen allows and sits in the middle of the card. */
+.lu-real .viz-pitch svg { max-height: calc(100vh - 320px); }

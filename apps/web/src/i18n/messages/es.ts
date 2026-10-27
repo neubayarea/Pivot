@@ -1262,4 +1262,13 @@ export const es: Messages = {
   "pre.effectUp": "Un poco más: {what}",
   "pre.effectDown": "Un poco menos: {what}",
   "pre.latest": "Último",
+  // C18 (#366): the analyst's Line-ups.
+  "plan.real.press": "PPDA {v} en el partido",
+  "plan.real.press.def": "Lo que mostró el partido: pases permitidos por acción defensiva. Más bajo, más presión",
+  "plan.real.line_height": "Defensa a {v} m de su portería",
+  "plan.real.line_height.def": "Lo que mostró el partido: distancia media de la defensa a su portería",
+  "plan.real.width": "{v} m de ancho",
+  "plan.real.width.def": "Lo que mostró el partido: anchura media del equipo",
+  "lu.realTitle": "Sobre el papel y donde jugaron",
+  "lu.realNote": "Sobre el papel {home} jugó {hf} y {away} {af}. Debajo, la posición media de cada jugador en el partido.",
 };

@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import FollowTeam from "../../components/FollowTeam";
 import Lineups from "../../components/Lineups";
 import TeamTactics from "../../components/TeamTactics";
+import { AveragePositions, VizBox, useAveragePositions } from "../../components/viz";
 import { useMatch, type Side } from "../../data/match";
 import { lines, tacticsDiff, type ApiLine, type Diff } from "../../data/matchup";
 import { other, usePersona } from "../../data/persona";
@@ -74,8 +75,8 @@ function Matchup({ side }: { side: Side }) {
 export function LineupsTab() {
   const t = useT();
   // The coach's plan below names each shape; the lists then leave it out.
-  const { preMatch } = useMatch();
-  const { side } = usePersona();
+  const { preMatch, match } = useMatch();
+  const { side, fan } = usePersona();
   return (
     <div className="post lineups-tab">
       <section className="post-sec" aria-labelledby="lu-side-hd" id="lu-side">
@@ -97,7 +98,33 @@ export function LineupsTab() {
         </header>
         <Lineups up={side ?? "home"} follow facts formation={!preMatch} />
       </section>
+      {!fan && match.status !== "scheduled" && <PaperVsActual />}
       <TeamTactics />
     </div>
+  );
+}
+
+/**
+ * C18 (#366): the analyst's "on paper vs where they played": each side's formation from the team
+ * sheet beside the average positions the pictures API gives (the same picture as the Stats tab's).
+ */
+function PaperVsActual() {
+  const t = useT();
+  const { match, teams, sheets, squads } = useMatch();
+  const pos = useAveragePositions(match.match_id, { stepS: 60 });
+  const names = { home: teams.home.name, away: teams.away.name };
+  return (
+    <section className="post-sec" aria-labelledby="lu-real-hd" id="lu-real">
+      <header className="sec-hd">
+        <h2 id="lu-real-hd">{t("lu.realTitle")}</h2>
+        <p className="muted">{t("lu.realNote", {
+          home: teams.home.short_name, away: teams.away.short_name,
+          hf: sheets?.home.formation ?? "–", af: sheets?.away.formation ?? "–",
+        })}</p>
+      </header>
+      <div className="card lu-real">
+        <VizBox state={pos}>{(d) => <AveragePositions data={d} squads={squads} teamNames={names} />}</VizBox>
+      </div>
+    </section>
   );
 }

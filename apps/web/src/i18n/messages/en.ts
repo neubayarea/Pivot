@@ -1261,4 +1261,13 @@ export const en = {
   "pre.effectUp": "Slightly more: {what}",
   "pre.effectDown": "Slightly less: {what}",
   "pre.latest": "Latest",
+  // C18 (#366): the analyst's Line-ups.
+  "plan.real.press": "PPDA {v} in the match",
+  "plan.real.press.def": "What the match showed: passes allowed per defensive action. Lower means a harder press",
+  "plan.real.line_height": "Back line {v} m from goal",
+  "plan.real.line_height.def": "What the match showed: the back line's average distance from its own goal",
+  "plan.real.width": "{v} m wide",
+  "plan.real.width.def": "What the match showed: the team's average width",
+  "lu.realTitle": "On paper and where they played",
+  "lu.realNote": "On paper {home} played {hf} and {away} {af}. Below, each player's average position in the match.",
 };
