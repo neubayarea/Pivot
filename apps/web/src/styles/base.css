@@ -500,8 +500,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 
 /* ---------- Match header (Ax59, C11): the two kits meet at the score ---------- */
 /* The band keeps the clubs' real kit colours in both themes; text on it is always white. */
-.match-head { position: sticky; top: 0; z-index: 15; }
-.mh { color: #FFFFFF; background: linear-gradient(90deg, var(--pv-home-kit, #1E6B45) 0 50%, var(--pv-away-kit, #4A1D57) 50% 100%); padding: 16px 32px 0; display: grid; gap: 10px; }
+.match-head { position: sticky; top: 0; z-index: 15; margin-bottom: var(--mh-reserve, 0px); }
+.mh { position: relative; color: #FFFFFF; background: linear-gradient(90deg, var(--pv-home-kit, #1E6B45) 0 50%, var(--pv-away-kit, #4A1D57) 50% 100%); padding: 16px 32px 0; display: grid; gap: 10px; }
 .mh-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 4px 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
 .mh-team { display: grid; gap: 4px; min-width: 0; padding-top: 14px; }
 .mh-team.home { justify-items: end; text-align: right; }
@@ -544,6 +544,46 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   .mh-goals, .mh-lbl, .mh .pick-label { display: none; }
   .mh-sc { font-size: 32px; padding: 2px 10px 4px; }
   .mh-ctl { padding-bottom: 8px; gap: 6px; }
+}
+
+/* Ax66: scrolled past, the band folds to a 48px bar on the panel colour; the kits stay as chips.
+   .match-head keeps a bottom margin for the folded rows (--mh-reserve, data/headerFold.ts), so the page under it never moves. */
+.mh.slim { display: block; height: 48px; padding: 0 32px; color: var(--pv-ink); background: var(--pv-sheet); box-shadow: inset 0 -1px var(--pv-hair); }
+.mh-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; height: 100%; max-width: 1280px; margin: 0 auto; padding-inline: 112px; }
+.mh-bar-team { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 700; font-size: var(--pv-fs-md); }
+.mh-bar-team.home { justify-self: end; flex-direction: row-reverse; }
+.mh-bar-team .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mh-bar-team .tm-short { display: none; }
+.mh-bar-team.fav .tm-full, .mh-bar-team.fav .tm-short { text-decoration: underline 2px var(--pv-gold); text-underline-offset: 4px; }
+.mh-bar-team .mh-fav { font-size: .8em; }
+.mh-chip { flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--tc); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
+.mh-bar-mid { display: inline-flex; align-items: center; gap: 10px; }
+.mh-bar-mid .stamp:not(.live) { background: var(--pv-sunk); color: var(--pv-ink-2); border-color: transparent; }
+.mh-bar-sc { display: inline-flex; align-items: center; font-family: var(--pv-display); font-weight: 900; font-size: var(--pv-fs-xl); line-height: 1; background: #14161A; color: #FFFFFF; border-radius: var(--pv-r-ctl); padding: 3px 10px 4px; }
+.mh-bar-sc > span:not(.mh-dash) { min-width: .7em; text-align: center; }
+.mh-bar-sc .mh-dash { padding: 0 4px; }
+.mh-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border-radius: var(--pv-r-ctl); font: inherit; font-weight: 600; font-size: var(--pv-fs-sm); cursor: pointer; }
+.mh-toggle.open { position: absolute; top: 8px; right: 32px; padding: 0 10px; border: 1px solid var(--pv-hair); background: var(--pv-sheet); color: var(--pv-ink); }
+.mh-toggle.open:hover { background: var(--pv-sunk); }
+.mh-toggle.shut { position: absolute; top: 10px; right: 12px; z-index: 1; width: 32px; padding: 0; border: 0; background: rgba(0, 0, 0, .28); color: #FFFFFF; }
+.mh-toggle.shut:hover { background: rgba(0, 0, 0, .42); }
+.mh-toggle.shut .mh-chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .mh.slim .mh-bar { animation: mh-fold .16s ease-out; }
+  .mh:not(.slim) > .mh-score { animation: mh-unfold .16s ease-out; }
+}
+@keyframes mh-fold { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes mh-unfold { from { opacity: .4; } }
+@media (max-width: 720px) {
+  .mh.slim { padding: 0 12px; }
+  .mh-bar { gap: 8px; padding-inline: 40px; }
+  .mh-bar-team { font-size: var(--pv-fs-sm); gap: 6px; }
+  .mh-bar-team .tm-full, .mh-toggle-txt, .mh-bar-mid .stamp { display: none; }
+  .mh-bar-team .tm-short { display: inline; }
+  .mh-bar-mid { gap: 6px; }
+  .mh-bar-sc { font-size: var(--pv-fs-lg); padding: 3px 8px 4px; }
+  .mh-toggle.open { right: 12px; width: 32px; padding: 0; }
+  .mh-toggle.shut { top: 6px; right: 6px; width: 28px; min-height: 28px; }
 }
 
 /* ---------- Match tabs (Ax59, C11): a white rail, left-aligned with the page ---------- */
