@@ -1262,4 +1262,18 @@ export const es: Messages = {
   "pre.effectUp": "Un poco más: {what}",
   "pre.effectDown": "Un poco menos: {what}",
   "pre.latest": "Último",
+  // C18 (#366): the analyst's Overview.
+  "xg.title": "Cómo se sumaron las ocasiones",
+  "xg.note": "Los goles esperados de cada equipo, tiro a tiro. Los anillos son goles; las líneas numeradas, los giros que encontró la IA.",
+  "xg.label": "Goles esperados en el partido: {home} {hxg}, {away} {axg}",
+  "xg.red": "Roja, {minute}",
+  "xg.keyGoal": "Gol",
+  "xg.keyRed": "Roja",
+  "xg.keyTurn": "Giro",
+  "why.evKind": "Prueba · {kind}",
+  "why.checkTrace": "Compruébalo en el registro de la IA",
+  "event.type.pass": "Pase",
+  "event.type.shot": "Tiro",
+  "event.type.card": "Tarjeta",
+  "event.type.substitution": "Cambio",
 };

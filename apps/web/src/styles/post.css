@@ -226,3 +226,34 @@
 .post .mom-mk .mk-lean-txt { font-family: var(--pv-body); font-weight: 700; font-size: 11px; }
 .post .pr .lean-tag { font-size: 12px; padding: 1px 8px; white-space: nowrap; justify-self: end; }
 .post .pr .lean-tag.against { background: transparent; color: var(--pv-ink); box-shadow: inset 0 0 0 1.5px var(--tc); }
+
+/* ---------- C18 (#366): the analyst's key numbers and xG race ---------- */
+.post .post-xg { display: grid; gap: var(--pv-s4); }
+.post .key-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--pv-s3); margin: 0; }
+.post .kmet { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 14px 16px; display: grid; gap: 6px; cursor: help; }
+.post .kmet dt { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; justify-self: start; }
+.post .kmet dd { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.post .kmet dd .num { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); line-height: 1; color: var(--pv-ink-2); }
+.post .kmet dd .num.a::before { content: "–"; margin-right: 14px; color: var(--pv-ink-2); font-weight: 400; }
+.post .kmet dd .num.win { color: var(--tc); }
+.post .xg-race { margin: 0; background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s4) var(--pv-s5); display: grid; gap: var(--pv-s2); }
+.post .xg-race svg { display: block; width: 100%; height: auto; }
+.post .xg-grid { stroke: var(--pv-hair); stroke-width: 1; }
+.post .xg-axis { font-size: 11px; fill: var(--pv-ink-2); font-family: var(--pv-body); }
+.post .xg-line { fill: none; stroke: currentColor; stroke-width: 3; stroke-linejoin: round; }
+.post .xg-goal { fill: var(--pv-sheet); stroke: currentColor; stroke-width: 3; }
+.post .xg-end { fill: currentColor; font-family: var(--pv-display); font-weight: 800; font-size: 16px; }
+.post .xg-red { fill: #C8102E; }
+.post .xg-turn line { stroke: var(--pv-gold-ink, var(--pv-ink)); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .7; }
+.post .xg-turn circle { fill: var(--pv-gold); stroke: var(--pv-ink); stroke-width: 1.5; }
+.post .xg-turn text { font-family: var(--pv-display); font-weight: 800; font-size: 12px; fill: var(--pv-ink); }
+.post .xg-key { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--pv-fs-sm); }
+.post .xg-key span { display: inline-flex; align-items: center; gap: 6px; }
+.post .xg-key span::before { content: ""; width: 14px; height: 3px; background: currentColor; }
+.post .xg-key .home { color: var(--pv-home); font-weight: 700; }
+.post .xg-key .away { color: var(--pv-away); font-weight: 700; }
+.post .xg-key .k-goal::before { width: 9px; height: 9px; border-radius: 50%; border: 2.5px solid var(--pv-ink); background: transparent; }
+.post .xg-key .k-red::before { width: 6px; height: 10px; background: #C8102E; border-radius: 1px; }
+.post .xg-key .k-turn::before { width: 12px; height: 12px; border-radius: 50%; background: var(--pv-gold); border: 1.5px solid var(--pv-ink); }
+.ev-kind { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin-right: 4px; }
+.ev-trace { display: inline-block; margin-top: 4px; font-size: var(--pv-fs-sm); font-weight: 600; }

@@ -1260,4 +1260,18 @@ export const zh: Messages = {
   "pre.effectUp": "略有提升：{what}",
   "pre.effectDown": "略有下降：{what}",
   "pre.latest": "最近",
+  // C18 (#366): the analyst's Overview.
+  "xg.title": "机会是怎么累积起来的",
+  "xg.note": "两队的预期进球（xG），每次射门累加一次。圆圈是进球，带编号的线是 AI 找到的转折点。",
+  "xg.label": "全场预期进球：{home} {hxg}，{away} {axg}",
+  "xg.red": "红牌，{minute}",
+  "xg.keyGoal": "进球",
+  "xg.keyRed": "红牌",
+  "xg.keyTurn": "转折点",
+  "why.evKind": "证据 · {kind}",
+  "why.checkTrace": "在 AI 工作记录里核对",
+  "event.type.pass": "传球",
+  "event.type.shot": "射门",
+  "event.type.card": "红黄牌",
+  "event.type.substitution": "换人",
 };

@@ -1261,4 +1261,18 @@ export const en = {
   "pre.effectUp": "Slightly more: {what}",
   "pre.effectDown": "Slightly less: {what}",
   "pre.latest": "Latest",
+  // C18 (#366): the analyst's Overview.
+  "xg.title": "How the chances added up",
+  "xg.note": "Each team's expected goals, shot by shot. Rings are goals; numbered lines are the AI's turning points.",
+  "xg.label": "Expected goals over the match: {home} {hxg}, {away} {axg}",
+  "xg.red": "Red card, {minute}",
+  "xg.keyGoal": "Goal",
+  "xg.keyRed": "Red card",
+  "xg.keyTurn": "Turning point",
+  "why.evKind": "Evidence · {kind}",
+  "why.checkTrace": "Check this in the AI's work log",
+  "event.type.pass": "Pass",
+  "event.type.shot": "Shot",
+  "event.type.card": "Card",
+  "event.type.substitution": "Substitution",
 };
