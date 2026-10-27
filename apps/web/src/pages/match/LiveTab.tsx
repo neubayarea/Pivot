@@ -10,11 +10,14 @@ import EventFeed from "../../components/EventFeed";
 import MatchPictures from "../../components/MatchPictures";
 import MatchStats from "../../components/MatchStats";
 import PitchBoard from "../../components/PitchBoard";
+import PlayerSpotlight from "../../components/PlayerSpotlight";
 import { pivotHeadline } from "../../components/PivotList";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
+import YourTeamSummary from "../../components/YourTeamSummary";
 import { useClock } from "../../data/clock";
 import { useMatch } from "../../data/match";
+import { usePersona } from "../../data/persona";
 import { tabSearch } from "../../data/tab";
 import { useT } from "../../i18n";
 
@@ -70,6 +73,14 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
   // C11: the team stats and the pictures follow the replay or the live clock; a stored match shows all of it.
   const upTo = over ? null : match.clock;
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
+  // C12: the ♥ team's summary and the ★ player's spotlight lead for a fan, follow the numbers for an analyst.
+  const { fan } = usePersona();
+  const mine = !scheduled && (
+    <>
+      <YourTeamSummary report={report.data} upTo={upTo} />
+      <PlayerSpotlight upTo={upTo} />
+    </>
+  );
   return (
     <>
       {(scheduled || over) && (
@@ -78,6 +89,7 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           <StartDemoButton matchId={match.match_id}>{t(scheduled ? "demo.startMatch" : "demo.startShort")}</StartDemoButton>
         </div>
       )}
+      {fan && mine}
       <div className="more-bd live-bd">
         {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them. */}
         {!scheduled && <PitchBoard key={match.match_id} />}
@@ -88,6 +100,7 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           <EventFeed highlight={evidence} />
         </Card>
       </div>
+      {!fan && mine}
       {!scheduled && (
         <>
           <section className="live-sec" aria-labelledby="live-pics-hd">

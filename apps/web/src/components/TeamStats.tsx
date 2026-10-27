@@ -1,16 +1,17 @@
 // The team stats table (C11, data from Bx11 #279): MET-001 to MET-023 for both teams, grouped
 // the Premier League way (attack, possession, defence, shape, physical), for the whole match or
 // one half. The same numbers the AI cites and the Verifier checks, so the page and the
-// explanations agree. Fans get the ten that need no explaining; analysts get all of them.
+// explanations agree. Fans get the five that need no explaining; analysts get all of them.
 import { useState } from "react";
 import type { StatMetricInfo, TeamStatsReport, TeamStatsScope } from "@pivot/contracts";
 import { useMatch } from "../data/match";
+import { FAN5 } from "../data/persona";
 import { useVizData, type VizState } from "../data/viz";
 import { isMessageKey, usePrefs, type T } from "../i18n";
 import Segmented from "./Segmented";
 
-const FAN = new Set(["shots", "shots_on_target", "xg", "possession_pct", "passes", "pass_accuracy_pct", "box_entries",
-  "tackles_won", "interceptions", "distance_covered_km"]);
+// C12: fans get the five plain ones (data/persona.ts), analysts all 23.
+const FAN = new Set<string>(FAN5);
 
 /** GET /api/matches/{id}/stats, up to the replay's or live match's second (whole minutes) when given. */
 export function useTeamStats(matchId: string | null, upTo: number | null) {

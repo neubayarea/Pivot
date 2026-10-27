@@ -33,7 +33,8 @@ export default function MatchPictures({ upTo }: { upTo: number | null }) {
           { value: "shots", label: t("viz.shots.title") },
           { value: "heat", label: t("viz.heat.title") },
           { value: "net", label: t("viz.net.title") },
-          { value: "pos", label: t("viz.pos.title") },
+          // C12: average positions are an analyst's picture.
+          ...(prefs.audience === "fan" ? [] : [{ value: "pos" as const, label: t("viz.pos.title") }]),
         ]} />
         {(pic === "heat" || pic === "net") && (
           <Segmented label={t("pics.side")} value={side} onChange={setSide} options={[
