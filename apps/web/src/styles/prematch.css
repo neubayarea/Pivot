@@ -81,5 +81,3 @@
   .plan-team, .pre-name { font-size: var(--pv-fs-md); overflow-wrap: normal; }
 }
 
-/* Until the pre-match tab (Ax59) gives the cards a slot of their own, they open "More details". */
-.more-pre { display: grid; gap: 14px; padding: 0 16px 16px; min-width: 0; }

@@ -19,8 +19,6 @@ export const es: Messages = {
   "top.team": "Equipo: {team}",
   "top.player": "Jugador: {player}",
   "top.trace": "Rastro {n}",
-  "top.settings": "Ajustes",
-  "top.settingsSet": "Hay un equipo o jugador elegido",
   "top.team.label": "Tu equipo",
   "top.team.short": "Equipo",
   "top.team.none": "Sin equipo",
@@ -99,7 +97,7 @@ export const es: Messages = {
   "board.beforePivot": "los 5 minutos antes del giro del {minute}′",
   "board.beforeNow": "{from}′–{to}′",
   "board.roster": "Alineaciones",
-  "board.rosterHint": "Toca un nombre para encontrar al jugador en el campo.",
+  "board.rosterHint": "Toca un nombre o un punto del campo para ver los datos del jugador.",
   "board.status.cameOn": "entró",
   "board.status.off": "sustituido",
   "board.status.sentOff": "expulsado",
@@ -122,8 +120,6 @@ export const es: Messages = {
   "moments.wiPick": "Elige un cambio arriba. No se ejecuta nada hasta que pulses Ejecutar simulación.",
   "moments.wiHow": "repite desde el {minute}′, 200 veces cada versión; una simulación nueva tarda unos minutos, una ya hecha responde al instante",
   "moments.lab": "Más opciones en el laboratorio",
-  "moments.more": "Más detalles",
-  "moments.moreNote": "Repetición en el campo · todos los eventos · estadísticas · registro de la IA",
   "moments.traceNote": "Qué modelo juzgó, escribió y comprobó cada momento, y cuánto tardó.",
   "board.halfTime": "Descanso",
   "board.phaseScore": "{phase} · {home} {score} {away}",
@@ -722,4 +718,44 @@ export const es: Messages = {
   "plan.ins.sit_deeper": "juega más atrás",
   "plan.ins.man_mark": "marca al hombre",
   "plan.ins.markWho": "marca a {who}",
+  // Ax59 · match header
+  "header.label": "Marcador",
+  "header.controls": "Cómo lo ves",
+  "header.scorers": "Goles de {team}",
+  "header.pen": "(p.)",
+
+  // Ax59 · match tabs
+  "tabs.label": "Secciones del partido",
+  "tabs.pre": "Previa",
+  "tabs.live": "En directo",
+  "tabs.post": "Después del partido",
+
+  // Ax59 · tab contents
+  "header.og": "(p.p.)",
+  "live.alert": "Punto de giro · {minute}′",
+  "live.alertOpen": "Por qué cambió",
+  "live.alertClose": "Cerrar",
+  "live.replayHint": "El partido terminó. Repítelo para ver moverse a los jugadores y aparecer los puntos de giro en su momento.",
+  "post.pivots": "Puntos de giro",
+  "post.pivotsNote": "Una línea cada uno. Elige uno para ver la explicación completa, comprobada con los datos del partido.",
+  "post.whatIfFor": "Qué punto de giro cambiar",
+  "post.whatIfAt": "Punto de giro {n} · {minute}′",
+  "post.whatIfNone": "El «¿y si…?» parte de un punto de giro y este partido aún no tiene.",
+  "post.trace": "Registro del trabajo de la IA",
+  "pre.lineups": "Alineaciones",
+  "pre.lineupsNote": "Los onces iniciales en su sistema, tal como los dieron los entrenadores.",
+  "pre.pitchLabel": "Sistemas iniciales: {home}, {away}",
+  "pre.starters": "Once inicial",
+  "pre.squad": "Plantilla",
+  "pre.bench": "Banquillo",
+  "pre.captain": "Capitán",
+  "pre.buildUp": "La previa",
+  "pre.buildUpNote": "Cómo llegan los dos equipos y cómo plantea el partido cada entrenador.",
+
+  // Ax59 · fan mode hides the evidence numbers
+  "why.sources": "Fuentes ({n})",
+
+  // Ax59 · a player in the line-ups card
+  "board.rosterBack": "Volver",
+  "board.rosterNoStats": "Aún no hay datos de este jugador en este partido.",
 };

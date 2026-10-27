@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import type { Claim, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { involves, useMatch } from "../data/match";
@@ -78,6 +78,10 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   const focus = prefs.focus_player_id;
   const name = nameMatcher(playerName(focus));
   const narrative = pivot?.narrative;
+  // Fans get the sentences without the evidence numbers (#904); a tap on a sentence's sources
+  // shows them. Analysts always see them (Ax59, #276).
+  const fan = prefs.audience === "fan";
+  const [opened, setOpened] = useState<ReadonlySet<number>>(new Set());
   if (!pivot || !narrative) {
     return (
       <Card title={t("why.title")} className="why">
@@ -105,7 +109,15 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
       {narrative.sentences.map((s, i) => (
         <p key={i} lang={fellBack ? served : undefined}>
           <Highlighted text={s.text} claims={s.claims} name={name} />
-          {s.evidence_ids.map((id) => {
+          {fan && s.evidence_ids.length > 0 && !opened.has(i) ? (
+            <>
+              {" "}
+              <button type="button" className="ev-more" aria-expanded={false}
+                onClick={() => setOpened(new Set(opened).add(i))}>
+                {t("why.sources", { n: s.evidence_ids.length })}
+              </button>
+            </>
+          ) : s.evidence_ids.map((id) => {
             const e = eventById(id);
             // ★ marks the evidence the followed player took part in.
             const star = !!e && involves(e, focus);

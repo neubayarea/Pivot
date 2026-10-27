@@ -10,6 +10,7 @@ import recorded from "../../../../eval/frozen/m-seed-29-before-ax44.json";
 import { toView } from "../data/live/provider";
 import { MatchContext, type MatchView } from "../data/match";
 import { PrefsProvider } from "../i18n";
+import { PreMatchTab } from "../pages/match/PreMatchTab";
 import PreMatch from "./PreMatch";
 import TeamTactics from "./TeamTactics";
 
@@ -143,5 +144,15 @@ describe("the coach's plan", () => {
   it("names the coach's usual shape when he starts in another", () => {
     const view = viewOf({ ...full, home: { ...full.home, coach: { ...full.home.coach, preferred_formation: "3-5-2" } } });
     expect(text(render(view, <TeamTactics />))).toContain("Usually 3-5-2");
+  });
+});
+
+describe("the pre-match tab", () => {
+  it("puts the build-up and the coach's plan in its slot, after the line-ups", () => {
+    const html = render(viewOf(full), <PreMatchTab />);
+    const slot = html.indexOf('data-slot="prematch"');
+    expect(slot).toBeGreaterThan(html.indexOf("Line-ups"));
+    expect(html.indexOf("Form &amp; table")).toBeGreaterThan(slot);
+    expect(html.indexOf("The coach&#x27;s plan")).toBeGreaterThan(slot);
   });
 });

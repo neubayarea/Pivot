@@ -35,7 +35,9 @@ from .realtime import Envelope
 from .scenarios import (
     ArmStats, OutcomeDist, PlantSpec, Scenario, ScenarioSpec, ScoreShare, SimResult, Spread, TeamRunStats,
 )
-from .stats import STAT_UNITS, Claim, StatMetric, StatRef
+from .stats import (
+    STAT_UNITS, Claim, StatGroup, StatMetric, StatMetricInfo, StatRef, StatScope, TeamStatsReport, TeamStatsScope,
+)
 from .traces import AgentTrace, Verdict, VerifierIssue
 from .tracking import FRAME_RATE_HZ, BallPosition, PlayerPosition, TrackingFrame
 
@@ -49,7 +51,7 @@ CONTRACT_MODELS = (
     TeamForm, HeadToHead, PastMeeting,
     Referee, FoulDetail, VarReview, InjuryInfo,
     MatchEvent, TrackingFrame, PlayerPosition, BallPosition, MinuteMetric,
-    StatRef, Claim,
+    StatRef, Claim, StatMetricInfo, TeamStatsScope, TeamStatsReport,
     ViewerPrefs, ExplanationSentence, Narrative,
     PivotCandidate, Pivot,
     ScenarioSpec, PlantSpec, OutcomeDist, Spread, TeamRunStats, ScoreShare, ArmStats, SimResult, Scenario,
@@ -76,7 +78,8 @@ __all__ = [
     "Personality", "Pivot", "PivotCandidate", "PlantSpec", "PlayPattern", "Player",
     "PlayerAttributes", "PlayerInstruction", "PlayerPosition", "Point", "PowerAttributes",
     "PreMatchCondition", "Recap", "Relationship", "Role", "Scenario", "ScenarioSpec", "Score",
-    "ScoreShare", "ShotOutcome", "Side", "SimResult", "Spread", "SkillAttributes", "StatMetric", "StatRef",
+    "ScoreShare", "ShotOutcome", "Side", "SimResult", "Spread", "SkillAttributes", "StatGroup", "StatMetric", "StatMetricInfo", "StatRef", "StatScope",
+    "TeamStatsReport", "TeamStatsScope",
     "Substitution", "Team", "TeamRunStats", "TeamSheet", "TeamTactics", "Third", "TrackingFrame", "Trait",
     "Verdict", "VerifierIssue", "ViewerPrefs",
 ]

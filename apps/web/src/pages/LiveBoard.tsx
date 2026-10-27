@@ -1,57 +1,37 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import Card from "../components/Card";
-import EventFeed from "../components/EventFeed";
-import KeyMoments, { KeyLegend, keyId, keyWhat } from "../components/KeyMoments";
-import Kicker from "../components/Kicker";
-import MatchStats from "../components/MatchStats";
-import MomentumChart from "../components/MomentumChart";
-import { MomentCards, OpenMoment } from "../components/Moments";
-import PitchBoard from "../components/PitchBoard";
-import PlayerCard from "../components/PlayerCard";
-import PreMatch from "../components/PreMatch";
-import SetPiecesAndShots from "../components/SetPieces";
-import StartDemoButton from "../components/StartDemoButton";
-import TeamTactics from "../components/TeamTactics";
-import { useClock } from "../data/clock";
-import { keyMoments, matchPhase } from "../data/keyMoments";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import MatchTabs from "../components/MatchTabs";
 import { useMatch } from "../data/match";
-import { useT } from "../i18n";
+import { useTab } from "../data/tab";
+import { LiveTab } from "./match/LiveTab";
+import { PostMatchTab } from "./match/PostMatchTab";
+import { PreMatchTab } from "./match/PreMatchTab";
 
-// S1 · Match board (Ax32). One line saying what the page is for, the momentum line with the
-// numbered moments, one card per moment, the picked one opened, everything else folded below:
-// set pieces and shot replays (Ax37), then the pitch, events and stats.
-// Layout follows docs/design/redesign-mockup.html. Ax38: the key moments (goals, red cards, ...)
-// sit under the pivots, and lead the page when a finished match never turned.
+// S1 · Match board (Ax32), split Premier League style into before / during / after the match
+// (Ax59, #276) under the sticky match header. Each tab is its own link (`?tab=pre|live|post`), the
+// live one by default, and the open pivot is in the link too (`&pivot=pv-…`) so a pivot alert on
+// the live tab can open its explanation on the post-match tab.
 export default function LiveBoard() {
-  const { match, teams, metrics, pivots, playback, events, playerName, pivotDetail } = useMatch();
-  const t = useT();
-  const { at } = useClock();
+  const { match, pivots } = useMatch();
+  const tab = useTab();
+  const [params, setParams] = useSearchParams();
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   // Pivots still being checked get a mark on the line but no card yet; the checker's rejects get neither.
   const moments = pivots.filter((p) => p.status === "confirmed" || p.status === "degraded").sort((a, b) => a.minute - b.minute);
-  const [picked, setPicked] = useState<string | null>(null);
-  const open = moments.find((p) => p.pivot_id === picked) ?? moments[0] ?? null;
-  const n = open ? moments.indexOf(open) + 1 : 0;
-  const scheduled = match.status === "scheduled";
-  // On the live feed a finished match leaves nothing in progress; the fixture has its own Restart.
-  const over = match.status === "finished" && !playback;
-  const finished = match.status === "finished";
-  const phase = matchPhase(match.status, events);
-  const score = { home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}` };
-  const keys = useMemo(() => keyMoments(events, finished), [events, finished]);
+  const open = moments.find((p) => p.pivot_id === params.get("pivot")) ?? null;
   const [key, setKey] = useState<string | null>(null);
-  // Ax42: a key moment plays as a clip under it in the list; the main replay stays put.
-  const pickKey = (id: string | null) => setKey(id);
 
   // Another match or another moment: the evidence picked for the last one no longer applies.
-  useEffect(() => {
-    setPicked(null);
-    setKey(null);
-  }, [match.match_id]);
+  useEffect(() => setKey(null), [match.match_id]);
   useEffect(() => setEvidence(new Set()), [open?.pivot_id]);
 
-  const pick = (id: string) => setPicked(id);
+  // Picking the open one again folds it away.
+  const pick = (id: string) =>
+    setParams((q) => {
+      if (id === open?.pivot_id) q.delete("pivot");
+      else q.set("pivot", id);
+      return q;
+    }, { replace: true, preventScrollReset: true });
   const toggle = (id: string) =>
     setEvidence((s) => {
       const next = new Set(s);
@@ -61,104 +41,14 @@ export default function LiveBoard() {
 
   return (
     <>
-      <div className="lead">
-        {scheduled ? (
-          <>
-            <Kicker>{t("board.kickoffPending")}</Kicker>
-            <h1>{t("board.versus", { home: teams.home.name, away: teams.away.name })}</h1>
-          </>
-        ) : moments.length ? (
-          <>
-            <Kicker>{t(match.status === "finished" ? "moments.kickerDone" : "moments.kickerLive", { home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}` })}</Kicker>
-            <h1>{t(match.status === "finished" ? "moments.title" : "moments.titleLive", { n: moments.length })}</h1>
-            <p className="lede">{t("moments.lede")}</p>
-          </>
-        ) : finished ? (
-          <>
-            <Kicker>{t("board.phaseScore", { phase: t("status.finished"), ...score })}</Kicker>
-            <h1>{t("board.noSwing")}</h1>
-            <p className="lede">{t("board.noSwingLede")}</p>
-          </>
-        ) : (
-          <>
-            <Kicker>{t("board.phaseScore", { phase: t(phase === "halfTime" ? "board.halfTime" : "board.kickoff"), ...score })}</Kicker>
-            <h1>{t("board.watching")}</h1>
-          </>
+      <MatchTabs tab={tab} />
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="board">
+        {tab === "pre" && <PreMatchTab />}
+        {tab === "live" && <LiveTab moments={moments} evidence={evidence} />}
+        {tab === "post" && (
+          <PostMatchTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
+            keySelected={key} onKey={setKey} />
         )}
-        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
-      </div>
-      <div className="board">
-        <Card
-          title={t("board.momentum")}
-          note={
-            <>
-              <span style={{ color: "var(--pv-home)" }}>■</span> {teams.home.name} &nbsp;
-              <span style={{ color: "var(--pv-away)" }}>■</span> {teams.away.name}
-            </>
-          }
-        >
-          {scheduled ? (
-            <div className="empty-box">
-              {t("board.kickoffPending")} · <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
-            </div>
-          ) : metrics.length ? (
-            <MomentumChart
-              metrics={metrics}
-              pivots={pivots}
-              homeLabel={teams.home.short_name}
-              awayLabel={teams.away.short_name}
-              numbered={moments.map((p) => p.pivot_id)}
-              selected={open?.pivot_id ?? null}
-              onPick={pick}
-              keys={keys.map((k) => ({
-                id: keyId(k), t: k.event.t, kind: k.kind, side: k.side,
-                label: t("keys.open", { minute: k.event.clock_label.replace(/'$/, ""), what: keyWhat(k, t, playerName, (s) => teams[s].short_name) }),
-              }))}
-              keySelected={key}
-              onKey={(id) => setKey(id === key ? null : id)}
-            />
-          ) : (
-            <div className="empty-box muted">{t("board.momentumEmpty")}</div>
-          )}
-          {!scheduled && metrics.length > 0 && keys.length > 0 && (
-            <KeyLegend kinds={new Set(keys.map((k) => k.kind))} pivots={moments.length > 0} />
-          )}
-        </Card>
-        {!moments.length && !finished && <p className="muted">{t("pivots.empty")}</p>}
-        {moments.length > 0 && <MomentCards pivots={moments} selected={open?.pivot_id ?? null} onPick={pick} />}
-        {open && <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={toggle} />}
-        {/* The ★ player's numbers so far, whole minutes so a live clock refetches once a minute. */}
-        {!scheduled && (
-          <PlayerCard upTo={finished ? null : Math.floor(match.clock / 60) * 60} numbered={moments.map((p) => p.pivot_id)} onPivot={pick} />
-        )}
-        {!scheduled && (
-          <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={key} onPick={pickKey} />
-        )}
-        {!scheduled && <SetPiecesAndShots key={match.match_id} />}
-        <details className="more">
-          <summary>
-            {t("moments.more")} <small>{t("moments.moreNote")}</small>
-          </summary>
-          {/* Ax60: here until the pre-match tab (Ax59) gives these a slot of their own. */}
-          <div className="more-pre">
-            <PreMatch />
-            <TeamTactics />
-          </div>
-          <div className="more-bd">
-            {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them, the AI's work on its own row. */}
-            {!scheduled && <PitchBoard key={match.match_id} />}
-            <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`} className="more-stats">
-              <MatchStats />
-            </Card>
-            <Card title={t("board.events")} note={t("board.autoScroll")} className="more-events">
-              <EventFeed highlight={evidence} />
-            </Card>
-            <Card title={t("trace.kicker")} className="more-trace">
-              <p className="muted">{t("moments.traceNote")}</p>
-              <Link to="/trace" className="btn">{t("top.trace", { n: pivots.length })}</Link>
-            </Card>
-          </div>
-        </details>
       </div>
     </>
   );

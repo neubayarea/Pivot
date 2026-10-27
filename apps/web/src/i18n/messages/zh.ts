@@ -19,8 +19,6 @@ export const zh: Messages = {
   "top.team": "球队：{team}",
   "top.player": "球员：{player}",
   "top.trace": "溯源 {n}",
-  "top.settings": "设置",
-  "top.settingsSet": "已选了球队或球员",
   "top.team.label": "主队",
   "top.team.short": "主队",
   "top.team.none": "不选主队",
@@ -98,7 +96,7 @@ export const zh: Messages = {
   "board.beforePivot": "{minute}′ 转折点前 5 分钟",
   "board.beforeNow": "{from}′–{to}′",
   "board.roster": "两队名单",
-  "board.rosterHint": "点名字，球场上会圈出这名球员。",
+  "board.rosterHint": "点名字或球场上的圆点，看这名球员的数据。",
   "board.status.cameOn": "替补上场",
   "board.status.off": "已换下",
   "board.status.sentOff": "红牌罚下",
@@ -121,8 +119,6 @@ export const zh: Messages = {
   "moments.wiPick": "先在上面选一个改动。不按「开始重踢」就不会跑。",
   "moments.wiHow": "从 {minute}′ 起两边各重放 200 次；没跑过的要几分钟，跑过的马上出结果",
   "moments.lab": "去「假如」实验室看更多选项",
-  "moments.more": "更多细节",
-  "moments.moreNote": "球场回放 · 全部事件 · 比赛数据 · AI 工作记录",
   "moments.traceNote": "每个时刻是哪个模型判断、撰写、核对的，各花了多久。",
   "board.halfTime": "半场",
   "board.phaseScore": "{phase} · {home} {score} {away}",
@@ -720,4 +716,44 @@ export const zh: Messages = {
   "plan.ins.sit_deeper": "站得更深",
   "plan.ins.man_mark": "盯人",
   "plan.ins.markWho": "盯防 {who}",
+  // Ax59 · match header
+  "header.label": "比分",
+  "header.controls": "观看方式",
+  "header.scorers": "{team} 进球",
+  "header.pen": "（点球）",
+
+  // Ax59 · match tabs
+  "tabs.label": "比赛分页",
+  "tabs.pre": "赛前",
+  "tabs.live": "赛中",
+  "tabs.post": "赛后",
+
+  // Ax59 · tab contents
+  "header.og": "（乌龙）",
+  "live.alert": "转折点 · {minute}′",
+  "live.alertOpen": "看为什么会转折",
+  "live.alertClose": "关闭",
+  "live.replayHint": "比赛已经结束。重放一遍，可以看到球员跑动，转折点也会在发生时弹出来。",
+  "post.pivots": "转折点",
+  "post.pivotsNote": "每个一句话。点开一个看完整解释，里面的数字都和比赛数据核对过。",
+  "post.whatIfFor": "改哪个转折点",
+  "post.whatIfAt": "转折点 {n} · {minute}′",
+  "post.whatIfNone": "「假如」要从一个转折点开始改，这场比赛还没有。",
+  "post.trace": "AI 工作记录",
+  "pre.lineups": "首发阵容",
+  "pre.lineupsNote": "两队教练排出的首发和阵型。",
+  "pre.pitchLabel": "首发阵型：{home}，{away}",
+  "pre.starters": "首发",
+  "pre.squad": "球员名单",
+  "pre.bench": "替补",
+  "pre.captain": "队长",
+  "pre.buildUp": "赛前看点",
+  "pre.buildUpNote": "两队带着怎样的状态来，两位教练打算怎么踢。",
+
+  // Ax59 · fan mode hides the evidence numbers
+  "why.sources": "依据（{n}）",
+
+  // Ax59 · a player in the line-ups card
+  "board.rosterBack": "返回",
+  "board.rosterNoStats": "这场比赛暂时没有这名球员的数据。",
 };

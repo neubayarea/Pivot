@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from .common import MinuteWindow, Model, Side
+from pydantic import Field
+
+from .common import ClockSeconds, MinuteWindow, Model, Period, Side
 
 # First version of the stat vocabulary: 15 event stats, 4 shape stats that come from
 # the tracking frames, and 4 standard analytics metrics (23 in total). D02 owns the
@@ -75,3 +77,40 @@ class Claim(Model):
     value: float
     unit: StatUnit
     stat_ref: StatRef
+
+
+StatGroup = Literal["attack", "possession", "defence", "shape", "physical"]
+StatScope = Literal["match", "first_half", "second_half", "extra_time_1", "extra_time_2", "window"]
+
+
+class StatMetricInfo(Model):
+    """How the page labels one stat, so it hard-codes nothing (the D02 vocabulary, MET-001 to MET-023)."""
+
+    metric: StatMetric
+    definition_id: str                        # "MET-001", the row in docs/data-definitions.md
+    unit: StatUnit
+    decimals: Annotated[int, Field(ge=0, le=3)]   # values come rounded to this many places
+    group: StatGroup                          # a heading for grouped tables, like the Premier League site's
+    label: str                                # analyst wording, e.g. "final-third passes"
+    fan_label: str                            # no jargon, e.g. "passes into the attacking third"
+    description: str                          # what is counted, one sentence
+    higher_means: str                         # what a higher number usually tells the viewer
+
+
+class TeamStatsScope(Model):
+    """Both teams' stats for one part of the match. A stat with no answer is null, never 0."""
+
+    scope: StatScope
+    period: Period | None = None              # set for one period, cut at its whistle
+    window: MinuteWindow                      # elapsed minutes covered, a <= minute < b
+    home: dict[StatMetric, float | None]
+    away: dict[StatMetric, float | None]
+
+
+class TeamStatsReport(Model):
+    """GET /api/matches/{id}/stats: the 23 team stats per part of the match, with their labels."""
+
+    match_id: str
+    up_to_t: ClockSeconds                     # elapsed seconds the numbers cover
+    metrics: list[StatMetricInfo]             # in display order: by group, then within the group
+    scopes: list[TeamStatsScope]
