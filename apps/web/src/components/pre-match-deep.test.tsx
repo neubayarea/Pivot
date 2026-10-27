@@ -46,8 +46,13 @@ const cup = teams((t, side) => side === "away" ? t : {
   next_fixture: {
     ...t.next_fixture!, competition: "Freeland Cup", stage: "Quarter-final", matchday: null, opponent: "Eastmoor", opponent_id: "club-eas",
     days_until: 3, importance: "high", rotation_risk: "high", fictional: true,
+    rotation_note: "Freeland Cup quarter-final away to Eastmoor in 3 days (fictional schedule), and the coach rests 3 regular starters.",
+    rotation_note_key: "prematch.rotation.cup_benched",
+    rotation_params: { competition: "Freeland Cup", stage: "Quarter-final", opponent: "Eastmoor", venue: "A", days: 3, benched: 3 },
   },
-  usual_xi_today: { ...t.usual_xi_today, regulars_starting: 8, regulars_benched: ["h09", "h10", "h11"], newcomers: ["h12", "h13", "h14"] },
+  usual_xi_today: {
+    ...t.usual_xi_today, regulars_starting: 8, regulars_benched: ["h09", "h10", "h11"], newcomers: ["h12", "h13", "h14"], usual_xi_named: false,
+  },
 });
 
 describe("the form in detail", () => {
@@ -92,14 +97,18 @@ describe("the form in detail", () => {
     expect(out).toContain("Average rating 6.5 6.7");
     expect(out).toContain("HBC goals by period");
     expect(html(fx).match(/class="pre-pcol"/g)).toHaveLength(12);
+    // Half-time scores and periods come from goal minutes: the page says they are estimates.
+    expect(out).toContain("Half-time scores are estimated from the minutes of the goals");
+    expect(out).toContain("Periods estimated from goal minutes");
   });
 
   it("says what each side plays next, that the usual XI starts, and that the simulation ignores it", () => {
     const out = text(html(fx));
     expect(out).toContain("Freeland League");
-    expect(out).toContain("Next: away to Tessmouth United, in 7 days");
-    expect(out).toContain("Next: Vantry Town at home, in 7 days");
-    expect(out).toContain("Harbour City start with their usual XI.");
+    // The note comes from rotation_note_key; with the usual XI named there is no "0 rested".
+    expect(out).toContain("Next league game: Tessmouth United (away) in 7 days, no midweek game. The coach names the usual XI.");
+    expect(out).toContain("Next league game: Vantry Town (home) in 7 days");
+    expect(out).not.toMatch(/\b0 regular|On the bench/);
     expect(out).toContain("started at least 3 of the last 5 league games");
     expect(out).toContain("the simulation does not take the next match into account");
     // The API's one-line caveat (about_key) closes the section.
@@ -109,9 +118,9 @@ describe("the form in detail", () => {
   it("names a cup tie, the league game after it and the regulars rested for it", () => {
     const out = text(html(cup));
     expect(out).toContain("Freeland Cup quarter-final");
-    expect(out).toContain("Next: away to Eastmoor, in 3 days");
+    expect(out).toContain("Freeland Cup quarter-final away to Eastmoor in 3 days (fictional schedule), and the coach rests 3 regular starters.");
+    expect(out).toContain("Fictional fixture");
     expect(out).toContain("Then in the league: away to Tessmouth United, in 7 days.");
-    expect(out).toContain("3 regular starters begin on the bench; 8 of the usual XI start.");
     for (const id of ["h09", "h10", "h11", "h12"]) expect(out).toContain(view.playerName(id));
     // With the API's caveat there the page does not add its own made-up note; without it, it does.
     expect(out).not.toContain("made up for this demo season");
@@ -157,7 +166,7 @@ describe("the form in detail", () => {
     const out = text(html(cup));
     expect(out.indexOf("What comes next")).toBeLessThan(out.indexOf("The last five games"));
     expect(out).toContain("Harbour City at home this season: won 6, drawn 3, lost 3.");
-    expect(out).toContain("A big game soon, so they may rest players today.");
+    expect(out).toContain("A big game soon, a good reason to rest players today.");
     expect(out).toContain("Kept a clean sheet");
     for (const absent of ["PPG", "Red cards", "Average rating", "goals by period", "Rotation risk", "Then in the league"]) expect(out).not.toContain(absent);
   });
@@ -171,6 +180,9 @@ describe("the form in detail", () => {
     expect(out).toContain("Freeland Cup 1/4 决赛");
     expect(out).toContain("5 场 3 次");
     expect(out).toContain("半场比分是估算的");
+    expect(out).toContain("半场比分是按进球分钟估算的");
+    expect(out).toContain("客场对Eastmoor打Freeland Cup 1/4 决赛（虚构赛程），主教练让 3 名主力休息。");
+    expect(text(html(fx))).toContain("7 天后客场对Tessmouth United，中间没有周中比赛。主教练派出惯用首发。");
     expect(out).not.toContain(" · ");
   });
 });

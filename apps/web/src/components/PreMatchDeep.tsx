@@ -207,6 +207,7 @@ function LastFive({ at, title, ...c }: Ctx & { at: PrematchReport["teams"]; titl
   if (!sides.length) return null;
   return (
     <Card title={title} note={c.t("pre.newestFirst")} className="pre-last5">
+      <p className="pre-hint muted">{c.t("pre.htEstimated")}</p>
       <div className="pre-cols">
         {sides.map((s) => (
           <div key={s} className={`pre-col ${s}${pickClass(s, c.mine)}`}>
@@ -328,9 +329,10 @@ function Periods({ side, stats, t, mine, short }: Ctx & { side: Side; stats: Pre
           </div>
         ))}
       </div>
-      <p className="pre-plegend muted" aria-hidden="true">
-        <span className="up">{t("pre.scored")}</span>
-        <span className="down">{t("pre.conceded")}</span>
+      <p className="pre-plegend muted">
+        <span className="up" aria-hidden="true">{t("pre.scored")}</span>
+        <span className="down" aria-hidden="true">{t("pre.conceded")}</span>
+        <span>{t("pre.periodsEstimated")}</span>
       </p>
       <table className="sr-only">
         <thead>
@@ -363,7 +365,7 @@ function NextUp({ at, title, about, ...c }: Ctx & { at: PrematchReport["teams"];
           <div key={s} className={`pre-col ${s}${pickClass(s, c.mine)}`}>
             <TeamHead side={s} {...c} />
             {at[s]!.next_fixture && <Fixture side={s} f={at[s]!.next_fixture!} league={at[s]!.next_league ?? null} {...c} />}
-            {at[s]!.usual_xi_today && <Rotation side={s} xi={at[s]!.usual_xi_today!} {...c} />}
+            {at[s]!.usual_xi_today && <Rotation side={s} xi={at[s]!.usual_xi_today!} noted={!!at[s]!.next_fixture} {...c} />}
           </div>
         ))}
       </div>
@@ -381,6 +383,32 @@ function Stage({ stage, t }: { stage: string; t: T }) {
   return isMessageKey(key) ? <>{t(key)}</> : <>{stage} <LangTag lang="en" /></>;
 }
 
+/**
+ * The API's rotation note (#327) in the page's language, from `rotation_note_key` and its params:
+ * where and when the next game is, and whether the coach names the usual XI or rests regulars.
+ * A key we do not have falls back to the API's English sentence, tagged.
+ */
+function RotationNote({ f, t }: { f: PrematchFixture; t: T }) {
+  const p = f.rotation_params ?? {};
+  const n = Number(p.benched ?? 0);
+  if (!f.rotation_note_key || !isMessageKey(f.rotation_note_key)) {
+    return f.rotation_note ? <p className="pre-line">{f.rotation_note} <LangTag lang="en" /></p> : null;
+  }
+  const home = (p.venue ?? f.venue) === "H";
+  const stage = String(p.stage ?? f.stage ?? "");
+  const stageKey = `pre.stage.${stage.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+  return (
+    <p className="pre-line">
+      {t(f.rotation_note_key, {
+        opponent: String(p.opponent ?? f.opponent), days: Number(p.days ?? f.days_until),
+        competition: String(p.competition ?? f.competition), stage: isMessageKey(stageKey) ? t(stageKey) : stage,
+        where: t(home ? "pre.where.home" : "pre.where.away"), to: t(home ? "pre.to.home" : "pre.to.away"),
+        rested: t(n === 1 ? "pre.restedOne" : "pre.restedMany", { n }),
+      })}
+    </p>
+  );
+}
+
 function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: PrematchFixture; league: PrematchFixture | null }) {
   // A cup tie comes first: say when the next league game is too, for the analyst.
   const then = !fan && league && f.fictional && (league.opponent !== f.opponent || league.days_until !== f.days_until) ? league : null;
@@ -389,11 +417,10 @@ function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: PrematchFixture; 
       <p className="pre-fx-what">
         <b>{f.competition}</b>
         {f.stage && <> <Stage stage={f.stage} t={t} /></>}
+        {f.fictional && <span className="pre-chip">{t("pre.fictional")}</span>}
+        <b className="num pre-fx-days">{t("pre.inDays", { n: f.days_until })}</b>
       </p>
-      <p className="pre-line">
-        {t(f.venue === "H" ? "pre.nextHome" : "pre.nextAway", { team: f.opponent })}{" "}
-        <b className="num">{t("pre.inDays", { n: f.days_until })}</b>
-      </p>
+      <RotationNote f={f} t={t} />
       {then && (
         <p className="pre-line muted">
           {t(then.venue === "H" ? "pre.thenLeagueHome" : "pre.thenLeagueAway", { team: then.opponent, n: then.days_until })}
@@ -411,18 +438,21 @@ function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: PrematchFixture; 
   );
 }
 
-/** How many of the usual starters begin today, who sits out, who comes in; worked out from the season. */
-function Rotation({ side, xi, t, fan, playerName, name, names }: Ctx & { side: Side; xi: PrematchUsualXi }) {
+/**
+ * Who sits out and who comes in, worked out from the season. With the usual XI named
+ * (`usual_xi_named`) there is no count of zero, only "the usual XI"; the fixture's note says it too.
+ */
+function Rotation({ side, xi, t, fan, playerName, name, names, noted }: Ctx & { side: Side; xi: PrematchUsualXi; noted: boolean }) {
   const benched = xi.regulars_benched.map(playerName);
   const fresh = xi.newcomers.map(playerName);
+  const line = xi.usual_xi_named
+    ? !noted && t("pre.unchanged", { team: name(side) })
+    : benched.length > 0 && !noted && t("pre.rotated", { team: name(side), n: benched.length, starting: xi.regulars_starting });
+  if (!line && !benched.length && (fan || !xi.games)) return null;
   return (
     <div className="pre-rotation">
-      <p className="pre-line">
-        {benched.length
-          ? t("pre.rotated", { team: name(side), n: benched.length, starting: xi.regulars_starting })
-          : t("pre.unchanged", { team: name(side) })}
-      </p>
-      {benched.length > 0 && (
+      {line && <p className="pre-line">{line}</p>}
+      {!xi.usual_xi_named && benched.length > 0 && (
         <dl className="pre-facts pre-who-list">
           <div><dt>{t("pre.benched")}</dt><dd>{names(benched)}</dd></div>
           {fresh.length > 0 && <div><dt>{t("pre.inFor")}</dt><dd>{names(fresh)}</dd></div>}

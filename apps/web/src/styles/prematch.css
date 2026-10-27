@@ -257,14 +257,15 @@
 .pre-pcol .down i { border-radius: 0 0 3px 3px; background: var(--pv-draw); }
 .pre-pcol b { font-size: var(--pv-fs-xs); font-weight: 700; line-height: 18px; font-variant-numeric: tabular-nums; }
 .pre-pcol small { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 4px; }
-.pre-plegend { display: flex; gap: 16px; font-size: var(--pv-fs-xs); }
-.pre-plegend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
+.pre-plegend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--pv-fs-xs); }
+.pre-plegend :is(.up, .down)::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
 .pre-plegend .up::before { background: var(--tc); }
 .pre-plegend .down::before { background: var(--pv-draw); }
 
 /* What comes next and who rests. */
 .pre-fixture, .pre-rotation { display: grid; gap: 6px; }
-.pre-fx-what { font-size: var(--pv-fs-md); }
+.pre-fx-what { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: var(--pv-fs-md); }
+.pre-fx-days { margin-left: auto; }
 .pre-rotation { padding-top: 8px; border-top: 1px solid var(--pv-hair); }
 .pre-who-list { flex-direction: column; gap: 6px; }
 .pre-who-list dd { font-weight: 600; }
