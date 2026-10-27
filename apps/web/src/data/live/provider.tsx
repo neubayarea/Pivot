@@ -214,6 +214,7 @@ export function toView({ match, events, metrics, pivots }: LiveState): MatchView
       away: match.away.squad.map(squadPlayer).sort(byShirt),
     },
     sheets: match.home.sheet && match.away.sheet ? { home: match.home.sheet, away: match.away.sheet } : undefined,
+    preMatch: match.context && { context: match.context, plans: { home: teamPlan(match.home), away: teamPlan(match.away) } },
     playerName: (id) => (id ? (players.get(id) ?? id) : ""),
     eventById: (id) => byId.get(id),
     pivotDetail: (id) => {
@@ -226,6 +227,8 @@ export function toView({ match, events, metrics, pivots }: LiveState): MatchView
 
 const squadPlayer = ({ player_id, name, shirt_number, role }: Match["home"]["squad"][number]) =>
   ({ player_id, name, shirt: shirt_number ?? null, role });
+
+const teamPlan = ({ club_id, coach, tactics }: Match["home"]) => ({ club_id, coach, tactics });
 
 const teamInfo = ({ name, short_name, side, color }: Match["home"]) => ({ name, short_name, side, color });
 

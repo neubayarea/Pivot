@@ -82,11 +82,11 @@ describe("what each tab holds", () => {
     expect(opened).toContain('aria-pressed="true"');
   });
 
-  it("pre: the line-ups and a marked slot for the pre-match content", () => {
+  it("pre: the line-ups; the fixture has no pre-match data, so no build-up section (Ax60)", () => {
     const html = board("/?tab=pre");
     expect(html).toContain("Line-ups");
     expect(html).toContain("Harbour City");
-    expect(html).toContain('data-slot="prematch"');
+    expect(html).not.toContain('data-slot="prematch"');
     expect(html).not.toContain("On the pitch");
   });
 });

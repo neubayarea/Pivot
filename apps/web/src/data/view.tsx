@@ -1,6 +1,6 @@
 // What S1 and S2 read, whichever source fills it: the live API (data/live) or the fixture replay.
 import { createContext, useContext } from "react";
-import type { Match, MatchEvent, MinuteMetric, Pivot1 as Pivot, Score, TeamSheet } from "@pivot/contracts";
+import type { Coach, Match, MatchContext as PreMatchContext, MatchEvent, MinuteMetric, Pivot1 as Pivot, Score, TeamSheet, TeamTactics } from "@pivot/contracts";
 import type { TeamInfo } from "../fixtures/demo-1021";
 import type { PivotDetailData } from "../fixtures/pivot-detail";
 import type { PeriodStart } from "./clock";
@@ -13,6 +13,8 @@ export type PivotDetail = PivotDetailData & { pivot: Pivot };
 /** One player in the focus-player picker. */
 export type SquadPlayer = { player_id: string; name: string; shirt: number | null; role?: TeamSheet["starters"][number]["role"] };
 export type TeamStats = { possession: number; shots: number; xg: number; pressures: number; finalThirdPasses: number };
+/** One side's club, coach and starting tactics, for the pre-match tab (Ax60). */
+export type TeamPlan = { club_id: string; coach: Coach; tactics: TeamTactics };
 
 export type MatchView = {
   match: Pick<Match, "match_id" | "clock" | "period" | "status" | "speed"> & {
@@ -32,6 +34,8 @@ export type MatchView = {
   squads: Record<Side, SquadPlayer[]>;
   /** Starting team sheets (formation and roles), for the pitch board's names and shape; the fixture has none. */
   sheets?: Record<Side, TeamSheet>;
+  /** What the API sends about the match before kick-off (Ax60): form, table, head-to-head, news, coaches, tactics; the fixture has none. */
+  preMatch?: { context: PreMatchContext; plans: Record<Side, TeamPlan> };
   playerName: (id: string | null) => string;
   eventById: (id: string) => MatchEvent | undefined;
   pivotDetail: (id: string) => PivotDetail | undefined;
