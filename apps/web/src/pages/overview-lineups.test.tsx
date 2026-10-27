@@ -38,7 +38,7 @@ const render = (search: string, node = <LiveBoard />) => {
 
 describe("the overview", () => {
   it("gives an analyst the momentum line and the turning points, and no story cards", () => {
-    const html = render("?fixture=1&from=95&tab=post&mode=analyst");
+    const html = render("?fixture=1&from=95&tab=overview&mode=analyst");
     expect(html).toContain('data-audience="analyst"');
     expect(html).toContain('id="post-momentum"');
     expect(html).toContain('id="post-pivots"');
@@ -46,7 +46,7 @@ describe("the overview", () => {
   });
 
   it("gives a fan the story of the match first, and the momentum line only after it", () => {
-    const html = render("?fixture=1&from=95&tab=post&mode=fan");
+    const html = render("?fixture=1&from=95&tab=overview&mode=fan");
     expect(html).toContain('data-audience="fan"');
     expect(html).toContain("How the match was decided");
     expect(html.indexOf('id="post-story"')).toBeGreaterThan(0);
@@ -55,13 +55,13 @@ describe("the overview", () => {
 
   it("opens on a different first block for a fan and an analyst (ORDER.*.post)", () => {
     const first = (html: string) => html.match(/<div class="post (?:fan|analyst)"[^>]*><header class="post-lead">.*?<\/header>(<\w+[^>]*>)/)![1];
-    expect(first(render("?fixture=1&from=95&tab=post&mode=fan"))).toContain('id="post-story"');
-    expect(first(render("?fixture=1&from=95&tab=post&mode=analyst"))).toContain('id="post-momentum"');
+    expect(first(render("?fixture=1&from=95&tab=overview&mode=fan"))).toContain('id="post-story"');
+    expect(first(render("?fixture=1&from=95&tab=overview&mode=analyst"))).toContain('id="post-momentum"');
   });
 
   it("shows both the key moments and the core five stats, and the AI log last", () => {
     for (const mode of ["fan", "analyst"]) {
-      const html = render(`?fixture=1&from=95&tab=post&mode=${mode}`);
+      const html = render(`?fixture=1&from=95&tab=overview&mode=${mode}`);
       const keys = html.indexOf('id="post-keys"');
       const core = html.indexOf('id="post-core"');
       const trace = html.indexOf('id="post-trace"');
@@ -72,21 +72,21 @@ describe("the overview", () => {
   });
 
   it("marks each turning point for or against the ♥ team, on the momentum line and in the list", () => {
-    const none = render("?fixture=1&from=95&tab=post&mode=analyst");
+    const none = render("?fixture=1&from=95&tab=overview&mode=analyst");
     expect(none).not.toContain("lean-tag");
     expect(none).not.toContain("mk-lean");
-    const html = render("?fixture=1&from=95&tab=post&mode=analyst&team=home");
+    const html = render("?fixture=1&from=95&tab=overview&mode=analyst&team=home");
     expect(html).toMatch(/class="mk-lean (for|against)"/);
     expect(html).toMatch(/class="lean-tag (for|against)" style="--tc:var\(--pv-(home|away)\)"/);
     // The fixture's red card swings it to the home side: that one is for a home fan, against an away fan.
     expect(html).toContain('class="pr to-home lean-for"');
-    expect(render("?fixture=1&from=95&tab=post&mode=analyst&team=away")).toContain('class="pr to-home lean-against"');
+    expect(render("?fixture=1&from=95&tab=overview&mode=analyst&team=away")).toContain('class="pr to-home lean-against"');
   });
 
   it("puts the ♥ team's match first once a team is picked", () => {
-    const none = render("?fixture=1&from=95&tab=post&mode=fan");
+    const none = render("?fixture=1&from=95&tab=overview&mode=fan");
     expect(none).not.toContain('id="you-hd"');
-    const html = render("?fixture=1&from=95&tab=post&mode=fan&team=away");
+    const html = render("?fixture=1&from=95&tab=overview&mode=fan&team=away");
     expect(html).toContain("How Northvale Rovers did");
     expect(html.indexOf('id="you-hd"')).toBeLessThan(html.indexOf('id="post-story"'));
     expect(html).toContain("Your team&#x27;s match first");
