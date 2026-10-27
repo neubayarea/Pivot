@@ -122,6 +122,15 @@ describe("live board states", () => {
     expect(post).toContain("Start match");
   });
 
+  it("has no Start match button on a next-round fixture, which is never played (#354)", () => {
+    const view = matchView({}, "scheduled");
+    const fixture = { ...view, match: { ...view.match, match_id: "S2026-38-HBC-PEL" } };
+    const html = render(<LiveBoard />, fixture, "/?tab=preview");
+    expect(html).not.toContain("Start match");
+    expect(html).not.toContain("Kick-off pending");
+    expect(render(<LiveBoard />, view, "/?tab=preview")).toContain("Start match");   // any other scheduled match still can
+  });
+
   it("offers Start demo once a live match is over", () => {
     expect(render(<LiveBoard />, matchView({}, "finished"))).toContain("Start demo");
     expect(render(<LiveBoard />, matchView({}, "live"))).not.toContain("Start demo");
