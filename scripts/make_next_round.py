@@ -26,17 +26,22 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=None)
     args = ap.parse_args()
     season = sims._season()
+    version = portable_sim_version()
+    # A fixture already worked out for this simulator and run count is kept (about 3.5 min each on 12 cores).
+    old = json.loads(PATH.read_text(encoding="utf-8")) if PATH.is_file() else {}
+    kept = ({f["match_id"]: f["prediction"] for f in old.get("fixtures", [])}
+            if old.get("sim_version") == version and old.get("n_runs") == args.runs else {})
     out = []
     for fx in fixtures():
         match = next_match(fx, season)
         t0 = time.monotonic()
-        prediction = predict(match, args.runs, args.workers)
+        prediction = kept.get(match.match_id) or predict(match, args.runs, args.workers)
         out.append({"match_id": match.match_id, "home": match.home.club_id, "away": match.away.club_id,
                     "seed": match.seed, "prediction": prediction})
         print(f"{match.match_id}: {prediction['home_win']:.2f} / {prediction['draw']:.2f} / {prediction['away_win']:.2f}"
               f", xG {prediction['xg']['home']}-{prediction['xg']['away']} ({time.monotonic() - t0:.0f} s)", flush=True)
     PATH.parent.mkdir(parents=True, exist_ok=True)
-    data = {"sim_version": portable_sim_version(), "matchday": NEXT_MATCHDAY, "n_runs": args.runs, "fixtures": out}
+    data = {"sim_version": version, "matchday": NEXT_MATCHDAY, "n_runs": args.runs, "fixtures": out}
     PATH.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {PATH}")
 
