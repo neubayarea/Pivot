@@ -58,8 +58,8 @@ import time
 import uuid
 from collections import defaultdict
 from collections.abc import Callable
-from concurrent.futures import Executor, ProcessPoolExecutor
-from dataclasses import dataclass, field
+from concurrent.futures import BrokenExecutor, Executor, ProcessPoolExecutor
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -104,6 +104,10 @@ DEFAULT_RUNS: NRuns = 200
 DEFAULT_WARM = 2
 DEFAULT_MAX_QUEUED = 20
 NOT_REPLAYABLE = "This match cannot be replayed"
+# A chip whose replays have failed once (Bx18): the same seeds fail again, so it is not run again.
+REPLAY_FAILS = "Its replays fail in the simulator: pick another change"
+# Failures that say nothing about the chip itself: it may run next time.
+TRANSIENT = (BrokenExecutor, MemoryError, OSError)
 USER, WARM = 0, 1                             # queue priority: what a viewer asked for goes first
 LANG_SEP = "."                                # "{cache key}.zh": a stored translation of that scenario
 
@@ -238,6 +242,8 @@ class WhatIf:
         self.scenarios: dict[str, Scenario] = {}
         self.precomputed: dict[str, dict[str, Scenario]] = {}   # match id -> cache key -> scenario run ahead (Bx11)
         self._keys: dict[str, str] = {}           # cache key -> scenario id
+        # chip -> fewest replays per arm that failed: run i uses seed_base + i, so more runs fail too (Bx18)
+        self._broken: dict[str, int] = {}
         self._queue: asyncio.PriorityQueue[Job] = asyncio.PriorityQueue()
         self._order = itertools.count()
         self._pool: Executor | None = None
@@ -281,7 +287,20 @@ class WhatIf:
                               {"home": before.home.tactics, "away": before.away.tactics})
         if replay is None:
             return [ScenarioOption(o.type, o.label, False, NOT_REPLAYABLE) for o in options]
-        return options
+        # failed at the fewest runs: fails at every size
+        return [replace(o, enabled=False, disabled_reason=REPLAY_FAILS)
+                if o.enabled and self._failed_at(self._chip(replay.version, pivot.pivot_id, o.type, o.target_event_id,
+                                                            o.params)) <= DEFAULT_RUNS
+                else o for o in options]
+
+    @staticmethod
+    def _chip(version: str, pivot_id: str, type_: str, target: str | None, params: dict[str, int | str]) -> str:
+        """A chip on one version of the match, at any number of runs: the cache key without `n_runs`."""
+        return json.dumps([version, pivot_id, type_, target, params], sort_keys=True)
+
+    def _failed_at(self, chip: str) -> float:
+        """The fewest replays per arm this chip failed at, or infinity."""
+        return self._broken.get(chip, float("inf"))
 
     async def submit(self, pivot_id: str, type_: str, n_runs: NRuns = DEFAULT_RUNS,
                      params: dict[str, int | str] | None = None, priority: int = USER) -> Scenario:
@@ -300,6 +319,9 @@ class WhatIf:
             option = with_params(option, params, target.minute if target else option.at_minute or 0)
         spec = option.to_spec(pivot_id, seed_base=seed_base(pivot_id, type_), n_runs=n_runs)
         replay = self.replays[match.match_id]
+        chip = self._chip(replay.version, pivot_id, type_, spec.target_event_id, spec.params)
+        if (self.runs_override or n_runs) >= self._failed_at(chip):
+            raise ValueError(f"{type_} is not available for this pivot: {REPLAY_FAILS}")
         key = cache_key(replay.version, spec)
         if (known := self._keys.get(key)) and self.scenarios[known].status != "failed":
             return self.scenarios[known]
@@ -564,6 +586,9 @@ class WhatIf:
                     pool=self._executor(), workers=max(self.workers, 1), scenario_id=scenario.scenario_id, n_runs=runs)
             except Exception as exc:
                 log.warning("what-if %s could not run: %r", scenario.scenario_id, exc)
+                if not isinstance(exc, TRANSIENT):     # the same seeds would fail again: not offered again
+                    chip = self._chip(replay.version, spec.pivot_id, spec.type, spec.target_event_id, spec.params)
+                    self._broken[chip] = min(runs, self._broken.get(chip, runs))
                 await steps.record(Step("executor", f"error: {exc}"[:500], "error"))
                 await self._update(job.scenario_id, "scenario.progress", status="failed")
                 return
