@@ -59,7 +59,8 @@ function Row({ m, s, fan, t }: { m: StatMetricInfo; s: TeamStatsScope; fan: bool
   );
 }
 
-export default function TeamStats({ state }: { state: VizState<TeamStatsReport> }) {
+/** `only`: just these metrics, whoever is watching (the overview's core five); otherwise fans get FAN5, analysts all. */
+export default function TeamStats({ state, only }: { state: VizState<TeamStatsReport>; only?: ReadonlySet<string> }) {
   const { teams } = useMatch();
   const { prefs, t } = usePrefs();
   const { data, error } = state;
@@ -69,7 +70,8 @@ export default function TeamStats({ state }: { state: VizState<TeamStatsReport> 
   const scopes = data.scopes.filter((s) => s.scope !== "window");
   const shown = scopes.find((s) => s.scope === scope) ?? scopes[0];
   if (!shown) return <p className="muted">{t("ts.error")}</p>;
-  const metrics = data.metrics.filter((m) => !fan || FAN.has(m.metric));
+  const keep = only ?? (fan ? FAN : null);
+  const metrics = data.metrics.filter((m) => !keep || keep.has(m.metric));
   const groups = [...new Set(metrics.map((m) => m.group))];
   return (
     <div className="ts">

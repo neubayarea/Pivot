@@ -1,12 +1,13 @@
 // The board's numbered moments (Ax32, redrawn C11 #288 after momomojun's prototype on
 // b/C-ui-overhaul): one line per pivot under the momentum line, and the one picked opened up below
 // with its explanation, the pitch at that moment and what-if for that same moment.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { useFrames } from "../data/live/frames";
 import { fixtureMode, useMatch } from "../data/match";
+import { usePersona } from "../data/persona";
 import { optionLabel, useOptionMinute, useScenarioRun, type ScenarioOption } from "../data/scenarios";
 import { useT } from "../i18n";
 import { detailFrame } from "../pages/PivotDetail";
@@ -56,8 +57,10 @@ function MomentRow({ p, n, on, onPick }: { p: Pivot; n: number; on: boolean; onP
   const t = useT();
   const { minute } = useClock();
   const cause = useCause(p);
+  // C12: with a ♥ team, whether this one went the viewer's way, in the colour of the side it went to.
+  const l = usePersona().lean(p);
   return (
-    <button type="button" className={`pr to-${p.direction}`} aria-pressed={on} onClick={onPick}>
+    <button type="button" className={`pr to-${p.direction}${l ? ` lean-${l}` : ""}`} aria-pressed={on} onClick={onPick}>
       <span className="pr-n" aria-hidden="true">{n}</span>
       <b className="pr-min num">{minute(p.minute)}′</b>
       <span className="pr-txt">
@@ -67,6 +70,7 @@ function MomentRow({ p, n, on, onPick }: { p: Pivot; n: number; on: boolean; onP
       <span className="pr-sw">
         <Swing p={p} />
         <span className="to">{t("post.swingTo", { team: teams[p.direction].name })}</span>
+        {l && <span className={`lean-tag ${l}`} style={{ "--tc": `var(--pv-${p.direction})` } as CSSProperties}>{t(l === "for" ? "you.for" : "you.against")}</span>}
       </span>
       <span className="pr-st"><PivotStamp status={p.status} /></span>
     </button>

@@ -3,9 +3,16 @@
 // Places come from the formation's rows, or the team sheet's anchors when the rows do not add up;
 // the fixture has no sheets and gets the squad lists only.
 // C11 (Ax63): each team in its kit colour from the page's tokens, so the night theme lightens it too.
+// Ax69: on the line-ups tab the ♥ team attacks up the page, and each player has the shared ☆ Follow button (#324).
+// Once the match is under way each player also shows what he did: goals, cards, when he came on or
+// went off, and his rating (data/lineupFacts.ts), in the list and on the pitch.
 import type { TeamSheet } from "@pivot/contracts";
+import { useClock } from "../data/clock";
+import { lineupFacts, shortName, type Facts } from "../data/lineupFacts";
 import { useMatch, type Side, type SquadPlayer } from "../data/match";
-import { useT } from "../i18n";
+import { usePlayers } from "../data/persona";
+import { usePrefs, useT, type T } from "../i18n";
+import FollowButton from "./FollowButton";
 import { surname } from "./FocusPickers";
 import "../styles/prematch.css";
 
@@ -41,13 +48,39 @@ function formationPlaces(side: Side, sheet: TeamSheet): Map<string, [number, num
   return out;
 }
 
-function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
+/** The facts after a name in a list row: goals, cards, the minute of a change, the rating. */
+function PlayerFacts({ f, t, at }: { f?: Facts; t: T; at: (s: number) => string }) {
+  if (!f) return null;
+  return (
+    <span className="lu-facts">
+      {f.goals > 0 && <span className="lu-goal" role="img" aria-label={t(f.goals === 1 ? "lu.goal" : "lu.goals", { n: f.goals })}>{"⚽".repeat(Math.min(f.goals, 3))}</span>}
+      {f.red ? <i className="lu-card red" role="img" aria-label={t("lu.red")} /> : f.yellow && <i className="lu-card yellow" role="img" aria-label={t("lu.yellow")} />}
+      {f.on !== undefined && <span className="lu-sub on" aria-label={t("lu.on", { minute: at(f.on) })}><span aria-hidden="true">▲</span> {at(f.on)}′</span>}
+      {f.off !== undefined && <span className="lu-sub off" aria-label={t("lu.off", { minute: at(f.off) })}><span aria-hidden="true">▼</span> {at(f.off)}′</span>}
+      {f.rating !== undefined && <span className="lu-rating num" aria-label={t("lu.rating", { n: f.rating.toFixed(1) })}>{f.rating.toFixed(1)}</span>}
+    </span>
+  );
+}
+
+/** Goals, cards, changes and ratings so far, or null before kick-off and where they are not wanted. */
+function useFacts(on: boolean): Map<string, Facts> | null {
+  const { match, events, playback } = useMatch();
+  const live = on && match.status !== "scheduled";
+  // Whole minutes, like the player card, so a running clock refetches once a minute.
+  const upTo = match.status === "finished" && !playback ? null : Math.floor(match.clock / 60) * 60;
+  const players = usePlayers(live ? match.match_id : null, upTo);
+  return live ? lineupFacts(events, players.data?.players) : null;
+}
+
+function FormationPitch({ sheets, up = "home", followed = null, facts }: { sheets: Record<Side, TeamSheet>; up?: Side; followed?: string | null; facts: Map<string, Facts> | null }) {
   const { teams, squads } = useMatch();
   const t = useT();
+  // Home attacks up the page; with the away side up, the whole pitch turns round.
+  const turn = ([x, y]: [number, number]): [number, number] => (up === "home" ? [x, y] : [W - x, H - y]);
   const byId = new Map([...squads.home, ...squads.away].map((p) => [p.player_id, p]));
   const places = { home: formationPlaces("home", sheets.home), away: formationPlaces("away", sheets.away) };
   return (
-    <svg className="lu-pitch" viewBox={`-2 -2 ${W + 4} ${H + 8}`} role="img"
+    <svg className="lu-pitch" viewBox={`-2 -6 ${W + 4} ${H + 12}`} role="img"
       aria-label={t("pre.pitchLabel", { home: `${teams.home.name} ${sheets.home.formation}`, away: `${teams.away.name} ${sheets.away.formation}` })}>
       <rect x="0" y="0" width={W} height={H} className="lu-grass" />
       <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="lu-line" />
@@ -57,13 +90,22 @@ function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
       {(["home", "away"] as Side[]).map((side) => (
         <g key={side} className={`lu-team ${side}`}>
           {sheets[side].starters.map((s) => {
-            const [cx, cy] = places[side]?.get(s.player_id) ?? place(side, s.anchor);
+            const [cx, cy] = turn(places[side]?.get(s.player_id) ?? place(side, s.anchor));
             const p = byId.get(s.player_id);
+            const name = surname(p?.name ?? s.player_id);
+            const f = facts?.get(s.player_id);
+            // The team at the top has its names above the dots, so the two front lines do not meet at halfway.
+            const top = side !== up;
             return (
-              <g key={s.player_id} transform={`translate(${cx} ${cy})`}>
+              <g key={s.player_id} className={followed === s.player_id ? "followed" : undefined} transform={`translate(${cx} ${cy})`}>
+                <title>{p?.name ?? name}</title>
                 <circle r="3.1" />
                 <text className="lu-no" dy="1.1">{p?.shirt ?? ""}</text>
-                <text className="lu-nm" dy="6.4">{surname(p?.name ?? s.player_id)}</text>
+                <text className="lu-nm" dy={top ? -4.2 : 6.4}>{shortName(name)}</text>
+                {f?.rating !== undefined && <text className="lu-rt" x="3.4" y="-2.2">{f.rating.toFixed(1)}</text>}
+                {f && f.goals > 0 && <circle className="lu-ball" cx="-3" cy="-2.6" r="1.1" />}
+                {f && (f.red || f.yellow) && <rect className={`lu-cd ${f.red ? "red" : "yellow"}`} x="-4.4" y="0.6" width="1.4" height="2" rx=".2" />}
+                {f?.off !== undefined && <text className="lu-offmk" x="3.4" y="3.2">▼</text>}
               </g>
             );
           })}
@@ -73,9 +115,10 @@ function FormationPitch({ sheets }: { sheets: Record<Side, TeamSheet> }) {
   );
 }
 
-function TeamList({ side, sheet }: { side: Side; sheet?: TeamSheet }) {
+function TeamList({ side, sheet, follow, facts, formation }: { side: Side; sheet?: TeamSheet; follow: boolean; facts: Map<string, Facts> | null; formation: boolean }) {
   const { teams, squads } = useMatch();
   const t = useT();
+  const { at } = useClock();
   const byId = new Map(squads[side].map((p) => [p.player_id, p]));
   const starters: (SquadPlayer & { slotRole?: string })[] = sheet
     ? sheet.starters.slice().sort((a, b) => a.slot - b.slot).flatMap((s) => {
@@ -88,14 +131,18 @@ function TeamList({ side, sheet }: { side: Side; sheet?: TeamSheet }) {
     <section className={`card lu-list ${side}`}>
       <h3>
         <span><i className={`pre-kit ${side}`} aria-hidden="true" />{teams[side].name}</span>
-        {sheet && <small>{sheet.formation}</small>}
+        {sheet && formation && <small>{sheet.formation}</small>}
       </h3>
       <ol aria-label={sheet ? t("pre.starters") : t("pre.squad")}>
         {starters.map((p) => (
           <li key={p.player_id}>
             <span className="no num">{p.shirt ?? ""}</span>
-            <span className="nm">{p.name}{sheet?.captain_id === p.player_id && <abbr title={t("pre.captain")}> (C)</abbr>}</span>
+            <span className="nm">
+              {p.name}{sheet?.captain_id === p.player_id && <abbr title={t("pre.captain")}> (C)</abbr>}
+              <PlayerFacts f={facts?.get(p.player_id)} t={t} at={at} />
+            </span>
             <span className="rl">{p.slotRole ?? p.role ?? ""}</span>
+            {follow && <FollowButton playerId={p.player_id} name={p.name} />}
           </li>
         ))}
       </ol>
@@ -104,7 +151,11 @@ function TeamList({ side, sheet }: { side: Side; sheet?: TeamSheet }) {
           <h4>{t("pre.bench")}</h4>
           <ul className="lu-bench">
             {bench.map((p) => (
-              <li key={p.player_id}><span className="no num">{p.shirt ?? ""}</span> {p.name}</li>
+              <li key={p.player_id}>
+                <span className="no num">{p.shirt ?? ""}</span> {p.name}
+                <PlayerFacts f={facts?.get(p.player_id)} t={t} at={at} />
+                {follow && <FollowButton playerId={p.player_id} name={p.name} />}
+              </li>
             ))}
           </ul>
         </>
@@ -113,13 +164,23 @@ function TeamList({ side, sheet }: { side: Side; sheet?: TeamSheet }) {
   );
 }
 
-export default function Lineups() {
+/**
+ * `up`: the team attacking up the page (home unless given); `follow`: a ☆ beside every player;
+ * `facts`: goals, cards, changes and ratings once the match is under way; `formation`: the shape in
+ * each list's header (off where the coach's plan already says it).
+ */
+export default function Lineups({ up = "home", follow = false, facts: withFacts = false, formation = true }: {
+  up?: Side; follow?: boolean; facts?: boolean; formation?: boolean;
+}) {
   const { sheets } = useMatch();
+  const { prefs } = usePrefs();
+  const facts = useFacts(withFacts);
+  // The team at the bottom of the pitch is listed first.
+  const order: Side[] = up === "home" ? ["home", "away"] : ["away", "home"];
   return (
-    <div className={`lineups${sheets ? "" : " no-sheet"}`}>
-      {sheets && <FormationPitch sheets={sheets} />}
-      <TeamList side="home" sheet={sheets?.home} />
-      <TeamList side="away" sheet={sheets?.away} />
+    <div className={`lineups${sheets ? "" : " no-sheet"}${follow ? " with-follow" : ""}`}>
+      {sheets && <FormationPitch sheets={sheets} up={up} followed={prefs.focus_player_id} facts={facts} />}
+      {order.map((s) => <TeamList key={s} side={s} sheet={sheets?.[s]} follow={follow} facts={facts} formation={formation} />)}
     </div>
   );
 }

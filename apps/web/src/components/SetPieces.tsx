@@ -14,11 +14,14 @@ import {
   frameBefore, goalX, MARK_M, setPieces, setupAt, shotClips, tally, PITCH_W,
   type SetPiece, type SetPieceResult, type ShotClip, type ShotSource,
 } from "../data/setpieces";
-import { useT, type MessageKey } from "../i18n";
+import { useT, type MessageKey, type T } from "../i18n";
 import { describe } from "./EventFeed";
 import ClipPlayer, { useFramesMatch, usePeople } from "./ClipPlayer";
 import Segmented from "./Segmented";
 import "../styles/setpieces.css";
+
+/** "1 corner", "3 corners": one string per count in each language (zh says it the same way for both). */
+const count = (t: T, what: "corners" | "fks" | "pens" | "shots" | "goals", n: number) => t(`sp.n.${what}.${n === 1 ? "one" : "other"}` as MessageKey, { n });
 
 const S = 5;
 const HASHES = ["#set-pieces", "#shots"] as const;
@@ -42,7 +45,7 @@ export default function SetPiecesAndShots({ folded = true }: { folded?: boolean 
   if (!folded) {
     return (
       <div className="set-shots open" id="set-pieces">
-        <p className="muted sp-count">{t("sp.titleNote", { corners, shots })}</p>
+        <p className="muted sp-count">{t("sp.titleNote", { corners: count(t, "corners", corners), shots: count(t, "shots", shots) })}</p>
         {body}
       </div>
     );
@@ -50,7 +53,7 @@ export default function SetPiecesAndShots({ folded = true }: { folded?: boolean 
   return (
     <details className="more set-shots" id="set-pieces" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary>
-        {t("sp.title")} <small>{t("sp.titleNote", { corners, shots })}</small>
+        {t("sp.title")} <small>{t("sp.titleNote", { corners: count(t, "corners", corners), shots: count(t, "shots", shots) })}</small>
       </summary>
       {open && body}
     </details>
@@ -89,7 +92,8 @@ export function SetPieceBoard() {
           <p key={side} className={side}>
             <b>{teams[side].short_name}</b>{" "}
             {t(sums[side].penalties ? "sp.sumPens" : "sp.sum", {
-              corners: sums[side].corners, fks: sums[side].freeKicks, pens: sums[side].penalties, shots: sums[side].shots, goals: sums[side].goals,
+              corners: count(t, "corners", sums[side].corners), fks: count(t, "fks", sums[side].freeKicks), pens: count(t, "pens", sums[side].penalties),
+              shots: count(t, "shots", sums[side].shots), goals: count(t, "goals", sums[side].goals),
             })}
           </p>
         ))}

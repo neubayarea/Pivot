@@ -201,6 +201,11 @@ button { font: inherit; color: inherit; }
   .playback .scrub { grid-column: 1 / -1; }
 }
 .mom { display: block; width: 100%; height: auto; }
+/* Ax69: below 640px the 780-wide chart would shrink its minute and axis labels to 6–7px; it keeps 640px and scrolls. */
+@media (max-width: 640px) {
+  .mom-scroll { overflow-x: auto; margin-inline: -8px; padding-inline: 8px; scrollbar-width: thin; }
+  .mom-scroll .mom { width: 640px; max-width: none; }
+}
 .mom .mom-pending { animation: blink 1.4s steps(2, start) infinite; }
 svg text { font-family: var(--pv-label); }
 .hl { background: linear-gradient(transparent 58%, var(--pv-gold) 58%); font-weight: 700; padding: 0 2px; color: var(--pv-ink); }
@@ -532,8 +537,15 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .mh-name .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-name .tm-short { display: none; }
 .mh-crest { display: none; }
-.mh-fav { color: var(--pv-gold); font-family: var(--pv-body); font-size: .55em; }
-.mh-team.fav .tm-full, .mh-team.fav .tm-short { text-decoration: underline 3px var(--pv-gold); text-underline-offset: 6px; }
+/* Ax69: the ♥ beside each name picks the viewer's team. A user's choice is ink or white, never yellow. */
+.fav-btn { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; padding: 0 4px; border: 0; border-radius: var(--pv-r-pill); background: transparent; color: inherit; font: inherit; font-family: var(--pv-body); line-height: 1; cursor: pointer; opacity: .72; }
+.fav-btn:hover { opacity: 1; background: rgba(0, 0, 0, .18); }
+.fav-btn.on { opacity: 1; }
+.mh-name .fav-btn { font-size: .55em; }
+.mh-team.fav .tm-full, .mh-team.fav .tm-short { text-decoration: underline 3px currentColor; text-underline-offset: 6px; }
+.follow-chip { justify-self: center; display: inline-flex; align-items: center; gap: 4px; margin: 0; padding: 2px 4px 2px 12px; border-radius: var(--pv-r-pill); background: rgba(0, 0, 0, .3); color: #FFFFFF; font-size: var(--pv-fs-sm); font-weight: 600; }
+.follow-x { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.follow-x:hover { background: rgba(255, 255, 255, .2); }
 .mh-goals { list-style: none; margin: 0; padding: 0; font-weight: 500; font-size: var(--pv-fs-sm); line-height: 1.45; color: rgba(255, 255, 255, .88); }
 .mh-goals li::before { content: "⚽ "; font-size: .85em; }
 .mh-team.home .mh-goals li::before { content: none; }
@@ -563,8 +575,9 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .mh-bar-team.home { justify-self: end; flex-direction: row-reverse; }
 .mh-bar-team .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-bar-team .tm-short { display: none; }
-.mh-bar-team.fav .tm-full, .mh-bar-team.fav .tm-short { text-decoration: underline 2px var(--pv-gold); text-underline-offset: 4px; }
-.mh-bar-team .mh-fav { font-size: .8em; }
+.mh-bar-team.fav .tm-full, .mh-bar-team.fav .tm-short { text-decoration: underline 2px var(--tc); text-underline-offset: 4px; }
+.mh-bar-team .fav-btn { color: var(--tc); min-width: 28px; min-height: 28px; }
+.mh-bar-team .fav-btn:hover { background: var(--pv-sunk); }
 .mh-chip { flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--tc); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
 .mh-bar-mid { display: inline-flex; align-items: center; gap: 10px; }
 .mh-bar-mid .stamp:not(.live) { background: var(--pv-sunk); color: var(--pv-ink-2); border-color: transparent; }
@@ -655,6 +668,27 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .lu-list .no { text-align: right; font-family: var(--pv-label); font-weight: 700; color: var(--pv-ink-2); }
 .lu-list .nm { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .lu-list abbr { text-decoration: none; color: var(--pv-ink-2); }
+.lineups.with-follow .lu-list li { grid-template-columns: 2em minmax(0, 1fr) auto auto; align-items: center; }
+.lu-list .follow { padding: 1px 8px; font-size: var(--pv-fs-xs); }
+.lineups.with-follow .lu-list { min-width: 0; }
+/* With a Follow button on every row the lists need more room than the pitch: pitch first, then both lists. */
+@media (min-width: 901px) {
+  .lineups.with-follow:not(.no-sheet) { grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "pitch home away"; }
+}
+/* Ax69: what each player did, in the list rows and on the pitch dots. Cards in card colours, the rest ink. */
+.lu-facts { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; vertical-align: middle; font-weight: 600; }
+.lu-goal { font-size: 11px; letter-spacing: 1px; }
+.lu-card { display: inline-block; width: 8px; height: 11px; border-radius: 1.5px; }
+.lu-card.yellow, .lu-cd.yellow { background: #F2C94C; fill: #F2C94C; }
+.lu-card.red, .lu-cd.red { background: var(--pv-red); fill: var(--pv-red); }
+.lu-sub { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); white-space: nowrap; }
+.lu-sub span { font-size: .8em; }
+.lu-rating { font-size: var(--pv-fs-xs); font-weight: 800; padding: 0 6px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); }
+.lu-rt { fill: var(--pv-ink); font-size: 2.2px; font-weight: 800; }
+.lu-ball { fill: #FFFFFF; stroke: var(--pv-ink); stroke-width: .35; }
+.lu-offmk { fill: var(--pv-ink-2); font-size: 2px; }
+.lu-team .followed circle { stroke: var(--pv-ink); stroke-width: 1.2; }
+.lu-team .followed .lu-nm { text-decoration: underline; }
 .lu-list .rl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
 .lu-list h4 { margin: 4px 0 0; font-family: var(--pv-label); font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
 .lu-bench { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
@@ -761,6 +795,37 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .story-watch { justify-self: start; }
 .story-lean { justify-self: start; font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: var(--pv-r-pill); background: var(--tc); color: var(--pv-on-team); }
 .story-clip { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 16px 20px; }
+
+/* ---------- Line-ups tab (Ax69): the matchup seen from the ♥ team; --tc is that team, --oc the other ---------- */
+.mu { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px 32px; background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 20px 24px 20px 30px; box-shadow: inset 6px 0 var(--tc); }
+.mu h3 { font-size: var(--pv-fs-md); font-weight: 700; margin-bottom: 6px; }
+.mu ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.mu-line { display: grid; grid-template-columns: minmax(7em, 1fr) auto auto auto auto; gap: 6px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--pv-hair); }
+.mu-zone { font-weight: 600; font-size: var(--pv-fs-sm); }
+.mu-roles { display: inline-flex; flex-wrap: wrap; gap: 3px; min-width: 4.5em; }
+.mu-roles.mine { justify-content: flex-end; }
+.mu-roles i { font-style: normal; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); padding: 1px 6px; border-radius: var(--pv-r-pill); color: var(--pv-on-team); }
+.mu-roles.mine i { background: var(--tc); }
+.mu-roles.theirs i { background: var(--oc); }
+.mu-count { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-lg); white-space: nowrap; }
+.mu-edge { justify-self: start; font-size: var(--pv-fs-xs); font-weight: 700; padding: 2px 10px; border-radius: var(--pv-r-pill); white-space: nowrap; }
+.mu-edge.edge { background: var(--tc); color: var(--pv-on-team); }
+.mu-edge.short { background: transparent; color: var(--pv-ink); box-shadow: inset 0 0 0 1.5px var(--oc); }
+.mu-edge.even { background: var(--pv-sunk); color: var(--pv-ink-2); }
+.mu-diffs li { padding: 8px 0; border-top: 1px solid var(--pv-hair); font-size: 15px; line-height: 1.45; }
+.mu-pick { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+.fav-btn.named { display: inline-flex; gap: 8px; padding: 6px 16px; opacity: 1; border: 1px solid var(--pv-hair); background: var(--pv-sheet); color: var(--pv-ink); font-weight: 600; }
+.fav-btn.named > span:first-child { color: var(--tc); font-size: 1.2em; }
+.fav-btn.named:hover { background: var(--pv-sunk); }
+@media (max-width: 900px) {
+  .mu { grid-template-columns: minmax(0, 1fr); padding: 16px 16px 16px 22px; }
+}
+@media (max-width: 560px) {
+  .mu-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .mu-zone { grid-column: 1 / -1; }
+  .mu-roles.mine { justify-content: flex-start; }
+  .mu-count, .mu-edge { justify-self: end; }
+}
 /* For / against the ♥ team: the colour of the side it went to (C12). */
 .lean-tag { display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: var(--pv-r-pill); background: var(--tc); color: var(--pv-on-team); }
 .alarm { margin: 0 32px; background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 14px 20px; display: grid; gap: 6px; }
