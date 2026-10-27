@@ -64,98 +64,101 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
     .map((p) => t("chart.towards", { minute: minute(p.minute), team: p.direction === "home" ? homeLabel : awayLabel }))
     .join(", ");
 
+  // On phones the chart keeps a readable width and scrolls sideways in its box (Ax69).
   return (
-    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
-      <defs>
-        <clipPath id={`${clip}up`}>
-          <rect x={0} y={0} width={W} height={MID} />
-        </clipPath>
-        <clipPath id={`${clip}dn`}>
-          <rect x={0} y={MID} width={W} height={H} />
-        </clipPath>
-      </defs>
-      {windowAt && (
-        <rect className="mom-win" x={x(windowAt[0] / 60)} y={T} width={Math.max(2, x(windowAt[1] / 60) - x(windowAt[0] / 60))} height={H - T - B} />
-      )}
-      <rect x={x(ht)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
-      <text x={x(ht) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
-        {t("chart.ht")}
-      </text>
-      <line x1={L} x2={W - R} y1={MID} y2={MID} stroke="var(--pv-ink)" strokeWidth={2} />
-      {TICKS.map((t) => (
-        <text key={t} x={x(tickAt(t))} y={H - 8} fontSize={11} textAnchor="middle" fill="var(--pv-ink-2)">
-          {t}′
+    <div className="mom-scroll">
+      <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
+        <defs>
+          <clipPath id={`${clip}up`}>
+            <rect x={0} y={0} width={W} height={MID} />
+          </clipPath>
+          <clipPath id={`${clip}dn`}>
+            <rect x={0} y={MID} width={W} height={H} />
+          </clipPath>
+        </defs>
+        {windowAt && (
+          <rect className="mom-win" x={x(windowAt[0] / 60)} y={T} width={Math.max(2, x(windowAt[1] / 60) - x(windowAt[0] / 60))} height={H - T - B} />
+        )}
+        <rect x={x(ht)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
+        <text x={x(ht) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
+          {t("chart.ht")}
         </text>
-      ))}
-      <text x={4} y={T + 12} fontSize={11} fontWeight={700} fill="var(--pv-home)">
-        {homeLabel}
-      </text>
-      <text x={4} y={H - B - 4} fontSize={11} fontWeight={700} fill="var(--pv-away)">
-        {awayLabel}
-      </text>
-      {/* C11: the one reveal on the page, kick-off to full time (styles/post.css; reduced motion skips it). */}
-      <g className="mom-draw">
-        <path d={area} fill="var(--pv-home)" fillOpacity={0.85} clipPath={`url(#${clip}up)`} />
-        <path d={area} fill="var(--pv-away)" fillOpacity={0.85} clipPath={`url(#${clip}dn)`} />
-        <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
-      </g>
-      {pivots.map((p) => {
-        const pending = p.status === "pending";
-        const label = `${minute(p.minute)}′`;
-        const n = numbered?.indexOf(p.pivot_id) ?? -1;
-        if (n >= 0 && onPick) {
-          const cx = x(p.minute);
-          const open = () => onPick(p.pivot_id);
+        <line x1={L} x2={W - R} y1={MID} y2={MID} stroke="var(--pv-ink)" strokeWidth={2} />
+        {TICKS.map((t) => (
+          <text key={t} x={x(tickAt(t))} y={H - 8} fontSize={11} textAnchor="middle" fill="var(--pv-ink-2)">
+            {t}′
+          </text>
+        ))}
+        <text x={4} y={T + 12} fontSize={11} fontWeight={700} fill="var(--pv-home)">
+          {homeLabel}
+        </text>
+        <text x={4} y={H - B - 4} fontSize={11} fontWeight={700} fill="var(--pv-away)">
+          {awayLabel}
+        </text>
+        {/* C11: the one reveal on the page, kick-off to full time (styles/post.css; reduced motion skips it). */}
+        <g className="mom-draw">
+          <path d={area} fill="var(--pv-home)" fillOpacity={0.85} clipPath={`url(#${clip}up)`} />
+          <path d={area} fill="var(--pv-away)" fillOpacity={0.85} clipPath={`url(#${clip}dn)`} />
+          <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
+        </g>
+        {pivots.map((p) => {
+          const pending = p.status === "pending";
+          const label = `${minute(p.minute)}′`;
+          const n = numbered?.indexOf(p.pivot_id) ?? -1;
+          if (n >= 0 && onPick) {
+            const cx = x(p.minute);
+            const open = () => onPick(p.pivot_id);
+            return (
+              <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} style={{ "--at": p.minute / end } as CSSProperties} role="button" tabIndex={0}
+                aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) }) + (lean(p) ? `, ${t(lean(p) === "for" ? "you.for" : "you.against")}` : "")}
+                onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
+                <line x1={cx} x2={cx} y1={T + 2} y2={H - B} />
+                {/* C12: with a ♥ team, a ring in the colour of the side it went to, and whether that was your way. */}
+                {lean(p) && <circle className={`mk-lean ${lean(p)}`} cx={cx} cy={T - 2} r={18} style={{ stroke: `var(--pv-${p.direction})` }} />}
+                <circle cx={cx} cy={T - 2} r={14} />
+                <text x={cx} y={T + 3} textAnchor="middle">{n + 1}</text>
+                <text className="mk-min" x={cx + (lean(p) ? 22 : 18)} y={T - 4}>{label}</text>
+                {lean(p) && <text className={`mk-lean-txt ${lean(p)}`} x={cx + 22} y={T + 10} style={{ fill: `var(--pv-${p.direction})` }}>{t(lean(p) === "for" ? "you.forShort" : "you.againstShort")}</text>}
+              </g>
+            );
+          }
+          const w = Math.max(34, 7 * label.length + 6);     // 45+2′ needs more room than 64′
           return (
-            <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} style={{ "--at": p.minute / end } as CSSProperties} role="button" tabIndex={0}
-              aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) }) + (lean(p) ? `, ${t(lean(p) === "for" ? "you.for" : "you.against")}` : "")}
-              onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
-              <line x1={cx} x2={cx} y1={T + 2} y2={H - B} />
-              {/* C12: with a ♥ team, a ring in the colour of the side it went to, and whether that was your way. */}
-              {lean(p) && <circle className={`mk-lean ${lean(p)}`} cx={cx} cy={T - 2} r={18} style={{ stroke: `var(--pv-${p.direction})` }} />}
-              <circle cx={cx} cy={T - 2} r={14} />
-              <text x={cx} y={T + 3} textAnchor="middle">{n + 1}</text>
-              <text className="mk-min" x={cx + (lean(p) ? 22 : 18)} y={T - 4}>{label}</text>
-              {lean(p) && <text className={`mk-lean-txt ${lean(p)}`} x={cx + 22} y={T + 10} style={{ fill: `var(--pv-${p.direction})` }}>{t(lean(p) === "for" ? "you.forShort" : "you.againstShort")}</text>}
+            <g key={p.pivot_id} className={pending ? "mom-pending" : undefined}>
+              <line
+                x1={x(p.minute)} x2={x(p.minute)} y1={T} y2={H - B}
+                stroke="var(--pv-red)" strokeWidth={pending ? 2 : 3} strokeDasharray={pending ? "4 4" : undefined}
+              />
+              <rect x={x(p.minute) - w / 2} y={T - 16} width={w} height={17} fill={pending ? "var(--pv-sheet)" : "var(--pv-red)"}
+                stroke="var(--pv-red)" strokeWidth={pending ? 2 : 0} />
+              <text x={x(p.minute)} y={T - 3} fontSize={12} fontWeight={700} textAnchor="middle"
+                fill={pending ? "var(--pv-red)" : "var(--pv-on-red)"}>
+                {label}
+              </text>
             </g>
           );
-        }
-        const w = Math.max(34, 7 * label.length + 6);     // 45+2′ needs more room than 64′
-        return (
-          <g key={p.pivot_id} className={pending ? "mom-pending" : undefined}>
-            <line
-              x1={x(p.minute)} x2={x(p.minute)} y1={T} y2={H - B}
-              stroke="var(--pv-red)" strokeWidth={pending ? 2 : 3} strokeDasharray={pending ? "4 4" : undefined}
-            />
-            <rect x={x(p.minute) - w / 2} y={T - 16} width={w} height={17} fill={pending ? "var(--pv-sheet)" : "var(--pv-red)"}
-              stroke="var(--pv-red)" strokeWidth={pending ? 2 : 0} />
-            <text x={x(p.minute)} y={T - 3} fontSize={12} fontWeight={700} textAnchor="middle"
-              fill={pending ? "var(--pv-red)" : "var(--pv-on-red)"}>
-              {label}
-            </text>
-          </g>
-        );
-      })}
-      {keys.map((k) => {
-        const kx = x(k.t / 60);
-        const on = k.id === keySelected;
-        const go = () => onKey?.(k.id);
-        return (
-          <g key={k.id} className={`mom-key${on ? " on" : ""}`} role={onKey ? "button" : undefined} tabIndex={onKey ? 0 : undefined}
-            aria-pressed={onKey ? on : undefined} aria-label={k.label} onClick={go}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go())}>
-            <circle className="hit" cx={kx} cy={MID} r={11} />
-            {on && <circle className="ring" cx={kx} cy={MID} r={9.5} />}
-            <KeyMark kind={k.kind} side={k.side} x={kx} y={MID} size={on ? 1.25 : 1} />
-          </g>
-        );
-      })}
-      {last && (
-        <>
-          <rect x={x(last.minute) + 8} y={T} width={2} height={H - T - B} fill="var(--pv-hair)" />
-          <circle className="now" cx={x(last.minute)} cy={y(last.momentum)} r={5} fill="var(--pv-ink)" stroke="var(--pv-sheet)" strokeWidth={2} />
-        </>
-      )}
-    </svg>
+        })}
+        {keys.map((k) => {
+          const kx = x(k.t / 60);
+          const on = k.id === keySelected;
+          const go = () => onKey?.(k.id);
+          return (
+            <g key={k.id} className={`mom-key${on ? " on" : ""}`} role={onKey ? "button" : undefined} tabIndex={onKey ? 0 : undefined}
+              aria-pressed={onKey ? on : undefined} aria-label={k.label} onClick={go}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go())}>
+              <circle className="hit" cx={kx} cy={MID} r={11} />
+              {on && <circle className="ring" cx={kx} cy={MID} r={9.5} />}
+              <KeyMark kind={k.kind} side={k.side} x={kx} y={MID} size={on ? 1.25 : 1} />
+            </g>
+          );
+        })}
+        {last && (
+          <>
+            <rect x={x(last.minute) + 8} y={T} width={2} height={H - T - B} fill="var(--pv-hair)" />
+            <circle className="now" cx={x(last.minute)} cy={y(last.momentum)} r={5} fill="var(--pv-ink)" stroke="var(--pv-sheet)" strokeWidth={2} />
+          </>
+        )}
+      </svg>
+    </div>
   );
 }

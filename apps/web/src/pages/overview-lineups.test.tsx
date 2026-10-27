@@ -5,10 +5,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TeamSheet, TeamTactics } from "@pivot/contracts";
+import type { MatchEvent, PlayerReport, TeamSheet, TeamTactics } from "@pivot/contracts";
 import { PlayerDetail } from "../components/PitchBoard";
 import ScoreHeader from "../components/ScoreHeader";
 import { FixtureProvider } from "../data/match";
+import { lineupFacts, shortName } from "../data/lineupFacts";
 import { lines, tacticsDiff, toggled } from "../data/matchup";
 import { DEFAULT_PREFS, PrefsProvider, usePrefs } from "../i18n";
 import LiveBoard from "./LiveBoard";
@@ -207,5 +208,38 @@ describe("the matchup from your side", () => {
       { field: "counter_attack", mine: false },
     ]);
     expect(tacticsDiff({ home: base, away: them }, "away")[0]).toEqual({ field: "press", mine: "low", theirs: "high", more: false });
+  });
+});
+
+describe("what each player did, in the line-ups", () => {
+  const ev = (e: Partial<MatchEvent>) => ({ team: "home", period: 1, meta: {}, ...e }) as MatchEvent;
+  it("counts goals (not own goals), cards with a second yellow as red, changes and ratings", () => {
+    const facts = lineupFacts([
+      ev({ t: 600, type: "shot", shot_outcome: "goal", player_id: "a" }),
+      ev({ t: 1200, type: "shot", shot_outcome: "goal", player_id: "a" }),
+      ev({ t: 1500, type: "clearance", player_id: "b", meta: { own_goal: "true" } }),
+      ev({ t: 1800, type: "card", player_id: "c", foul: { card: "yellow" } as MatchEvent["foul"] }),
+      ev({ t: 2400, type: "card", player_id: "c", foul: { card: "second_yellow" } as MatchEvent["foul"] }),
+      ev({ t: 3600, type: "substitution", player_id: "d", substitution: { player_off_id: "d", player_on_id: "e", reason: "tactical", slot: 9 } }),
+    ], [{ player_id: "a", stats: { rating: 8.4, minutes_played: 90 } } as PlayerReport, { player_id: "x", stats: { rating: 6, minutes_played: 0 } } as PlayerReport]);
+    expect(facts.get("a")).toMatchObject({ goals: 2, rating: 8.4 });
+    expect(facts.get("b")?.goals ?? 0).toBe(0);
+    expect(facts.get("c")).toMatchObject({ red: true });
+    expect(facts.get("d")).toMatchObject({ off: 3600 });
+    expect(facts.get("e")).toMatchObject({ on: 3600 });
+    expect(facts.has("x")).toBe(false);
+  });
+
+  it("shows them in the list rows once the match is under way", () => {
+    const html = render("?fixture=1&from=95&tab=lineups");
+    expect(html).toContain('aria-label="1 goal"');
+    expect(html).toContain('aria-label="Red card"');
+    expect(html).toMatch(/aria-label="Came on at \d+′"/);
+    expect(html).toMatch(/aria-label="Went off at \d+′"/);
+  });
+
+  it("cuts long surnames on the pitch", () => {
+    expect(shortName("Rasfelrassen")).toBe("Rasfelr.");
+    expect(shortName("Okafor")).toBe("Okafor");
   });
 });

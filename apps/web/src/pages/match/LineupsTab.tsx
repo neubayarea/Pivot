@@ -73,6 +73,8 @@ function Matchup({ side }: { side: Side }) {
 
 export function LineupsTab() {
   const t = useT();
+  // The coach's plan below names each shape; the lists then leave it out.
+  const { preMatch } = useMatch();
   const { side } = usePersona();
   return (
     <div className="post lineups-tab">
@@ -93,7 +95,7 @@ export function LineupsTab() {
           <h2 id="lu-xi-hd">{t("pre.lineups")}</h2>
           <p className="muted">{t("lu.note")}</p>
         </header>
-        <Lineups up={side ?? "home"} follow />
+        <Lineups up={side ?? "home"} follow facts formation={!preMatch} />
       </section>
       <TeamTactics />
     </div>
