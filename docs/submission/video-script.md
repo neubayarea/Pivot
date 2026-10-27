@@ -1,106 +1,149 @@
 # Pivot: demo video script
 
-Target length **1:54.5** (limit 2:00). Narration is **251 words**, about 1:48 at 140 words per minute; the rest is room for clicks and pauses. Captions: [video-captions.srt](video-captions.srt) (same timings as below).
+Length **1:57** (limit 2:00). Narration: **249 words**, about 1:47 at 140 words a minute. The rest is room for clicks. Captions: [video-captions.srt](video-captions.srt), with the same timings as below.
 
-Demo match: **M-seed-29**, Harbour City 3–1 Northgate Rovers, https://pivot.in-stacks.com/?match=M-seed-29
+Demo match: **M-seed-101**, **Harbour City 3–3 Northgate Rovers**. The site opens it by default: https://pivot.in-stacks.com/
 
-Every shot below was walked through on the live site on **2026-10-26**. What we saw is under each shot. Lines marked **⟳ check live** depend on AI text or simulation results that are being regenerated after the simulator version changed. Before recording, run the [checks](#before-recording) and change the narration if the site shows something else.
+Every number below was read off the live site and its API on **2026-10-27**, after tonight's regeneration (set-piece positions #265, per-coach tactics #289). Before recording, run the [checks](#check-the-live-site-10-minutes-before) to confirm them again.
 
-> **All minutes, scores, player names and percentages in this script are as seen on 2026-10-26 and are subject to the final live site.** #245 (set-piece positions) will be merged before recording; after it the demo match's events, score and moment minutes can change and every result is recomputed. The structure of the video stays the same: re-read the numbers off the final live site, then update the narration and [video-captions.srt](video-captions.srt).
+## Tabs: new names and fallbacks
+
+The match page is being regrouped into six tabs by content in #316 / PR #323. Check with `gh pr view 323 -R neubayarea/Pivot` before recording.
+
+| Tab after #323 | `?tab=` | If #323 is not merged yet | Used in |
+|---|---|---|---|
+| **Overview** 概况 | `overview` | **Post-match** (`post`) | Shots 1–3, 6b |
+| **What if** 假如 | `whatif` | the **What if…** panel under the open turning point on Post-match | Shot 5 |
+| **Replay** 回放 | `replay` | **Live** (`live`) | Shot 6a |
+| **Stats** 数据 | `stats` | **Live** (`live`): in fan mode its top shows "How Harbour City did" and "Player spotlight" | Shot 4 |
+| **Line-ups** 阵容 | `lineups` | **Pre-match** (`pre`), the coach's-plan section | Shot 7b |
+| **Preview** 赛前 | `preview` | **Pre-match** (`pre`) | Shot 7a |
+
+After #323 the old links still work: `tab=post` opens Overview, `tab=live` opens Replay and `tab=pre` opens Preview. Overview keeps its inline **What if…** panel after #323, so shot 5 works either way.
+
+Viewer settings can go in the link too: `mode=fan|analyst`, `team=home|away|none`, `player=<id>|none`, `lang=en|zh|es`. M. Miquingorini is `h10`. On camera, change them with the top-bar controls: **Fan / Analyst**, **♥ Team**, **★ Player**, **EN / 中文 / ES**.
+
+Section names change with the viewing mode. Analyst says "Form & table", "Head-to-head", "The coach's plan" and "News & storylines". Fan says "How they come in", "When they last met", "How each coach wants to play" and "The talk before the game". Shots 1–2 are in analyst mode and shots 3–7 in fan mode.
 
 ## Shot list
 
-| # | Time | Picture (what to click) | Narration (words) | Judging point |
+| # | Time | Picture: what to click | Narration (words) | Judging point |
 |---|---|---|---|---|
-| 1 | 0:00–0:07.5 | Match page, **More details** open, camera on the **Match stats** card (Possession 57 % / 43 %, Shots 13 / 6). | Match stats tell you what happened: fifty-seven percent possession, thirteen shots. Not why the game turned. **(16)** | The problem: football insight |
-| 2 | 0:07.5–0:16 | Cut to the top of the page: "THE 3 MOMENTS THAT CHANGED THE COURSE OF THIS MATCH" and the momentum chart with markers ① ② ③. Slow move of the mouse along the momentum line. | Pivot finds the moments that turned a match, explains why, and lets you replay it with one thing changed. **(19)** | One-line pitch, innovation |
-| 3 | 0:16–0:31 | Hover the three cards under the chart one by one: **① 38′** "Lisais' red card shifts momentum to Harbour City", **② 62′** "Harbour City adopts deeper, less intense press" (set off by 63′ substitution), **③ 75′** "Quinvika's entrance shifts Harbour City's control". Each card shows **VERIFIED ✓**. ⟳ check live | Here's a synthetic match. Harbour City three, Northgate one. Pivot found three turning points. A red card. A substitution that pulled Harbour City deeper. And a second change that won control back. **(32)** | Football insight: why a moment matters |
-| 4 | 0:31–0:43 | Card ① is open below the cards ("WHY IT TURNED · 38′ · VERIFIED"). Hover the underlined **12 to 6**: the tooltip shows *Passes · Northgate Rovers · 33′–37′ · 12 · stat_ref.passes*. Then click evidence chip **#678**: the mini pitch marks "38′ Red card · E. Lisais". Show the line "Judge ✓ · Explainer ✓ · Verifier ✓ 4 claims · 4 evidence". ⟳ check live | Pick one. The AI explains why it mattered, and every number is checked. Northgate's passes fell from twelve to six. Hover it to see its source. **(26)** | Technical implementation, trust |
-| 5 | 0:43–0:59 | In the same panel, **WHAT IF…**: click chip **Remove 38′ red card**, then **RUN SIMULATION**. Result is instant ("INSTANT · SIMULATED BEFORE"): **−28 points less likely a Harbour City win**, "CLEAR DIFFERENCE", As played HBC 80 % / Draw 15 % / ROV 6 %, With the change HBC 52 % / 30 % / 19 %, 95 % ranges, "ranges do not overlap". Hold 2 s on the bars, then on "WHY IT DIFFERS": *Northgate Rovers increased shots from 4.9 to 10.4 and xG from 0.65 to 1.5…* ⟳ check live | So did the red card decide it? Remove it, and Pivot replays the rest of the match two hundred times each way. Northgate's shots double, and Harbour City's win chance drops from eighty to fifty-two percent. **(36)** | Innovation, football insight |
-| 6 | 0:59–1:09 | Scroll to **KEY MOMENTS**. Click row **40′ GOAL · H. Darbelnoez** (tag "EXTENDS THE LEAD", "→ Pivot ①"). The clip opens under the row; click **0.25×**, then ▶ (caption: "On the ball: 9 · C. Felbelroini → 10 · H. Darbelnoez"). Cut to **SET PIECES & SHOTS** → **CORNERS & FREE KICKS** → **40′ HBC Corner · C. Felbelroini · GOAL**: "In the box: HBC 4 attackers · ROV 3 defenders", "Marking: Zonal · 0 of 4 attackers had a defender within 2.5 m". ⟳ check live (set-piece positions are being reworked in #245) | Two minutes after the card, Harbour City scored from a corner. At quarter speed: four attackers, three defenders, nobody tight on them. **(22)** | Football insight, demo |
-| 7 | 1:09–1:22 | Back to the top. **SETTINGS** → Viewing mode **FAN** → Your team **Harbour City** → Player to follow **H. Darbelnoez**. Card ① is rewritten: headline "Lisais' red card sparks Harbour City surge", text "Lisais was booked at 38' and Northgate Rovers dropped to ten men… This pressure led to Darbelnoez scoring…"; the evidence chips that involve Darbelnoez get a **★**. Then click **中文** (title "改变这场比赛走向的 3 个时刻"), then **ES** for a second. ⟳ check live | And it's personal. Switch to Fan, pick Harbour City, follow Darbelnoez, and the story is told from your side. In Chinese, or Spanish. Every version is checked again. **(28)** | Personalisation (rule 4.1), completeness |
-| 8 | 1:22–1:40 | Switch back to **EN**. Open **More details** → **AGENT TRACE** → button **TRACE 3** (opens `/trace`, "EVERY STEP THE AI TOOK"). The top card is **75′ · Quinvika's entrance…**: box "SENT BACK BY THE VERIFIER (2)": *Number does not match: the number 70 in sentence 1 only matches pass_accuracy_pct for Northgate Rovers, but the sentence has it about Harbour City*. Below: Judge · mini → Explainer · standard "First draft" → Verifier · rules "Sent back" → Explainer "Rewrite 1" → Verifier "Every claim checks out". ⟳ check live | Every card comes from a Microsoft Agent Framework workflow. A Judge confirms the moment, an Explainer writes it, a Verifier recomputes every number. Here it caught the model giving Harbour City the other team's pass accuracy, and sent it back. **(40)** | Microsoft tech, technical implementation |
-| 9 | 1:40–1:47 | Architecture picture: the "How it works" diagram in the README on GitHub (https://github.com/neubayarea/Pivot#how-it-works), zoomed so the Azure box (Azure AI Foundry, Cosmos DB, Blob Storage) fills the frame. | The agents run on Azure AI Foundry. Results live in Cosmos DB, matches in Blob Storage. **(16)** | Microsoft tech |
-| 10 | 1:47–1:54.5 | End card: Pivot logo or the match page top, with text *pivot.in-stacks.com · github.com/neubayarea/Pivot · All clubs, players and matches are synthetic.* | Every match here is synthetic, as the rules require. Next: real match data. This is Pivot. **(16)** | Data rules, what comes next |
+| 1 | 0:00–0:12 | **Overview.** Open the [start link](#links). Score band: **Harbour City 3–3 Northgate Rovers**, "Miquingorini 60′, 65′, 82′" and "Rasfelrassen 19′ · Anbel 35′ · Renbelov 89′". Scroll slowly to "The 3 moments that changed the course of this match" and the momentum chart with markers **① 14′ ② 35′ ③ 72′**. The header folds into the slim bar as you scroll. | Harbour City three, Northgate Rovers three: one simulated match. Pivot finds the moments that turned it, explains why, and lets you replay it with one thing changed. **(27)** | The problem and the one-line pitch |
+| 2 | 0:12–0:31 | **Turning points, analyst view.** Click card **② 35′ "Anbel's goal shifts momentum decisively"** (Verified ✓, "Set off by 35′ Goal: O. Anbel"). Under **Why it turned**: "Checked: 10 numbers, 2 events". Hover the underlined **0 to 4** in the second sentence: the tooltip shows *Final-third passes · Northgate Rovers · 30′–34′*. Click evidence chip **#676**: the mini pitch shows "35′ Goal: O. Anbel". Hold 1 s on "Judged, written and checked by the AI. Claims checked: 10." | Pivot found three turning points. Take Anbel's goal at thirty-five minutes. A Judge agent confirms it really swung the game. An Explainer writes why. A Verifier recomputes every number from the event log: Northgate's passes into the final third went from zero to four. **(44)** | Football insight, trust in the AI |
+| 3 | 0:31–0:45 | **Switch to fan and pick a team.** Still on card ②, click **Fan** in the top bar, then **♥ Team → Harbour City**. The headline changes from "Anbel's goal shifts momentum decisively" to **"Harbour City lose grip after Northgate's second"**, and the text takes Harbour City's side ("After the goal, Harbour City's passes into the attacking third dropped to zero…"). Click **中文** (headline "Northgate再下一城 Harbour City失控"), then **ES** ("Harbour City pierde control tras segundo gol de Northgate"), then back to **EN**. | Now switch to Fan and pick Harbour City. Same moment, same checked facts, told from your side: "Harbour City lose grip after Northgate's second." In Chinese or Spanish, too. **(29)** | Personalisation (rule 4.1): audience, team, language |
+| 4 | 0:45–0:57 | **Follow a player.** Click **★ Player → M. Miquingorini**. (Or tap his name and press **☆ Follow** on his player card, #324, once that is live.) Card ③ now reads "Miquingorini's goal lifts Harbour City". Click the **Stats** tab (fallback: **Live**). At the top: "How Harbour City did · 3–3 · Best player: M. Miquingorini, rated 9.3", then **Player spotlight**: rating **9.3** (team average 7.0), Goals **3**, Shots **7**, Top speed **33** km/h. Click **Heatmap**, then hover "In the turning points" (14′, 35′, and 72′ "set it off"). | Follow a player. Miquingorini scored a hat-trick and is rated nine point three. You get his shots, his heatmap and his part in each turning point. **(26)** | Personalisation (rule 4.1): followed player |
+| 5 | 0:57–1:18 | **What-if.** Click the **What if** tab, then turning point **③ 72′** in the row at the top (fallback: **Overview**, click card ③, scroll to **What if…** under it). Click chip **Disallow 65′ goal**, keep **200** runs, click **Run simulation**. Result: **+27pts**, "Without the 65′ goal, Northgate Rovers's chance of winning rises from 26% to 53%, and the most likely score goes from 2–2 to 1–2." **Clear difference**. As played (from 64′): HBC 32 % · Draw 43 % · ROV 26 %. With the change: HBC 13 % · Draw 35 % · ROV 53 %. In fan mode with Harbour City a line adds "Harbour City's chance of winning: 32% as played, 13% with the change." Hold 2 s on the bars, then on "◆ ranges do not overlap". | So what if his equaliser had been ruled out? Pivot saves the match at that minute and plays the rest two hundred times each way. Northgate's chance of winning doubles, from twenty-six to fifty-three percent. The ranges don't overlap. It's a clear difference. **(43)** | Innovation, football insight |
+| 6 | 1:18–1:35 | **Replay and set pieces.** (a) 1:18–1:27: open the [replay link](#links) (`from=66`). As soon as the pitch shows, pause (❚❚), click **5×** on the bar under the pitch, then play. Passes draw a line from passer to receiver and tackles flash. At 65′ Miquingorini's goal gets a gold ring. (b) 1:27–1:35: **Overview** → **Set pieces & shots** → **Set pieces** → row **60′ HBC Free kick in the attacking third · M. Rasnosen · Goal**. The clip plays at 1×. It shows "In the box: HBC 3 attackers, ROV 8 defenders (keeper included)", "Marking: Man-to-man, 3 of 3 attackers had a defender within 2.5 m" and "What happened: 60′ HBC, Goal: M. Miquingorini". | Every match replays on the pitch, with passes, shots and tackles drawn as they happen. Set pieces too: his first goal came from a free kick, three attackers against eight defenders, all three man-marked. **(34)** | Demo, football insight |
+| 7 | 1:35–1:46 | **Pre-match.** (a) Click the **Preview** tab (fallback: **Pre-match**). "Qualification at stake". Under "How they come in", "2 points apart": Harbour City **3rd, 48 pts** (D W L L L), Northgate Rovers **5th, 46 pts** (W D W W L). Scroll to "The talk before the game": "S. Katoo under pressure after 3 defeats in Harbour City's last five league games". (b) Click **Line-ups** (fallback: scroll up to "How each coach wants to play" on Pre-match). Harbour City **4-3-3, S. Katoo, Defensive**, low press, slow tempo. Northgate Rovers **4-2-3-1, Y. Darquiner, Balanced**. | Before kick-off: third against fifth, two points apart, the storylines, and each coach's plan: a defensive four-three-three against a balanced four-two-three-one. **(21)** | Completeness, football context |
+| 8 | 1:46–1:57 | **End card**: a plain slide, or the match page dimmed behind text. **Pivot** · *Azure AI Foundry: models for the Judge, Explainer and Comparator agents · Azure Cosmos DB: results · Azure Blob Storage: match library* · *pivot.in-stacks.com · github.com/neubayarea/Pivot* · *All clubs, players and matches are synthetic.* | The agents run on Azure AI Foundry. Results live in Cosmos DB, matches in Blob Storage. Every club and player is synthetic. This is Pivot. **(25)** | Microsoft technology, data rules |
 
-Total: 251 words. If it runs long, cut "Every version is checked again." from shot 7 (5 words).
+Total: 249 words. If it runs long, cut "It's a clear difference." from shot 5 (4 words) and let the "Clear difference" label say it.
 
-### Which what-if to use
+### Which what-if to use, and why
 
-Use **Remove the red card**. In the precomputed results (#246, M-seed-29, 200 runs each) it is the only change with a large effect: seen from the 62′ moment, a Harbour City win goes 81 % → 47 % and a Northgate win 3 % → 28 %; seen from 75′, 86 % → 49 % and 2 % → 24 %. Disallowing the 40′ goal (from 38′) moves a home win 95 % → 83 %. Cancelling or moving a substitution, or pressing higher, changes the result by 1–3 points, too little to show. The script runs the red-card chip from moment ① (on 10/26: 80 % → 52 %); if the final site shows a bigger drop from moment ② or ③, run it from that moment's panel instead and say those numbers.
+Use **Disallow 65′ goal** from turning point ③ (72′). It is about the player followed in shot 4, and it is one of the three changes with a large effect. Each chip was replayed 200 times each way (#320). On 10/27 the live server returned:
+
+| Turning point | Change | As played → with the change (API values) | Clear difference? |
+|---|---|---|---|
+| ③ 72′ | **Disallow 65′ goal** (Miquingorini's equaliser) | ROV win 25.5 % → 52.5 %, HBC win 31.5 % → 13.0 %, most likely score 2–2 → 1–2 | yes, for HBC win and ROV win |
+| ② 35′ | Disallow 35′ goal (Anbel) | ROV win 82.0 % → 49.5 %, HBC win 6.5 % → 20.0 % | yes, all three |
+| ① 14′ | Disallow 19′ goal (Rasfelrassen's penalty) | HBC win 31.0 % → 45.5 %, ROV win 49.0 % → 25.5 % | yes, for HBC win and ROV win |
+| any | Cancel or move a substitution, press higher | at most 7.5 points on any outcome | no |
+
+The page rounds these to whole percentages (26 % → 53 %, 32 % → 13 %). The scenario in the video is `M-seed-101:see12b333150f` (`/api/scenarios/M-seed-101:see12b333150f`); the inline panel says "Instant: simulated before". **Do not click other chips on camera.** Later on 10/27 the server no longer returned some of the others, for example the 35′ one. A scenario that is not stored runs again, and that takes minutes on the 2-core server (the 65′ one took 155 s the first time).
 
 ### Why this order
 
-The first 16 seconds state the problem and the answer. Shots 3–6 stay on one moment (the 38′ red card) and look at it four ways: the explanation, a checked number, the what-if, and the goal it led to with the corner that made it. Shot 7 covers the personalisation the challenge rules (4.1) require: audience, team, followed player, language. Shots 8–9 show how it is built. Shot 8 is the strongest proof of "the AI is checked": a real rejected draft from the live site.
-
-No separate player card exists in the web app yet (the player numbers are only in the API, `GET /api/matches/{id}/players/stats`), so shot 7 shows the followed player through the ★ on the evidence chips and the rewritten text. Do not say "player card" in the video.
+Shots 1–2 state the problem and show the checked explanation on the strongest card. Turning point ① is an "Auto summary" (the template fallback), so the script never opens it. Shots 3–4 are the personalisation rule 4.1 asks for: audience, team and language, then a followed player. Shot 5 asks a question about that player's goal. Shot 6 shows the pitch and the same player's set-piece goal, and shot 7 shows what the page knows before kick-off.
 
 ## Before recording
 
 ### Screen and browser
 
-- Chrome, an **incognito window** (the site remembers language and match in browser storage; on 10/26 a normal window opened in Spanish).
-- Page area **1920 × 1080**, browser zoom 100 %. Record at 1920 × 1080, 30 fps.
-- Hide the bookmarks bar, close other tabs, hide the Dock, turn on **Do Not Disturb** (no Slack, mail or calendar pop-ups), mute system sounds.
-- Language **EN** in the top bar. **Settings → Viewing mode: Analyst**, Your team: No team, no player followed (the default). Shots 1–6 use the analyst wording; shot 7 changes the settings on camera. Reload into an incognito window before re-taking shots 1–6.
-- Mouse: turn on a cursor highlight if your recorder has one. Move slowly; hold still for half a second before every click.
+- Chrome, **incognito window**: the site remembers language, viewer settings and match in browser storage. Page area **1920 × 1080**, zoom 100 %. Record at 1920 × 1080, 30 fps.
+- Hide the bookmarks bar and the Dock, close other tabs, turn on **Do Not Disturb**, mute system sounds.
+- **No music**, or only music you hold a licence for. **No Premier League logos or marks** anywhere: browser tabs, desktop, end card.
+- Mouse: turn on cursor highlight if your recorder has it. Hold still for half a second before each click.
 
-### Check the live site still matches the script (10 minutes before)
+### Links
+
+| Use | Link |
+|---|---|
+| Start (shots 1–2), after #323 | https://pivot.in-stacks.com/?match=M-seed-101&tab=overview&mode=analyst&team=none&player=none&lang=en |
+| Start, before #323 (also works after) | https://pivot.in-stacks.com/?match=M-seed-101&tab=post&mode=analyst&team=none&player=none&lang=en |
+| Shot 2 with card ② already open | add `&pivot=M-seed-101:p34` |
+| Shot 4, if you cut there | https://pivot.in-stacks.com/?match=M-seed-101&tab=stats&mode=fan&team=home&player=h10&lang=en (before #323: `tab=live`) |
+| Shot 5, if you cut there | https://pivot.in-stacks.com/?match=M-seed-101&tab=whatif&pivot=M-seed-101:p74&mode=fan&team=home&player=h10&lang=en (before #323: `tab=post`, same `pivot=`) |
+| Shot 6a, replay | https://pivot.in-stacks.com/?match=M-seed-101&tab=replay&from=66&mode=fan&team=home&player=h10&lang=en (before #323: `tab=live`) |
+| Shot 7a | https://pivot.in-stacks.com/?match=M-seed-101&tab=preview&mode=fan&team=home&player=h10&lang=en (before #323: `tab=pre`) |
+| Shot 7b | https://pivot.in-stacks.com/?match=M-seed-101&tab=lineups&mode=fan&team=home&player=h10&lang=en (before #323: `tab=pre`) |
+
+`team=none&player=none` in the start link clears anything a previous take saved. `from=` is in minutes of match time. The replay starts at 20×, so pause it first.
+
+### Check the live site (10 minutes before)
 
 ```bash
-curl -s https://pivot.in-stacks.com/api/matches/M-seed-29/pivots | python3 -c "import json,sys;[print(p['pivot_id'],p['narrative']['headline']) for p in json.load(sys.stdin)]"
+curl -s https://pivot.in-stacks.com/api/matches/M-seed-101 | python3 -c "import json,sys;print(json.load(sys.stdin)['score'])"
+curl -s https://pivot.in-stacks.com/api/matches/M-seed-101/pivots | python3 -c "import json,sys;[print(p['pivot_id'],p['status'],p['narrative']['headline']) for p in json.load(sys.stdin)]"
+curl -s https://pivot.in-stacks.com/api/scenarios/M-seed-101:see12b333150f | python3 -c "import json,sys;r=json.load(sys.stdin)['result'];print(r['baseline']['away_win'],r['counterfactual']['away_win'])"
 ```
 
-On 10/26 this printed `p37` "Lisais' red card shifts momentum to Harbour City", `p66` "Harbour City adopts deeper, less intense press" and `p79` "Quinvika's entrance shifts Harbour City's control" (shown on the page as 38′, 62′, 75′). If the minutes or headlines changed, rewrite shot 3, and check shots 4 and 9 against the page.
+On 10/27 these printed:
+- the score `home 3, away 3`;
+- `p13 degraded "Momentum swings to Northgate Rovers"`, `p34 confirmed "Anbel's goal shifts momentum decisively"` and `p74 confirmed "Miquingorini's goal sparks Harbour City revival"`;
+- `0.255 0.525`.
 
-- **Shot 4:** the first sentence of card ① still has an underlined number. If it is not "12 to 6", say the new number and team.
-- **Shot 8:** `/trace` still has a card with "SENT BACK BY THE VERIFIER". If the pass-accuracy example is gone, describe the one shown (any "Number does not match" or "Wrong direction" line works: "Here, it caught a wrong number and sent it back.").
-- **Shot 6:** after #245 lands, the 40′ corner numbers may change. Read them off the page.
+If anything differs, re-read the shots off the page, then change the narration and the captions together. If the last command says "not found", the what-if is no longer stored; see backup 5.
 
-### Warm up (open each once, so nothing loads on camera)
+### Warm up (open each once, so nothing is written on camera)
 
-1. https://pivot.in-stacks.com/?match=M-seed-29 (wait for the momentum chart and the three cards).
-2. Card ① → **Remove 38′ red card** → **RUN SIMULATION**. It must say "INSTANT · SIMULATED BEFORE". On 10/26 it did (scenario `M-seed-29:s7209aa0245eb`, HBC 79.5 % → 51.5 %).
-3. Key moments → 40′ goal clip, play once.
-4. Set pieces & shots → 40′ corner.
-5. Settings → Fan → Harbour City → H. Darbelnoez, and wait until card ① shows "Lisais' red card sparks Harbour City surge" (the first time, the team version took a few seconds; until then the plain fan version shows). Then switch to 中文 and ES once each (the first request in a language writes it). Then set everything back: EN, Analyst, No team, no player.
-   Use **Harbour City**, not Northgate: on 10/26 the Northgate fan version was still the plain template ("A card changes the game"), which #247 fixes.
-6. More details → Agent trace → TRACE 3 (`/trace`).
-7. GitHub README "How it works" (the diagram takes a moment to render).
+1. The start link. Wait for the momentum chart and the three cards.
+2. Card ② → Fan → ♥ Harbour City. Wait until the headline reads "Harbour City lose grip after Northgate's second". While a version is being written, the card says "Writing the fan version. Showing the analyst version for now."; on 10/27 that took about 30 s. Then click 中文 and ES once each.
+3. ★ Miquingorini. Check that card ③ reads "Miquingorini's goal lifts Harbour City".
+4. Stats (or Live) → Player spotlight → Heatmap.
+5. Card ③ → Disallow 65′ goal → Run simulation. The inline panel must say "Instant: simulated before". The What if tab (the What-if lab) can show "Replaying… 400 of 400" for a second before the result while the stored result loads. Cut it if it shows.
+6. The replay link, and the 60′ free-kick clip.
+7. Preview and Line-ups (or Pre-match).
 
-The repository was still **private** on 10/26. Shot 9 shows GitHub, so either record it after the repository is made public, or use the slide backup.
-
-Then reload the match page so every panel starts closed.
+Then open the start link again, so every panel starts closed and the viewer is back to Analyst, no team, no player.
 
 ### Recording tips
 
-- Record each shot as its own take; cut them together. Record the voice separately and lay it over.
-- Shots 5 and 8 are the ones judges remember. Give them the longest holds.
-- Stay on M-seed-29 and on the red-card what-if. **Do not click other what-if chips on camera**: on 10/26 only the red-card one was confirmed as already computed, and a new one takes about 10 minutes on the 2-core server (the red-card run took 625 s when it was first computed).
+- Record each shot as its own take. Record the voice separately and lay it over.
+- Shots 3 and 5 carry personalisation and innovation. Give them the longest holds.
+- In fan mode with Harbour City and Miquingorini, do not show card ③ in Chinese: on 10/27 it was still the template ("Harbour City失去势头"). Card ② was written by the model in all three languages.
 
 ## Backup for each shot
 
 | # | If this goes wrong | Do this instead |
 |---|---|---|
-| 1 | Stats card shows different numbers | Say the numbers on screen, or drop the numbers: "Match stats tell you what happened. Not why the game turned." |
-| 2–3 | Moments changed after regeneration | Use what the page shows; keep the pattern "a red card, a substitution, a second change". If a card shows "Auto summary" instead of "VERIFIED ✓", film a different card and mention it: the fallback is a feature ("If no draft passes, a plain checked summary is shown"). |
-| 4 | No underlined number in card ① | Click **FULL DETAIL →** for card ① and hover a number there, or click card ② and hover its number. |
-| 5 | Red-card what-if is not instant (shows a queue or progress) | Do not wait on camera. Option A: record it on your laptop with `PIVOT_PIPELINE=fake` (see README "Run it locally"; a 200-run what-if takes about 30 s there, then cut the waiting). Option B: use the screenshot `docs/screenshots/submission/04-whatif-result.png` with a slow zoom, and say "Harbour City's win chance drops sharply." |
-| 6 | Clip does not play, or the set-piece panel looks broken (#244) | Use the 52′ or 11′ goal row, or click **Replay from here →**. For the corner, use tab **EVERY SHOT** and replay the 40′ goal shot; narrate "Every shot can be replayed." |
-| 7 | Fan + Harbour City text has not appeared yet, or shows "Auto summary" | Wait on the settings menu (cut it out later); or show only Fan (no team), whose text is also rewritten ("Lisais' card sparks Harbour City surge"). If Chinese is missing for a card, show ES, or just the Chinese title and chips. |
-| 8 | `/trace` empty or slow | Open https://pivot.in-stacks.com/api/pivots/M-seed-29:p79/traces in the browser (raw JSON with the same `number_mismatch`), or use `docs/screenshots/d10-trace/`. |
-| 9 | GitHub diagram does not render, or the repository is still private | Screenshot the diagram from `docs/architecture.md`, or a simple slide: Browser → FastAPI (Oracle VM) → Azure AI Foundry · Cosmos DB · Blob Storage. |
-| 10 | — | A plain slide is fine. |
+| 1 | Tab names differ from the script | Use the [tab table](#tabs-new-names-and-fallbacks). The picture is the same Overview / Post-match page. |
+| 2 | The tooltip on "0 to 4" does not show | Hover "0 to 0.93" in the third sentence (xG) and say "Northgate's expected goals went from zero to nearly one." |
+| 3 | The fan text is still loading | Wait off camera and cut. Or show Fan with no team first, then add Harbour City. |
+| 4 | Player spotlight is not on Stats | Before #323 it is on Live. Overview also shows a "★ Following M. Miquingorini" card (Goals 3, Goes at goal 7) under the what-if panel. |
+| 5 | The result is not instant (a queue or a progress bar) | Do not wait on camera. Try the inline panel on Overview with card ③ open. If that queues too, record it locally with `PIVOT_PIPELINE=fake` (README, "Run it locally"); a 200-run what-if takes about 30 s on a laptop, so cut the wait. Or narrate over a still of the result: "Northgate's chance of winning doubles." |
+| 6 | The replay runs past the goal | Click the gold goal mark on the scrubber; it jumps to 5 s before the goal. Or use Overview → Key moments → **65′ Goal, M. Miquingorini** and play the clip at 0.5×. |
+| 7 | Storylines or the coach's plan are missing | Show the table and the formations from Line-ups only, and drop "the storylines" from the narration. |
+| 8 | — | A plain slide is fine. |
 
-## What we saw on the live site (2026-10-26)
+## What we saw on the live site (2026-10-27)
 
-- Top: "AFTER THE MATCH · HARBOUR CITY 3–1 NORTHGATE ROVERS", "THE 3 MOMENTS THAT CHANGED THE COURSE OF THIS MATCH", button START DEMO, momentum chart with markers 1 (38′), 2 (62′), 3 (75′).
-- Card ①: "Lisais' red card at 38' forced Northgate Rovers to a mid defensive line and press, reducing their passes from 12 to 6. #678 #679" and "Harbour City dominated possession with 94.7% field tilt and created three box entries, leading to Darbelnoez's goal. #714 #716".
-- Inline what-if chips: Remove 38′ red card, Disallow 40′ goal, Cancel 63′ substitution. Red card result as in shot 5. "Why it differs": "Removing the 38′ red card made a Northgate Rovers win more likely in the replays. Northgate Rovers increased shots from 4.9 to 10.4 and xG from 0.65 to 1.5…"
-- Key moments: 11′ goal (opener, 1–0), 38′ red card, 40′ goal (extends the lead, 2–0), 46′ penalty to ROV then VAR overturns it, 52′ goal (3–0), 56′ penalty to HBC, 86′ goal ROV (pulls one back, 3–1). Clip speeds 0.25× 0.5× 1× 2× 5×.
-- Set pieces: HBC 5 corners · 5 free kicks → 1 shot, 1 goal; ROV 6 corners · 1 free kick → 1 shot, 1 goal.
-- More details: On the pitch (team shape, vs 5 min before, formation 4-3-3 vs 4-4-2 · 10 players, back line, width, depth), Line-ups, Match stats, Events, Agent trace.
-- Personalisation (Fan · Harbour City · H. Darbelnoez): card ① headline "Lisais' red card sparks Harbour City surge"; sentences "Lisais was booked at 38' and Northgate Rovers dropped to ten men, forcing them to change tactics." / "Harbour City took over the game, with their share of play rising to 95%." / "This pressure led to Darbelnoez scoring and Harbour City extending their lead."; ★ on #714. Fan + Northgate was the template ("A card changes the game").
-- What-if Lab page (`/whatif/M-seed-29:p37`) shows the same result as the inline panel; the most common scores and per-team shots/xG from #236 are in the API result (`baseline_stats.top_scores`, …) but only reach the screen through the "Why it differs" sentences.
-- Agent trace: all three moments had at least one draft sent back by the Verifier (38′: twice, 62′: once, 75′: once).
-- Not read aloud, on purpose: card ② says "PPDA worsen from 6.0 to 3.75, indicating fewer defensive actions per opponent pass" (a lower PPDA means *more* pressing), and the Chinese card ① translates "field tilt" as 控球率 (possession). Neither is in the script.
+- Score band: Harbour City 3–3 Northgate Rovers, full time. Goals: Rasfelrassen 19′ (penalty), Anbel 35′, Miquingorini 60′ (from a free kick), 65′ and 82′, Renbelov 89′.
+- Turning points, all swinging to Northgate Rovers:
+  - ① 14′ "Momentum swings to Northgate Rovers" (Auto summary);
+  - ② 35′ "Anbel's goal shifts momentum decisively" (Verified ✓, set off by the 35′ goal);
+  - ③ 72′ "Miquingorini's goal sparks Harbour City revival" (Verified ✓, set off by the 65′ goal).
+- Card ② in analyst view:
+  - "At 35', O. Anbel scored after a Northgate Rovers build-up with 75% pass accuracy, reversing their earlier 44% rate."
+  - "Northgate Rovers increased their final-third passes from 0 to 4 and box entries from 0 to 2 after the goal."
+  - "…xG from 0 to 0.93 and threat created from 0.007 to 0.30."
+- Card ② for a Harbour City fan following Miquingorini: "Harbour City lose grip after Northgate's second", then "O. Anbel scored at 35' to double Northgate's lead, ending Harbour City's strong spell with M. Miquingorini involved."
+- Card ③ for the same viewer: "Miquingorini's goal lifts Harbour City", then "M. Miquingorini scored at 65' to level the game, sparking hope for Harbour City fans."
+- Player: M. Miquingorini, #10, ST, 100 minutes, rating 9.3, 3 goals, 7 shots, xG 0.80, top speed 33 km/h.
+- Match stats: possession 51 % / 49 %, shots 14 / 13, xG 1.63 / 2.28.
+- Pre-match: Freeland League, Harbour Park, crowd 38,000, referee S. Midar. Head-to-head over 5 meetings: HBC won 2, 1 draw, ROV won 2.
+- Left out of the narration on purpose:
+  - in card ②, the tooltip on "0 to 2" (box entries) shows the final-third-passes source instead;
+  - card ③'s analyst headline says "Harbour City revival" while its momentum went to Northgate Rovers;
+  - the result sentence says "Northgate Rovers's".

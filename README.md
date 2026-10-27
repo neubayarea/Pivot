@@ -16,22 +16,26 @@ All matches, clubs and players are synthetic (see [Data](#data-and-disclaimer)).
 
 **Live demo: https://pivot.in-stacks.com/**
 
-No sign-in is needed. The site shows 20 simulated matches and opens the first one in the match list (top bar) by default. Every match is an ordinary simulation: nothing in it is staged. A private window works best, because the site remembers the last match you opened.
+No sign-in is needed. The site has 20 simulated matches and opens the demo match, **Harbour City 3–3 Northgate Rovers** (`?match=M-seed-101`); the others are in the match menu in the top bar. Every match is an ordinary simulation: nothing in it is staged. A private window works best, because the site remembers your language, viewer settings and last match.
+
+The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Preview**. If you see **Pre-match / Live / Post-match** instead, the six-tab layout (#323) is not deployed yet. Post-match is Overview, Live holds Replay and Stats, and Pre-match holds Preview and Line-ups. Old links with `?tab=pre|live|post` keep working.
 
 | Step | Do this | You should see |
 |---|---|---|
-| 1 | Open the link | The default match: score, momentum chart, the list of **Pivots**, the pitch and match stats. The red lines on the momentum chart are the pivots. |
-| 2 | Click **Start demo**, then **60×** | The match replays from 0′. Momentum is drawn live, players move on the pitch, and each pivot card appears at the minute it was detected. |
-| 3 | Click the first pivot in the list | The pivot page: headline, "Verified ✓", which way momentum went, and the "Why it turned" sentences. Each sentence ends with evidence numbers such as `#1107`. |
-| 4 | Click an evidence number | The mini pitch shows that event (a shot gets an arrow) and the timeline jumps to that second. |
-| 5 | Switch **Analyst / Fan** and **EN / 中文 / ES** in the top bar | The explanation is rewritten for that audience and language. It goes through the same checks, so the evidence numbers stay. |
-| 6 | On the pivot page, click **What if…** | The What-if Lab, with the scenarios that fit this moment (for example cancelling a substitution or removing a goal or a red card). |
-| 7 | Pick a scenario, keep **200** runs, click **Run simulation** | Win/draw/loss "as played" vs "with the change", 95 % ranges, and a short "Why it differs". |
-| 8 | Pick another match in the top bar | The board switches to that match; steps 2 to 7 work the same on every match. |
+| 1 | Open the link | **Overview** (Post-match): the score band (it folds into a slim bar as you scroll), "The 3 moments that changed the course of this match" and a momentum chart marked ① 14′ ② 35′ ③ 72′. |
+| 2 | Click **② 35′ "Anbel's goal shifts momentum decisively"** | What set it off (35′ goal, O. Anbel), which way momentum went, "Verified ✓", and the **Why it turned** sentences. Hover an underlined number to see the statistic it was checked against. Click an evidence chip such as **#676** to see the event on the mini pitch. |
+| 3 | In the top bar, switch **Analyst → Fan** and pick **♥ Harbour City** | The same moment, rewritten from Harbour City's side: "Harbour City lose grip after Northgate's second". The analyst version shows for a few seconds if a version is still being written. |
+| 4 | Click **中文** and **ES**, then **EN** | The explanation in Chinese and Spanish. Every version goes through the same checks, so the evidence chips stay. |
+| 5 | Pick **★ M. Miquingorini** (three goals), then open **Stats** (Live) | His player card: rating 9.3, goals, shots, heatmap and his part in each turning point. Further down are the 23 team stats (whole match or either half), a shot map, heatmaps and a pass network. |
+| 6 | Back on Overview, click **③ 72′**. Under **What if…** (or in the **What if** tab), click **Disallow 65′ goal**, keep **200** runs, click **Run simulation** | "Instant: simulated before". Without the 65′ goal, Northgate's chance of winning rises from 26 % to 53 %, and the most likely score goes from 2–2 to 1–2. The panel also shows 95 % ranges and "Why it differs". |
+| 7 | Under **Key moments**, click a goal; under **Set pieces & shots**, click the **60′ free kick** | A short clip on the pitch at 0.25× to 5×. For the set piece it also shows how many attackers and defenders were in the box and how they were marked. |
+| 8 | Open **Replay** (Live) and click **Start demo** | The match replays from 0′. Players glide on the pitch, passes, shots, tackles and cards are drawn as they happen, momentum is drawn live, and each turning point appears at its minute. Add `&from=66` to the link to start at 66′. |
+| 9 | Open **Preview** and **Line-ups** (Pre-match) | The table, form, head-to-head, storylines, both line-ups and each coach's plan (formation, style, press, tempo, set pieces). |
+| 10 | Pick another match in the top bar | Steps 1 to 9 work the same on every match. |
 
-The live server has only 2 CPU cores. A scenario nobody has run yet takes a few minutes there and queues behind the others; one that has been run before answers at once. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
+The live server has only 2 CPU cores. The what-if chips on the demo match were computed in advance, so a stored one, such as **Disallow 65′ goal**, answers at once. A scenario that is not stored takes a few minutes there and queues behind the others. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
 
-To see what the AI agents did, click **Trace** in the top bar. It lists each step (Judge, Explainer, Verifier) for every pivot, the model used, latency, tokens and the verdict. The raw data is at `https://pivot.in-stacks.com/api/pivots/<pivot id>/traces`; the pivot id (such as `M-seed-101:p37`) is in the address bar of a pivot page.
+To see what the AI agents did, click **Trace** in the top bar. It lists each step (Judge, Explainer, Verifier) for every turning point, the model used, latency, tokens and the verdict. The raw data is at `https://pivot.in-stacks.com/api/pivots/<pivot id>/traces`. The pivot id (such as `M-seed-101:p34`) is in the link once a turning point is open (`&pivot=`).
 
 | Pivot detail with evidence | What-if result |
 |---|---|
