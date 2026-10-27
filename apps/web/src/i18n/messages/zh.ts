@@ -1287,9 +1287,9 @@ export const zh: Messages = {
   "viz.pos.ghostKey": "淡色圆圈：纸面阵型里的位置；连线表示球员实际偏离了多远。",
   // C19 (#385): the analyst's post-match report.
   "rp.title": "赛后分析报告",
-  "rp.note": "从几个角度看这场比赛：按机会质量应得的结果、各时间段、比分状态、射门质量。",
-  "rp.sample": "示例数据",
-  "rp.sampleNote": "分析接口还没上线：这一块显示的是形状正确的示例数字，不是这场比赛的。",
+  "rp.note": "从几个角度看这场比赛，每个数字都来自比赛数据。",
+  "rp.loading": "正在读取分析…",
+  "rp.src.shotsOnly": "每次射门的 xG（/shots）",
   "rp.source": "数据来源：{what}",
   "rp.src.deserved": "比赛数据里每次射门的 xG，用固定的随机种子模拟 {n} 次（/analysis）",
   "rp.src.phases": "核对员那套球队数据，每 15 分钟算一次（/analysis）",

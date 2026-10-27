@@ -3,15 +3,14 @@
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
 
-type Props = { id: string; title: string; takeaway?: string | null; source: string; sample?: boolean; className?: string; children: ReactNode };
+type Props = { id: string; title: string; takeaway?: string | null; source: string; className?: string; children: ReactNode };
 
-export default function ReportSection({ id, title, takeaway, source, sample = false, className = "", children }: Props) {
+export default function ReportSection({ id, title, takeaway, source, className = "", children }: Props) {
   const t = useT();
   return (
     <section className={`rp-sec ${className}`.trim()} aria-labelledby={`${id}-hd`} id={id}>
       <header className="rp-hd">
         <h3 id={`${id}-hd`}>{title}</h3>
-        {sample && <span className="rp-sample" title={t("rp.sampleNote")}>{t("rp.sample")}</span>}
       </header>
       {takeaway && <p className="rp-take">{takeaway}</p>}
       {children}

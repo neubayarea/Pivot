@@ -1288,9 +1288,9 @@ export const en = {
   "viz.pos.ghostKey": "Faint ring: the slot in the formation on paper; the line shows how far the player moved from it.",
   // C19 (#385): the analyst's post-match report.
   "rp.title": "Post-match report",
-  "rp.note": "How the match was played, from every angle: the result the chances deserved, the spells, the score states and the quality of the shots.",
-  "rp.sample": "Sample data",
-  "rp.sampleNote": "The analysis API is not live yet: this section shows made-up numbers of the right shape, not this match's.",
+  "rp.note": "How the match was played, from several angles, every number from the match data.",
+  "rp.loading": "Loading the analysis…",
+  "rp.src.shotsOnly": "each shot's xG (/shots)",
   "rp.source": "Source: {what}",
   "rp.src.deserved": "every shot's xG from the match data, simulated {n} times with a fixed seed (/analysis)",
   "rp.src.phases": "the verifier's team stats over each 15 minutes (/analysis)",

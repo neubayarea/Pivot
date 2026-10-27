@@ -1289,9 +1289,9 @@ export const es: Messages = {
   "viz.pos.ghostKey": "Anillo tenue: el puesto en la formación sobre el papel; la línea muestra cuánto se alejó el jugador.",
   // C19 (#385): the analyst's post-match report.
   "rp.title": "Informe del partido",
-  "rp.note": "Cómo se jugó el partido desde varios ángulos: el resultado que merecían las ocasiones, las fases, el marcador y la calidad de los tiros.",
-  "rp.sample": "Datos de ejemplo",
-  "rp.sampleNote": "La API de análisis aún no está activa: esta sección muestra cifras inventadas con la forma correcta, no las de este partido.",
+  "rp.note": "Cómo se jugó el partido desde varios ángulos, cada cifra sacada de los datos del partido.",
+  "rp.loading": "Cargando el análisis…",
+  "rp.src.shotsOnly": "el xG de cada tiro (/shots)",
   "rp.source": "Fuente: {what}",
   "rp.src.deserved": "el xG de cada tiro del partido, simulado {n} veces con una semilla fija (/analysis)",
   "rp.src.phases": "las cifras del verificador en cada tramo de 15 minutos (/analysis)",

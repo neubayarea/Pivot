@@ -2,7 +2,7 @@
 // contributors by xG + xA among the players who played.
 import { describe, expect, it } from "vitest";
 import type { PlayerMatchStats, PlayerReport } from "@pivot/contracts";
-import { SAMPLE_ANALYSIS } from "../../data/analysis";
+import { SAMPLE_ANALYSIS } from "../../data/analysis.sample";
 import { laneShares } from "./Lanes";
 import { topContributors } from "./PlayerContrib";
 import { radarPoint } from "./StyleRadar";

@@ -8,7 +8,6 @@
 @media (max-width: 1100px) { .rp { grid-template-columns: minmax(0, 1fr); } }
 .rp-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .rp-hd h3 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-lg); line-height: 1.1; }
-.rp-sample { font-size: var(--pv-fs-xs); font-weight: 700; padding: 2px 8px; border-radius: var(--pv-r-pill); border: 1.5px dashed var(--pv-ink-2); color: var(--pv-ink-2); cursor: help; }
 .rp-take { font-size: var(--pv-fs-md); font-weight: 600; line-height: 1.4; max-width: 70ch; }
 .rp-src { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin: 0; }
 .rp svg { display: block; width: 100%; height: auto; }
@@ -135,3 +134,5 @@
 .rp-key .k-xg::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--pv-ink-2); }
 .rp-key .k-xa::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: color-mix(in oklab, var(--pv-ink-2) 40%, var(--pv-sheet)); }
 .pt-table tbody tr.linked { background: var(--pv-sunk); box-shadow: inset 4px 0 var(--pv-ink-2); }
+/* While the analysis loads: an empty outline where it will go, no numbers. */
+.rp-wait { grid-column: 1 / -1; min-height: 320px; border-radius: var(--pv-r-panel); border: 1.5px dashed var(--pv-hair); background: transparent; }
