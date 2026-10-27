@@ -17,6 +17,7 @@ import MomentumChart from "../../components/MomentumChart";
 import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments";
 import MatchStory from "../../components/MatchStory";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
+import PostMatchReport from "../../components/report/PostMatchReport";
 import SetPiecesAndShots from "../../components/SetPieces";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
@@ -103,6 +104,12 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
         )}
       </Section>
     ),
+    // C19 (#385): the analyst's post-match report, under the xG race.
+    report: (
+      <Section id="post-report" title={t("rp.title")} note={t("rp.note")} className="post-report">
+        <PostMatchReport moments={moments} upTo={upTo} />
+      </Section>
+    ),
     // C12: the ♥ team's match, then (ORDER) the story for a fan and the numbers for an analyst.
     yourTeam: <YourTeamSummary report={report.data} upTo={upTo} />,
     spotlight: <PlayerSpotlight upTo={upTo} onPivot={fan ? undefined : pick} />,
@@ -181,7 +188,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   };
   // The blocks in the order each audience reads them (data/persona.ts); a fan also gets the core five, after the key moments.
   const order: string[] = [...persona.order.post];
-  if (!fan) order.unshift("xgRace");
+  if (!fan) order.unshift("xgRace", "report");
   if (fan && !order.includes("teamStats")) order.splice(order.indexOf("keys") + 1, 0, "teamStats");
 
   return (
