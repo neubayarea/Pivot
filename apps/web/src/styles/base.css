@@ -763,6 +763,9 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ts-teams .fav::after { content: "♥"; color: var(--tc); }
 .ts-teams small { font-weight: 600; color: var(--tc); }
 .ts-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px 48px; align-items: start; }
+/* C17 (#367): the analyst's five groups flow into balanced columns, so the last row does not leave a third of the card empty. */
+.ts-groups:has(> .ts-table:nth-child(4)) { display: block; columns: 3 340px; column-gap: 48px; }
+.ts-groups:has(> .ts-table:nth-child(4)) > .ts-table { break-inside: avoid; margin-bottom: 20px; }
 .ts-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ts-table caption { text-align: left; font-weight: 700; font-size: var(--pv-fs-md); padding-bottom: 6px; }
 .ts-table td, .ts-table th { padding: 9px 0 8px; border-top: 1px solid var(--pv-hair); vertical-align: top; }
