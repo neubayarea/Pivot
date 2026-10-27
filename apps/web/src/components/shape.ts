@@ -4,7 +4,7 @@
 // from their own goal, width the spread of the outfield players across the pitch. Depth (front to
 // back of the outfield players) is the compactness number. Unlike the StatCalculator these are
 // taken over every frame, in and out of possession, so one frame has a value too.
-import type { MatchEvent, TeamSheet, TrackingFrame } from "@pivot/contracts";
+import type { MatchEvent, TeamSheet, TeamTactics, TrackingFrame } from "@pivot/contracts";
 import type { Side } from "../data/view";
 import { PITCH } from "../fixtures/pivot-detail";
 
@@ -34,6 +34,16 @@ export function lineupAt(sheets: Record<Side, TeamSheet>, events: MatchEvent[], 
   const roles = new Map<string, Role>();
   for (const side of ["home", "away"] as const) for (const s of now[side].starters) roles.set(s.player_id, s.role);
   return { roles, formation: { home: now.home.formation, away: now.away.formation } };
+}
+
+/** Each team's tactics in force at second `t` (Ax67): the coach's plan, then each event that carries new ones. */
+export function tacticsAt(start: Record<Side, TeamTactics>, events: MatchEvent[], t: number): Record<Side, TeamTactics> {
+  const now = { ...start };
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.t <= t && e.tactics) now[e.team] = e.tactics;
+  }
+  return now;
 }
 
 export type Shape = { backLine: number; width: number; depth: number };

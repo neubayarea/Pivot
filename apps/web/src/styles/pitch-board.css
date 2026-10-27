@@ -4,6 +4,8 @@
 .pb-tools { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
 .pb-tools small { font-size: 12px; }
 
+/* Ax67: the caption, then the shape numbers and tactics straight under it, beside the pitch on a wide board. */
+.pb-side { display: grid; gap: 8px; align-content: start; min-width: 0; }
 .shape-table { display: grid; gap: 4px; overflow-x: auto; }
 .shape-table table { border-collapse: collapse; font-family: var(--pv-label); font-size: 13px; width: 100%; }
 .shape-table th, .shape-table td { padding: 3px 6px; border-bottom: 1px solid var(--pv-ink); text-align: right; white-space: nowrap; }
@@ -14,6 +16,8 @@
 .shape-table td { font-weight: 700; font-variant-numeric: tabular-nums; }
 .shape-table td small { font-weight: 500; color: var(--pv-ink-2); }
 .shape-table > small { font-size: 12px; }
+.shape-table .tactics .sec th { padding-top: 12px; font-size: 12px; font-weight: 700; color: var(--pv-ink-2); border-bottom-width: 2px; }
+.shape-table .tactics td { font-weight: 600; }
 
 .roster { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
 .roster h4 { font-family: var(--pv-label); font-size: 12px; border-bottom: 1px solid var(--pv-hair); margin: 0 0 2px; }

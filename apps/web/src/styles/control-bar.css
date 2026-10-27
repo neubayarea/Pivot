@@ -70,6 +70,5 @@
   .pb-main:has(> .ctl) > :first-child { grid-row: 1; }
   .pb-main > .ctl { grid-column: 1; grid-row: 2; }
   .pb-main > .clip-keys { grid-column: 1; grid-row: 3; align-self: start; }
-  .pb-main:has(> .ctl) > .pitch-cap { grid-column: 2; grid-row: 1; }
-  .pb-main:has(> .ctl) > .shape-table { grid-column: 2; grid-row: 2 / 4; }
+  .pb-main:has(> .ctl) > .pb-side { grid-column: 2; grid-row: 1 / 4; }
 }

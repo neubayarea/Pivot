@@ -1,18 +1,20 @@
 import { useMemo, useRef, useState } from "react";
-import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
+import type { MatchEvent, TeamTactics, TrackingFrame } from "@pivot/contracts";
 import { fixtureMode, useMatch, type Speed } from "../data/match";
 import { frameAt, useFrameStore, useFrameWindow } from "../data/live/frames";
 import { cueSpan, cuesAt } from "../data/motion";
 import { minuteAt, minuteLabel, PLAIN_PERIODS, useClock } from "../data/clock";
 import { isRedCard, type Side, type SquadPlayer } from "../data/view";
-import { useT, type MessageKey } from "../i18n";
+import { usePrefs, useT, type MessageKey } from "../i18n";
 import Card from "./Card";
 import ControlBar, { barKey, type BarMark } from "./ControlBar";
 import { describe } from "./EventFeed";
 import { EventCues, smoothFor, usePitchMotion } from "./motion";
 import Pitch, { whoFromSquads } from "./Pitch";
 import { PlayerNumbers, usePlayerReport } from "./PlayerCard";
-import { backLineX, frameShape, lineOf, lineupAt, meanShape, shapeLines, type Lineup, type Role, type Shape } from "./shape";
+import {
+  backLineX, frameShape, lineOf, lineupAt, meanShape, shapeLines, tacticsAt, type Lineup, type Role, type Shape,
+} from "./shape";
 import "../styles/pitch-board.css";
 
 // The board's speeds (Ax61): slow enough to follow a move; 20× is the replay's own default.
@@ -36,9 +38,11 @@ const LINE_ORDER = ["GK", "DF", "MF", "AM", "FW"];
  * who it is; the team-shape layer draws each team's lines with its back line, width and depth,
  * and can set them against the five minutes before the last pivot. Ax41: the line-ups are a card
  * of their own next to the pitch card, so "More details" can put them in their own cell.
+ * Ax67: the shape numbers stay up whichever layer is on, right under the caption, with each
+ * team's tactics at the clock below them.
  */
 export default function PitchBoard() {
-  const { match, playback, squads, sheets, teams, events, pivots, playerName, eventById } = useMatch();
+  const { match, playback, squads, sheets, teams, events, pivots, playerName, eventById, preMatch } = useMatch();
   const t = useT();
   const { at, clock, minute: minuteOf } = useClock();
   // The fixture has no frames to fetch; neither has a page rendered with no browser (the tests).
@@ -77,6 +81,9 @@ export default function PitchBoard() {
 
   const who = useMemo(() => whoFromSquads(squads), [squads]);
   const lineup = useMemo(() => (sheets ? lineupAt(sheets, events, now) : null), [sheets, events, now]);
+  const plans = preMatch?.plans;
+  const tactics = useMemo(() => (plans ? tacticsAt({ home: plans.home.tactics, away: plans.away.tactics }, events, now) : null),
+    [plans, events, now]);
   const players = useMemo(() => new Map([...squads.home, ...squads.away].map((p) => [p.player_id, p])), [squads]);
   const roleOf = (id: string): Role | undefined => lineup?.roles.get(id) ?? players.get(id)?.role;
   const tag = (id: string) => {
@@ -177,19 +184,21 @@ export default function PitchBoard() {
               step={STEP_S} speeds={BOARD_SPEEDS} speed={match.speed} onSpeed={(s) => playback.setSpeed(s as Speed)} marks={marks}
               lead={LEAD_S} format={clock} inputRef={scrub} timeRef={time} />
           )}
-          <p className="pitch-cap" aria-live="off">
-            {latest && (
-              <span className={`cap-ev ${latest.team}`}>
-                <b>{at(latest.t)}′</b> {describe(latest, playerName, t)}
-              </span>
-            )}
-            {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
-          </p>
           {playback && <small className="muted clip-keys">{t("board.keys")}</small>}
-          {shapeOn && lineup && frame && (
-            <ShapeTable frame={frame} lineup={lineup} before={compare ? before : undefined} beforeLabel={beforeLabel}
-              isHome={isHome} names={names} />
-          )}
+          <div className="pb-side">
+            <p className="pitch-cap" aria-live="off">
+              {latest && (
+                <span className={`cap-ev ${latest.team}`}>
+                  <b>{at(latest.t)}′</b> {describe(latest, playerName, t)}
+                </span>
+              )}
+              {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
+            </p>
+            {((lineup && frame) || tactics) && (
+              <ShapeTable frame={frame} lineup={lineup} before={compare && shapeOn ? before : undefined} beforeLabel={beforeLabel}
+                isHome={isHome} names={names} tactics={tactics} />
+            )}
+          </div>
         </div>
       </Card>
       {roster(marked)}
@@ -230,46 +239,74 @@ function ShapeLayer({ frame, lineup, before, isHome }: { frame: TrackingFrame; l
 const metres = (v: number | undefined) => (v === undefined || Number.isNaN(v) ? "–" : v.toFixed(0));
 
 function Delta({ now, was }: { now?: number; was?: number }) {
+  const t = useT();
   if (now === undefined || was === undefined || Number.isNaN(now) || Number.isNaN(was)) return null;
-  const d = Math.round(now - was);
-  return <small className="was"> ← {metres(was)}{d ? ` (${d > 0 ? "+" : ""}${d})` : ""}</small>;
+  const d = Math.round(now) - Math.round(was);
+  return <small className="was" title={t("board.shapeWas", { v: metres(was) })}> ({d > 0 ? "+" : d < 0 ? "−" : "±"}{Math.abs(d)})</small>;
 }
 
 const ROWS: [MessageKey, keyof Shape][] = [["board.shapeBack", "backLine"], ["board.shapeWidth", "width"], ["board.shapeDepth", "depth"]];
+// The plan's settings the board lists (Ax67), worded as on the Pre-match tab; a switch only when a side has it on.
+const TACTICS = ["press", "line_height", "tempo", "passing", "attack_focus"] as const satisfies readonly (keyof TeamTactics)[];
+const SWITCHES = ["counter_attack", "offside_trap"] as const satisfies readonly (keyof TeamTactics)[];
 
-export function ShapeTable({ frame, lineup, before, beforeLabel, isHome, names }: {
-  frame: TrackingFrame; lineup: Lineup; before: TrackingFrame[] | null | undefined; beforeLabel: string;
-  isHome: IsHome; names: Record<Side, string>;
+export function ShapeTable({ frame, lineup, before, beforeLabel, isHome, names, tactics }: {
+  frame: TrackingFrame | null; lineup: Lineup | null; before: TrackingFrame[] | null | undefined; beforeLabel: string;
+  isHome: IsHome; names: Record<Side, string>; tactics?: Record<Side, TeamTactics> | null;
 }) {
-  const t = useT();
+  const { prefs, t } = usePrefs();
   const sides = ["home", "away"] as const;
-  const now = (side: Side) => frameShape(frame, side, lineup.roles, isHome);
-  const was = (side: Side) => (before?.length ? meanShape(before, side, lineup.roles, isHome) : null);
-  const count = (side: Side) => frame.players.filter((p) => isHome(p.player_id) === (side === "home")).length;
+  const shape = frame && lineup ? { frame, lineup } : null;
+  const now = (side: Side) => shape && frameShape(shape.frame, side, shape.lineup.roles, isHome);
+  const was = (side: Side) => (shape && before?.length ? meanShape(before, side, shape.lineup.roles, isHome) : null);
+  const count = (side: Side) => frame?.players.filter((p) => isHome(p.player_id) === (side === "home")).length ?? 0;
+  const label = (key: string) => t((prefs.audience === "fan" ? `plan.fan.${key}` : `plan.${key}`) as MessageKey);
+  const switches = tactics ? SWITCHES.filter((k) => tactics.home[k] || tactics.away[k]) : [];
   return (
     <div className="shape-table">
       <table>
         <thead>
           <tr><th />{sides.map((s) => <th key={s} className={s}>{names[s]}</th>)}</tr>
         </thead>
-        <tbody>
-          <tr>
-            <th>{t("board.shapeFormation")}</th>
-            {sides.map((s) => (
-              <td key={s}>{lineup.formation[s]}{count(s) < 11 && count(s) > 0 && <small> · {t("board.players", { n: count(s) })}</small>}</td>
-            ))}
-          </tr>
-          {ROWS.map(([label, k]) => (
-            <tr key={k}>
-              <th>{t(label)}</th>
-              {sides.map((s) => <td key={s}>{metres(now(s)?.[k])}<Delta now={now(s)?.[k]} was={was(s)?.[k]} /></td>)}
+        {shape && (
+          <tbody>
+            <tr>
+              <th>{t("board.shapeFormation")}</th>
+              {sides.map((s) => (
+                <td key={s}>{shape.lineup.formation[s]}{count(s) < 11 && count(s) > 0 && <small> ({t("board.players", { n: count(s) })})</small>}</td>
+              ))}
             </tr>
-          ))}
-        </tbody>
+            {ROWS.map(([name, k]) => (
+              <tr key={k}>
+                <th>{t(name)}</th>
+                {sides.map((s) => <td key={s}>{metres(now(s)?.[k])}<Delta now={now(s)?.[k]} was={was(s)?.[k]} /></td>)}
+              </tr>
+            ))}
+          </tbody>
+        )}
+        {tactics && (
+          <tbody className="tactics">
+            <tr className="sec"><th colSpan={3}>{t("board.tactics")}</th></tr>
+            {TACTICS.map((k) => (
+              <tr key={k}>
+                <th>{label(k)}</th>
+                {sides.map((s) => <td key={s}>{t(`plan.${k}.${tactics[s][k]}` as MessageKey)}</td>)}
+              </tr>
+            ))}
+            {switches.map((k) => (
+              <tr key={k}>
+                <th>{t(`plan.flag.${k}`)}</th>
+                {sides.map((s) => <td key={s}>{tactics[s][k] ? t("board.tacticOn") : "–"}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        )}
       </table>
-      <small className="muted">
-        {before === undefined ? t("board.shapeNote") : before === null ? t("board.shapeLoading") : t("board.shapeVs", { when: beforeLabel })}
-      </small>
+      {shape && (
+        <small className="muted">
+          {before === undefined ? t("board.shapeNote") : before === null ? t("board.shapeLoading") : t("board.shapeVs", { when: beforeLabel })}
+        </small>
+      )}
     </div>
   );
 }
