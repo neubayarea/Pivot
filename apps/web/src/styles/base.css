@@ -138,6 +138,7 @@ button { font: inherit; color: inherit; }
 .dist .h { background: var(--pv-home); color: var(--pv-sheet); }
 .dist .d { background: var(--pv-draw); color: var(--pv-ink); }
 .dist .a { background: var(--pv-away); color: var(--pv-sheet); }
+.dist .ci > span + span { margin-left: 14px; }
 .dist .ci { font-family: var(--pv-label); font-size: 12px; color: var(--pv-ink-2); font-variant-numeric: tabular-nums; }
 .sig-mark { color: var(--pv-ink); }
 .arms { display: grid; gap: 6px; min-width: 0; overflow-x: auto; }

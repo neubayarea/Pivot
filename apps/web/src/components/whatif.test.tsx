@@ -124,7 +124,7 @@ describe("a run from queued to result", () => {
     const scenario = await runScenario(source, body, { signal: new AbortController().signal, pollMs: 1, onUpdate: () => {} });
     const state = { phase: "done", body, scenario, cached: false } as Extract<RunState, { phase: "done" }>;
     const html = render(<ScenarioResult state={state} option={mockOptions(view, "p63")[0]} teams={view.teams} onReset={() => {}} source={source} />);
-    expect(html).toContain("Simulated · 1,000 replays");
+    expect(html).toContain("Simulated, 1,000 replays");
     expect(html).toContain("As played (from 63′)");
     expect(html).toContain("With the change: Cancel 63′ substitution");
     expect(html).toMatch(/HCY \d+% \(\d+–\d+\)/);
@@ -134,7 +134,7 @@ describe("a run from queued to result", () => {
     expect(html).toContain("Try another");
     expect(html).not.toContain("simulated before");
     const cached = render(<ScenarioResult state={{ ...state, cached: true }} option={undefined} teams={view.teams} onReset={() => {}} source={source} />);
-    expect(cached).toContain("Instant · simulated before");
+    expect(cached).toContain("Instant: simulated before");
   });
 
   it("names the outcome that moved most, and says so when the ranges still overlap", () => {
@@ -266,7 +266,7 @@ describe("mock mode (?fixture=1)", () => {
     );
     const html = page("/whatif/p63");
     expect(html).toContain('href="/pivot/p63"');
-    expect(html).toContain("Pivot 64′ · Substitution flipped the left flank");   // elapsed minute 63
+    expect(html).toContain("Pivot 64′: Substitution flipped the left flank");   // elapsed minute 63
     expect(html).toContain("Simulated, not a prediction");
     expect(html).toContain("Loading the scenarios…");
     expect(html).toContain("Pick a scenario to set up the replay.");

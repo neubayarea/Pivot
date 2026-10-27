@@ -176,11 +176,11 @@ export function Distribution({ label, dist, teams, significant }: {
         ))}
       </div>
       <span className="ci">
-        {OUTCOMES.map((k, i) => {
+        {OUTCOMES.map((k) => {
           const [lo, hi] = ci(dist, k);
           return (
             <span key={k}>
-              {i > 0 && " · "}
+
               {significant?.[k] && <b className="sig-mark" aria-hidden="true">◆ </b>}
               {outcomeShort(k, teams, t)} {pct(dist[k])}% ({pct(lo)}–{pct(hi)})
             </span>
