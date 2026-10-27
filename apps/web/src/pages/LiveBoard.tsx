@@ -4,20 +4,19 @@ import MatchTabs from "../components/MatchTabs";
 import { useMatch } from "../data/match";
 import { useTab } from "../data/tab";
 import { LineupsTab } from "./match/LineupsTab";
-import { LiveTab } from "./match/LiveTab";
-import { OverviewTab } from "./match/OverviewTab";
-import { PreMatchTab } from "./match/PreMatchTab";
+import { LiveTab, StatsTab } from "./match/LiveTab";
+import { PostMatchTab } from "./match/PostMatchTab";
+import { PreviewTab } from "./match/PreviewTab";
+import { WhatIfTab } from "./match/WhatIfTab";
 
-// S1 · Match board (Ax32), split Premier League style into before / during / after the match
-// (Ax59, #276) under the sticky match header. Each tab is its own link (`?tab=pre|live|post`), the
-// live one by default, and the open pivot is in the link too (`&pivot=pv-…`) so a pivot alert on
-// the live tab can open its explanation on the post-match tab.
+// S1 · Match board (Ax32) under the sticky match header, in six tabs by content (C13 #316, after
+// FotMob, Sofascore and the Premier League site): overview, what-if, replay, stats, line-ups,
+// preview. Each tab is its own link (`?tab=`, data/tab.ts), and the open pivot is in the link too
+// (`&pivot=pv-…`) so a pivot alert on the replay can open its explanation on the overview.
 export default function LiveBoard() {
   const { match, pivots } = useMatch();
   const tab = useTab();
   const [params, setParams] = useSearchParams();
-  // Ax69: the line-ups tab opens on `?tab=lineups` until the tab shell (#316) gives it a tab of its own.
-  const lineups = params.get("tab") === "lineups";
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   // Pivots still being checked get a mark on the line but no card yet; the checker's rejects get neither.
   const moments = pivots.filter((p) => p.status === "confirmed" || p.status === "degraded").sort((a, b) => a.minute - b.minute);
@@ -46,13 +45,15 @@ export default function LiveBoard() {
     <>
       <MatchTabs tab={tab} />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="board">
-        {lineups && <LineupsTab />}
-        {!lineups && tab === "pre" && <PreMatchTab />}
-        {!lineups && tab === "live" && <LiveTab moments={moments} evidence={evidence} />}
-        {tab === "post" && (
-          <OverviewTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
+        {tab === "overview" && (
+          <PostMatchTab moments={moments} open={open} onPick={pick} evidence={evidence} onEvidence={toggle}
             keySelected={key} onKey={setKey} />
         )}
+        {tab === "whatif" && <WhatIfTab moments={moments} open={open} onPick={pick} />}
+        {tab === "replay" && <LiveTab moments={moments} evidence={evidence} />}
+        {tab === "stats" && <StatsTab />}
+        {tab === "lineups" && <LineupsTab />}
+        {tab === "preview" && <PreviewTab />}
       </div>
     </>
   );

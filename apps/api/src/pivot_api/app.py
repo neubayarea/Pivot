@@ -16,6 +16,7 @@ from .demo import seed_demo
 from .personalize import personalizer_from_env
 from .pictures import router as pictures_router
 from .players import router as players_router
+from .prematch import router as prematch_router
 from .realtime import router as realtime_router
 from .routes import router
 from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
@@ -140,6 +141,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(players_router)
+app.include_router(prematch_router)
 app.include_router(team_stats_router)
 app.include_router(pictures_router)
 app.include_router(realtime_router)

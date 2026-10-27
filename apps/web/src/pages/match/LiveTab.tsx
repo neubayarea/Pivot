@@ -1,7 +1,8 @@
-// 赛中 · Live (Ax59): what used to sit folded in "More details" (Ax41), now a tab of its own. The
-// pitch with the replay on top and the match stats beside it, the events under the pitch and the
-// line-ups under the stats. A pivot the checker signs off while the viewer watches pops up as an
-// alert with a link to its explanation on the post-match tab.
+// 回放 / 直播 · Replay (Live while the match is played) and 数据 · Stats (Ax59, split by content
+// in C13 #316). Replay: the pitch with the replay on top, the key stats beside it and the events
+// under it; a pivot the checker signs off while the viewer watches pops up as an alert with a link
+// to its explanation on the overview. Stats: the ♥ team's summary and the ★ player's spotlight
+// (C12), the grouped team stats and the match pictures.
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
@@ -49,7 +50,7 @@ function PivotAlert({ moments }: { moments: Pivot[] }) {
   }, [shown]);
 
   if (!shown) return null;
-  const q = new URLSearchParams(tabSearch(search, "post"));
+  const q = new URLSearchParams(tabSearch(search, "overview"));
   q.set("pivot", shown.pivot_id);
   return (
     <aside className={`pv-alert to-${shown.direction}`} role="status" aria-live="polite">
@@ -63,24 +64,21 @@ function PivotAlert({ moments }: { moments: Pivot[] }) {
   );
 }
 
-export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: ReadonlySet<string> }) {
+/** A stored match that is not being replayed shows everything; a replay or a live match shows up to the clock. */
+function useUpTo() {
   const { match, playback } = useMatch();
+  const over = match.status === "finished" && !playback;
+  return { over, upTo: over ? null : match.clock };
+}
+
+/** Replay (Live while the match is played, C13 #316): the pitch, the five key stats and the events. */
+export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: ReadonlySet<string> }) {
+  const { match } = useMatch();
   const t = useT();
   const { at } = useClock();
   const scheduled = match.status === "scheduled";
-  // A stored match that is not being replayed: offer the replay, which moves everything on this tab.
-  const over = match.status === "finished" && !playback;
-  // C11: the team stats and the pictures follow the replay or the live clock; a stored match shows all of it.
-  const upTo = over ? null : match.clock;
+  const { over, upTo } = useUpTo();
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
-  // C12: the ♥ team's summary and the ★ player's spotlight lead for a fan, follow the numbers for an analyst.
-  const { fan } = usePersona();
-  const mine = !scheduled && (
-    <>
-      <YourTeamSummary report={report.data} upTo={upTo} />
-      <PlayerSpotlight upTo={upTo} />
-    </>
-  );
   return (
     <>
       {(scheduled || over) && (
@@ -89,7 +87,6 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           <StartDemoButton matchId={match.match_id}>{t(scheduled ? "demo.startMatch" : "demo.startShort")}</StartDemoButton>
         </div>
       )}
-      {fan && mine}
       <div className="more-bd live-bd">
         {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them. */}
         {!scheduled && <PitchBoard key={match.match_id} />}
@@ -100,26 +97,48 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           <EventFeed highlight={evidence} />
         </Card>
       </div>
-      {!fan && mine}
-      {!scheduled && (
-        <>
-          <section className="live-sec" aria-labelledby="live-pics-hd">
-            <header className="live-hd">
-              <h2 id="live-pics-hd">{t("pics.title")}</h2>
-              {!over && <p className="muted">{t("pics.note")}</p>}
-            </header>
-            <div className="card"><MatchPictures key={match.match_id} upTo={upTo} /></div>
-          </section>
-          <section className="live-sec" aria-labelledby="live-stats-hd">
-            <header className="live-hd">
-              <h2 id="live-stats-hd">{t("ts.title")}</h2>
-              <p className="muted">{t("ts.note")}</p>
-            </header>
-            <div className="card"><TeamStats state={report} /></div>
-          </section>
-        </>
-      )}
       <PivotAlert moments={moments} />
+    </>
+  );
+}
+
+/**
+ * Stats (C13 #316): the 23 team stats grouped (five plain ones for a fan), then the shot map,
+ * heatmaps, pass network and average positions. The ♥ team's summary and the ★ player's spotlight
+ * (C12) lead for a fan and follow the numbers for an analyst.
+ */
+export function StatsTab() {
+  const { match } = useMatch();
+  const t = useT();
+  const scheduled = match.status === "scheduled";
+  const { over, upTo } = useUpTo();
+  const report = useTeamStats(scheduled ? null : match.match_id, upTo);
+  const { fan } = usePersona();
+  if (scheduled) return <div className="empty-box">{t("board.kickoffPending")}</div>;
+  const mine = (
+    <>
+      <YourTeamSummary report={report.data} upTo={upTo} />
+      <PlayerSpotlight upTo={upTo} />
+    </>
+  );
+  return (
+    <>
+      {fan && mine}
+      <section className="live-sec" aria-labelledby="live-stats-hd">
+        <header className="live-hd">
+          <h2 id="live-stats-hd">{t("ts.title")}</h2>
+          <p className="muted">{t("ts.note")}</p>
+        </header>
+        <div className="card"><TeamStats state={report} /></div>
+      </section>
+      <section className="live-sec" aria-labelledby="live-pics-hd">
+        <header className="live-hd">
+          <h2 id="live-pics-hd">{t("pics.title")}</h2>
+          {!over && <p className="muted">{t("pics.note")}</p>}
+        </header>
+        <div className="card"><MatchPictures key={match.match_id} upTo={upTo} /></div>
+      </section>
+      {!fan && mine}
     </>
   );
 }

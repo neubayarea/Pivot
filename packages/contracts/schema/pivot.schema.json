@@ -4101,6 +4101,745 @@
       "title": "PreMatchCondition",
       "type": "object"
     },
+    "PrematchFixture": {
+      "additionalProperties": false,
+      "properties": {
+        "competition": {
+          "type": "string"
+        },
+        "days_until": {
+          "type": "integer"
+        },
+        "fictional": {
+          "type": "boolean"
+        },
+        "importance": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "type": "string"
+        },
+        "matchday": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "opponent": {
+          "type": "string"
+        },
+        "opponent_id": {
+          "type": "string"
+        },
+        "rotation_note": {
+          "type": "string"
+        },
+        "rotation_note_key": {
+          "type": "string"
+        },
+        "rotation_params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "rotation_risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "venue": {
+          "enum": [
+            "H",
+            "A"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "competition",
+        "stage",
+        "matchday",
+        "opponent",
+        "opponent_id",
+        "venue",
+        "days_until",
+        "importance",
+        "fictional",
+        "rotation_risk",
+        "rotation_note",
+        "rotation_note_key",
+        "rotation_params"
+      ],
+      "title": "PrematchFixture",
+      "type": "object"
+    },
+    "PrematchFormStats": {
+      "additionalProperties": false,
+      "properties": {
+        "avg_rating": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "btts": {
+          "type": "integer"
+        },
+        "clean_sheets": {
+          "type": "integer"
+        },
+        "conceded_by_period": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "failed_to_score": {
+          "type": "integer"
+        },
+        "ga_avg": {
+          "type": "number"
+        },
+        "games": {
+          "type": "integer"
+        },
+        "gf_avg": {
+          "type": "number"
+        },
+        "goals_by_period": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "ht_lead_dropped": {
+          "type": "integer"
+        },
+        "ht_lead_won": {
+          "type": "integer"
+        },
+        "over_2_5": {
+          "type": "integer"
+        },
+        "reds": {
+          "type": "integer"
+        },
+        "scored_first": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "games",
+        "gf_avg",
+        "ga_avg",
+        "clean_sheets",
+        "failed_to_score",
+        "btts",
+        "over_2_5",
+        "scored_first",
+        "ht_lead_won",
+        "ht_lead_dropped",
+        "goals_by_period",
+        "conceded_by_period",
+        "reds",
+        "avg_rating"
+      ],
+      "title": "PrematchFormStats",
+      "type": "object"
+    },
+    "PrematchGame": {
+      "additionalProperties": false,
+      "description": "One recent league game, seen from the team: `ft` and `ht` are [this team, opponent].",
+      "properties": {
+        "came_from_behind": {
+          "type": "boolean"
+        },
+        "ft": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "ht": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "matchday": {
+          "type": "integer"
+        },
+        "opponent": {
+          "type": "string"
+        },
+        "opponent_id": {
+          "type": "string"
+        },
+        "result": {
+          "enum": [
+            "W",
+            "D",
+            "L"
+          ],
+          "type": "string"
+        },
+        "scored_first": {
+          "type": "boolean"
+        },
+        "season": {
+          "type": "integer"
+        },
+        "venue": {
+          "enum": [
+            "H",
+            "A"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "season",
+        "matchday",
+        "opponent",
+        "opponent_id",
+        "venue",
+        "ft",
+        "ht",
+        "result",
+        "scored_first",
+        "came_from_behind"
+      ],
+      "title": "PrematchGame",
+      "type": "object"
+    },
+    "PrematchH2HCount": {
+      "additionalProperties": false,
+      "properties": {
+        "away_w": {
+          "type": "integer"
+        },
+        "d": {
+          "type": "integer"
+        },
+        "home_w": {
+          "type": "integer"
+        },
+        "played": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "played",
+        "home_w",
+        "d",
+        "away_w"
+      ],
+      "title": "PrematchH2HCount",
+      "type": "object"
+    },
+    "PrematchHeadToHead": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "$ref": "#/$defs/PrematchH2HCount"
+        },
+        "at_this_ground": {
+          "$ref": "#/$defs/PrematchH2HCount"
+        },
+        "meetings": {
+          "items": {
+            "$ref": "#/$defs/PrematchMeeting"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "all",
+        "at_this_ground",
+        "meetings"
+      ],
+      "title": "PrematchHeadToHead",
+      "type": "object"
+    },
+    "PrematchLine": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "away_players": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "home": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "home_players": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "note": {
+          "type": "string"
+        },
+        "note_key": {
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "zone": {
+          "enum": [
+            "home_wide_left",
+            "home_wide_right",
+            "midfield",
+            "home_attack",
+            "away_attack"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "zone",
+        "home",
+        "away",
+        "home_players",
+        "away_players",
+        "note",
+        "note_key",
+        "params"
+      ],
+      "title": "PrematchLine",
+      "type": "object"
+    },
+    "PrematchMatchup": {
+      "additionalProperties": false,
+      "properties": {
+        "away_formation": {
+          "type": "string"
+        },
+        "home_formation": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/PrematchLine"
+          },
+          "type": "array"
+        },
+        "perspective": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "tactics_diff": {
+          "items": {
+            "$ref": "#/$defs/PrematchTacticsDiff"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "perspective",
+        "home_formation",
+        "away_formation",
+        "lines",
+        "tactics_diff"
+      ],
+      "title": "PrematchMatchup",
+      "type": "object"
+    },
+    "PrematchMeeting": {
+      "additionalProperties": false,
+      "description": "`ft` and `ht` are [home, away] of that meeting.",
+      "properties": {
+        "away_club": {
+          "type": "string"
+        },
+        "ft": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "home_club": {
+          "type": "string"
+        },
+        "ht": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "matchday": {
+          "type": "integer"
+        },
+        "season": {
+          "type": "integer"
+        },
+        "venue_club": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "season",
+        "matchday",
+        "venue_club",
+        "home_club",
+        "away_club",
+        "ft",
+        "ht"
+      ],
+      "title": "PrematchMeeting",
+      "type": "object"
+    },
+    "PrematchRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "type": "integer"
+        },
+        "ga": {
+          "type": "integer"
+        },
+        "gf": {
+          "type": "integer"
+        },
+        "l": {
+          "type": "integer"
+        },
+        "played": {
+          "type": "integer"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ppg": {
+          "type": "number"
+        },
+        "pts": {
+          "type": "integer"
+        },
+        "w": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "played",
+        "w",
+        "d",
+        "l",
+        "gf",
+        "ga",
+        "pts",
+        "ppg",
+        "position"
+      ],
+      "title": "PrematchRecord",
+      "type": "object"
+    },
+    "PrematchReport": {
+      "additionalProperties": false,
+      "properties": {
+        "about": {
+          "type": "string"
+        },
+        "about_key": {
+          "type": "string"
+        },
+        "head_to_head": {
+          "$ref": "#/$defs/PrematchHeadToHead"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "matchday": {
+          "type": "integer"
+        },
+        "matchup": {
+          "$ref": "#/$defs/PrematchMatchup"
+        },
+        "season": {
+          "type": "integer"
+        },
+        "teams": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PrematchTeam"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "match_id",
+        "season",
+        "matchday",
+        "about",
+        "about_key",
+        "teams",
+        "head_to_head",
+        "matchup"
+      ],
+      "title": "PrematchReport",
+      "type": "object"
+    },
+    "PrematchTacticsDiff": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "home": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "note_key": {
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "field",
+        "home",
+        "away",
+        "note",
+        "note_key",
+        "params"
+      ],
+      "title": "PrematchTacticsDiff",
+      "type": "object"
+    },
+    "PrematchTeam": {
+      "additionalProperties": false,
+      "properties": {
+        "away_only": {
+          "$ref": "#/$defs/PrematchRecord"
+        },
+        "club_id": {
+          "type": "string"
+        },
+        "home_only": {
+          "$ref": "#/$defs/PrematchRecord"
+        },
+        "last5": {
+          "items": {
+            "$ref": "#/$defs/PrematchGame"
+          },
+          "type": "array"
+        },
+        "last5_stats": {
+          "$ref": "#/$defs/PrematchFormStats"
+        },
+        "name": {
+          "type": "string"
+        },
+        "next_fixture": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PrematchFixture"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_league": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PrematchFixture"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overall": {
+          "$ref": "#/$defs/PrematchRecord"
+        },
+        "usual_xi_today": {
+          "$ref": "#/$defs/PrematchUsualXi"
+        }
+      },
+      "required": [
+        "club_id",
+        "name",
+        "overall",
+        "home_only",
+        "away_only",
+        "last5",
+        "last5_stats",
+        "next_fixture",
+        "next_league",
+        "usual_xi_today"
+      ],
+      "title": "PrematchTeam",
+      "type": "object"
+    },
+    "PrematchUsualXi": {
+      "additionalProperties": false,
+      "properties": {
+        "games": {
+          "type": "integer"
+        },
+        "newcomers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "regulars": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "regulars_benched": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "regulars_starting": {
+          "type": "integer"
+        },
+        "usual_xi_named": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "games",
+        "regulars",
+        "regulars_starting",
+        "regulars_benched",
+        "newcomers",
+        "usual_xi_named"
+      ],
+      "title": "PrematchUsualXi",
+      "type": "object"
+    },
     "Recap": {
       "additionalProperties": false,
       "properties": {
@@ -5878,6 +6617,6 @@
   },
   "$id": "https://github.com/neubayarea/Pivot/packages/contracts/schema/pivot.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "Generated from packages/pivot_core/src/pivot_core/domain. Do not edit by hand.",
+  "description": "Generated from packages/pivot_core/src/pivot_core/domain and apps/api/src/pivot_api/prematch.py. Do not edit by hand.",
   "title": "Pivot"
 }

@@ -1,4 +1,4 @@
-// 阵容 · Line-ups (Ax69, #316 #322): both XIs in their formations with a ☆ to follow any player,
+// 阵容 · Line-ups (C13 #316 tab, Ax69 #322 content): both XIs in their formations with a ☆ to follow any player,
 // the line-up seen from the viewer's ♥ team (its lines against theirs, where it has a spare man and
 // where it is short, and how the two plans differ, data/matchup.ts), and each coach's plan.
 // With a team picked that team attacks up the pitch; without one the matchup asks for a team.

@@ -908,6 +908,13 @@ export const es: Messages = {
 
   // Ax59 · match tabs
   "tabs.label": "Secciones del partido",
+  "tabs.overview": "Resumen",
+  "tabs.whatif": "Y si…",
+  "tabs.replay": "Repetición",
+  "tabs.stats": "Estadísticas",
+  "tabs.lineups": "Alineaciones",
+  "tabs.preview": "Previa",
+  "tabs.previewNone": "No hay información previa de este partido.",
   "tabs.pre": "Previa",
   "tabs.live": "En directo",
   "tabs.post": "Después del partido",
