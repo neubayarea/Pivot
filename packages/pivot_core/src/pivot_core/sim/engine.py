@@ -39,6 +39,7 @@ from .movement import (
     ACCEL_MS2, BURST_S, RECOVER_MS, RECOVERED_S, SPRINT_MS, MovementModel, TeamShape, clip1, from_view, norm,
     normal, settle, to_view, top_speed, uniform,
 )
+from .setpieces import SetPieceView
 
 GOAL = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])
 BOX_DEPTH, BOX_Y = 16.5, (13.84, 54.16)
@@ -250,6 +251,9 @@ class Engine:
         # Technique labels draw from their own stream, so adding or changing a label rule never
         # changes the run of play of a seed.
         self.style_rng = np.random.default_rng([(match.seed if seed is None else seed) or 0, 2])
+        # Where players are shown standing at corners and free kicks (Ax44): its own stream too, and
+        # only the tracking frames use it, so the run of play of a seed is the same with or without.
+        self.view = SetPieceView(np.random.default_rng([(match.seed if seed is None else seed) or 0, 3]))
         self.touch: dict | None = None            # last reception: who, when, what kind of ball
         self.p = params
         self.teams = [match.home, match.away]
@@ -328,6 +332,7 @@ class Engine:
         """Draw everything from here on from a new seed, the same way __init__ seeds a match (B08)."""
         self.rng = np.random.default_rng(seed)
         self.style_rng = np.random.default_rng([seed, 2])
+        self.view.rng = np.random.default_rng([seed, 3])
         self.move.rng = self.rng
 
     @staticmethod
@@ -1721,8 +1726,10 @@ class Engine:
         f["ball"].append((self.ball[0], self.ball[1], self.ball_z))
         f["owner"].append(self._pid(*self.owner) if self.owner else None)
         f["ids"].append([list(self.shapes[0].player_ids), list(self.shapes[1].player_ids)])
-        f["pos"].append(self.pos.copy())
-        f["speed"].append(self.speed.copy())
+        pos, speed = self.view.frame(self.t, tuple(self.shapes), self.pos, self.speed, self._physique()[0], self.ball,
+                                     self.owner, self.restart, self.forced, self.flight)
+        f["pos"].append(pos.copy())
+        f["speed"].append(speed.copy())
         f["fit"].append(self.fitness.copy())
 
     def play(self, until_t: int | None = None) -> bool:
