@@ -17,7 +17,7 @@ from pivot_api.whatif import (
     SEED_PRECOMPUTED_DIR, cache_key, load_precomputed, portable_sim_version, precomputed_path, write_precomputed,
 )
 
-SITE = {s.match_id for s in sims.specs_first(40)}
+SITE = {*(s.match_id for s in sims.specs_first(40)), *sims.FIXTURE_IDS}      # the seed matches and the season fixtures (#364)
 
 
 def _crlf_checkout() -> bool:
