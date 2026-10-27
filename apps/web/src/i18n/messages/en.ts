@@ -792,6 +792,10 @@ export const en = {
   "pre.captain": "Captain",
   "pre.buildUp": "The build-up",
   "pre.buildUpNote": "How both sides come into the match, and how each coach sets up to play.",
+  "pre.h2hWins": "{team} wins",
+  "pre.h2hDraws": "Draws",
+  "pre.stories": "Storylines",
+  "pre.storiesNote": "The talk before kick-off, the old clubs and teammates meeting again, and what the simulator weighs in.",
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "Sources ({n})",

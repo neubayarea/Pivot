@@ -791,6 +791,10 @@ export const zh: Messages = {
   "pre.captain": "队长",
   "pre.buildUp": "赛前看点",
   "pre.buildUpNote": "两队带着怎样的状态来，两位教练打算怎么踢。",
+  "pre.h2hWins": "{team} 胜",
+  "pre.h2hDraws": "平局",
+  "pre.stories": "赛前故事",
+  "pre.storiesNote": "开赛前的新闻，谁要面对老东家和老队友，以及模拟器开球时计入的影响。",
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "依据（{n}）",

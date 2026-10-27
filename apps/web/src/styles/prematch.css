@@ -1,83 +1,165 @@
-/* Ax60: the pre-match cards and the coach's plan. Home reads in --pv-home, away in --pv-away, as on the stats. */
-.prematch { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; align-items: start; min-width: 0; }
-.prematch .card, .plan { overflow-wrap: anywhere; }
+/* Ax60: the pre-match cards and the coach's plan. Home reads in --pv-home, away in --pv-away, as on the stats.
+ * C11 (Ax63): a match preview. The tale of the tape is the biggest thing on the tab; each team block
+ * opens on a rule in its kit colour, and every team or person name carries a small kit swatch. */
+:is(.pre-kit, .pre-team, .pre-tally li, .pre-split i, .plan-head, .plan-val, .lu-team, .lu-list).home { --tc: var(--pv-home); }
+:is(.pre-kit, .pre-team, .pre-tally li, .pre-split i, .plan-head, .plan-val, .lu-team, .lu-list).away { --tc: var(--pv-away); }
+.pre-kit { display: inline-block; flex: none; width: 10px; height: 10px; margin-right: 8px; border-radius: 3px; background: var(--tc); vertical-align: 0; }
+.pre-top, .pre-stories .card, .plan { overflow-wrap: anywhere; }
 
+/* The tale of the tape: the match facts on a strip, then table and form facing the head-to-head. */
+.card.pre-top { padding: 0; gap: 0; box-shadow: var(--pv-lift); overflow: hidden; }
+.pre-occasion { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; padding: 14px 24px; background: var(--pv-sunk); border-bottom: 1px solid var(--pv-hair); }
 .pre-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.pre-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px 14px; margin: 0; }
-.pre-facts dt { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
-.pre-facts dd { margin: 0; font-weight: 600; }
+.pre-facts { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0; }
+.pre-facts dt { font-size: var(--pv-fs-xs); font-weight: 500; color: var(--pv-ink-2); }
+.pre-facts dd { margin: 0; font-size: var(--pv-fs-sm); font-weight: 700; }
 
-.pre-team { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 6px 0 6px 10px; border-left: 6px solid var(--pv-home); }
-.pre-team.away { border-left-color: var(--pv-away); }
-.pre-team + .pre-team { margin-top: 4px; }
-.pre-name { font-family: var(--pv-display); font-size: var(--pv-fs-lg); line-height: 1.1; }
-.pre-place { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-lg); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pre-place small { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+.pre-tape { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+.pre-tape > * { padding: 20px 24px 22px; min-width: 0; display: grid; gap: 14px; align-content: start; }
+.pre-tape > * + * { border-left: 1px solid var(--pv-hair); }
+.pre-tape > :only-child { grid-column: 1 / -1; }
+.pre-tape h3 { font-weight: 700; font-size: var(--pv-fs-md); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.pre-tape h3 small { font-size: var(--pv-fs-sm); font-weight: 500; color: var(--pv-ink-2); }
+
+.pre-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.pre-team { display: grid; gap: 10px; align-content: start; padding-top: 12px; border-top: 4px solid var(--tc); min-width: 0; }
+.pre-team.away { justify-items: end; text-align: right; }
+.pre-name { display: inline-flex; align-items: center; font-weight: 700; font-size: var(--pv-fs-lg); line-height: 1.2; }
+.pre-team.away .pre-name { flex-direction: row-reverse; }
+.pre-team.away .pre-name .pre-kit { margin: 0 0 0 8px; }
+.pre-place { display: flex; align-items: baseline; gap: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pre-team.away .pre-place { flex-direction: row-reverse; }
+.pre-place b { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: .95; }
+.pre-place small { font-size: var(--pv-fs-md); font-weight: 600; color: var(--pv-ink-2); }
 .pre-wdl { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
-.pre-wdl li { width: 26px; height: 26px; display: grid; place-items: center; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); color: #fff; }
-.pre-wdl .r-W { background: #1E7A46; }
-.pre-wdl .r-D { background: #8A8F86; }
-.pre-wdl .r-L { background: #C0303F; }
-.pre-wdl li:last-child { outline: 2px solid var(--pv-ink); outline-offset: 1px; }
-.pre-goals { grid-column: 1 / -1; font-size: var(--pv-fs-sm); }
-.pre-wdl + .pre-goals { grid-column: auto; text-align: right; }
+.pre-wdl li { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
+.pre-wdl .r-W { background: var(--pv-ink); color: var(--pv-sheet); }
+.pre-wdl .r-D { background: var(--pv-draw); color: var(--pv-ink); }
+.pre-wdl .r-L { background: var(--pv-red); color: var(--pv-on-red); }
+.pre-wdl li:last-child { outline: 2px solid var(--pv-ink); outline-offset: 2px; }
+.pre-goals { font-size: var(--pv-fs-sm); }
 .pre-hint { font-size: var(--pv-fs-xs); }
 
-.pre-split { display: flex; height: 22px; border: 1px solid var(--pv-hair); }
-.pre-split i { display: grid; place-items: center; font-style: normal; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); color: #fff; min-width: 22px; }
-.pre-split .home { background: var(--pv-home); }
-.pre-split .draw { background: var(--pv-draw); color: var(--pv-ink); }
-.pre-split .away { background: var(--pv-away); }
-.pre-split-key { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-sm); }
-.pre-split-key .home { color: var(--pv-home); }
-.pre-split-key .away { color: var(--pv-away); }
-.pre-meetings { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
-.pre-meetings li { display: grid; grid-template-columns: 3.5em 1fr auto 1fr; gap: 8px; align-items: baseline; padding: 3px 0; border-top: var(--pv-rule-hair); font-family: var(--pv-label); font-weight: 600; }
+.pre-tally { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pre-tally li { display: grid; gap: 2px; justify-items: center; text-align: center; }
+.pre-tally li.home { justify-items: start; text-align: left; }
+.pre-tally li.away { justify-items: end; text-align: right; }
+.pre-tally b { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: .95; font-variant-numeric: tabular-nums; color: var(--tc, var(--pv-ink-2)); }
+.pre-tally span { font-size: var(--pv-fs-sm); font-weight: 600; color: var(--pv-ink-2); }
+.pre-split { display: flex; gap: 3px; height: 8px; }
+.pre-split i { border-radius: var(--pv-r-pill); background: var(--tc, var(--pv-draw)); min-width: 8px; }
+.pre-meetings { list-style: none; margin: 0; padding: 0; display: grid; font-variant-numeric: tabular-nums; }
+.pre-meetings li { display: grid; grid-template-columns: 3.5em minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--pv-hair); font-size: var(--pv-fs-sm); font-weight: 500; color: var(--pv-ink-2); }
 .pre-meetings li > :nth-child(2) { text-align: right; }
-.pre-meetings b { background: var(--pv-ink); color: var(--pv-sheet); padding: 0 6px; }
-.pre-meetings .won { font-weight: 800; text-decoration: underline 2px; text-underline-offset: 3px; }
+.pre-meetings b { min-width: 3.4em; text-align: center; padding: 1px 8px; border-radius: 6px; background: var(--pv-sunk); color: var(--pv-ink); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
+.pre-meetings .won { color: var(--pv-ink); font-weight: 800; }
 
-.pre-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.pre-list li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; }
-.pre-list small { display: block; font-size: var(--pv-fs-xs); }
-.pre-dot { width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--pv-ink-2); }
-.tone-positive .pre-dot { background: #1E7A46; }
-.tone-negative .pre-dot { background: var(--pv-red); }
-.pre-chip { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); padding: 2px 6px; border: 1px solid var(--pv-hair); white-space: nowrap; }
-.pre-chip.up { background: var(--pv-gold-soft); }
-.pre-chip.down { background: var(--pv-bad-bg); color: var(--pv-bad-fg); border-color: var(--pv-bad-fg); }
+/* The storylines: the news widest with the context effects beside it, then the ties across the width. */
+.pre-stories { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pre-stories > .pre-ties, .pre-stories > :only-child,
+.pre-stories:not(:has(> .pre-factors)) > .pre-news, .pre-stories:not(:has(> .pre-news)) > .pre-factors { grid-column: 1 / -1; }
+/* Across the width the ties run in two columns of rows. */
+@media (min-width: 901px) {
+  .pre-stories > .pre-ties .pre-list { grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr); column-gap: 32px; }
+  .pre-stories > .pre-ties .pre-list li { grid-column: span 2; }
+  .pre-stories > .pre-ties .pre-list li:nth-child(2) { border-top: 0; padding-top: 0; }
+  .pre-stories > .pre-ties .pre-list li:nth-last-child(2):nth-child(odd) { padding-bottom: 0; }
+}
+.pre-feed { list-style: none; margin: 0; padding: 0; display: grid; }
+.pre-feed li { display: grid; gap: 4px; padding: 12px 0; border-top: 1px solid var(--pv-hair); }
+.pre-feed li:first-child { border-top: 0; padding-top: 0; }
+.pre-feed li:last-child { padding-bottom: 0; }
+.pre-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--pv-fs-xs); }
+.pre-headline { font-size: var(--pv-fs-md); font-weight: 500; line-height: 1.45; }
+.pre-who { display: inline-flex; align-items: center; font-weight: 700; }
+.pre-meta .pre-who { font-size: var(--pv-fs-sm); }
+.pre-kind, .pre-tone, .pre-chip { display: inline-block; padding: 1px 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); font-size: var(--pv-fs-xs); font-weight: 600; line-height: 1.6; white-space: nowrap; }
+.pre-tone.negative, .pre-chip.down { background: var(--pv-bad-bg); color: var(--pv-bad-fg); }
+.pre-tone.positive { background: transparent; box-shadow: inset 0 0 0 1px var(--pv-hair); }
+.pre-when { margin-left: auto; }
 
-/* The coach's plan */
-.plan-heads, .plan-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.plan-head { display: grid; gap: 2px; padding: 6px 0 8px 10px; border-left: 6px solid var(--pv-home); }
-.plan-head.away, .plan-col.away { border-color: var(--pv-away); }
-.plan-team { font-family: var(--pv-display); font-size: var(--pv-fs-lg); line-height: 1.1; }
-.plan-shape { font-family: var(--pv-display); font-size: var(--pv-fs-2xl); line-height: 1; font-variant-numeric: tabular-nums; }
-.plan-coach { font-family: var(--pv-label); font-weight: 700; }
-.plan-style { font-size: var(--pv-fs-sm); }
-.plan-style.attacking { color: var(--pv-red); }
-.plan-rows { display: grid; gap: 10px; }
-.plan-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; align-items: center; padding-top: 6px; border-top: var(--pv-rule-hair); }
-.plan-row .nm { grid-column: 1 / -1; text-align: center; font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
-.plan-val { display: flex; align-items: center; gap: 8px; font-family: var(--pv-label); font-weight: 700; min-width: 0; }
-.plan-val.away { flex-direction: row-reverse; }
+.pre-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); }
+.pre-list li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--pv-hair); }
+.pre-list li:first-child { border-top: 0; padding-top: 0; }
+.pre-list li:last-child { padding-bottom: 0; }
+.pre-chip { justify-self: start; }
+.pre-chip small { color: var(--pv-ink-2); font-size: inherit; }
+.pre-chip.down small { color: inherit; }
+.pre-list .pre-who { display: flex; }
+.pre-note { display: block; margin-top: 2px; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+.pre-pair { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.pre-pair > span { color: var(--pv-ink-2); }
+
+/* The coach's plan: a comparison, home on the left and away on the right, each setting between them. */
+.card.plan { padding: 20px 24px 22px; gap: 16px; }
+.plan-heads, .plan-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.plan-head { display: grid; gap: 6px; align-content: start; padding-top: 12px; border-top: 4px solid var(--tc); min-width: 0; }
+.plan-head.away { justify-items: end; text-align: right; }
+.plan-team { display: inline-flex; align-items: center; font-weight: 700; font-size: var(--pv-fs-lg); line-height: 1.2; }
+.plan-head.away .plan-team { flex-direction: row-reverse; }
+.plan-head.away .plan-team .pre-kit { margin: 0 0 0 8px; }
+.plan-shape { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: .95; font-variant-numeric: tabular-nums; }
+.plan-coach { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-weight: 600; }
+.plan-head.away .plan-coach { flex-direction: row-reverse; }
+.plan-style { padding: 1px 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); font-size: var(--pv-fs-xs); font-weight: 600; }
+.plan-head small { font-size: var(--pv-fs-sm); }
+.plan-rows { display: grid; }
+.plan-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(8em, auto) minmax(0, 1fr); grid-template-areas: "home nm away"; gap: 4px 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--pv-hair); }
+.plan-row:last-child { border-bottom: 1px solid var(--pv-hair); }
+.plan-row .nm { grid-area: nm; text-align: center; font-size: var(--pv-fs-sm); font-weight: 600; color: var(--pv-ink-2); }
+.plan-val { display: flex; align-items: center; gap: 10px; font-weight: 700; min-width: 0; }
+.plan-val.home { grid-area: home; }
+.plan-val.away { grid-area: away; flex-direction: row-reverse; }
 .plan-meter { display: flex; gap: 3px; flex: 0 0 auto; }
 .plan-val.away .plan-meter:not(.lanes) { flex-direction: row-reverse; }
-.plan-meter i { width: 22px; height: 12px; border: 1px solid var(--pv-hair); background: transparent; }
-.plan-val.home .plan-meter i.on { background: var(--pv-home); }
-.plan-val.away .plan-meter i.on { background: var(--pv-away); }
-.plan-meter.lanes i { width: 10px; height: 18px; }
-.plan-cols h4 { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin: 6px 0 2px; }
-.plan-col { border-left: 6px solid var(--pv-home); padding-left: 10px; }
+.plan-meter i { width: 28px; height: 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); box-shadow: inset 0 0 0 1px var(--pv-hair); }
+.plan-meter i.on { background: var(--tc); box-shadow: none; }
+.plan-meter.lanes i { width: 10px; height: 18px; border-radius: 3px; }
+.plan-col { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.plan-cols h4 { font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); margin: 8px 0 0; }
+.plan-cols .plan-col-team { display: inline-flex; align-items: center; margin: 0 0 2px; font-size: var(--pv-fs-sm); font-weight: 700; color: var(--pv-ink); }
 .plan-flags { display: flex; flex-wrap: wrap; gap: 6px; }
 .plan-sp { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--pv-fs-sm); }
-.plan-sp b { font-family: var(--pv-label); }
+.plan-sp b { font-weight: 700; }
 
+/* Line-ups (base.css lays them out): kit colours from the tokens, softer pitch, the bench as a list. */
+.lineups .lu-pitch { border: 0; border-radius: var(--pv-r-panel); }
+.lineups .lu-team circle { fill: var(--tc); }
+.lineups .lu-no { fill: var(--pv-on-team); font-family: var(--pv-body); font-weight: 800; }
+.lineups .lu-nm { font-family: var(--pv-body); font-weight: 600; }
+.lineups .lu-list h3 { font-size: var(--pv-fs-md); }
+.lineups .lu-list h3 > span { gap: 0; }
+.lineups .lu-list h3 small { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-lg); color: var(--pv-ink); }
+.lineups .lu-list li:last-child { border-bottom: 0; }
+.lineups .lu-list .rl { font-weight: 600; }
+.lineups .lu-list h4 { margin: 4px 0 0; font-weight: 600; }
+.lineups .lu-bench { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.lineups .lu-bench .no { margin-right: 2px; }
+
+/* Chinese: the place reads "第 2 名", so it takes the text face, a size down. */
+:lang(zh) .pre-place b { font-family: var(--pv-body); font-weight: 800; font-size: var(--pv-fs-2xl); font-synthesis: none; }
+
+@media (max-width: 900px) {
+  .pre-stories { grid-template-columns: minmax(0, 1fr); }
+  .pre-tape { grid-template-columns: minmax(0, 1fr); }
+  .pre-tape > * + * { border-left: 0; border-top: 1px solid var(--pv-hair); }
+}
 @media (max-width: 560px) {
+  .pre-occasion, .pre-tape > *, .card.plan { padding-left: 16px; padding-right: 16px; }
+  .pre-occasion { gap: 10px 20px; }
+  .pre-facts { gap: 8px 20px; }
+  .pre-teams, .plan-heads { gap: 14px; }
   .plan-cols { grid-template-columns: 1fr; }
-  .plan-meter i { width: 14px; }
-  .plan-shape { font-size: var(--pv-fs-xl); }
+  .pre-place, .pre-team.away .pre-place { flex-direction: row; flex-wrap: wrap; gap: 2px 8px; }
+  .pre-team.away .pre-place { justify-content: flex-end; }
+  .pre-place b, .plan-shape, .pre-tally b { font-size: var(--pv-fs-2xl); }
+  :lang(zh) .pre-place b { font-size: var(--pv-fs-xl); }
+  .pre-wdl { gap: 3px; }
+  .pre-wdl li { width: 24px; height: 24px; font-size: var(--pv-fs-sm); }
+  .plan-row { grid-template-columns: 1fr 1fr; grid-template-areas: "nm nm" "home away"; }
+  .plan-meter i { width: 16px; }
   /* Team names break between words, not inside them, on a phone. */
   .plan-team, .pre-name { font-size: var(--pv-fs-md); overflow-wrap: normal; }
+  .pre-list { grid-template-columns: minmax(0, 1fr); }
+  .pre-list li { gap: 6px; }
 }
-

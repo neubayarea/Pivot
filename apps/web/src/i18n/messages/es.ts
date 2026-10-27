@@ -793,6 +793,10 @@ export const es: Messages = {
   "pre.captain": "Capitán",
   "pre.buildUp": "La previa",
   "pre.buildUpNote": "Cómo llegan los dos equipos y cómo plantea el partido cada entrenador.",
+  "pre.h2hWins": "Victorias {team}",
+  "pre.h2hDraws": "Empates",
+  "pre.stories": "Historias",
+  "pre.storiesNote": "Lo que se dice antes del partido, los reencuentros con antiguos clubes y compañeros, y lo que el simulador tiene en cuenta.",
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "Fuentes ({n})",

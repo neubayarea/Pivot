@@ -1,6 +1,8 @@
 // The coach's plan (Ax60): each side's coach, shape and starting tactics side by side, from the
 // TeamTactics the API sends and the page used to drop (#276). Match sites show a formation and stop
 // there; this reads the settings the simulator plays by. Changes during the match arrive as events.
+// C11 (Ax63): read like a stats comparison, home on the left and away on the right in their kits,
+// each setting's name between the two meters.
 import type { TeamTactics as Tactics } from "@pivot/contracts";
 import { useMatch, type Side } from "../data/match";
 import { usePrefs, type MessageKey } from "../i18n";
@@ -37,10 +39,10 @@ export default function TeamTactics() {
           const formation = sheets?.[s].formation ?? coach.preferred_formation;
           return (
             <div key={s} className={`plan-head ${s}`}>
-              <span className="plan-team">{teams[s].name}</span>
+              <span className="plan-team"><i className={`pre-kit ${s}`} aria-hidden="true" />{teams[s].name}</span>
               <span className="plan-shape">{formation}</span>
               <span className="plan-coach">
-                {coach.name} · <span className={`plan-style ${coach.style}`}>{t(`plan.style.${coach.style}`)}</span>
+                {coach.name} <span className={`plan-style ${coach.style}`}>{t(`plan.style.${coach.style}`)}</span>
               </span>
               {formation !== coach.preferred_formation && (
                 <small className="muted">{t("plan.usually", { formation: coach.preferred_formation })}</small>
@@ -92,6 +94,7 @@ export default function TeamTactics() {
           const sp = tx.set_pieces;
           return (
             <div key={s} className={`plan-col ${s}`}>
+              <h4 className="plan-col-team"><i className={`pre-kit ${s}`} aria-hidden="true" />{teams[s].name}</h4>
               {flags.length > 0 && (
                 <p className="plan-flags">{flags.map((f) => <span key={f} className="stamp line">{t(`plan.flag.${f}`)}</span>)}</p>
               )}
