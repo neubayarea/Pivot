@@ -280,3 +280,6 @@
   .pre-ground .pre-meetings li { grid-template-columns: 3em minmax(0, 1fr) auto minmax(0, 1fr); }
   .pre-ground .pre-meetings li > small { grid-column: 2 / -1; text-align: center; }
 }
+
+/* #311: with a ♥ team picked, its column comes first in the two-column cards. */
+.pre-cols > .pre-col.mine { order: -1; }

@@ -167,6 +167,17 @@ describe("the pre-match tab", () => {
     expect(at("News &amp; storylines")).toBeGreaterThan(at("Storylines"));
   });
 
+  it("puts the storylines first for fans and the numbers first for analysts (#311)", () => {
+    withWindow("?mode=fan");
+    const fan = render(viewOf(full), <PreMatchTab />);
+    expect(fan.indexOf("Storylines")).toBeGreaterThan(-1);
+    expect(fan.indexOf("Storylines")).toBeLessThan(fan.indexOf('data-slot="prematch"'));
+    expect(fan.indexOf('data-slot="prematch"')).toBeLessThan(fan.indexOf("pre-lineups-hd"));
+    delete g.window;
+    const analyst = render(viewOf(full), <PreMatchTab />);
+    expect(analyst.indexOf('data-slot="prematch"')).toBeLessThan(analyst.indexOf("Storylines"));
+  });
+
   it("chains nothing with a middle dot and leaves the storylines out when there are none (Ax63)", () => {
     expect(text(render(viewOf(full), <PreMatchTab />))).not.toContain(" · ");
     expect(render(viewOf(basic), <PreMatchTab />)).not.toContain("Storylines");
