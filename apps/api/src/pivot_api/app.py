@@ -18,6 +18,7 @@ from .players import router as players_router
 from .realtime import router as realtime_router
 from .routes import router
 from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
+from .team_stats import router as team_stats_router
 from .whatif import DEFAULT_WARM, WhatIf, load_precomputed, precomputed_path
 from .whatif import router as whatif_router
 
@@ -37,8 +38,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # written by hand, never verified) is test data only: PIVOT_SAMPLE_MATCH=1 (Ax54); PIVOT_DEMO=0 keeps it out.
     app.state.fixture_frames = {}
     app.state.fixture_files = {}
-    # players.py: per-player numbers, worked out once per match on first use
-    app.state.player_calcs, app.state.player_lines, app.state.player_calcs_lock = {}, {}, asyncio.Lock()
+    # matchdata.py (players.py, team_stats.py): each match's frames and calculators, read once on first use
+    app.state.player_lines, app.state.match_calcs, app.state.match_calcs_cut = {}, {}, None
+    app.state.team_stats = {}
+    app.state.match_inputs, app.state.match_inputs_lock = {}, asyncio.Lock()
     replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
     precomputed = {}                          # the recorded demo's what-ifs, run ahead of time (Bx11)
     demo_id = None
@@ -129,6 +132,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(players_router)
+app.include_router(team_stats_router)
 app.include_router(realtime_router)
 app.include_router(whatif_router)
 

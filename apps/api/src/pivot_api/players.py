@@ -19,16 +19,13 @@ from __future__ import annotations
 import asyncio
 import gzip
 import json
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from pivot_core.analytics import StatCalculator, player_match_stats
-from pivot_core.domain import (
-    Match, MatchEvent, Pivot, PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport, TrackingFrame,
-)
+from pivot_core.analytics import player_match_stats
+from pivot_core.domain import MatchEvent, Pivot, PlayerMatchStats, PlayerPivotLink, PlayerReport, PlayerStatsReport
 
-from . import sims
+from . import matchdata, sims
 
 router = APIRouter(prefix="/api")
 
@@ -41,11 +38,6 @@ def involved(e: MatchEvent) -> set[str]:
     if e.substitution:
         ids |= {e.substitution.player_off_id, e.substitution.player_on_id}
     return {i for i in ids if i}
-
-
-def _frames_path(request: Request, match_id: str) -> Path | None:
-    return getattr(request.app.state, "fixture_frames", {}).get(match_id) or \
-        sims.frames_path(getattr(request.app.state, "sims_dir", sims.data_dir_from_env()), match_id)
 
 
 def _cache(request: Request, name: str) -> dict:
@@ -73,24 +65,6 @@ def _stored_lines(request: Request, match_id: str) -> list[dict] | None:
     return lines
 
 
-async def _calculator(request: Request, match: Match, frames: Path) -> StatCalculator:
-    """One StatCalculator per match, built on first use: reading 6,000 frames takes a second or two."""
-    state = request.app.state
-    cache = _cache(request, "player_calcs")
-    if getattr(state, "player_calcs_lock", None) is None:
-        state.player_calcs_lock = asyncio.Lock()
-    async with state.player_calcs_lock:
-        if match.match_id not in cache:
-            events = await state.adapters.matches.list_events(match.match_id)
-
-            def build() -> StatCalculator:
-                rows = [TrackingFrame.model_validate(f) for f in sims.read_frames(frames)]
-                return StatCalculator(match, events, rows)
-
-            cache[match.match_id] = await asyncio.to_thread(build)
-        return cache[match.match_id]
-
-
 def _pivot_links(mine: list[MatchEvent], pivots: list[Pivot]) -> list[PlayerPivotLink]:
     out = []
     for p in pivots:
@@ -115,11 +89,10 @@ async def player_stats(request: Request, match_id: str, up_to: int | None = Quer
     squad = [p for t in (match.home, match.away) for p in t.squad]
     if player is not None and player not in {p.player_id for p in squad}:
         raise HTTPException(422, f"player {player!r} is not in this match")
-    frames = _frames_path(request, match_id)
-    if frames is None:
+    if matchdata.frames_path(request, match_id) is None:
         raise HTTPException(404, f"match {match_id!r} has no tracking frames, so no player numbers")
 
-    calc = await _calculator(request, match, frames)
+    calc = await matchdata.calculator(request, match)
     end_t = int(calc._frames.t.max()) if len(calc._frames.t) else 0
     stored = _stored_lines(request, match_id) if up_to is None or up_to >= end_t else None
     if stored is not None:
