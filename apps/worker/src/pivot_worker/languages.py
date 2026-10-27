@@ -26,7 +26,8 @@ INSTRUCTIONS = {
     "en": "Write in English.",
     "zh": ("Write in Simplified Chinese (简体中文). Keep team and player names exactly as given, in Latin letters; "
            "never translate or transliterate them (Harbour City, not 海港城). Write numbers "
-           "with Arabic digits exactly as in the claims, and match minutes as 61'."),
+           "with Arabic digits exactly as in the claims, and match minutes as 61'. Put a space between a Latin "
+           "name or a number and the Chinese characters next to it (Harbour City 在 61' 扳平)."),
     "es": ("Write in Spanish (español neutro). Keep team and player names exactly as given; never translate "
            "them (Harbour City, not Ciudad Puerto). Write numbers "
            "with a decimal point exactly as in the claims, and match minutes as 61'."),
