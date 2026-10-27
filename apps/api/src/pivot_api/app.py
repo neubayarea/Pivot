@@ -20,7 +20,7 @@ from .realtime import router as realtime_router
 from .routes import router
 from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
 from .team_stats import router as team_stats_router
-from .whatif import DEFAULT_WARM, WhatIf, load_precomputed, precomputed_path
+from .whatif import DEFAULT_WARM, WhatIf, load_precomputed, precomputed_path, seed_precomputed_path
 from .whatif import router as whatif_router
 
 log = logging.getLogger("uvicorn.error")   # shows up in the uvicorn startup log
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.team_stats, app.state.pictures = {}, None
     app.state.match_inputs, app.state.match_inputs_lock = {}, asyncio.Lock()
     replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
-    precomputed = {}                          # the recorded demo's what-ifs, run ahead of time (Bx11)
+    precomputed = {}                          # what-ifs run ahead of time: the recorded demo's (Bx11), the seeds' (Bx14)
     demo_id = None
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
         if os.getenv("PIVOT_SAMPLE_MATCH", "0") == "1":
@@ -73,6 +73,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if app.state.adapters.profile == "local" and (specs := specs_from_env()):
         app.state.sims.order = [spec.match_id for spec in specs]     # /api/matches lists them in this order
         replays.update((spec.match_id, spec.replay()) for spec in specs)
+        # their what-ifs run ahead of time (Bx14), used when made for the same version of the match
+        for spec in specs:
+            if (path := seed_precomputed_path(spec.match_id)).is_file():
+                precomputed[spec.match_id] = await asyncio.to_thread(load_precomputed, path,
+                                                                     replays[spec.match_id].version)
+                log.info("%d what-ifs of %s run ahead of time, from %s", len(precomputed[spec.match_id]),
+                         spec.match_id, path.name)
         tasks.append(asyncio.create_task(load_sims(app.state.adapters, specs, app.state.sims_dir, app.state.sims,
                                               store=build_sim_store()),
                                          name="sims"))

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TrackingFrame } from "@pivot/contracts";
 import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button";
@@ -14,6 +14,7 @@ import WhyItTurned from "../components/WhyItTurned";
 import { useClock } from "../data/clock";
 import { type Frames, useFrames } from "../data/live/frames";
 import { fixtureMode, involves, useMatch } from "../data/match";
+import { swingAt, usePersona } from "../data/persona";
 import { inWindow } from "../data/window";
 import { usePrefs } from "../i18n";
 import NotFound from "./NotFound";
@@ -38,7 +39,9 @@ export function detailFrame(own: TrackingFrame[], from: number, t: number, fetch
 // S2 · Pivot detail. Layout follows "06 S2" in docs/design/matchday-programme.html.
 export default function PivotDetail() {
   const { id = "" } = useParams();
-  const { match, squads, pivotDetail, eventById, teams, playerName } = useMatch();
+  const { match, squads, pivotDetail, eventById, teams, playerName, metrics } = useMatch();
+  // C12: the ♥ team sees whether it went its way; an analyst also sees the alarm's numbers.
+  const persona = usePersona();
   const { minute, at, span } = useClock();
   const { prefs, t: tr } = usePrefs();
   const focus = prefs.focus_player_id;
@@ -111,9 +114,11 @@ export default function PivotDetail() {
         <span className="min">{minute(pivot.minute)}′</span>
         <h1>{pivotHeadline(pivot, teams, tr)}</h1>
         <span className="acts">
-          <Link to={`/trace/${pivot.pivot_id}`} className="btn">
-            {tr("trace.kicker")}
-          </Link>
+          {!persona.fan && (
+            <Link to={`/trace/${pivot.pivot_id}`} className="btn">
+              {tr("trace.kicker")}
+            </Link>
+          )}
           <Link to={`/whatif/${pivot.pivot_id}`} className="btn pri">
             {tr("detail.whatIf")}
           </Link>
@@ -130,8 +135,14 @@ export default function PivotDetail() {
           )}
           {disputed && <Stamp tone="warn">{tr("detail.flaggedStamp")}</Stamp>}
           <span className="pipe">{tr("pivot.momentumTo", { team: teams[pivot.direction].name })}</span>
+          {persona.side && (
+            <span className={`lean-tag ${persona.lean(pivot)}`} style={{ "--tc": `var(--pv-${pivot.direction})` } as CSSProperties}>
+              {tr(persona.lean(pivot) === "for" ? "you.for" : "you.against")}
+            </span>
+          )}
         </span>
       </div>
+      {!persona.fan && <AlarmFacts minute={pivot.minute} direction={pivot.direction} severity={pivot.severity} metrics={metrics} team={teams[pivot.direction].name} />}
       <div className="grid2">
         <Card title={tr("detail.pitch")} note={
           <>
@@ -191,5 +202,26 @@ export default function PivotDetail() {
         </div>
       </div>
     </>
+  );
+}
+
+/** The alarm's numbers for an analyst (C12): momentum five minutes either side and the swing, from the per-minute line. */
+function AlarmFacts({ minute, direction, severity, metrics, team }: {
+  minute: number; direction: "home" | "away"; severity: number; metrics: { minute: number; momentum: number }[]; team: string;
+}) {
+  const { t } = usePrefs();
+  const { before, after, swing } = swingAt(metrics, minute, direction);
+  const f = (v: number | null) => (v === null ? "–" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)}`);
+  return (
+    <section className="alarm" aria-labelledby="alarm-hd">
+      <h2 id="alarm-hd">{t("alarm.title")}</h2>
+      <dl className="open-facts">
+        <div><dt>{t("alarm.before")}</dt><dd className="num">{f(before)}</dd></div>
+        <div><dt>{t("alarm.after")}</dt><dd className="num">{f(after)}</dd></div>
+        <div><dt>{t("alarm.swing", { team })}</dt><dd className="num">{f(swing)}</dd></div>
+        <div><dt>{t("alarm.severity")}</dt><dd>{t("alarm.severityValue", { n: severity })}</dd></div>
+      </dl>
+      <p className="muted">{t("alarm.note")}</p>
+    </section>
   );
 }

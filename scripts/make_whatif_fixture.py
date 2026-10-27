@@ -5,6 +5,13 @@
   uv run scripts/make_whatif_fixture.py --list             # the chips and what they would cost, nothing run
   uv run scripts/make_whatif_fixture.py --runs 200 --workers 8
   uv run scripts/make_whatif_fixture.py --table            # what is in the file, as a Markdown table
+  uv run scripts/make_whatif_fixture.py --match M-seed-101 M-seed-212 --runs 200   # the site's matches (Bx14)
+
+With `--match` the site's simulated matches are run instead of the demo: each one is simulated and stored
+as the server does it (`build_one`, `store_one`) and gets its own file, eval/fixtures/whatif/<id>.whatif.json,
+keyed by the version a Linux checkout gives the simulator code (`portable_sim_version`), so a file made on
+Windows still matches the server. Any change to pivot_core/sim or pivot_core/analytics makes it stale: the
+server then logs that and runs the chips itself, so re-run this after such a change.
 
 Goes through the API's own code: the demo is loaded as the server loads it (`load_fixture`), its pivots
 come from the worker's fake pipeline (the same minutes and directions the server's worker gives them),
@@ -22,20 +29,32 @@ import argparse
 import asyncio
 import os
 import sys
+import tempfile
 import time
+from dataclasses import replace
 from pathlib import Path
 
 os.environ["PIVOT_RESULTS"] = "0"          # in memory: nothing from earlier server runs is read back
 
 from pivot_adapters import build_adapters  # noqa: E402
-from pivot_api.sims import FIXTURE, Replay, load_fixture  # noqa: E402
-from pivot_api.whatif import WhatIf, load_precomputed, precomputed_path, write_precomputed  # noqa: E402
+from pivot_api.sims import FIXTURE, Replay, build_one, load_fixture, paths, specs_first, store_one  # noqa: E402
+from pivot_api.whatif import (  # noqa: E402
+    WhatIf, load_precomputed, portable_sim_version, precomputed_path, seed_precomputed_path, write_precomputed,
+)
 from pivot_core.domain import Scenario  # noqa: E402
 from pivot_worker.models import OfflineModelClient  # noqa: E402
 from pivot_worker.pipeline import FakePipeline  # noqa: E402
 from pivot_worker.worker import Worker  # noqa: E402
 
 RUNS = (200, 500, 1000)
+MAX_SPECS = 40                               # --match looks for the match among the site's first this many
+
+
+async def pivots(adapters) -> None:
+    """The worker's pivots for the stored match: the minutes and directions the server's worker gives them."""
+    worker = Worker(adapters, FakePipeline())
+    while await worker.run_once(timeout=0.5):
+        pass
 
 
 async def demo(fixture: Path):
@@ -43,10 +62,23 @@ async def demo(fixture: Path):
     adapters = build_adapters("local")
     replays: dict[str, Replay] = {}
     match_id, _ = await load_fixture(adapters, fixture, replays)
-    worker = Worker(adapters, FakePipeline())
-    while await worker.run_once(timeout=0.5):
-        pass
-    return adapters, replays, match_id
+    await pivots(adapters)
+    return adapters, replays, match_id, replays[match_id].version, precomputed_path(fixture)
+
+
+async def seed(match_id: str, data_dir: Path):
+    """A simulated match of the site (Bx14), built and stored as the server does (`build_one`, `store_one`),
+    under the version a Linux checkout gives it (`portable_sim_version`), the one the server will match."""
+    spec = next((s for s in specs_first(MAX_SPECS) if s.match_id == match_id), None)
+    if spec is None:
+        raise SystemExit(f"{match_id} is not one of the site's first {MAX_SPECS} simulated matches")
+    version = portable_sim_version()
+    build_one(spec, data_dir, version)
+    adapters = build_adapters("local")
+    await store_one(adapters, paths(data_dir, spec, version)[0])
+    await pivots(adapters)
+    return adapters, {match_id: replace(spec.replay(), version=version)}, match_id, version, \
+        seed_precomputed_path(match_id)
 
 
 def pct(p: float) -> str:
@@ -86,9 +118,18 @@ async def table(whatif: WhatIf, match_id: str, done: dict[str, Scenario]) -> str
 
 
 async def main(args: argparse.Namespace) -> int:
-    adapters, replays, match_id = await demo(args.fixture)
-    version = replays[match_id].version
-    out = precomputed_path(args.fixture)
+    if not args.match:
+        return await run(args, *(await demo(args.fixture)))
+    with tempfile.TemporaryDirectory() as tmp:
+        for match_id in args.match:
+            if code := await run(args, *(await seed(match_id, Path(tmp)))):
+                return code
+    return 0
+
+
+async def run(args: argparse.Namespace, adapters, replays: dict[str, Replay], match_id: str, version: str,
+              out: Path) -> int:
+    out.parent.mkdir(parents=True, exist_ok=True)
     done = load_precomputed(out, version)
     print(f"{match_id}, version {version}: {len(done)} chips already in {out.name}")
     whatif = WhatIf(adapters, replays, OfflineModelClient(), workers=args.workers)
@@ -149,4 +190,6 @@ if __name__ == "__main__":
     parser.add_argument("--list", action="store_true", help="list the chips and stop")
     parser.add_argument("--table", action="store_true", help="print what is in the file as a Markdown table")
     parser.add_argument("--fixture", type=Path, default=FIXTURE)
+    parser.add_argument("--match", nargs="+", metavar="MATCH_ID",
+                        help="the site's simulated matches instead of the demo, e.g. M-seed-101 M-seed-212 (Bx14)")
     sys.exit(asyncio.run(main(parser.parse_args())))
