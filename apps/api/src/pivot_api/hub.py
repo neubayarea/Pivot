@@ -13,6 +13,10 @@ GET /api/hub
   prediction is there only when its round was worked out ahead of time.
 - `matches`: every stored match in the /api/matches order, with its matchday, score, how many
   turning points it has and its best-rated player. The live one is in the list, marked.
+- `history` (#364): the whole league's season so far, every round in eval/fixtures/season-2026.json
+  (matchdays 1-29, 290 games), latest first, each game with its score and red cards. A game links to
+  its full match (`match_id`) only when one is stored under the season fixture's id
+  (`S2026-07-COR-TES`, world.fixture_match); the rest are scores only.
 
 Read-only. A finished match's line is kept in memory after the first request.
 """
@@ -26,6 +30,9 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Request
 
 from pivot_core.domain import Match
+from pivot_core.sim.world import BY_ID, SEASON
+
+from . import nextround, sims
 
 from .players import _cache, _stored_lines
 from .prematch import matchday_of
@@ -83,6 +90,33 @@ async def _line(request: Request, match: Match) -> dict:
     return line
 
 
+def _club(club_id: str) -> dict:
+    c = BY_ID[club_id]
+    return {"name": c.name, "short_name": c.short, "color": c.color}
+
+
+def history(stored: set[str]) -> list[dict]:
+    """The season's played rounds, latest first: each game's clubs, score and red cards."""
+    season = sims._season()
+    if season is None:
+        return []
+    rounds: dict[int, list[dict]] = {}
+    for r in season["results"]:
+        if r["season"] != SEASON or r["home"] not in BY_ID or r["away"] not in BY_ID:
+            continue
+        md = r["matchday"]
+        fid = f"S{r['season']}-{md:02d}-{BY_ID[r['home']].short}-{BY_ID[r['away']].short}"
+        reds = [x[0] if isinstance(x, list) else x.get("team") for x in r.get("reds", [])]
+        rounds.setdefault(md, []).append({
+            "home": _club(r["home"]), "away": _club(r["away"]),
+            "score": {"home": r["score"][0], "away": r["score"][1]},
+            "reds": {"home": reds.count(r["home"]), "away": reds.count(r["away"])},
+            "match_id": fid if fid in stored else None,
+        })
+    return [{"matchday": md, "date": nextround.round_date(md).isoformat(), "results": rounds[md]}
+            for md in sorted(rounds, reverse=True)]
+
+
 @router.get("/hub")
 async def hub(request: Request) -> dict:
     """The live match (its wall-clock second, goal and pivot times) and a line for every stored match."""
@@ -94,7 +128,8 @@ async def hub(request: Request) -> dict:
     by_id = {m.match_id: m for i in (nxt["order"] if nxt else [])
              if (m := await request.app.state.adapters.matches.get_match(i)) is not None}
     out = {"matches": [{**line, "live": line["match_id"] == live} for line in lines], "live": None,
-           "generating": bool(status and status.as_dict()["generating"]), "next": None, "schedule": []}
+           "generating": bool(status and status.as_dict()["generating"]), "next": None, "schedule": [],
+           "history": history({m.match_id for m in matches if m.status == "finished"})}
     if nxt:
         def fixture(i: str) -> dict:
             return {"match_id": i, "home": _team(by_id[i].home), "away": _team(by_id[i].away),

@@ -54,3 +54,15 @@ def test_the_live_match_is_the_second_finished_simulated_one_unless_asked(monkey
     assert hub.live_id(matches) == "M-seed-212"
     assert hub.live_id([M("M-seed-101")]) == "M-seed-101"
     assert hub.live_id([M("M-seed-101", status="live")]) is None
+
+
+def test_the_league_history_lists_every_played_round_with_scores(client):
+    history = client.get("/api/hub").json()["history"]
+    assert [r["matchday"] for r in history] == list(range(29, 0, -1))
+    assert sum(len(r["results"]) for r in history) == 290
+    game = history[-1]["results"][0]
+    assert set(game) == {"home", "away", "score", "reds", "match_id"}
+    assert game["home"]["short_name"] and game["home"]["color"].startswith("#")
+    assert history[0]["date"] < "2026-10-21"
+    assert all(g["match_id"] is None for r in history for g in r["results"])   # no fixture replays stored yet
+    assert sum(g["reds"]["home"] + g["reds"]["away"] for r in history for g in r["results"]) > 0

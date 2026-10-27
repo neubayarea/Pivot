@@ -5,7 +5,7 @@ import Segmented from "../components/Segmented";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
 import {
-  byFixture, byMatchday, clubGames, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubLive, type HubNext, type HubPrediction, type HubTeam,
+  byFixture, byMatchday, clubGames, liveNow, pinned, useHub, useNow, type HubFixture, type HubLine, type HubPast, type HubRound, type HubLive, type HubNext, type HubPrediction, type HubTeam,
 } from "../data/hub";
 import { liveHref } from "../data/liveClock";
 import { useLang, usePrefs, useT } from "../i18n";
@@ -294,6 +294,80 @@ function Schedule({ rounds, fav }: { rounds: HubNext[]; fav: string | null }) {
   );
 }
 
+/** #364: one game of the season so far; it opens only when its full match is stored. */
+function PastRow({ g, fav, label }: { g: HubPast; fav: string | null; label?: string }) {
+  const t = useT();
+  const score = `${g.score.home}–${g.score.away}`;
+  const reds = g.reds.home + g.reds.away;
+  const body = (
+    <>
+      <span className="hub-meta">{label}</span>
+      <TeamName team={g.home} fav={fav} />
+      <span className="hub-score num">{score}</span>
+      <TeamName team={g.away} fav={fav} />
+      <span className="hub-meta">{reds > 0 && t("hub.hist.reds", { n: reds })}</span>
+      <span className="hub-meta">{g.match_id ? t("hub.hist.full") : t("hub.hist.scoreOnly")}</span>
+    </>
+  );
+  return (
+    <li>
+      {g.match_id ? (
+        <Link to={`/?match=${encodeURIComponent(g.match_id)}&tab=overview`} className="hub-past-row"
+          aria-label={t("hub.open", { home: g.home.name, away: g.away.name, score })}>{body}</Link>
+      ) : <div className="hub-past-row">{body}</div>}
+    </li>
+  );
+}
+
+/** #364: the whole league's season so far from the season file, a round at a time, or the viewer's club's games. */
+function History({ rounds, fav }: { rounds: HubRound[]; fav: string | null }) {
+  const t = useT();
+  const day = useRoundDate();
+  const [picked, setPicked] = useState(String(rounds[0].matchday));
+  const [mine, setMine] = useState(false);
+  const round = rounds.find((r) => String(r.matchday) === picked) ?? rounds[0];
+  const onlyMine = mine && fav !== null;
+  const games = rounds.reduce((n, r) => n + r.results.length, 0);
+  return (
+    <section className="hub-sched hub-hist" aria-labelledby="hub-hist-h">
+      <div className="hub-section-head">
+        <h2 id="hub-hist-h">{t("hub.hist.title")}</h2>
+        <span className="hub-note">
+          {t("hub.hist.note", { n: games, from: rounds[rounds.length - 1].matchday, to: rounds[0].matchday })}
+        </span>
+      </div>
+      <div className="hub-sched-pick">
+        {!onlyMine && (
+          <label className="hub-hist-pick">
+            <span className="hub-meta">{t("hub.sched.round")}</span>
+            <select value={picked} onChange={(e) => setPicked(e.target.value)}>
+              {rounds.map((r) => <option key={r.matchday} value={String(r.matchday)}>{t("hub.sched.day", { n: r.matchday, date: day(r.date) })}</option>)}
+            </select>
+          </label>
+        )}
+        {fav && (
+          <Segmented label={t("hub.sched.show")} value={onlyMine ? "mine" : "all"} onChange={(v) => setMine(v === "mine")}
+            options={[{ value: "all", label: t("hub.sched.all") }, { value: "mine", label: t("hub.sched.mine", { team: fav }) }]} />
+        )}
+      </div>
+      <div className="hub-day">
+        {onlyMine ? (
+          <ul>
+            {rounds.flatMap((r) => r.results.filter((g) => [g.home.short_name, g.away.short_name].includes(fav))
+              .map((g) => <PastRow key={`${r.matchday}-${g.home.short_name}`} g={g} fav={fav}
+                label={t("hub.sched.day", { n: r.matchday, date: day(r.date) })} />))}
+          </ul>
+        ) : (
+          <>
+            <h3>{t("hub.sched.day", { n: round.matchday, date: day(round.date) })}</h3>
+            <ul>{pinned(round.results, fav).map((g) => <PastRow key={g.home.short_name} g={g} fav={fav} />)}</ul>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Hub() {
   const { prefs, setPrefs } = usePrefs();
   const t = useT();
@@ -343,6 +417,7 @@ export default function Hub() {
             ))}
           </section>
         )}
+        {data?.history && data.history.length > 0 && <History rounds={data.history} fav={fav} />}
       </main>
     </>
   );
