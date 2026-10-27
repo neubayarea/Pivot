@@ -22,7 +22,7 @@ export const pivotHeadline = (p: Pivot, teams: MatchView["teams"], t: T) =>
 export function Severity({ level }: { level: Pivot["severity"] }) {
   const t = useT();
   return (
-    <span className="sev" aria-label={t("pivot.severity", { n: level })}>
+    <span className="sev" role="img" aria-label={t("pivot.severity", { n: level })}>
       {"●".repeat(level)}
       <i>{"●".repeat(3 - level)}</i>
     </span>
