@@ -3,12 +3,12 @@ import type React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import type { MatchEvent, TeamSheet, TrackingFrame } from "@pivot/contracts";
+import type { MatchEvent, TeamSheet, TeamTactics, TrackingFrame } from "@pivot/contracts";
 import { FixtureProvider } from "../data/match";
 import { PrefsProvider } from "../i18n";
 import Pitch from "./Pitch";
 import { PlayerDetail, Roster, ShapeTable } from "./PitchBoard";
-import { frameShape, lineupAt, meanShape, shapeLines } from "./shape";
+import { frameShape, lineupAt, meanShape, shapeLines, tacticsAt } from "./shape";
 
 const slot = (player_id: string, role: TeamSheet["starters"][number]["role"]) => ({ player_id, role, slot: 0, anchor: [0, 0] });
 const sheet = (formation: string, starters: ReturnType<typeof slot>[]) => ({ formation, starters, bench: [] }) as unknown as TeamSheet;
@@ -54,7 +54,52 @@ describe("team shape", () => {
     const html = renderToStaticMarkup(<ShapeTable frame={frame(1)} lineup={lineupAt(sheets, [], 1)} before={[frame(0, -10)]}
       beforeLabel="x" isHome={isHome} names={{ home: "HOM", away: "AWY" }} />);
     expect(html).toContain("4-3-3");
-    expect(html).toContain("← 20 (+10)");
+    expect(html).toContain('title="Then: 20 m"> (+10)');
+  });
+});
+
+describe("shape and tactics beside the pitch (Ax67)", () => {
+  const g = globalThis as { window?: unknown };
+  afterEach(() => void delete g.window);
+  const plan = (o: Partial<TeamTactics> = {}) => ({
+    press: "high", line_height: "mid", width: "wide", tempo: "fast", passing: "short", attack_focus: "left",
+    counter_attack: false, offside_trap: false, time_wasting: false, ...o,
+  }) as TeamTactics;
+  const tactics = { home: plan(), away: plan({ press: "low", passing: "direct", counter_attack: true }) };
+  const table = (o: Partial<React.ComponentProps<typeof ShapeTable>> = {}, audience = "analyst") => {
+    const store = new Map([["pivot.mode", audience]]);
+    g.window = { location: { search: "" }, localStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} } };
+    return renderToStaticMarkup(<PrefsProvider><ShapeTable frame={frame(1)} lineup={lineupAt(sheets, [], 1)} before={undefined}
+      beforeLabel="x" isHome={isHome} names={{ home: "HOM", away: "AWY" }} tactics={tactics} {...o} /></PrefsProvider>);
+  };
+
+  it("shows the shape numbers with the layer off and with the comparison on", () => {
+    expect(table()).toContain("Back line, m from own goal");
+    expect(table()).toContain("This second.");
+    expect(table({ before: [frame(0, -10)] })).toMatch(/30<small class="was"[^>]*> \(\+10\)/);
+  });
+
+  it("lists each team's tactics, and a switch only when a side has it on", () => {
+    const html = table();
+    expect(html).toContain("Tactics");
+    expect(html).toMatch(/Pressing<\/th><td>High<\/td><td>Low<\/td>/);
+    expect(html).toMatch(/Passing<\/th><td>Short<\/td><td>Direct<\/td>/);
+    expect(html).toMatch(/Counter-attacks<\/th><td>–<\/td><td>Yes<\/td>/);
+    expect(html).not.toContain("Offside trap");
+    expect(table({}, "fan")).toContain("How hard they chase the ball");
+  });
+
+  it("hides the tactics with no plan, and the shape rows with no frame", () => {
+    expect(table({ tactics: null })).not.toContain("Tactics");
+    const html = table({ frame: null });
+    expect(html).toContain("Pressing");
+    expect(html).not.toContain("Formation");
+  });
+
+  it("follows a change of tactics during the match", () => {
+    const change = ev({ t: 50, team: "away", tactics: plan({ press: "high" }) });
+    expect(tacticsAt(tactics, [change], 49).away.press).toBe("low");
+    expect(tacticsAt(tactics, [change], 50).away.press).toBe("high");
   });
 });
 
