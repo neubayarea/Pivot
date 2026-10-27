@@ -25,7 +25,7 @@ export default function PlayerSpotlight({ upTo = null, onPivot }: { upTo?: numbe
   const { match, teams, squads, pivots, eventById, playerName, preMatch } = useMatch();
   const { t } = usePrefs();
   const { minute } = useClock();
-  const { player } = usePersona();
+  const { player, fan } = usePersona();
   const report = usePlayerReport(match.match_id, player, upTo);
   const all = usePlayers(player ? match.match_id : null, upTo);
   const [pic, setPic] = useState<Pic>("heat");
@@ -65,7 +65,8 @@ export default function PlayerSpotlight({ upTo = null, onPivot }: { upTo?: numbe
 
       {s ? (
         <dl className="spot-stats">
-          {coreStats(report.role).map((k) => (
+          {/* Fans get no xG number: top speed in its place. */}
+          {coreStats(report.role).map((k) => (fan && k === "xg" ? "top_speed_kmh" : k)).map((k) => (
             <div key={k}><dt>{t(`spot.stat.${k}` as never)}</dt><dd className="num">{fmt(k, s[k] as number | null)}</dd></div>
           ))}
         </dl>

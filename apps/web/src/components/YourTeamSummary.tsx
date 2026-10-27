@@ -46,8 +46,8 @@ export default function YourTeamSummary({ report, upTo = null }: { report?: Team
   if (!side) return null;
   const stats = report ?? own.data;
   const team = teams[side].name;
-  // Fans only hear about stats that have a plain name (no PPDA, no field tilt).
-  const plain = fan ? new Set((stats?.metrics ?? []).map((m) => m.metric).filter((m) => isMessageKey(`ts.fan.${m}`))) : undefined;
+  // Fans only hear about stats that have a plain name (no PPDA, no field tilt), and never an xG number.
+  const plain = fan ? new Set((stats?.metrics ?? []).map((m) => m.metric).filter((m) => m !== "xg" && isMessageKey(`ts.fan.${m}`))) : undefined;
   const { strengths, weaknesses } = strengthsAndWeaknesses(stats, side, 3, plain);
   const best = bestPlayer(players.data?.players ?? [], side);
   const line = teamLine(t as never, prefs.language, {
