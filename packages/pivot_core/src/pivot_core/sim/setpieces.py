@@ -27,12 +27,11 @@ Free kicks:
   in the box, five attackers on it;
 - anywhere else play goes on as it was; only the opponents step back 9.15 m from the ball.
 
-These are the positions in the tracking frames: what the match page shows. The engine resolves the
-kick, the header and the shot from its own positions as before (calibrated against the Premier
-League), so the run of play, the events and the score of every seed stay as they were. After the
-kick whoever may get the ball heads for where the engine has him; the rest hold their spots while
-the ball is around the box, then jog back. Nobody is shown faster than his own top speed (REAL-014),
-so now and then a pass reaches a man a second before he is shown arriving.
+The players walk to these spots during the stoppage (the engine's movement targets; everyone at
+his own pace) and the kick waits until the opponents are 9.15 m away. The delivery, the header
+and the shot are then played from where they stand. After the kick anyone near the ball plays on;
+the rest hold their spots while the ball is around the box and nobody has cleared it, at most
+STAY_S seconds. The layouts draw from their own random stream, so the same seed plays the same match.
 """
 
 from __future__ import annotations
@@ -42,19 +41,14 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ..domain.common import PITCH_LENGTH, PITCH_WIDTH
-from .movement import TeamShape, from_view, norm, normal, settle, to_view, uniform
+from .movement import TeamShape, from_view, norm, normal, to_view, uniform
 
 GOAL_V = np.array([PITCH_LENGTH, PITCH_WIDTH / 2])        # the goal attacked, in the kicking side's view
 POST = 3.66                                               # goal centre to post
 KEEP_OFF = 9.15                                           # Laws 13 and 17: opponents this far from the ball
 SHOOTING_M = 32.0                                         # free kick this close, in front of goal: a wall
 WALL_GAP = 0.6                                            # shoulder to shoulder
-# Shown speeds (m/s): setting up, following a man, jogging back after the kick (under the 7 m/s
-# that counts as a sprint), going for the ball.
-WALK_MS, MARK_MS, RUN_MS, CHASE_MS = 5.5, 6.5, 6.5, 10.5
-RELEASE_S = 120                                           # after this the shown players are where the engine has them
-INVOLVED_M = 15.0                                         # after the kick, anyone the engine has this near the ball
-                                                          # may get it soon: he heads for where the engine has him
+INVOLVED_M = 5.0                                          # after the kick, anyone this near the ball plays on
 STAY_S, STAY_M = 8, 25.0                                  # after the kick the rest hold their spots this long, while the
                                                           # ball is within this many metres of the goal line
 
@@ -140,10 +134,7 @@ def corner_plan(rng: np.random.Generator, k: int, shapes: tuple[TeamShape, TeamS
             keep -= 1
         else:
             n_box -= 1
-    # The engine plays the corner to someone it has in the box, so they all go in first; the
-    # striker and the centre-backs fill the box up.
-    in_box = [i for i in pool if PITCH_LENGTH - float(av[i][0]) < 20.0 and abs(float(av[i][1]) - PITCH_WIDTH / 2) < 22]
-    box = in_box[:n_box] + _pick(att.roles, [i for i in pool if i not in in_box], UP_ORDER, n_box - len(in_box))
+    box = _pick(att.roles, pool, UP_ORDER, n_box)          # the striker and the centre-backs first
     rest_pool = [i for i in pool if i not in box]
     back = sorted(rest_pool, key=lambda i: (-UP_ORDER.get(att.roles[i], 9), i))[:keep]
     mid = [i for i in rest_pool if i not in back]
@@ -313,136 +304,82 @@ def _keeper(rng: np.random.Generator, plan: Plan, dfn: TeamShape, spot: np.ndarr
             plan.spots[(1 - k, j)] = spot
 
 
-class SetPieceView:
-    """The positions the tracking frames show (see the module docstring). Holds no engine state:
-    give it the engine's positions every second, get back what to record."""
+class SetPieceShape:
+    """Moves the 22 to their set-piece spots while a corner or free kick is set up, and keeps the
+    box full for a few seconds after the kick. It only changes the movement targets the engine
+    hands it, so everyone still runs at his own pace (REAL-014)."""
 
     def __init__(self, rng: np.random.Generator):
         self.rng = rng
-        self.shown: np.ndarray | None = None              # (2, 11, 2) while it differs from the engine
         self.plan: Plan | None = None
         self.plan_for: dict | None = None                 # the engine's restart the plan was made for
         self.draw = 0                                     # seeds the plan's own draws for that restart
-        self.held = 0                                     # seconds the plan has been shown
-        self.released = 0                                 # seconds since the kick
-        self.last: np.ndarray | None = None               # what the last frame showed
-        self.after = 0                                    # the side that took the last set piece
+        self.after = 0                                    # seconds since the kick
         self.involved = np.zeros((2, 11), dtype=bool)     # after the kick: who has gone for the ball
         self.won = False                                  # after the kick: the defending side has had the ball
-        self.top = np.full((2, 11), CHASE_MS)             # each player's top speed this second
 
-    def frame(self, t: int, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, speed: np.ndarray,
-              top: np.ndarray, ball: np.ndarray, owner: tuple[int, int] | None, restart: dict | None,
-              forced: dict | None, flight: dict | None) -> tuple[np.ndarray, np.ndarray]:
-        """Positions and speeds to record for this second. `top` is each player's top speed (m/s):
-        nobody is shown running faster."""
-        self.top = top
-        if restart is not None and restart["kind"] == "kick_off" and restart["period_start"]:
-            self.shown, self.plan, self.plan_for = None, None, None      # a new half: everyone where the engine is
-        elif restart is not None and restart["kind"] in ("corner", "free_kick"):
+    def apply(self, targets: np.ndarray, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, ball: np.ndarray,
+              owner: tuple[int, int] | None, restart: dict | None, forced: dict | None,
+              flight: dict | None) -> None:
+        """Overwrite `targets` (absolute, (2, 11, 2)) for this second."""
+        if restart is not None and restart["kind"] in ("corner", "free_kick"):
             if restart is not self.plan_for:
-                self.plan_for, self.held = restart, 0
+                self.plan_for = restart
                 self.draw = int(self.rng.integers(2 ** 31))
-                if self.shown is None:                    # set off from where the last frame had them
-                    self.shown = (self.last if self.last is not None else pos).copy()
-            # Made again every second from where the engine has everybody, with the same draws, so
-            # at the kick the men in the box are the ones the engine may play it to.
+            # Made again every second from where everybody is, with the same draws: a player who
+            # comes on or is sent off in the meantime is taken into account.
             maker = corner_plan if restart["kind"] == "corner" else free_kick_plan
             self.plan = maker(np.random.default_rng(self.draw), restart["team"], shapes, pos, restart["spot"],
                               restart["taker"])
-            self._hold(shapes, pos, ball, restart["team"], restart["taker"])
+            self.after = 0
+            self._set(targets, shapes, pos, ball, restart["team"], restart["taker"])
         elif self.plan is not None and forced is not None and owner is not None and owner[0] == self.plan.team:
-            self._hold(shapes, pos, ball, self.plan.team, owner[1])      # the kick is this coming second
-        elif self.shown is not None:
-            if self.plan is not None:
-                self.after, self.involved, self.won = self.plan.team, np.zeros((2, 11), dtype=bool), False
-                self.plan, self.plan_for = None, None
-            self._release(t, pos, speed, ball, owner, flight)
-        if self.shown is None:
-            self.last = pos
-            return pos, speed
-        last = self.last if self.last is not None else pos
-        # Nobody is shown running faster than his own top speed, not even the man on the ball: when
-        # the ball reaches someone shown away from it, he gets there a second or two after it.
-        move = self.shown - last
-        far = norm(move)
-        over = far > top
-        if over.any():
-            self.shown = settle(np.where(over[..., None], last + move * (top / np.maximum(far, 1e-9))[..., None],
-                                         self.shown))
-        if self.plan is None and bool((self.shown == pos).all()):
-            self.shown, self.last = None, pos                 # everybody is back where the engine has him
-            return pos, speed
-        shown_speed = np.where(np.stack([shapes[0].active, shapes[1].active]), norm(self.shown - last), 0.0)
-        self.last = self.shown.copy()
-        return self.shown.copy(), settle(shown_speed)
+            self._set(targets, shapes, pos, ball, self.plan.team, owner[1])      # the kick is this coming second
+            targets[1 - self.plan.team] = pos[1 - self.plan.team]               # the defending side stands still
+        elif self.plan is not None and restart is None:
+            self._after_kick(targets, shapes, pos, ball, owner, flight)
+        else:
+            self.plan, self.plan_for = None, None
 
-    def _hold(self, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, ball: np.ndarray, k: int,
-              taker: int) -> None:
-        plan, shown = self.plan, self.shown
-        self.held += 1
-        self.released = 0
+    def _set(self, targets: np.ndarray, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray, ball: np.ndarray,
+             k: int, taker: int, skip: np.ndarray | None = None) -> None:
+        plan = self.plan
         goal = from_view(GOAL_V, k)
-        target = pos.copy()
-        vmax = np.full((2, 11), WALK_MS)
         for (side, i), spot in plan.spots.items():
-            target[side, i] = from_view(spot, k)
+            if (side, i) != (k, taker) and (skip is None or not skip[side, i]):
+                targets[side, i] = from_view(spot, k)
         for j, i in plan.mark.items():                    # a metre goal-side of his man, wherever he goes
-            man = shown[k, i]
-            to_goal = goal - man
-            target[1 - k, j] = man + to_goal / max(float(norm(to_goal)), 1e-6) * 1.0
-            vmax[1 - k, j] = MARK_MS
+            if skip is None or not skip[1 - k, j]:
+                to_goal = goal - pos[k, i]
+                targets[1 - k, j] = pos[k, i] + to_goal / max(float(norm(to_goal)), 1e-6) * 1.0
         for side, i in sorted(plan.jostle):
-            target[side, i] = target[side, i] + normal(self.rng, 0.0, 0.25, 2)
-        target[k, taker] = pos[k, taker]
-        vmax[k, taker] = CHASE_MS
-        vmax = np.minimum(vmax, self.top)
-        step = target - shown
-        dist = norm(step)
-        scale = np.minimum(1.0, vmax / np.maximum(dist, 1e-9))
-        new = shown + step * scale[..., None]
-        # Nobody of the other side within 9.15 m once they have had time to get back.
-        if self.held > 3:
-            away = new[1 - k] - ball
+            if (skip is None or not skip[side, i]) and (side, i) != (k, taker):
+                targets[side, i] = targets[side, i] + normal(self.rng, 0.0, 0.25, 2)
+        if skip is None:
+            # nobody of the other side within 9.15 m of the ball
+            away = targets[1 - k] - ball
             d = norm(away)
-            near = d < KEEP_OFF + 0.05
+            near = d < KEEP_OFF + 0.3
             if near.any():
-                push = np.where(d > 1e-6, (KEEP_OFF + 0.1) / np.maximum(d, 1e-6), 1.0)
-                new[1 - k] = np.where(near[:, None], ball + away * push[:, None], new[1 - k])
-        new = np.clip(new, [0.3, 0.3], [PITCH_LENGTH - 0.3, PITCH_WIDTH - 0.3])
-        active = np.stack([shapes[0].active, shapes[1].active])
-        self.shown = settle(np.where(active[..., None], new, pos))
+                push = (KEEP_OFF + 0.4) / np.maximum(d, 1e-6)
+                targets[1 - k] = np.where(near[:, None], ball + away * push[:, None], targets[1 - k])
+        np.clip(targets, [0.5, 0.5], [PITCH_LENGTH - 0.5, PITCH_WIDTH - 0.5], out=targets)
 
-    def _release(self, t: int, pos: np.ndarray, speed: np.ndarray, ball: np.ndarray,
-                 owner: tuple[int, int] | None, flight: dict | None) -> None:
-        """After the kick. Whoever the ball comes to (the man on it at once, the one a pass is played
-        to as it arrives, anyone the engine has near it) goes to where the engine has him; the rest
-        hold their spots while the ball is still around the box, as defenders do until it is
-        cleared, then everybody runs back to where the engine has them."""
-        self.released += 1
-        shown = self.shown
-        step = pos - shown
-        dist = norm(step)
+    def _after_kick(self, targets: np.ndarray, shapes: tuple[TeamShape, TeamShape], pos: np.ndarray,
+                    ball: np.ndarray, owner: tuple[int, int] | None, flight: dict | None) -> None:
+        """After the kick whoever may get the ball plays on as the engine has him; the rest hold their
+        spots while the ball is around the box, as defenders do until it is cleared."""
+        k = self.plan.team
+        if self.after == 0:
+            self.involved, self.won = np.zeros((2, 11), dtype=bool), False
+        self.after += 1
         self.involved |= norm(pos - ball) < INVOLVED_M
         if owner is not None:
             self.involved[owner] = True
+            self.won |= owner[0] != k
         if flight is not None and flight.get("team") is not None:
             self.involved[flight["team"], flight["slot"]] = True
-        if owner is not None and owner[0] != self.after:
-            self.won = True                               # the defending side has it: the box empties
-        near_goal = float(to_view(ball, self.after)[0]) > PITCH_LENGTH - STAY_M
-        staying = self.released <= STAY_S and near_goal and not self.won
-        # catching up with a man who is running himself takes a little more than his own speed
-        run = np.minimum(np.maximum(RUN_MS, speed + 1.0), CHASE_MS)
-        vmax = np.where(self.involved, CHASE_MS, 0.0 if staying else run)
-        if flight is not None and flight.get("team") is not None:
-            k, i = flight["team"], flight["slot"]
-            vmax[k, i] = max(float(dist[k, i]) / max(flight["arrive"] - t, 1), RUN_MS)
-        vmax = np.minimum(vmax, self.top)
-        scale = np.minimum(1.0, vmax / np.maximum(dist, 1e-9))
-        new = shown + step * scale[..., None]
-        close = (norm(pos - new) < 0.5) & (norm(pos - shown) <= self.top)
-        new = np.where(close[..., None], pos, new)                          # close enough: he is there
-        self.shown = settle(new)
-        if self.released >= RELEASE_S:
-            self.shown = None
+        if self.won or self.after > STAY_S or float(to_view(ball, k)[0]) <= PITCH_LENGTH - STAY_M:
+            self.plan, self.plan_for = None, None
+            return
+        self._set(targets, shapes, pos, ball, k, -1, skip=self.involved)

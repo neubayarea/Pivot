@@ -102,4 +102,4 @@ def test_bx10_same_numbers_on_every_platform():
     assert hashlib.sha256(numbers.encode()).hexdigest()[:16] == PIN, numbers
 
 
-PIN = "efcb51c2c32fd459"
+PIN = "93324578c48348fd"                # Ax44: set-piece positions changed the run of play

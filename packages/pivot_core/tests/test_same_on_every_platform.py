@@ -8,8 +8,7 @@ sent to press. Fingerprints hash the raw events and the exact player positions
 
 When a change is meant to alter the run of play, rerun these seeds with
 `uv run scripts/sim_fingerprint.py --seeds 4 17 --preset-seeds 29` and update FINGERPRINTS,
-saying so in the PR. Ax44 changed only `pos` and `frames` (set-piece positions in the tracking
-frames); `ev`, the score and the event count are as before.
+saying so in the PR. Ax44 (set-piece positions) changed all three.
 """
 
 import sys
@@ -23,9 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from sim_fingerprint import fingerprint  # noqa: E402
 
 FINGERPRINTS = {
-    "seed 4": "1-0 events=1894 ev:26fe64692a092b42 pos:dc81a91d7cb4b701 frames:271abeadc7dd4281",
-    "seed 17": "2-2 events=1834 ev:76951f21fd03bf8c pos:43d183d22d653f16 frames:98f3acce22a397a7",
-    "demo-1021 seed 29": "3-1 events=1726 ev:31a91007251c8990 pos:4f6c0a2fb0958d04 frames:8d491110d2988c3d",
+    "seed 4": "1-0 events=1961 ev:95b06afb642f3e5c pos:65301029b506b448 frames:9e2f882e8d648a5d",
+    "seed 17": "1-2 events=1712 ev:d6b7c17b146b2e14 pos:49ab15fca98d34ad frames:7a57e0ea0b517bd3",
+    "demo-1021 seed 29": "5-1 events=1681 ev:03dc318d17b06c90 pos:615a973763fb0e2a frames:a9391ff19862baec",
 }
 
 

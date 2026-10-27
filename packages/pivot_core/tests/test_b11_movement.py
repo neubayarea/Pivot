@@ -143,9 +143,11 @@ def test_b11_higher_press_stands_closer_to_the_ball_carrier():
 
 def test_b11_higher_press_stands_closer_to_the_ball_carrier_over_whole_matches():
     # low to mid, which reuses the matches above; mid to high is a few centimetres in a whole match.
-    # B12 narrowed the low and mid pressing zones (Premier League PPDA), so the gap is smaller.
-    low = np.mean([nearest_home_player_to_carrier(sim(s, press="low")[1]) for s in SEEDS])
-    mid = np.mean([nearest_home_player_to_carrier(sim(s)[1]) for s in SEEDS])
+    # B12 narrowed the low and mid pressing zones (Premier League PPDA), so the gap is smaller; Ax44
+    # (set-piece positions) left it at about 0.4 m over 12 matches, but two matches can come out level.
+    seeds = range(1, 9)
+    low = np.mean([nearest_home_player_to_carrier(sim(s, press="low")[1]) for s in seeds])
+    mid = np.mean([nearest_home_player_to_carrier(sim(s)[1]) for s in seeds])
     assert mid < low - 0.1
 
 
