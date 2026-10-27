@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import { needsLocalised, usePrefs } from "../../i18n";
+import { liveClock } from "../liveClock";
 import { useReplayClock } from "../replayClock";
 import { ConnectionContext, LocalisingContext, MatchContext, type Connection, type MatchView } from "../view";
 import type { MatchChoice } from "../choice";
@@ -50,9 +51,12 @@ export function stateAt(full: LiveState, clock: number, playing: boolean): LiveS
   return { match, events, metrics: full.metrics.filter((m) => m.minute <= minute), pivots };
 }
 
-type Props = { children: ReactNode; fallback: ReactNode; choice: MatchChoice; from: number; onMissing?: (id: string) => void };
+/** `live`: played as the simulated live match (C14): at 1x, from the wall-clock second (data/liveClock). */
+type Props = {
+  children: ReactNode; fallback: ReactNode; choice: MatchChoice; from: number; live?: boolean; onMissing?: (id: string) => void;
+};
 
-export default function ReplayProvider({ children, fallback, choice, from, onMissing }: Props) {
+export default function ReplayProvider({ children, fallback, choice, from, live = false, onMissing }: Props) {
   const [full, setFull] = useState<LiveState | null>(null);
   const [connection, setConnection] = useState<Connection | null>(null);
   const { prefs } = usePrefs();
@@ -114,7 +118,14 @@ export default function ReplayProvider({ children, fallback, choice, from, onMis
   }, [key, localise]);
 
   const end = full ? replayEnd(full) : Infinity;
-  const { clock, playing, speed, now, seek, setPlaying, setSpeed } = useReplayClock(from, end, !!full, 20);
+  const { clock, playing, speed, now, seek, setPlaying, setSpeed } = useReplayClock(from, end, !!full, live ? 1 : 20);
+  // The live match joins the wall clock once its length is known, and again on "Back to live".
+  const goLive = useMemo(() => (live && full ? () => {
+    seek(Math.min(end, liveClock(end)));
+    setSpeed(1);
+    setPlaying(true);
+  } : undefined), [live, full, end, seek, setSpeed, setPlaying]);
+  useEffect(() => goLive?.(), [goLive]);
 
   // Like the fixture: events and pivots only change on whole seconds.
   const second = Math.floor(clock);
@@ -133,8 +144,9 @@ export default function ReplayProvider({ children, fallback, choice, from, onMis
       seek,
       end,
       now,
+      goLive,
     },
-  }, [data, playing, speed, from, end, seek, setPlaying, setSpeed, now]);
+  }, [data, playing, speed, from, end, seek, setPlaying, setSpeed, now, goLive]);
 
   return (
     <ConnectionContext.Provider value={connection}>
