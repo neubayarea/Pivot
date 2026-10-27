@@ -53,6 +53,7 @@ from pivot_core.analytics import StatCalculator, detect_candidates, momentum_ser
 from pivot_core.domain import Match, MatchEvent, MinuteMetric, PivotCandidate, PlantSpec
 from pivot_core.ports import PIVOT_CANDIDATES
 from pivot_core.sim import PRESETS, build_demo_match, simulate
+from pivot_core.sim.season import load_season, site_matchday, with_prematch
 
 log = logging.getLogger("uvicorn.error")
 
@@ -156,7 +157,7 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     _write_json_gz(data_path, {
         "sim_version": version,
         "spec": spec.__dict__,
-        "match": out.match.model_dump(mode="json", round_trip=True),
+        "match": prematch(out.match, spec).model_dump(mode="json", round_trip=True),
         "events": [e.model_dump(mode="json", round_trip=True) for e in events],
         "metrics": [m.model_dump(mode="json", round_trip=True) for m in metrics],
         "candidates": [c.model_dump(mode="json", round_trip=True) for c in candidates],
@@ -164,6 +165,23 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     })
     drop_old_versions(data_dir, spec, version)
     return True
+
+
+@lru_cache(maxsize=1)
+def _season() -> dict | None:
+    try:
+        return load_season(FIXTURE.parent)
+    except OSError:
+        log.warning("no season file in %s: simulated matches get only the basic pre-match context", FIXTURE.parent)
+        return None
+
+
+def prematch(match: Match, spec: SimSpec) -> Match:
+    """The played match with its pre-match context (Bx13): form, table, head-to-head, news, ties and the
+    context effects, from the fictional season up to the round the seed sets it on. Added after the match
+    is simulated, so its events and score are the same with or without it."""
+    season = _season()
+    return match if season is None else with_prematch(match, season, site_matchday(spec.seed))
 
 
 def drop_old_versions(data_dir: Path, spec: SimSpec, version: str) -> None:
