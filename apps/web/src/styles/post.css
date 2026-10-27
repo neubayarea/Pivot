@@ -257,3 +257,12 @@
 .post .xg-key .k-turn::before { width: 12px; height: 12px; border-radius: 50%; background: var(--pv-gold); border: 1.5px solid var(--pv-ink); }
 .ev-kind { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin-right: 4px; }
 .ev-trace { display: inline-block; margin-top: 4px; font-size: var(--pv-fs-sm); font-weight: 600; }
+/* ---------- C18 (#367): the three gaps on the Overview and Line-ups ---------- */
+/* The fan's five numbers use the card's width. */
+.post .ts-fan .ts-groups, .post .ts-fan .ts-teams { max-width: none; }
+/* A key moment's tags sit in a column close to what happened, not across the row. */
+.post .km { grid-template-columns: 3.4em 16px 3.4em minmax(0, 28em) minmax(0, 1fr); }
+.post .km-tags { justify-content: flex-start; }
+/* The match-up table: zone, roles and count hug the left; the verdict takes the rest. */
+.lineups-tab .mu-line { grid-template-columns: minmax(7em, max-content) auto auto auto minmax(0, 1fr); }
+.lineups-tab .mu-edge { justify-self: start; }
