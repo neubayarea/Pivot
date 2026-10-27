@@ -78,7 +78,7 @@ describe("on the M-seed-29 demo match", () => {
     const view = toView({ match: fx.match, events: [...fx.events].reverse(), metrics: [], pivots: [] });
     const html = renderToStaticMarkup(<MatchContext.Provider value={view}><SetPieceBoard /></MatchContext.Provider>);
     expect(html).toContain("Penalty");
-    expect(html).toMatch(/1 penalties → /);
+    expect(html).toMatch(/1 penalties led to /);
     expect(html.match(/class="clip[" ]/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Replay: ');
     for (const r of RATES) expect(html).toContain(`${r}×`);

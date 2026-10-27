@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import type { MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import type { KeyKind } from "../data/keyMoments";
@@ -19,6 +19,8 @@ type Props = {
   keys?: { id: string; t: number; kind: KeyKind; side: Side; label: string }[];
   keySelected?: string | null;
   onKey?: (id: string) => void;
+  /** C11: the open pivot's before / after window, in seconds, shaded behind the line. */
+  windowAt?: readonly [number, number] | null;
 };
 
 // Geometry follows the S1 mock in docs/design/matchday-programme.html.
@@ -33,7 +35,7 @@ const TICKS = [0, 15, 30, 45, 60, 75, 90];
  * The axis runs on elapsed minutes, so stoppage time takes room, but reads the match clock:
  * each tick sits where the clock showed it, and the second half starts at its real kick-off.
  */
-export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick, keys = [], keySelected, onKey }: Props) {
+export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, numbered, selected, onPick, keys = [], keySelected, onKey, windowAt }: Props) {
   const clip = useId().replace(/[^\w-]/g, "");
   const t = useT();
   const { periods, minute } = useClock();
@@ -61,7 +63,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
     .join(", ");
 
   return (
-    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
+    <svg className="mom" viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t("chart.label", { list: summary || t("chart.none") })}>
       <defs>
         <clipPath id={`${clip}up`}>
           <rect x={0} y={0} width={W} height={MID} />
@@ -70,6 +72,9 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
           <rect x={0} y={MID} width={W} height={H} />
         </clipPath>
       </defs>
+      {windowAt && (
+        <rect className="mom-win" x={x(windowAt[0] / 60)} y={T} width={Math.max(2, x(windowAt[1] / 60) - x(windowAt[0] / 60))} height={H - T - B} />
+      )}
       <rect x={x(ht)} y={T} width={1} height={H - T - B} fill="var(--pv-hair)" />
       <text x={x(ht) + 4} y={T + 10} fontSize={11} fill="var(--pv-ink-2)">
         {t("chart.ht")}
@@ -86,9 +91,12 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
       <text x={4} y={H - B - 4} fontSize={11} fontWeight={700} fill="var(--pv-away)">
         {awayLabel}
       </text>
-      <path d={area} fill="var(--pv-home)" fillOpacity={0.85} clipPath={`url(#${clip}up)`} />
-      <path d={area} fill="var(--pv-away)" fillOpacity={0.85} clipPath={`url(#${clip}dn)`} />
-      <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
+      {/* C11: the one reveal on the page, kick-off to full time (styles/post.css; reduced motion skips it). */}
+      <g className="mom-draw">
+        <path d={area} fill="var(--pv-home)" fillOpacity={0.85} clipPath={`url(#${clip}up)`} />
+        <path d={area} fill="var(--pv-away)" fillOpacity={0.85} clipPath={`url(#${clip}dn)`} />
+        <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
+      </g>
       {pivots.map((p) => {
         const pending = p.status === "pending";
         const label = `${minute(p.minute)}′`;
@@ -97,7 +105,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
           const cx = x(p.minute);
           const open = () => onPick(p.pivot_id);
           return (
-            <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} role="button" tabIndex={0}
+            <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} style={{ "--at": p.minute / end } as CSSProperties} role="button" tabIndex={0}
               aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) })}
               onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
               <line x1={cx} x2={cx} y1={T + 2} y2={H - B} />
@@ -140,7 +148,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
       {last && (
         <>
           <rect x={x(last.minute) + 8} y={T} width={2} height={H - T - B} fill="var(--pv-hair)" />
-          <circle cx={x(last.minute)} cy={y(last.momentum)} r={5} fill="var(--pv-gold)" stroke="var(--pv-ink)" strokeWidth={2} />
+          <circle className="now" cx={x(last.minute)} cy={y(last.momentum)} r={5} fill="var(--pv-ink)" stroke="var(--pv-sheet)" strokeWidth={2} />
         </>
       )}
     </svg>

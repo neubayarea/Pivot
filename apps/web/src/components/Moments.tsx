@@ -1,6 +1,7 @@
-// The board's numbered moments (Ax32): one card per pivot, and the one picked opened up with its
-// explanation, the pitch at that moment and the what-if chips. Layout follows docs/design/redesign-mockup.html.
-import { useEffect, useMemo, useState } from "react";
+// The board's numbered moments (Ax32, redrawn C11 #288 after momomojun's prototype on
+// b/C-ui-overhaul): one line per pivot under the momentum line, and the one picked opened up below
+// with its explanation, the pitch at that moment and what-if for that same moment.
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
@@ -25,32 +26,63 @@ export function useCause(p: Pivot): string | null {
   return e ? `${e.clock_label.replace(/'$/, "′")} ${describe(e, playerName, t)}` : null;
 }
 
-function MomentCard({ p, n, on, onPick }: { p: Pivot; n: number; on: boolean; onPick: () => void }) {
+const SW = 96, SH = 32, SPAN = 8;
+
+/** The momentum line eight minutes either side of the pivot, in the two kits: the swing at a glance. */
+function Swing({ p }: { p: Pivot }) {
+  const { metrics } = useMatch();
+  const near = metrics.filter((m) => m.minute >= p.minute - SPAN && m.minute <= p.minute + SPAN);
+  if (near.length < 3) return null;
+  const x = (m: number) => ((m - (p.minute - SPAN)) / (2 * SPAN)) * SW;
+  const y = (v: number) => SH / 2 - Math.max(-1, Math.min(1, v)) * (SH / 2 - 1);
+  const area = `M${x(near[0].minute)},${SH / 2}${near.map((m) => ` L${x(m.minute)},${y(m.momentum)}`).join("")} L${x(near.at(-1)!.minute)},${SH / 2} Z`;
+  const clip = `sw-${p.pivot_id.replace(/[^\w-]/g, "")}`;
+  return (
+    <svg className="pr-swing" viewBox={`0 0 ${SW} ${SH}`} width={SW} height={SH} aria-hidden="true">
+      <defs>
+        <clipPath id={`${clip}u`}><rect x={0} y={0} width={SW} height={SH / 2} /></clipPath>
+        <clipPath id={`${clip}d`}><rect x={0} y={SH / 2} width={SW} height={SH / 2} /></clipPath>
+      </defs>
+      <path d={area} className="home" clipPath={`url(#${clip}u)`} />
+      <path d={area} className="away" clipPath={`url(#${clip}d)`} />
+      <line x1={0} x2={SW} y1={SH / 2} y2={SH / 2} className="mid" />
+      <line x1={x(p.minute)} x2={x(p.minute)} y1={0} y2={SH} className="at" />
+    </svg>
+  );
+}
+
+function MomentRow({ p, n, on, onPick }: { p: Pivot; n: number; on: boolean; onPick: () => void }) {
   const { teams } = useMatch();
   const t = useT();
   const { minute } = useClock();
   const cause = useCause(p);
   return (
-    <button type="button" className={`mc to-${p.direction}`} aria-pressed={on} onClick={onPick}>
-      <span className="badge" aria-hidden="true">{n}</span>
-      <span className="mc-min"><b className="num">{minute(p.minute)}′</b></span>
-      <span className="mc-hd">{pivotHeadline(p, teams, t)}</span>
-      {cause && <span className="mc-cause">{t("moments.cause", { cause })}</span>}
-      <span className="mc-ft">
-        <span className="to">{t("pivot.momentumTo", { team: teams[p.direction].name })}</span>
-        <PivotStamp status={p.status} />
+    <button type="button" className={`pr to-${p.direction}`} aria-pressed={on} onClick={onPick}>
+      <span className="pr-n" aria-hidden="true">{n}</span>
+      <b className="pr-min num">{minute(p.minute)}′</b>
+      <span className="pr-txt">
+        <span className="pr-hd">{pivotHeadline(p, teams, t)}</span>
+        {cause && <span className="pr-cause">{t("moments.cause", { cause })}</span>}
       </span>
+      <span className="pr-sw">
+        <Swing p={p} />
+        <span className="to">{t("post.swingTo", { team: teams[p.direction].name })}</span>
+      </span>
+      <span className="pr-st"><PivotStamp status={p.status} /></span>
     </button>
   );
 }
 
+/** The pivots as the story of the match, one line each, straight under the momentum line. */
 export function MomentCards({ pivots, selected, onPick }: { pivots: Pivot[]; selected: string | null; onPick: (id: string) => void }) {
   return (
-    <div className="moments">
+    <ol className="pv-story">
       {pivots.map((p, i) => (
-        <MomentCard key={p.pivot_id} p={p} n={i + 1} on={p.pivot_id === selected} onPick={() => onPick(p.pivot_id)} />
+        <li key={p.pivot_id}>
+          <MomentRow p={p} n={i + 1} on={p.pivot_id === selected} onPick={() => onPick(p.pivot_id)} />
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -75,7 +107,7 @@ function MomentPitch({ pivot, picked }: { pivot: Pivot; picked: string | null })
         label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
       <figcaption>
         {shown && <><b>{shown.clock_label.replace(/'$/, "′")}</b> {describe(shown, playerName, t)}</>}
-        {note && <span className="muted"> · {t(note === "none" ? "board.pitchNone" : "board.pitchLoading")}</span>}
+        {note && <span className="muted"> {t(note === "none" ? "board.pitchNone" : "board.pitchLoading")}</span>}
       </figcaption>
     </figure>
   );
@@ -140,7 +172,7 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
           <div className="mo-wi-go">
             <p>
               <b>{optionLabel(option, t, undefined, minuteOf(option))}</b>
-              {option.at_minute !== null && <> · {t("moments.wiHow", { minute: minute(option.at_minute) })}</>}
+              {option.at_minute !== null && <small className="muted">{t("moments.wiHow", { minute: minute(option.at_minute) })}</small>}
             </p>
             <Button variant="primary" onClick={() => run({ pivot_id: pivot.pivot_id, type: option.type, n_runs: 200, ...(Object.keys(option.params).length ? { params: option.params } : {}) })}>
               {t("whatif.run")}
@@ -151,25 +183,44 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
         {state.phase === "failed" && <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={reset} />}
         {state.phase === "done" && <ScenarioResult state={state} option={option} teams={teams} onReset={() => { reset(); setChosen(null); }} source={source} />}
       </div>
-      <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")} →</Link>
+      <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")}</Link>
     </section>
   );
 }
 
-/** The one moment opened up: why it mattered and where everyone stood. What-if has its own section (Ax59). */
-export function OpenMoment({ pivot, n, evidence, onEvidence }: {
+/**
+ * The one moment opened up, the only raised panel on the page: why it turned, where everyone stood,
+ * and what-if for this moment under them; previous / next step through the others (C11).
+ */
+export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, children }: {
   pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void;
+  /** The turning points either side; absent at either end. */
+  onPrev?: () => void; onNext?: () => void; children?: ReactNode;
 }) {
   const { teams } = useMatch();
   const t = useT();
   const { minute } = useClock();
+  const cause = useCause(pivot);
   const picked = [...evidence].at(-1) ?? null;
+  const sentences = pivot.narrative?.sentences ?? [];
+  const claims = sentences.reduce((k, s) => k + s.claims.length, 0);
+  const events = new Set(sentences.flatMap((s) => s.evidence_ids)).size;
   return (
-    <section className="open-mo" aria-label={`${n} · ${minute(pivot.minute)}′`}>
+    <section className={`open-mo to-${pivot.direction}`} aria-labelledby="open-mo-hd">
       <div className="open-hd">
-        <span className="badge" aria-hidden="true">{n}</span>
-        <h2>{minute(pivot.minute)}′ · {pivotHeadline(pivot, teams, t)}</h2>
-        <Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")} →</Link>
+        <span className="pr-n" aria-hidden="true">{n}</span>
+        <b className="open-min num">{minute(pivot.minute)}′</b>
+        <h2 id="open-mo-hd">{pivotHeadline(pivot, teams, t)}</h2>
+        <nav className="open-nav" aria-label={t("post.pivots")}>
+          <button type="button" className="btn" onClick={onPrev} disabled={!onPrev} aria-label={t("moments.prevLabel")}>{t("moments.prev")}</button>
+          <button type="button" className="btn" onClick={onNext} disabled={!onNext} aria-label={t("moments.nextLabel")}>{t("moments.next")}</button>
+        </nav>
+        <dl className="open-facts">
+          {cause && <div><dt>{t("open.trigger")}</dt><dd>{cause}</dd></div>}
+          <div className="swung"><dt>{t("open.swung")}</dt><dd>{teams[pivot.direction].name}</dd></div>
+          {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims, evidence: events })}</dd></div>}
+          <div className="open-more"><Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link></div>
+        </dl>
       </div>
       {pivot.status === "degraded" && (
         <div className="banner warn" role="status">
@@ -180,6 +231,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence }: {
         <WhyItTurned pivot={pivot} selected={evidence} onToggle={onEvidence} chipHint={t("moments.chipHint")} />
         <MomentPitch pivot={pivot} picked={picked} />
       </div>
+      {children && <div className="open-wi">{children}</div>}
     </section>
   );
 }

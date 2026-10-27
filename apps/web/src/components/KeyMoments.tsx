@@ -6,6 +6,7 @@ import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { keyClip } from "../data/clips";
 import { linkedPivot, type KeyKind, type KeyMoment, type Window } from "../data/keyMoments";
+import { scrollBehavior } from "../data/motion";
 import { useMatch, type Side } from "../data/match";
 import { useT, type MessageKey, type T } from "../i18n";
 import ClipPlayer, { KeyMark, usePeople } from "./ClipPlayer";
@@ -23,14 +24,14 @@ const Glyph = ({ kind, side }: { kind: KeyKind; side: Side }) => (
   </svg>
 );
 
-/** What happened, in a line: "GOAL · Lisais", "Penalty to ROV · foul by Okafor". */
+/** What happened, in a line: "Goal, Lisais", "Penalty to ROV, foul by Okafor". */
 export function keyWhat(k: KeyMoment, t: T, playerName: (id: string | null) => string, team: (s: Side) => string): string {
   const who = playerName(k.event.player_id);
   switch (k.kind) {
     case "goal":
       return t(k.ownGoal ? "keys.ownGoal" : "keys.goal", { who });
     case "red":
-      return t("event.red", { who });
+      return t("keys.red", { who });
     case "penalty":
       return t("keys.penalty", { team: team(k.side), who });
     case "var":
@@ -65,7 +66,7 @@ function KeyClip({ k }: { k: KeyMoment }) {
     if (!playback) return;
     playback.setPlaying(false);
     playback.seek(k.event.t);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
   };
   const from = Math.max(0, Math.floor(clip.parts[0][0] / 60));
   return (
@@ -73,13 +74,13 @@ function KeyClip({ k }: { k: KeyMoment }) {
       <ClipPlayer clip={clip} label={t("keys.clipLabel", { minute, what })} intro={t("keys.clipIntro")}>
         {clip.named && <p className="clip-chain"><b>{t(k.kind === "red" ? "keys.clipSentOff" : "keys.clipFoul")}</b> {people.tag(clip.named)}</p>}
         {k.kind === "goal" && clip.involved.length > 0 && (
-          <p className="clip-chain"><b>{t("shots.involved")}</b> {clip.involved.map((id) => people.tag(id)).join(" → ")}</p>
+          <p className="clip-chain"><b>{t("shots.involved")}</b> {clip.involved.map((id) => people.tag(id)).join(", ")}</p>
         )}
         <p className="km-clip-ft">
           <small className="muted">{t(`keys.clipHow.${k.kind}` as MessageKey, { span })}</small>
           {playback
             ? <button type="button" className="btn ghost" onClick={show}>{t("keys.inMain")}</button>
-            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")} →</a>}
+            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")}</a>}
         </p>
       </ClipPlayer>
     </div>
@@ -102,7 +103,7 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick,
   const linked = pivots.map((p) => ({ minute: p.minute, trigger_event_ids: p.trigger_event_ids, window: windows(p) }));
   // Picked from the momentum line, the moment may be out of sight.
   useEffect(() => {
-    if (selected) document.getElementById(`km-${selected}`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    if (selected) document.getElementById(`km-${selected}`)?.scrollIntoView?.({ block: "nearest", behavior: scrollBehavior() });
   }, [selected]);
   return (
     <section className="keys" aria-labelledby={heading ? "keys-hd" : undefined} aria-label={heading ? undefined : t("keys.title")}>

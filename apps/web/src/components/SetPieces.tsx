@@ -136,7 +136,7 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
 
   return (
     <ClipPlayer clip={clip} label={t("sp.clipLabel", { minute: `${at(sp.event.t)}′`, kind: kindLabel(sp, t) })} intro={t("sp.clipIntro")}
-      title={<>{at(sp.event.t)}′ · {kindLabel(sp, t)} · {att} · {playerName(sp.event.player_id)} <Result r={sp.result} /></>}
+      title={<>{t("sp.clipTitle", { minute: `${at(sp.event.t)}′`, kind: kindLabel(sp, t), team: att, who: playerName(sp.event.player_id) })} <Result r={sp.result} /></>}
       under={(frame, tm) => {
         const before = tm < sp.event.t;
         return <SetupLayer frame={frame} sp={sp} pairs={marks && before && setup ? setup.pairs : []} wall={marks && before && setup ? setup.wall : []} />;
@@ -150,7 +150,7 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
               <dt>{t("sp.marking")}</dt>
               <dd>
                 {setup.marking ? <b>{t(`sp.marking.${setup.marking}` as MessageKey)}</b> : t("sp.marking.few")}
-                {setup.marking && <small> · {t("sp.markingWhy", { k: setup.pairs.length, n: setup.attackersInBox.length, m: MARK_M })}</small>}
+                {setup.marking && <small> {t("sp.markingWhy", { k: setup.pairs.length, n: setup.attackersInBox.length, m: MARK_M })}</small>}
               </dd>
             </>
           )}
@@ -161,7 +161,7 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
             </>
           )}
           <dt>{t("sp.then")}</dt>
-          <dd>{sp.decidedBy ? `${at(sp.decidedBy.t)}′ ${teams[sp.decidedBy.team].short_name} · ${describe(sp.decidedBy, playerName, t)}` : t("sp.result.kept")}</dd>
+          <dd>{sp.decidedBy ? `${at(sp.decidedBy.t)}′ ${teams[sp.decidedBy.team].short_name}, ${describe(sp.decidedBy, playerName, t)}` : t("sp.result.kept")}</dd>
         </dl>
       )}
       <small className="muted">{t(marks ? "sp.how" : "sp.howPlain", { from: clock(from), to: clock(to) })}</small>
@@ -231,7 +231,7 @@ function ShotCard({ c, on, onPick }: { c: ShotClip; on: boolean; onPick: () => v
   return (
     <button type="button" className={`sh-card ${c.shot.team}${goal ? " goal" : ""}`} aria-pressed={on} onClick={onPick}>
       <span className="sh-min num">{at(c.shot.t)}′</span>
-      <span className="sh-who"><b>{playerName(c.shot.player_id)}</b> · {teams[c.shot.team].short_name}</span>
+      <span className="sh-who"><b>{playerName(c.shot.player_id)}</b> {teams[c.shot.team].short_name}</span>
       <span className="sh-out">{t(`shots.out.${c.shot.shot_outcome ?? "off_target"}` as MessageKey)}</span>
       <span className="sh-meta">
         <span className="num">{t("shots.xg", { xg: (c.shot.xg ?? 0).toFixed(2) })}</span>
@@ -251,11 +251,11 @@ function ShotClipView({ clip }: { clip: ShotClip }) {
   return (
     <ClipPlayer clip={c} label={t("shots.pitchLabel", { minute: `${at(clip.shot.t)}′` })} intro={t("shots.buildUp")}
       title={<>
-        {at(clip.shot.t)}′ · {playerName(clip.shot.player_id)} · {teams[clip.shot.team].short_name}
+        {t("shots.clipTitle", { minute: `${at(clip.shot.t)}′`, who: playerName(clip.shot.player_id), team: teams[clip.shot.team].short_name })}
         {" "}<span className="sh-out">{t(`shots.out.${clip.shot.shot_outcome ?? "off_target"}` as MessageKey)}</span>
       </>}>
       <p className="clip-chain">
-        <b>{t("shots.involved")}</b> {c.involved.map((id) => people.tag(id)).join(" → ")}
+        <b>{t("shots.involved")}</b> {c.involved.map((id) => people.tag(id)).join(", ")}
       </p>
       <small className="muted">{t("shots.how", { from: clock(clip.from), to: clock(clip.to) })}</small>
     </ClipPlayer>

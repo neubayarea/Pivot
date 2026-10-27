@@ -1,0 +1,221 @@
+/* 赛后 · Post-match tab (C11 step 3, Ax64, #288), after momomojun's prototype on b/C-ui-overhaul and
+ * the rules in docs/design/c11-design-plan.md. Everything is scoped to .post so the shared rules in
+ * base.css (the pivot detail page, the live tab) are left as they are.
+ *   - Yellow marks only the AI's pivots and the numbers it checked; kit colours carry the data.
+ *   - One hero: the momentum line with the pivots under it. One raised panel: the open pivot.
+ *   - Everything else is a flat white panel on the stand grey. */
+
+.post { display: grid; gap: var(--pv-s6); min-width: 0; max-width: 1280px; }
+
+/* ---------- The lead: the one-sentence verdict ---------- */
+.post .post-lead { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--pv-s4) var(--pv-s5); }
+.post .post-lead h1 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: 1; letter-spacing: -.01em; max-width: 20em; overflow-wrap: anywhere; }
+.post .post-lead .lede { margin-top: 10px; font-size: var(--pv-fs-lg); color: var(--pv-ink-2); max-width: 62ch; }
+
+/* The two kits, as a key next to the momentum heading. */
+.post .kit-key { display: inline-flex; flex-wrap: wrap; gap: var(--pv-s1) var(--pv-s4); font-size: var(--pv-fs-sm); }
+.post .kit-key span { display: inline-flex; align-items: center; gap: 6px; color: var(--pv-ink); font-weight: 600; }
+.post .kit-key span::before { content: ""; width: 12px; height: 12px; border-radius: 3px; }
+.post .kit-key .home::before { background: var(--pv-home); }
+.post .kit-key .away::before { background: var(--pv-away); }
+
+/* ---------- The hero: momentum, the pivots pinned on it and listed under it ---------- */
+.post .turns { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s5) var(--pv-s5) var(--pv-s3); display: grid; gap: var(--pv-s3); min-width: 0; }
+.post .turns-hd { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--pv-s2) var(--pv-s4); }
+.post .turns-hd h2 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); line-height: 1.1; }
+
+.post .mom text { font-family: var(--pv-body); }
+.post .mom > line { stroke: var(--pv-ink-2); stroke-width: 1; }
+.post .mom-win { fill: var(--pv-gold); opacity: .28; }
+.post .mom-mk line { stroke: var(--pv-ink); stroke-width: 1.5; stroke-dasharray: 3 3; opacity: .45; }
+.post .mom-mk circle { fill: var(--pv-gold); stroke: var(--pv-sheet); stroke-width: 3; }
+.post .mom-mk text { fill: var(--pv-on-gold); font-family: var(--pv-display); font-weight: 900; font-size: 17px; }
+.post .mom-mk .mk-min { fill: var(--pv-ink); font-family: var(--pv-body); font-weight: 700; font-size: 12px; }
+.post .mom-mk:hover circle { fill: color-mix(in oklab, var(--pv-gold) 80%, var(--pv-ink)); }
+.post .mom-mk.on circle { fill: var(--pv-ink); }
+.post .mom-mk.on text:not(.mk-min) { fill: var(--pv-gold); }
+.post .mom-mk.on line { stroke-dasharray: none; stroke-width: 2; opacity: 1; }
+.post .mom-mk:focus-visible circle { stroke: var(--pv-focus); stroke-width: 3; }
+.post .mom-key .ring { fill: var(--pv-sheet); stroke: var(--pv-ink); stroke-width: 1.5; }
+.post .mom-key:focus-visible .hit { stroke: var(--pv-focus); }
+.post .km-legend { margin-top: 0; font-size: var(--pv-fs-xs); }
+.post .km-legend .km-pv { color: var(--pv-gold-ink); }
+
+/* The one reveal on the page: the line drawn from kick-off to full time, the pins dropping in on time. */
+@media (prefers-reduced-motion: no-preference) {
+  .post .turns .mom-draw { animation: post-mom-draw 1.2s cubic-bezier(.3, .7, .2, 1) both; }
+  .post .turns .mom-mk { animation: post-pin-in .45s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(.2s + var(--at, 0) * 1.1s); }
+}
+@keyframes post-mom-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes post-pin-in { from { opacity: 0; transform: translateY(-10px); } }
+
+/* One line per pivot, straight under the chart. */
+.post .pv-story { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--pv-hair); }
+.post .pv-story > li + li { border-top: 1px solid var(--pv-hair); }
+.post .pr { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; align-items: center;
+  grid-template-columns: 36px 4em minmax(0, 1fr) auto auto; gap: var(--pv-s2) var(--pv-s4); padding: var(--pv-s3) var(--pv-s3);
+  border-left: 4px solid transparent; transition: background-color .15s; }
+.post .pr.to-home { border-left-color: var(--pv-home); }
+.post .pr.to-away { border-left-color: var(--pv-away); }
+.post .pr:hover { background: var(--pv-sunk); }
+.post .pr[aria-pressed="true"] { background: var(--pv-gold-soft); }
+.post .pr:focus-visible { outline: 2px solid var(--pv-focus); outline-offset: -2px; }
+/* The pivot's number: a yellow disc, since the pivot is the AI's finding. */
+.post .pr-n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--pv-gold); color: var(--pv-on-gold);
+  font-family: var(--pv-display); font-weight: 900; font-size: 18px; flex: none; }
+.post .pr[aria-pressed="true"] .pr-n { background: var(--pv-ink); color: var(--pv-gold); }
+.post .pr-min { font-family: var(--pv-display); font-weight: 800; font-size: 32px; line-height: .9; font-variant-numeric: tabular-nums; }
+.post .pr-txt { display: grid; gap: 2px; min-width: 0; }
+.post .pr-hd { font-weight: 700; font-size: var(--pv-fs-md); line-height: 1.3; color: var(--pv-ink); overflow-wrap: anywhere; }
+.post .pr-cause { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); line-height: 1.4; }
+.post .pr-sw { display: grid; justify-items: end; gap: 2px; font-size: var(--pv-fs-xs); font-weight: 700; white-space: nowrap; }
+.post .pr.to-home .pr-sw .to { color: var(--pv-home); }
+.post .pr.to-away .pr-sw .to { color: var(--pv-away); }
+.post .pr-swing { display: block; overflow: visible; }
+.post .pr-swing .home { fill: var(--pv-home); }
+.post .pr-swing .away { fill: var(--pv-away); }
+.post .pr-swing .mid { stroke: var(--pv-hair); stroke-width: 1; }
+.post .pr-swing .at { stroke: var(--pv-ink); stroke-width: 1.5; stroke-dasharray: 2 2; }
+/* The picked team's swings get a heart, like the score band's. */
+.page[data-fav="home"] .post .pr.to-home .pr-sw .to::before,
+.page[data-fav="away"] .post .pr.to-away .pr-sw .to::before { content: "♥ "; }
+
+/* ---------- The open pivot: the only raised panel ---------- */
+.post .open-mo { background: var(--pv-sheet); border: 0; border-top: 4px solid var(--pv-gold); border-radius: var(--pv-r-panel); box-shadow: var(--pv-lift); min-width: 0; overflow: hidden; display: grid; }
+.post .open-hd { background: transparent; color: var(--pv-ink); display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 0 var(--pv-s4); padding: var(--pv-s5) var(--pv-s5) var(--pv-s1); }
+.post .open-hd .pr-n { width: 36px; height: 36px; font-size: 21px; }
+.post .open-min { font-family: var(--pv-display); font-weight: 900; font-size: 56px; line-height: .9; }
+.post .open-hd h2 { font-family: var(--pv-body); font-weight: 700; font-size: 28px; line-height: 1.15; letter-spacing: -.015em; min-width: 0; overflow-wrap: anywhere; }
+.post .open-nav { display: flex; gap: 6px; }
+.post .open-nav .btn { padding: 5px 12px; }
+.post .open-nav .btn:disabled { opacity: .4; cursor: default; }
+/* Small label over a big value, for each fact. */
+.post .open-facts { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: var(--pv-s2) 36px; margin: 14px 0 0; padding-top: var(--pv-s3); border-top: 1px solid var(--pv-hair); }
+.post .open-facts > div { display: grid; min-width: 0; }
+.post .open-facts dt { font-size: 13px; font-weight: 500; color: var(--pv-ink-2); }
+.post .open-facts dd { margin: 0; font-size: 15px; font-weight: 600; }
+.post .open-mo.to-home .swung dd { color: var(--pv-home); }
+.post .open-mo.to-away .swung dd { color: var(--pv-away); }
+.post .open-facts .open-more { margin-left: auto; }
+.post .open-mo .more-link { font-weight: 600; }
+.post .open-mo > .banner { margin: var(--pv-s3) var(--pv-s5) 0; }
+.post .open-bd { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--pv-s6); padding: var(--pv-s4) var(--pv-s5) var(--pv-s5); }
+.post .open-bd > .card { padding: 0; background: transparent; border-radius: 0; }
+
+.post .why { gap: var(--pv-s3); }
+.post .why > h3 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); justify-content: flex-start; flex-wrap: wrap; gap: 4px 12px; }
+.post .why > h3 small { font-family: var(--pv-body); color: var(--pv-gold-ink); font-weight: 600; font-size: var(--pv-fs-sm); }
+.post .why p { font-size: 17px; line-height: 1.65; max-width: 62ch; color: var(--pv-ink); }
+.post .why p + p { border-top: 0; padding-top: 0; }
+.post .why .pipe { font-family: var(--pv-body); font-weight: 500; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); padding-top: var(--pv-s2); border-top: 1px solid var(--pv-hair); max-width: 62ch; }
+.post .why .lang-note { border-radius: var(--pv-r-ctl); font-weight: 600; padding: 6px 10px; }
+.page[data-fav] .post .why { box-shadow: none; padding-left: 0; }
+
+/* Evidence ids: quiet pills, yellow only once picked (they are the AI's sources). */
+.post .ev { font-family: var(--pv-body); font-weight: 600; font-size: var(--pv-fs-xs); padding: 0 8px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill);
+  background: var(--pv-sunk); color: var(--pv-ink-2); line-height: 1.7; vertical-align: 2px; }
+.post .ev:hover { background: var(--pv-gold-soft); color: var(--pv-ink); border-color: var(--pv-gold); }
+.post .ev.on { background: var(--pv-gold); color: var(--pv-on-gold); border-color: var(--pv-gold); }
+.post .ev.star { border-color: var(--pv-gold); box-shadow: none; color: var(--pv-ink); }
+.post .ev-more { font: inherit; font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); background: none; border: 0; padding: 0 2px;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; vertical-align: 1px; }
+.post .ev-more:hover { color: var(--pv-ink); }
+.post .mo-pitch figcaption { font-size: var(--pv-fs-sm); }
+
+/* What-if for this same moment, in a sunk band at the foot of the open pivot. */
+.post .open-wi { border-top: 1px solid var(--pv-hair); background: var(--pv-sunk); padding: var(--pv-s5); min-width: 0; }
+.post .open-wi .mo-wi { border-top: 0; padding-top: 0; }
+.post .mo-wi-hd h3 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); }
+.post .chip { font-family: var(--pv-body); font-weight: 600; border-radius: var(--pv-r-pill); padding: 6px 14px; }
+.post .chip:hover { background: var(--pv-sheet); border-color: var(--pv-ink-2); }
+.post .chip[aria-pressed="true"] { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); box-shadow: none; }
+.post .mo-wi-res { border: 0; border-radius: var(--pv-r-ctl); background: var(--pv-sheet); padding: var(--pv-s4); }
+.post .mo-wi-go p { display: grid; gap: 4px; }
+.post .mo-wi .more-link { justify-self: start; font-weight: 600; }
+
+/* ---------- Quiet sections below: flat white panels ---------- */
+.post .post-sec { display: grid; gap: var(--pv-s3); min-width: 0; }
+.post .post-sec + .post-sec { border-top: 0; padding-top: 0; margin-top: 0; }
+.post .sec-hd { display: grid; gap: 2px; }
+.post .sec-hd h2 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); line-height: 1.1; }
+.post .sec-hd p { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); max-width: 62em; flex-basis: auto; }
+.post .player-card { box-shadow: none; }
+
+.post .keys { border: 0; border-radius: var(--pv-r-panel); padding: var(--pv-s2) var(--pv-s4); }
+.post .km { padding: var(--pv-s3); border-left-width: 4px; grid-template-columns: 3.4em 16px 3.4em minmax(0, 1fr) auto; }
+.post .km:hover, .post .km[aria-expanded="true"] { background: var(--pv-sunk); }
+.post .km.to-home[aria-expanded="true"] { border-left-color: var(--pv-home); }
+.post .km.to-away[aria-expanded="true"] { border-left-color: var(--pv-away); }
+.post .km-min { font-size: 24px; }
+.post .km.goal .km-what { font-weight: 700; }
+.post .km-tag { border-radius: var(--pv-r-pill); padding: 2px 9px; font-weight: 600; font-size: var(--pv-fs-xs); background: var(--pv-sunk); }
+.post .km-tag.big { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); }
+.post .km-score { font-size: 20px; font-weight: 800; }
+.post .km-pv { color: var(--pv-gold-ink); font-weight: 700; }
+.post .km-clip { border-left: 4px solid var(--pv-hair); background: var(--pv-sunk); border-radius: 0 var(--pv-r-ctl) var(--pv-r-ctl) 0; padding: var(--pv-s3) var(--pv-s4) var(--pv-s4); margin: 0 0 var(--pv-s3); max-width: 760px; }
+
+.post .set-shots.open { border: 0; border-radius: var(--pv-r-panel); background: var(--pv-sheet); padding: var(--pv-s4) var(--pv-s5) var(--pv-s5); display: grid; gap: var(--pv-s3); }
+.post .set-shots .sp-count { font-size: var(--pv-fs-sm); }
+.post .set-shots .more-bd { padding: 0; gap: var(--pv-s4); display: grid; }
+.post .sp-sum, .post .sp-list button, .post .sp-facts { font-family: var(--pv-body); }
+.post .sp-list { border-radius: var(--pv-r-ctl); }
+.post .sp-list button:hover, .post .sp-list button:focus-visible { background: var(--pv-sunk); }
+.post .sp-list button:focus-visible { outline-color: var(--pv-focus); }
+.post .sp-res, .post .sh-out { font-family: var(--pv-body); font-weight: 600; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill); padding: 1px 8px; background: var(--pv-sheet); color: var(--pv-ink-2); }
+.post .sp-res.shot { background: var(--pv-sunk); color: var(--pv-ink); border-color: var(--pv-hair); }
+.post .sp-res.goal, .post .sh-card.goal .sh-out { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); }
+.post .sp-list button[aria-pressed="true"] .sp-res { border-color: transparent; }
+.post .sh-card { font-family: var(--pv-body); border-radius: var(--pv-r-ctl); border-width: 1px; border-left-width: 5px; }
+.post .sh-card.goal { border-width: 1px; border-left-width: 5px; }
+.post .sh-card:hover, .post .sh-card:focus-visible { background: var(--pv-sunk); }
+.post .sh-card[aria-pressed="true"] { background: var(--pv-sunk); border-color: var(--pv-ink); box-shadow: none; }
+.post .sh-card.home[aria-pressed="true"] { border-left-color: var(--pv-home); }
+.post .sh-card.away[aria-pressed="true"] { border-left-color: var(--pv-away); }
+.post .sh-who b { margin-right: 4px; }
+
+/* The AI's work log: one row. */
+.post .post-trace { grid-template-columns: minmax(0, 1fr) auto; align-items: center; background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s4) var(--pv-s5); gap: 4px var(--pv-s4); }
+.post .post-trace > .sec-hd { grid-column: 1 / -1; }
+.post .post-trace .sec-hd h2 { font-size: var(--pv-fs-lg); }
+.post .post-trace p { margin: 0; color: var(--pv-ink-2); }
+
+:lang(zh) .post :is(.post-lead h1, .turns-hd h2, .sec-hd h2, .why > h3, .mo-wi-hd h3, .open-hd h2) { font-family: var(--pv-body); font-weight: 700; font-synthesis: none; letter-spacing: 0; }
+:lang(zh) .post .post-lead h1 { font-size: 40px; line-height: 1.2; }
+:lang(zh) .post :is(.turns-hd h2, .sec-hd h2, .mo-wi-hd h3) { font-size: 22px; }
+:lang(zh) .post .why > h3 { font-size: 20px; }
+:lang(zh) .post .open-hd h2 { font-size: 26px; }
+:lang(zh) .post .why p { line-height: 1.8; }
+
+@media (max-width: 960px) {
+  .post .pr { grid-template-columns: 32px 3.6em minmax(0, 1fr) auto; grid-template-areas: "n m t t" ". . s st"; }
+  .post .pr-n { grid-area: n; }
+  .post .pr-min { grid-area: m; }
+  .post .pr-txt { grid-area: t; }
+  .post .pr-sw { grid-area: s; grid-auto-flow: column; justify-content: start; align-items: center; gap: var(--pv-s3); white-space: normal; min-width: 0; }
+  .post .pr-st { grid-area: st; justify-self: end; align-self: center; }
+  .post .open-bd { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .post { gap: var(--pv-s5); }
+  .post .post-lead h1, :lang(zh) .post .post-lead h1 { font-size: 30px; }
+  .post .post-lead .lede { font-size: var(--pv-fs-md); }
+  .post .turns { padding: var(--pv-s3) var(--pv-s3) var(--pv-s2); }
+  .post .pr { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "n m m" "t t t" "s s st"; gap: var(--pv-s2) var(--pv-s3); padding: var(--pv-s3) var(--pv-s2); }
+  .post .pr-n { width: 28px; height: 28px; font-size: 16px; }
+  .post .pr-min { font-size: 28px; }
+  .post .open-hd { grid-template-columns: auto minmax(0, 1fr) auto; padding: var(--pv-s4) var(--pv-s4) 0; gap: var(--pv-s2) var(--pv-s3); }
+  .post .open-hd .pr-n { grid-column: 1; grid-row: 1; }
+  .post .open-min { grid-column: 2; grid-row: 1; font-size: 40px; }
+  .post .open-hd h2, :lang(zh) .post .open-hd h2 { grid-column: 1 / -1; grid-row: 2; font-size: 21px; }
+  .post .open-nav { grid-column: 3; grid-row: 1; }
+  .post .open-facts { grid-column: 1 / -1; gap: var(--pv-s2) var(--pv-s5); }
+  .post .open-facts .open-more { margin-left: 0; }
+  .post .open-bd { padding: var(--pv-s3) var(--pv-s4) var(--pv-s4); gap: var(--pv-s4); }
+  .post .open-mo > .banner { margin-inline: var(--pv-s4); }
+  .post .why p { font-size: var(--pv-fs-md); }
+  .post .open-wi { padding: var(--pv-s4); }
+  .post .set-shots.open { padding: var(--pv-s3); }
+  .post .keys { padding: var(--pv-s1) var(--pv-s2); }
+  .post .km { grid-template-columns: 3em 16px minmax(0, 1fr); padding: var(--pv-s2); }
+  .post .post-trace { grid-template-columns: minmax(0, 1fr); padding: var(--pv-s4); }
+}

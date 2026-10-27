@@ -1,28 +1,27 @@
-// 赛后 · Post-match (Ax59): the analysis, one numbered section after another so it reads top to
-// bottom instead of as a wall of cards: the pivots (one line each, the full explanation a click
-// away), the momentum line with the goals on it, the key moments, set pieces and shots, what-if,
-// and the AI's work log across the bottom.
-import { useState, type ReactNode } from "react";
+// 赛后 · Post-match (Ax59, redrawn C11 Ax64 after momomojun's prototype on b/C-ui-overhaul, #288).
+// One hero: the momentum line with the AI's turning points pinned on it and one line each under it.
+// The open one (the first when none is picked) is the only raised panel: why it turned, the pitch
+// at that moment and what-if for that same moment. Key moments, set pieces and shots and the AI's
+// work log follow, quieter. Styles in styles/post.css.
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import KeyMoments, { KeyLegend, keyId, keyWhat } from "../../components/KeyMoments";
-import Kicker from "../../components/Kicker";
 import MomentumChart from "../../components/MomentumChart";
 import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments";
 import PlayerCard from "../../components/PlayerCard";
 import SetPiecesAndShots from "../../components/SetPieces";
 import StartDemoButton from "../../components/StartDemoButton";
-import { useClock } from "../../data/clock";
 import { keyMoments, matchPhase } from "../../data/keyMoments";
 import { useMatch } from "../../data/match";
 import { useT } from "../../i18n";
+import "../../styles/post.css";
 
-/** One numbered section of the analysis, with its heading and a line on what it shows. */
-function Section({ n, title, note, children, id }: { n: number; title: string; note?: ReactNode; children: ReactNode; id: string }) {
+/** One section of the analysis, with its heading and a line on what it shows; the pivots lead. */
+function Section({ title, note, children, id, className = "" }: { title: string; note?: ReactNode; children: ReactNode; id: string; className?: string }) {
   return (
-    <section className="post-sec" aria-labelledby={`${id}-hd`} id={id}>
+    <section className={`post-sec ${className}`.trim()} aria-labelledby={`${id}-hd`} id={id}>
       <header className="sec-hd">
-        <span className="sec-n" aria-hidden="true">{n}</span>
         <h2 id={`${id}-hd`}>{title}</h2>
         {note && <p className="muted">{note}</p>}
       </header>
@@ -44,116 +43,107 @@ type Props = {
 export function PostMatchTab({ moments, open, onPick, evidence, onEvidence, keySelected, onKey }: Props) {
   const { match, teams, metrics, pivots, playback, events, playerName, pivotDetail } = useMatch();
   const t = useT();
-  const { minute } = useClock();
   const scheduled = match.status === "scheduled";
   const finished = match.status === "finished";
   // On the live feed a finished match leaves nothing in progress; the fixture has its own Restart.
   const over = finished && !playback;
   const phase = matchPhase(match.status, events);
-  const score = { home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}` };
   const keys = keyMoments(events, finished);
-  // What-if runs on one pivot at a time: the one open above, or the one picked here.
-  const [wiFor, setWiFor] = useState<string | null>(null);
-  const whatIf = moments.find((p) => p.pivot_id === (wiFor ?? open?.pivot_id)) ?? moments[0] ?? null;
-  const n = open ? moments.indexOf(open) + 1 : 0;
+  // With none picked the first one is open, so the page lands on an explanation (C11 prototype).
+  const shown = open ?? moments[0] ?? null;
+  const n = shown ? moments.indexOf(shown) + 1 : 0;
+  // Picking the one already open keeps it open; the prototype has no folded state.
+  const pick = (id: string) => id !== shown?.pivot_id && onPick(id);
 
   if (scheduled) {
     return (
       <div className="empty-box">
-        {t("board.kickoffPending")} · <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
+        {t("board.kickoffPending")} <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="lead">
-        <Kicker>
-          {moments.length
-            ? t(finished ? "moments.kickerDone" : "moments.kickerLive", score)
-            : t("board.phaseScore", { phase: t(finished ? "status.finished" : phase === "halfTime" ? "board.halfTime" : "board.kickoff"), ...score })}
-        </Kicker>
-        <h1>
-          {moments.length
-            ? t(finished ? "moments.title" : "moments.titleLive", { n: moments.length })
-            : t(finished ? "board.noSwing" : "board.watching")}
-        </h1>
-        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
-      </div>
-
-      <Section n={1} id="post-pivots" title={t("post.pivots")} note={moments.length ? t("post.pivotsNote") : undefined}>
-        {moments.length ? (
-          <MomentCards pivots={moments} selected={open?.pivot_id ?? null} onPick={onPick} />
-        ) : (
-          <p className="muted">{t(finished ? "board.noSwingLede" : "pivots.empty")}</p>
-        )}
-        {open && <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={onEvidence} />}
-        {/* The ★ player's numbers so far, whole minutes so a live clock refetches once a minute. */}
-        <PlayerCard upTo={finished ? null : Math.floor(match.clock / 60) * 60} numbered={moments.map((p) => p.pivot_id)} onPivot={onPick} />
-      </Section>
-
-      <Section n={2} id="post-momentum" title={t("board.momentum")}
-        note={<>
-          <span style={{ color: "var(--pv-home)" }}>■</span> {teams.home.name} &nbsp;
-          <span style={{ color: "var(--pv-away)" }}>■</span> {teams.away.name}
-        </>}>
-        <div className="card">
-          {metrics.length ? (
-            <MomentumChart
-              metrics={metrics}
-              pivots={pivots}
-              homeLabel={teams.home.short_name}
-              awayLabel={teams.away.short_name}
-              numbered={moments.map((p) => p.pivot_id)}
-              selected={open?.pivot_id ?? null}
-              onPick={onPick}
-              keys={keys.map((k) => ({
-                id: keyId(k), t: k.event.t, kind: k.kind, side: k.side,
-                label: t("keys.open", { minute: k.event.clock_label.replace(/'$/, ""), what: keyWhat(k, t, playerName, (s) => teams[s].short_name) }),
-              }))}
-              keySelected={keySelected}
-              onKey={(id) => onKey(id === keySelected ? null : id)}
-            />
-          ) : (
-            <div className="empty-box muted">{t("board.momentumEmpty")}</div>
-          )}
-          {metrics.length > 0 && keys.length > 0 && <KeyLegend kinds={new Set(keys.map((k) => k.kind))} pivots={moments.length > 0} />}
+    <div className="post">
+      <header className="post-lead">
+        <div>
+          <h1>
+            {moments.length
+              ? t(finished ? "moments.title" : "moments.titleLive", { n: moments.length })
+              : t(finished ? "board.noSwing" : "board.watching")}
+          </h1>
+          <p className="lede">
+            {moments.length
+              ? t("moments.lede")
+              : t(finished ? "board.noSwingLede" : "board.phaseScore", {
+                phase: t(phase === "halfTime" ? "board.halfTime" : "board.kickoff"),
+                home: teams.home.name, away: teams.away.name, score: `${match.score.home}–${match.score.away}`,
+              })}
+          </p>
         </div>
-      </Section>
+        {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
+      </header>
 
-      <Section n={3} id="post-keys" title={t("keys.title")} note={t("keys.note")}>
+      <section className="turns" aria-labelledby="post-momentum-hd" id="post-momentum">
+        <header className="turns-hd">
+          <h2 id="post-momentum-hd">{t("board.momentum")}</h2>
+          <span className="kit-key" aria-hidden="true">
+            <span className="home">{teams.home.name}</span>
+            <span className="away">{teams.away.name}</span>
+          </span>
+        </header>
+        {metrics.length ? (
+          <MomentumChart
+            metrics={metrics}
+            pivots={pivots}
+            homeLabel={teams.home.short_name}
+            awayLabel={teams.away.short_name}
+            numbered={moments.map((p) => p.pivot_id)}
+            selected={shown?.pivot_id ?? null}
+            onPick={pick}
+            windowAt={shown ? pivotDetail(shown.pivot_id)?.window ?? null : null}
+            keys={keys.map((k) => ({
+              id: keyId(k), t: k.event.t, kind: k.kind, side: k.side,
+              label: t("keys.open", { minute: k.event.clock_label.replace(/'$/, ""), what: keyWhat(k, t, playerName, (s) => teams[s].short_name) }),
+            }))}
+            keySelected={keySelected}
+            onKey={(id) => onKey(id === keySelected ? null : id)}
+          />
+        ) : (
+          <div className="empty-box muted">{t("board.momentumEmpty")}</div>
+        )}
+        {metrics.length > 0 && keys.length > 0 && <KeyLegend kinds={new Set(keys.map((k) => k.kind))} pivots={moments.length > 0} />}
+        <div id="post-pivots" role="group" aria-label={t("post.pivots")}>
+          {moments.length ? (
+            <MomentCards pivots={moments} selected={shown?.pivot_id ?? null} onPick={pick} />
+          ) : (
+            <p className="muted">{t(finished ? "board.noSwingLede" : "pivots.empty")}</p>
+          )}
+        </div>
+      </section>
+
+      {shown && (
+        <OpenMoment key={shown.pivot_id} pivot={shown} n={n} evidence={evidence} onEvidence={onEvidence}
+          onPrev={n > 1 ? () => onPick(moments[n - 2].pivot_id) : undefined}
+          onNext={n < moments.length ? () => onPick(moments[n].pivot_id) : undefined}>
+          <WhatIfInline key={shown.pivot_id} pivot={shown} />
+        </OpenMoment>
+      )}
+      {/* The ★ player's numbers so far, whole minutes so a live clock refetches once a minute. */}
+      <PlayerCard upTo={finished ? null : Math.floor(match.clock / 60) * 60} numbered={moments.map((p) => p.pivot_id)} onPivot={pick} />
+
+      <Section id="post-keys" title={t("keys.title")} note={t("keys.note")}>
         <KeyMoments moments={keys} pivots={moments} windows={(p) => pivotDetail(p.pivot_id)?.window} selected={keySelected} onPick={onKey} heading={false} />
       </Section>
 
-      <Section n={4} id="post-set-pieces" title={t("sp.title")}>
+      <Section id="post-set-pieces" title={t("sp.title")}>
         <SetPiecesAndShots key={match.match_id} folded={false} />
       </Section>
 
-      <Section n={5} id="post-whatif" title={t("detail.whatIf")} note={t("moments.wiNote")}>
-        {whatIf ? (
-          <div className="post-wi">
-            {moments.length > 1 && (
-              <div className="chips" role="group" aria-label={t("post.whatIfFor")}>
-                {moments.map((p, i) => (
-                  <button key={p.pivot_id} type="button" className="chip" aria-pressed={p.pivot_id === whatIf.pivot_id} onClick={() => setWiFor(p.pivot_id)}>
-                    {t("post.whatIfAt", { n: i + 1, minute: minute(p.minute) })}
-                  </button>
-                ))}
-              </div>
-            )}
-            <WhatIfInline key={whatIf.pivot_id} pivot={whatIf} />
-          </div>
-        ) : (
-          <p className="muted">{t("post.whatIfNone")}</p>
-        )}
+      <Section id="post-trace" title={t("post.trace")} className="post-trace">
+        <p>{t("moments.traceNote")}</p>
+        <Link to="/trace" className="btn">{t("top.trace", { n: pivots.length })}</Link>
       </Section>
-
-      <Section n={6} id="post-trace" title={t("post.trace")}>
-        <div className="card post-trace">
-          <p className="muted">{t("moments.traceNote")}</p>
-          <Link to="/trace" className="btn">{t("top.trace", { n: pivots.length })}</Link>
-        </div>
-      </Section>
-    </>
+    </div>
   );
 }
