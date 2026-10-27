@@ -15,7 +15,7 @@
 /* List left, pitch right. The pitch keeps to 52% of the window's height so the list, the pitch and
    the notes under it fit one 1440x900 screen; the list takes the rest of the width. */
 .sp-split { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, min(100% - 436px, 52vh * 105 / 68)); gap: 16px; align-items: start; }
-.sp-list { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; border: 2px solid var(--pv-ink); max-height: min(640px, 52vh + 190px); overflow-y: auto; overscroll-behavior: contain; container-type: inline-size; }
+.sp-list { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; border: 1px solid var(--pv-hair); max-height: min(640px, 52vh + 190px); overflow-y: auto; overscroll-behavior: contain; container-type: inline-size; }
 .sp-list li + li { border-top: 1px solid var(--pv-hair); }
 .sp-list button { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 3em 3em minmax(0, 1fr) auto; grid-template-areas: "m t k r" "m t n r";
   gap: 0 8px; align-items: baseline; padding: 6px 8px; font-family: var(--pv-label); font-size: 13px; cursor: pointer; }
@@ -36,7 +36,7 @@
   .sp-list .sp-res { justify-self: start; margin-top: 3px; }
 }
 
-.sp-res, .sh-out { font-family: var(--pv-label); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border: 2px solid currentColor; white-space: nowrap; }
+.sp-res, .sh-out { font-family: var(--pv-label); font-size: 11px; font-weight: 700; padding: 1px 6px; border: 2px solid currentColor; white-space: nowrap; }
 .sp-res.shot { background: var(--pv-gold-soft); color: var(--pv-ink); border-color: var(--pv-gold); }
 .sp-res.goal, .sh-card.goal .sh-out, .clip.goal h4 .sh-out { background: var(--pv-gold); color: var(--pv-on-gold); border-color: var(--pv-ink); }
 
@@ -53,29 +53,29 @@
 .pitch .ball-trail { stroke: var(--pv-ink); stroke-width: 2.5; stroke-dasharray: 2 5; stroke-linecap: round; stroke-linejoin: round; stroke-opacity: .7; }
 
 .sh-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; max-height: min(660px, 52vh + 210px); overscroll-behavior: contain; overflow-y: auto; padding: 0 6px 6px 0; }
-.sh-card { all: unset; box-sizing: border-box; display: grid; gap: 3px; padding: 8px 10px; border: 2px solid var(--pv-ink); border-left-width: 6px;
+.sh-card { all: unset; box-sizing: border-box; display: grid; gap: 3px; padding: 8px 10px; border: 1px solid var(--pv-hair); border-left-width: 6px;
   background: var(--pv-sheet); font-family: var(--pv-label); font-size: 13px; cursor: pointer; }
 .sh-card.home { border-left-color: var(--pv-home); }
 .sh-card.away { border-left-color: var(--pv-away); }
 .sh-card:hover, .sh-card:focus-visible { background: var(--pv-gold-soft); }
 .sh-card:focus-visible { outline: 2px solid var(--pv-ink); outline-offset: 2px; }
-.sh-card[aria-pressed="true"] { box-shadow: 4px 4px 0 var(--pv-ink); background: var(--pv-gold-soft); }
+.sh-card[aria-pressed="true"] { box-shadow: var(--pv-lift); background: var(--pv-gold-soft); }
 .sh-card.goal { border-width: 3px; border-left-width: 6px; }
 .sh-min { font-family: var(--pv-display); font-size: 18px; }
 .sh-card .sh-out { justify-self: start; }
 .sh-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--pv-ink-2); }
 .sh-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.clip-banner { font-family: var(--pv-display); font-weight: 400; font-size: 20px; background: var(--pv-gold); color: var(--pv-on-gold); padding: 0 10px; border: 2px solid var(--pv-ink); box-shadow: 3px 3px 0 var(--pv-ink); margin-left: 8px; }
+.clip-banner { font-family: var(--pv-display); font-weight: 800; font-size: 20px; background: var(--pv-gold); color: var(--pv-on-gold); padding: 0 10px; border: 1px solid var(--pv-hair); box-shadow: var(--pv-lift); margin-left: 8px; }
 .clip-banner.red { background: var(--pv-red); color: var(--pv-sheet); }
 .clip-banner.penalty, .clip-banner.var { background: var(--pv-sheet); color: var(--pv-ink); }
 .clip:focus-visible { outline: 3px solid var(--pv-gold); outline-offset: 3px; }
-.clip-ctl .again { font-size: 16px; width: 36px; height: 32px; border: 2px solid var(--pv-ink); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; }
+.clip-ctl .again { font-size: 16px; width: 36px; height: 32px; border: 1px solid var(--pv-hair); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; }
 .clip-ctl .again:disabled { opacity: .5; cursor: default; }
 .clip-keys { font-size: 11px; }
 .clip-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--pv-label); }
 .clip-ctl input[type="range"] { flex: 1 1 160px; accent-color: var(--pv-gold); }
-.clip-ctl .play { font-size: 14px; width: 36px; height: 32px; border: 2px solid var(--pv-ink); background: var(--pv-gold); color: var(--pv-on-gold); cursor: pointer; }
+.clip-ctl .play { font-size: 14px; width: 36px; height: 32px; border: 1px solid var(--pv-hair); background: var(--pv-gold); color: var(--pv-on-gold); cursor: pointer; }
 .clip-ctl .play:disabled { opacity: .5; cursor: default; }
 .clip-chain { margin: 0; font-family: var(--pv-label); font-size: 13px; }
 

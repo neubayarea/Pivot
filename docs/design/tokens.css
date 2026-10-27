@@ -1,85 +1,97 @@
-/* Pivot · Matchday Programme design tokens.
- * Source of truth for apps/web (C01). The spec page docs/design/matchday-programme.html
- * inlines the same values; change both together.
- * apps/web/src/styles/tokens.css is a copy of this file; keep it in sync.
+/* Copy of apps/web/src/styles/tokens.css (C11). Change both files together. */
+/* Pivot · "Kit clash" design tokens (C11, #288). Source of truth for apps/web.
  *
- * Fonts (Google Fonts):
- *   https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap
+ * Three jobs, three colour families, nothing else:
+ *   - the two clubs' own kit colours carry the data (score band, momentum, pitch dots);
+ *   - Pivot yellow marks only what the AI found and checked (turning points, verified numbers);
+ *   - stand greys and white hold everything else.
+ *
+ * Fonts (Google Fonts, OFL):
+ *   https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap
+ * Old names (--pv-gold, --pv-bar, --pv-label...) stay so every page picks the new values up at once.
  */
 :root {
-  /* Paper and ink */
-  --pv-paper: #ECEEE8;        /* page background, with halftone dots */
-  --pv-sheet: #F8F8F3;        /* cards and panels */
-  --pv-ink: #121A3A;          /* text, heavy rules, top bar */
-  --pv-ink-2: #4A5272;        /* secondary text */
-  --pv-hair: #C3C8BE;         /* hairlines inside cards */
-  --pv-dot: rgba(18, 26, 58, 0.09);
-  --pv-bar: #121A3A;          /* top bar and overlay card stay dark in both themes */
-  --pv-on-bar: #F8F8F3;
-  --pv-bar-line: #3A4570;
+  /* Stand and sheet */
+  --pv-paper: #ECEEF1;        /* "Stand": the page, a cool concrete grey */
+  --pv-sheet: #FFFFFF;        /* panels */
+  --pv-sunk: #F5F6F8;         /* wells inside a panel: tables, chips at rest */
+  --pv-ink: #121418;          /* text */
+  --pv-ink-2: #565D6B;        /* secondary text, 6.0:1 on paper */
+  --pv-hair: #D8DCE2;         /* hairlines */
+  --pv-dot: transparent;
+  --pv-bar: #16181D;          /* site bar, tooltips */
+  --pv-on-bar: #F4F5F7;
+  --pv-bar-line: #2C3038;
+  --pv-focus: #1F5FFF;        /* keyboard focus ring, 5.4:1 on white */
 
-  /* Programme accents */
-  --pv-gold: #FFC53A;         /* score boxes, primary buttons, highlighter */
-  --pv-on-gold: #121A3A;
-  --pv-gold-soft: #FFE6A3;    /* selected row */
-  --pv-red: #D22B3C;          /* LIVE, kickers, drop caps */
+  /* Pivot yellow: the AI's turning points and checked numbers, nothing else */
+  --pv-gold: #FFCC1F;
+  --pv-on-gold: #121418;
+  --pv-gold-soft: #FFF3C4;    /* hover, selected row */
+  --pv-gold-ink: #7A5A00;     /* yellow-family text on white, 6.4:1 */
+  --pv-red: #C8102E;          /* live dot, errors; white on it 5.9:1 */
   --pv-on-red: #FFFFFF;
 
-  /* Teams (synthetic clubs; swap per match) */
-  --pv-home: #1C2C6E;
-  --pv-away: #D22B3C;
-  --pv-draw: #B9BFB4;
+  /* Clubs: App sets --pv-home-kit / --pv-away-kit from the match; these are fallbacks */
+  --pv-home: var(--pv-home-kit, #1E6B45);
+  --pv-away: var(--pv-away-kit, #4A1D57);
+  --pv-on-team: #FFFFFF;
+  --pv-draw: #B9BEC7;
 
   /* Status */
-  --pv-ok-bg: #121A3A;  --pv-ok-fg: #FFC53A;   /* VERIFIED stamp */
-  --pv-warn-bg: #FCEBC4; --pv-warn-fg: #7A4700; /* AUTO SUMMARY, degraded */
-  --pv-bad-bg: #F6D2D6; --pv-bad-fg: #8E1220;  /* rejected claim, errors */
+  --pv-ok-bg: #FFCC1F;  --pv-ok-fg: #121418;   /* verified */
+  --pv-warn-bg: #FCEBC4; --pv-warn-fg: #6E4300; /* auto summary, degraded */
+  --pv-bad-bg: #FADADF; --pv-bad-fg: #8E1220;  /* rejected claim, errors */
 
-  /* Pitch */
-  --pv-pitch: #D9DFD5;
-  --pv-pitch-line: #121A3A;
+  /* Pitch: mown grass, chalk lines */
+  --pv-pitch: #E2EAE3;
+  --pv-pitch-line: #9DB5A4;
 
-  /* Type */
-  --pv-display: "Alfa Slab One", "Rockwell", Georgia, serif;
-  --pv-body: "Archivo", "Noto Sans SC", system-ui, sans-serif;
-  --pv-label: "Archivo Narrow", "Archivo", "Noto Sans SC", sans-serif;
+  /* Type: Big Shoulders for numbers and the few big headings, Hanken Grotesk for everything read */
+  --pv-display: "Big Shoulders Display", "Hanken Grotesk", "Noto Sans SC", sans-serif;
+  --pv-body: "Hanken Grotesk", "Noto Sans SC", system-ui, sans-serif;
+  --pv-label: var(--pv-body);
 
-  /* Type scale (px) */
-  --pv-fs-xs: 11px; --pv-fs-sm: 13px; --pv-fs-md: 15px; --pv-fs-lg: 19px;
-  --pv-fs-xl: 26px; --pv-fs-2xl: 38px; --pv-fs-3xl: 56px;
+  /* Type scale (px), after the classic 12 / 14 / 16 / 18 / 21 / 24 / 36 / 48 / 72 */
+  --pv-fs-xs: 12px; --pv-fs-sm: 14px; --pv-fs-md: 16px; --pv-fs-lg: 18px;
+  --pv-fs-xl: 24px; --pv-fs-2xl: 36px; --pv-fs-3xl: 48px; --pv-fs-4xl: 72px;
 
-  /* Rules, not radii: the programme uses square corners and printed rules */
-  --pv-rule-heavy: 3px solid var(--pv-ink);
-  --pv-rule: 2px solid var(--pv-ink);
+  /* Radii by rank: panels, controls, pills */
+  --pv-r-panel: 14px; --pv-r-ctl: 8px; --pv-r-pill: 999px;
+  --pv-radius: var(--pv-r-ctl);
+  --pv-rule-heavy: 1px solid var(--pv-hair);
+  --pv-rule: 1px solid var(--pv-hair);
   --pv-rule-hair: 1px solid var(--pv-hair);
-  --pv-radius: 0;
+  --pv-lift: 0 1px 2px rgba(18, 20, 24, .06), 0 8px 24px -12px rgba(18, 20, 24, .18);
 
   /* Spacing */
-  --pv-s1: 4px; --pv-s2: 8px; --pv-s3: 12px; --pv-s4: 16px; --pv-s5: 24px; --pv-s6: 32px;
+  --pv-s1: 4px; --pv-s2: 8px; --pv-s3: 12px; --pv-s4: 16px; --pv-s5: 24px; --pv-s6: 32px; --pv-s7: 48px;
 }
 
-/* Floodlights edition: night-match dark theme */
+/* Floodlights: the night match */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --pv-paper: #0D1330; --pv-sheet: #161E42; --pv-ink: #F1EFE4; --pv-ink-2: #A9B0CC;
-    --pv-hair: #2E3762; --pv-dot: rgba(241, 239, 228, 0.06);
-    --pv-bar: #060A1E; --pv-on-bar: #F1EFE4; --pv-bar-line: #2E3762;
-    --pv-gold-soft: #3B3418; --pv-red: #FF5A67;
-    --pv-home: #8FA6FF; --pv-away: #FF6B76; --pv-draw: #4A5276;
-    --pv-ok-bg: #FFC53A; --pv-ok-fg: #121A3A;
+    --pv-paper: #0F1114; --pv-sheet: #181B20; --pv-sunk: #20242A; --pv-ink: #F1F2F4; --pv-ink-2: #A3A9B5;
+    --pv-hair: #2C3139; --pv-bar: #0A0B0D; --pv-on-bar: #F1F2F4; --pv-bar-line: #2C3139; --pv-focus: #7FA6FF;
+    --pv-gold-soft: #3A3215; --pv-gold-ink: #FFD95A; --pv-red: #E0384F;
+    --pv-home: color-mix(in oklab, var(--pv-home-kit, #1E6B45) 55%, white);
+    --pv-away: color-mix(in oklab, var(--pv-away-kit, #4A1D57) 50%, white);
+    --pv-on-team: #0F1114; --pv-draw: #4A505B;
     --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451; --pv-bad-bg: #4A1820; --pv-bad-fg: #FFB3BA;
-    --pv-pitch: #1B2A4A; --pv-pitch-line: #C9CDE0;
+    --pv-pitch: #18261F; --pv-pitch-line: #4B6758;
+    --pv-lift: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --pv-paper: #0D1330; --pv-sheet: #161E42; --pv-ink: #F1EFE4; --pv-ink-2: #A9B0CC;
-  --pv-hair: #2E3762; --pv-dot: rgba(241, 239, 228, 0.06);
-  --pv-bar: #060A1E; --pv-on-bar: #F1EFE4; --pv-bar-line: #2E3762;
-  --pv-gold-soft: #3B3418; --pv-red: #FF5A67;
-  --pv-home: #8FA6FF; --pv-away: #FF6B76; --pv-draw: #4A5276;
-  --pv-ok-bg: #FFC53A; --pv-ok-fg: #121A3A;
+  --pv-paper: #0F1114; --pv-sheet: #181B20; --pv-sunk: #20242A; --pv-ink: #F1F2F4; --pv-ink-2: #A3A9B5;
+  --pv-hair: #2C3139; --pv-bar: #0A0B0D; --pv-on-bar: #F1F2F4; --pv-bar-line: #2C3139; --pv-focus: #7FA6FF;
+  --pv-gold-soft: #3A3215; --pv-gold-ink: #FFD95A; --pv-red: #E0384F;
+  --pv-home: color-mix(in oklab, var(--pv-home-kit, #1E6B45) 55%, white);
+  --pv-away: color-mix(in oklab, var(--pv-away-kit, #4A1D57) 50%, white);
+  --pv-on-team: #0F1114; --pv-draw: #4A505B;
   --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451; --pv-bad-bg: #4A1820; --pv-bad-fg: #FFB3BA;
-  --pv-pitch: #1B2A4A; --pv-pitch-line: #C9CDE0;
+  --pv-pitch: #18261F; --pv-pitch-line: #4B6758;
+  --pv-lift: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
   color-scheme: dark;
 }
