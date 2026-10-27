@@ -38,3 +38,15 @@
 @media (max-width: 480px) {
   .roster { grid-template-columns: 1fr; }
 }
+/* Ax59: one player in the line-ups card, in the same box as the list. */
+.roster-detail { display: grid; gap: 10px; align-content: start; }
+.pd-back { justify-self: start; padding: 2px 4px; font-size: 13px; }
+.pd-hd { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid var(--pv-ink); padding-bottom: 8px; }
+.pd-hd > span { display: grid; min-width: 0; }
+.pd-no { min-width: 44px; height: 44px; display: grid; place-items: center; font-family: var(--pv-display); font-size: 20px; color: #fff; background: var(--pv-home); }
+.roster-detail.away .pd-no { background: var(--pv-away); }
+.pd-nm { font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+.pd-hd small { font-size: 12px; }
+.roster-detail .player-stats { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+/* Back gets focus when the card swaps; keep it clear of the sticky match header when that scrolls it into view. */
+.pd-back { scroll-margin-top: 280px; }

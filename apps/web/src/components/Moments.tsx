@@ -82,10 +82,10 @@ function MomentPitch({ pivot, picked }: { pivot: Pivot; picked: string | null })
 }
 
 /**
- * The what-if chips under the open moment. Picking a chip only says what would run; nothing is
+ * The what-if chips for one moment (the post-match tab's What-if section, Ax59). Picking a chip only says what would run; nothing is
  * simulated until the viewer presses Start (a real run takes minutes, a cached one answers at once).
  */
-function WhatIfInline({ pivot }: { pivot: Pivot }) {
+export function WhatIfInline({ pivot }: { pivot: Pivot }) {
   const { teams } = useMatch();
   const t = useT();
   const { minute } = useClock();
@@ -156,7 +156,7 @@ function WhatIfInline({ pivot }: { pivot: Pivot }) {
   );
 }
 
-/** The one moment opened up: why it mattered, where everyone stood, and what if. */
+/** The one moment opened up: why it mattered and where everyone stood. What-if has its own section (Ax59). */
 export function OpenMoment({ pivot, n, evidence, onEvidence }: {
   pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void;
 }) {
@@ -179,7 +179,6 @@ export function OpenMoment({ pivot, n, evidence, onEvidence }: {
       <div className="open-bd">
         <WhyItTurned pivot={pivot} selected={evidence} onToggle={onEvidence} chipHint={t("moments.chipHint")} />
         <MomentPitch pivot={pivot} picked={picked} />
-        <WhatIfInline key={pivot.pivot_id} pivot={pivot} />
       </div>
     </section>
   );

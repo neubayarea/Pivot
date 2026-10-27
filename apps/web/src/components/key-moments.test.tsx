@@ -68,7 +68,7 @@ function view(events: MatchEvent[], status: MatchView["match"]["status"], pivots
   };
 }
 const render = (v: MatchView) =>
-  renderToStaticMarkup(<MemoryRouter><MatchContext.Provider value={v}><LiveBoard /></MatchContext.Provider></MemoryRouter>);
+  renderToStaticMarkup(<MemoryRouter initialEntries={["/?tab=post"]}><MatchContext.Provider value={v}><LiveBoard /></MatchContext.Provider></MemoryRouter>);
 
 describe("key moments", () => {
   it("M-seed-404: tells the opener, the equaliser, the comeback and the stoppage-time equaliser apart", () => {
@@ -138,8 +138,9 @@ describe("board without pivots", () => {
     expect(html).toContain("Stoppage-time equaliser");
     expect(html).toContain("Turns it round");
     expect(html).toContain("Penalty to HBC");
-    // Key moments come before the folded details, right after the momentum line.
-    expect(html.indexOf("Key moments")).toBeLessThan(html.indexOf("More details"));
+    // Key moments come right after the momentum line, before set pieces and shots.
+    expect(html.indexOf("Momentum")).toBeLessThan(html.indexOf("Key moments"));
+    expect(html.indexOf("Key moments")).toBeLessThan(html.indexOf("Set pieces &amp; shots"));
     // Four goals and a penalty marked on the line, and a legend for them; no numbered pivot in it.
     expect(html.match(/class="mom-key/g)).toHaveLength(5);
     expect(html).toContain("km-legend");
