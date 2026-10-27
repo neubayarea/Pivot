@@ -11,6 +11,7 @@ import { fixtureMode, useMatch } from "../data/match";
 import { type MessageKey, usePrefs } from "../i18n";
 import Card from "./Card";
 import FollowButton from "./FollowButton";
+import { Placeholder } from "./Skeleton";
 
 type Key = "minutes_played" | "rating" | "goals" | "assists" | "shots" | "xg" | "passes" | "key_passes" | "tackles_won"
   | "interceptions" | "duels_won" | "distance_km" | "top_speed_kmh";
@@ -89,7 +90,7 @@ export function PlayerNumbers({ report, numbered = [], onPivot }: Pick<Props, "n
   return (
     <>
       {report === undefined ? (
-        <p className="muted">{t("player.loading")}</p>
+        <Placeholder label={t("player.loading")} lines={4} />
       ) : !report.stats ? (
         <p className="muted">{t("player.notOn")}</p>
       ) : (
