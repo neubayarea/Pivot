@@ -132,7 +132,9 @@ def test_another_minute_for_a_moved_substitution_is_another_chip(make_client):
     assert wait_done(client, failed.json()["scenario_id"])["status"] == "failed"
     assert post(client, "move_substitution", params={"new_minute": 80}).status_code == 422
     assert chips(client)["move_substitution"]["enabled"]            # offered with its default minute, 74
-    assert post(client, "move_substitution").status_code == 202     # 74: never tried, so it runs
+    again = post(client, "move_substitution")                       # 74: never tried, so it runs
+    assert again.status_code == 202
+    wait_done(client, again.json()["scenario_id"])                  # the runner is called in the background
     assert len(runner.calls) == 2
 
 
