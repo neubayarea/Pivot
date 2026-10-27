@@ -254,6 +254,92 @@ def mask_minutes(text: str) -> str:
     return MINUTES.sub(replace, text)
 
 
+def minutes_in(text: str) -> list[str]:
+    """Match minutes written in `text` ("86'", "第78分钟", "minuto 84", "en el 63", "45+2'"), as clock labels
+    without the mark ("86", "45+2"). A number in quotes is not one, as in `mask_minutes`."""
+    found = []
+    for m in MINUTES.finditer(text):
+        if m["mark"] in ("'", "’"):
+            before = text[:m.start()]
+            if before.endswith(("'", "‘")) or before.rfind("‘") > before.rfind("’"):
+                continue
+        if digits := re.search(r"\d{1,3}(?:\+\d{1,2})?", m[0]):
+            found.append(digits[0])
+    return found
+
+
+# Stat names the Verifier recognises in Chinese and Spanish, besides the template labels (`LABELS`):
+# a number next to one of these must be a claim on that stat (#254: field tilt written as 控球率).
+STAT_NAMES = {
+    "zh": {"possession_pct": ("控球率", "控球"), "field_tilt_pct": ("场地倾斜度", "场地倾斜", "前场占比"),
+           "momentum_avg": ("势头",), "threat_total": ("威胁值", "制造的威胁"), "ppda": ("PPDA",),
+           "pass_accuracy_pct": ("传球成功率", "传球准确率"), "shots_on_target": ("射正",),
+           "pressures": ("逼抢次数", "压迫次数"), "line_height_m": ("防线高度",), "press_distance_m": ("逼抢距离",),
+           "tackles_won": ("抢断成功",), "interceptions": ("拦截",), "turnovers": ("丢失球权", "失误")},
+    "es": {"possession_pct": ("la posesión", "posesión"), "field_tilt_pct": ("la inclinación del campo",),
+           "momentum_avg": ("el impulso", "impulso", "la inercia"), "threat_total": ("la amenaza creada",),
+           "ppda": ("PPDA",), "pass_accuracy_pct": ("la precisión de pase", "precisión de pase")},
+}
+
+# How a translation must render the stat names (#222, #254): the translator gets this list.
+GLOSSARY = {
+    "zh": {"field tilt": "场地倾斜度 (never 控球率)", "possession": "控球率", "momentum": "势头",
+           "threat created": "威胁值 (never 势头)", "PPDA": "PPDA", "pass accuracy": "传球成功率",
+           "final-third passes": "进入前场三区的传球", "box entries": "进入禁区次数", "pressures": "逼抢次数"},
+    "es": {"field tilt": "la inclinación del campo (never la posesión)", "possession": "la posesión",
+           "momentum": "el impulso", "threat created": "la amenaza creada (never el impulso)", "PPDA": "PPDA"},
+}
+
+# Momentum said to go to a team (#187). `{T}` is the team-name alternation; `gain` patterns name the side
+# that took it, `lose` patterns the side that lost it (so the other side took it).
+MOMENTUM_GAIN = {
+    "en": (r"\bmomentum\b[^.;!?]{0,60}?\b(?:to|towards|toward|in favour of|in favor of)\s+(?:the\s+)?(?P<t>{T})",
+           r"(?P<t>{T})(?:'s?)?\s+(?:\w+\s+){0,3}?(?:seiz\w*|t[ao]k\w*|took|grab\w*|gain\w*|w[io]n\w*|regain\w*|"
+           r"claim\w*|stole|steal\w*|wrest\w*|snatch\w*)\s+(?:back\s+)?(?:the\s+)?(?:\w+\s+)?momentum\b"),
+    "zh": (r"势头[^。；！？]{0,12}?(?:倒向|转向|偏向|转到|转移到|移向|归于|站在)\s*(?P<t>{T})",
+           r"(?P<t>{T})[^。；！？]{0,10}?(?:掌握|占据|夺回|抢回|抢到|赢得|拿到|获得|取得)(?:了)?[^。；！？]{0,4}?势头"),
+    "es": (r"(?:impulso|inercia)[^.;!?]{0,60}?\b(?:a favor de|hacia|pas[óo] a|pasa a|para|del lado de)\s+"
+           r"(?:el\s+|los\s+)?(?P<t>{T})",
+           r"(?P<t>{T})\s+(?:\w+\s+){0,3}?(?:tom[óoa]\w*|gan[óoa]\w*|recuper[óoa]\w*|se adueñ[óo] de|se hizo con|"
+           r"se llev[óo])\s+(?:el\s+|la\s+)?(?:impulso|inercia)"),
+}
+MOMENTUM_LOSE = {
+    "en": (r"\bmomentum\b[^.;!?]{0,40}?\baway from\s+(?:the\s+)?(?P<t>{T})",
+           r"(?P<t>{T})\s+(?:\w+\s+){0,2}?(?:lost|lose|loses|losing|surrender\w*|ced\w*|gave up|give up)\s+"
+           r"(?:the\s+)?momentum\b"),
+    "zh": (r"(?P<t>{T})[^。；！？]{0,8}?(?:失去|丢掉|丧失|交出)(?:了)?[^。；！？]{0,4}?势头",),
+    "es": (r"(?P<t>{T})\s+(?:\w+\s+){0,2}?(?:perdi[óo]|pierde|cedi[óo]|cede)\s+(?:el\s+|la\s+)?(?:impulso|inercia)",),
+}
+# Words for the two sides that stand for a team name.
+SIDE_WORDS = {
+    "en": {"home": ("home side", "home team", "hosts"), "away": ("away side", "away team", "visitors")},
+    "zh": {"home": ("主队",), "away": ("客队",)},
+    "es": {"home": ("el local", "los locales"), "away": ("el visitante", "los visitantes")},
+}
+
+# Reading a pressing stat the wrong way round (#254). For these stats a lower value means a more
+# intense press, so after a fall "pressed less" is wrong and after a rise "pressed harder" is.
+PRESS_INVERTED = ("ppda", "press_distance_m")
+PRESS_MORE = {
+    "en": ("more pressing", "pressed more", "pressed harder", "pressing harder", "pressing more", "more intense press",
+           "more aggressive press", "pressed higher", "more defensive actions", "pressed more aggressively",
+           "stepped up the press", "tighter press", "pressed tighter", "more intense"),
+    "zh": ("逼抢更凶", "逼抢更积极", "逼抢更紧", "逼抢更强", "压迫更强", "压迫更紧", "压迫更凶", "防守动作更多", "逼抢加强",
+           "压迫加强", "加强了逼抢", "加强了压迫", "逼抢强度上升", "压迫强度上升"),
+    "es": ("más presión", "presionó más", "presionaron más", "presión más intensa", "más acciones defensivas",
+           "presionó con más intensidad", "presión más alta"),
+}
+PRESS_LESS = {
+    "en": ("less pressing", "pressed less", "less pressure", "fewer defensive actions", "eased off", "less aggressive",
+           "less intense", "pressing less", "looser press", "pressed looser", "stopped pressing", "pressure eased",
+           "dropped off"),
+    "zh": ("逼抢更少", "逼抢减弱", "逼抢变弱", "压迫减弱", "压迫变弱", "防守动作更少", "放松了逼抢", "逼抢放松", "逼抢强度下降",
+           "压迫强度下降"),
+    "es": ("menos presión", "presionó menos", "presionaron menos", "menos acciones defensivas", "presión más floja",
+           "presión más suave"),
+}
+
+
 # Numbers written as words. "one"/"uno"/"un"/"una" and a lone 一 are left out: they mostly mean "a".
 _EN_UNITS = ("zero", "", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
              "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen")

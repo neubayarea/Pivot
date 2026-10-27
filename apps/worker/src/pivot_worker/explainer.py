@@ -134,8 +134,13 @@ def event_line(e: MatchEvent, team_names: Mapping[str, str], player_names: Mappi
     for key in ("player_id", "receiver_id", "outcome", "shot_outcome", "xg"):
         if (value := getattr(e, key)) is not None:
             line[key] = value
+    if player_names and e.receiver_id in player_names:
+        line["receiver"] = player_names[e.receiver_id]
     if e.substitution:
         line["substitution"] = e.substitution.model_dump(exclude_defaults=True)
+        for side in ("off", "on"):                # names, so a card never writes "H.06" (#186)
+            if player_names and (pid := getattr(e.substitution, f"player_{side}_id")) in player_names:
+                line["substitution"][f"player_{side}"] = player_names[pid]
     if colour := card_colour(e):            # "card" alone reads as a booking: a red card was written as "booked" (#261)
         line["card"] = colour
     if e.tactics:
@@ -157,7 +162,7 @@ EXAMPLES = (
     ExplainerDraft(
         headline="Okafor's arrival flips the left flank",
         sentences=[ExplanationSentence(
-            text="Okafor came on at 61' and Rovers' final-third passes rose from 3 to 9 in the next five minutes.",
+            text="Okafor came on at 64' and Rovers' final-third passes rose from 3 to 9 in the next five minutes.",
             evidence_ids=["m063-s01042", "m063-s01077"],
             claims=[
                 Claim(value=3, unit="count", stat_ref=StatRef(metric="passes_final_third", team="home", window=(56, 61))),
@@ -171,7 +176,7 @@ EXAMPLES = (
     ExplainerDraft(
         headline="The red card pins Harbour back",
         sentences=[ExplanationSentence(
-            text="After the red card at 36' Harbour's defensive line dropped from 41 m to 33 m.",
+            text="After the red card at 39' Harbour's defensive line dropped from 41 m to 33 m.",
             evidence_ids=["m038-s00811"],
             claims=[
                 Claim(value=41, unit="m", stat_ref=StatRef(metric="line_height_m", team="away", window=(31, 36))),
@@ -188,7 +193,7 @@ EXAMPLES = (
 FAN_EXAMPLE = ExplainerDraft(
     headline="Okafor changes the game for Rovers",
     sentences=[ExplanationSentence(
-        text="Okafor came on at 61' and suddenly Rovers kept finding a way into Harbour's half.",
+        text="Okafor came on at 64' and suddenly Rovers kept finding a way into Harbour's half.",
         evidence_ids=["m063-s01042", "m063-s01077"],
     ), ExplanationSentence(
         text="Their passes into the attacking third rose to 9 in five minutes, and Harbour were hanging on.",
