@@ -1269,4 +1269,6 @@ export const zh: Messages = {
   "plan.real.width.def": "比赛里的实际数字：全队的平均宽度",
   "lu.realTitle": "纸面阵型和实际站位",
   "lu.realNote": "纸面上 {home} 是 {hf}，{away} 是 {af}。下面是每名球员本场的平均位置。",
+  "viz.pos.subs": "显示替补",
+  "viz.pos.ghostKey": "淡色圆圈：纸面阵型里的位置；连线表示球员实际偏离了多远。",
 };

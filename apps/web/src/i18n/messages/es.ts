@@ -1271,4 +1271,6 @@ export const es: Messages = {
   "plan.real.width.def": "Lo que mostró el partido: anchura media del equipo",
   "lu.realTitle": "Sobre el papel y donde jugaron",
   "lu.realNote": "Sobre el papel {home} jugó {hf} y {away} {af}. Debajo, la posición media de cada jugador en el partido.",
+  "viz.pos.subs": "Mostrar suplentes",
+  "viz.pos.ghostKey": "Anillo tenue: el puesto en la formación sobre el papel; la línea muestra cuánto se alejó el jugador.",
 };

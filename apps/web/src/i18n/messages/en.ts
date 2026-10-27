@@ -1270,4 +1270,6 @@ export const en = {
   "plan.real.width.def": "What the match showed: the team's average width",
   "lu.realTitle": "On paper and where they played",
   "lu.realNote": "On paper {home} played {hf} and {away} {af}. Below, each player's average position in the match.",
+  "viz.pos.subs": "Show substitutes",
+  "viz.pos.ghostKey": "Faint ring: the slot in the formation on paper; the line shows how far the player moved from it.",
 };
