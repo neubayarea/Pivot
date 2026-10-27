@@ -225,6 +225,12 @@ svg text { font-family: var(--pv-label); }
 .feed { display: grid; font-family: var(--pv-label); font-size: 13px; }
 .feed div { display: grid; grid-template-columns: 48px 40px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--pv-hair); animation: pv-in .4s ease-out; }
 .feed div.key { font-weight: 700; }
+.feed-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.feed-kinds .chip { padding: 3px 10px; font-size: 13px; }
+.feed-kinds .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+.feed-note { font-size: 13px; margin: 0 0 8px; }
+/* The filter row sits between the card's title and the scrolling feed. */
+.more-events:has(> .feed-kinds, > .feed-note) { grid-template-rows: auto auto minmax(0, 1fr); }
 .feed div.on { background: var(--pv-gold-soft); }
 .feed .t { font-weight: 700; font-variant-numeric: tabular-nums; }
 .feed .h { color: var(--pv-home); font-weight: 700; }
@@ -774,6 +780,23 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 /* C17 (#367): the analyst's five groups flow into balanced columns, so the last row does not leave a third of the card empty. */
 .ts-groups:has(> .ts-table:nth-child(4)) { display: block; columns: 3 340px; column-gap: 48px; }
 .ts-groups:has(> .ts-table:nth-child(4)) > .ts-table { break-inside: avoid; margin-bottom: 20px; }
+/* C16 (#366): the analyst's player table. */
+.pt { display: grid; gap: 12px; min-width: 0; }
+.pt > .seg { justify-self: start; }
+.pt-scroll { overflow-x: auto; }
+.pt-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+.pt-table th, .pt-table td { padding: 7px 10px; border-top: 1px solid var(--pv-rule-hair); text-align: right; white-space: nowrap; }
+.pt-table thead th { border-top: 0; font-weight: 500; color: var(--pv-ink-2); }
+.pt-table thead button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.pt-table thead th[aria-sort="ascending"] button, .pt-table thead th[aria-sort="descending"] button { color: var(--pv-ink); font-weight: 700; }
+.pt-arrow { display: inline-block; width: 1em; font-size: 10px; }
+.pt-table .pt-who { text-align: left; font-weight: 600; }
+.pt-table .pt-who small { font-weight: 500; color: var(--pv-ink-2); margin-left: 4px; }
+.pt-shirt { display: inline-block; min-width: 2ch; text-align: right; color: var(--pv-ink-2); margin-right: 6px; }
+.pt-table tbody tr:hover { background: var(--pv-paper); }
+.pt-table tbody tr.on { box-shadow: inset 4px 0 var(--pv-ink); }
+.pt-note { font-size: 13px; margin: 0; }
+.pt-table tfoot th, .pt-table tfoot td { border-top: 2px solid var(--pv-ink); font-weight: 700; }
 .ts-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ts-table caption { text-align: left; font-weight: 700; font-size: var(--pv-fs-md); padding-bottom: 6px; }
 .ts-table td, .ts-table th { padding: 9px 0 8px; border-top: 1px solid var(--pv-hair); vertical-align: top; }
