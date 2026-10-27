@@ -1274,4 +1274,15 @@ export const zh: Messages = {
   "event.type.shot": "射门",
   "event.type.card": "红黄牌",
   "event.type.substitution": "换人",
+  // C18 (#366): the analyst's Line-ups.
+  "plan.real.press": "本场 PPDA {v}",
+  "plan.real.press.def": "比赛里的实际数字：每次防守动作允许对方传球数，越低逼抢越凶",
+  "plan.real.line_height": "防线离本方球门 {v} 米",
+  "plan.real.line_height.def": "比赛里的实际数字：后防线离本方球门的平均距离",
+  "plan.real.width": "宽度 {v} 米",
+  "plan.real.width.def": "比赛里的实际数字：全队的平均宽度",
+  "lu.realTitle": "纸面阵型和实际站位",
+  "lu.realNote": "纸面上 {home} 是 {hf}，{away} 是 {af}。下面是每名球员本场的平均位置。",
+  "viz.pos.subs": "显示替补",
+  "viz.pos.ghostKey": "淡色圆圈：纸面阵型里的位置；连线表示球员实际偏离了多远。",
 };

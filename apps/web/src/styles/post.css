@@ -266,3 +266,7 @@
 /* The match-up table: zone, roles and count hug the left; the verdict takes the rest. */
 .lineups-tab .mu-line { grid-template-columns: minmax(7em, max-content) auto auto auto minmax(0, 1fr); }
 .lineups-tab .mu-edge { justify-self: start; }
+/* C18 (#366): the real numbers under the coach's plan, and the average positions. */
+.plan-real { display: block; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin-top: 2px; cursor: help; }
+/* The pitch is as tall as the screen allows and sits in the middle of the card. */
+.lu-real .viz-pitch svg { max-height: calc(100vh - 320px); }

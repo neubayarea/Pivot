@@ -1275,4 +1275,15 @@ export const en = {
   "event.type.shot": "Shot",
   "event.type.card": "Card",
   "event.type.substitution": "Substitution",
+  // C18 (#366): the analyst's Line-ups.
+  "plan.real.press": "PPDA {v} in the match",
+  "plan.real.press.def": "What the match showed: passes allowed per defensive action. Lower means a harder press",
+  "plan.real.line_height": "Back line {v} m from goal",
+  "plan.real.line_height.def": "What the match showed: the back line's average distance from its own goal",
+  "plan.real.width": "{v} m wide",
+  "plan.real.width.def": "What the match showed: the team's average width",
+  "lu.realTitle": "On paper and where they played",
+  "lu.realNote": "On paper {home} played {hf} and {away} {af}. Below, each player's average position in the match.",
+  "viz.pos.subs": "Show substitutes",
+  "viz.pos.ghostKey": "Faint ring: the slot in the formation on paper; the line shows how far the player moved from it.",
 };
