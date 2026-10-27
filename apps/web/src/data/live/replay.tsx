@@ -4,13 +4,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Match, MatchEvent, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import { needsLocalised, usePrefs } from "../../i18n";
-import { ConnectionContext, LocalisingContext, MatchContext, type Connection, type MatchView, type Speed } from "../view";
+import { useReplayClock } from "../replayClock";
+import { ConnectionContext, LocalisingContext, MatchContext, type Connection, type MatchView } from "../view";
 import type { MatchChoice } from "../choice";
 import { api } from "./api";
 import { classifyLoadError, firstPivots, listPivotsFor, pickMatch, toView } from "./provider";
 import type { LiveState } from "./state";
 
-const TICK_MS = 250;
 /** A pivot shows as "pending" once its minute is over, and settles this many seconds later (as the worker would). */
 const SETTLE_S = 40;
 
@@ -55,9 +55,6 @@ type Props = { children: ReactNode; fallback: ReactNode; choice: MatchChoice; fr
 export default function ReplayProvider({ children, fallback, choice, from, onMissing }: Props) {
   const [full, setFull] = useState<LiveState | null>(null);
   const [connection, setConnection] = useState<Connection | null>(null);
-  const [clock, setClock] = useState(from);
-  const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState<Speed>(20);
   const { prefs } = usePrefs();
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
@@ -117,15 +114,7 @@ export default function ReplayProvider({ children, fallback, choice, from, onMis
   }, [key, localise]);
 
   const end = full ? replayEnd(full) : Infinity;
-  useEffect(() => {
-    if (!playing || !full) return;
-    const timer = setInterval(() => setClock((c) => Math.min(end, c + (speed * TICK_MS) / 1000)), TICK_MS);
-    return () => clearInterval(timer);
-  }, [playing, speed, end, full]);
-
-  useEffect(() => {
-    if (clock >= end) setPlaying(false);
-  }, [clock, end]);
+  const { clock, playing, speed, now, seek, setPlaying, setSpeed } = useReplayClock(from, end, !!full, 20);
 
   // Like the fixture: events and pivots only change on whole seconds.
   const second = Math.floor(clock);
@@ -138,13 +127,14 @@ export default function ReplayProvider({ children, fallback, choice, from, onMis
       setPlaying,
       setSpeed,
       restart: () => {
-        setClock(from);
+        seek(from);
         setPlaying(true);
       },
-      seek: (t: number) => setClock(Math.min(end, Math.max(0, t))),
+      seek,
       end,
+      now,
     },
-  }, [data, playing, speed, from, end]);
+  }, [data, playing, speed, from, end, seek, setPlaying, setSpeed, now]);
 
   return (
     <ConnectionContext.Provider value={connection}>

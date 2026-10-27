@@ -1,0 +1,75 @@
+/* Ax61: the one control bar for the replay pitch and the clips. */
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-family: var(--pv-body); font-weight: 600; font-size: var(--pv-fs-sm); min-width: 0; }
+.ctl-btns { display: inline-flex; gap: 4px; }
+/* Same look as .btn (C11): hairline, 8px corners; play is the ink primary. Yellow stays for the AI's pivots. */
+.ctl-btns button, .ctl .again { min-width: 44px; height: 36px; padding: 0 8px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-ctl);
+  background: var(--pv-sheet); color: var(--pv-ink); font: inherit; cursor: pointer; transition: background-color .15s, border-color .15s; }
+.ctl-btns button:hover:not(:disabled), .ctl .again:hover:not(:disabled) { background: var(--pv-sunk); border-color: var(--pv-ink-2); }
+.ctl-btns button.play { background: var(--pv-ink); color: var(--pv-sheet); border-color: var(--pv-ink); }
+.ctl-btns button.play:hover:not(:disabled) { background: color-mix(in oklab, var(--pv-ink) 82%, var(--pv-sheet)); }
+.ctl .again { font-size: 16px; }
+.ctl button:disabled { opacity: .5; cursor: default; }
+.ctl-track { position: relative; flex: 1 1 180px; min-width: 120px; height: 36px; }
+.ctl-track::before { content: ""; position: absolute; left: 0; right: 0; top: 17px; height: 3px; border-radius: var(--pv-r-pill); background: var(--pv-hair); }
+.ctl-track input[type="range"] { position: absolute; inset: 0 -8px; width: calc(100% + 16px); height: 36px; margin: 0; background: transparent;
+  appearance: none; cursor: pointer; }
+.ctl-track input[type="range"]::-webkit-slider-runnable-track { height: 36px; background: transparent; }
+.ctl-track input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; margin-top: 10px; border-radius: 50%;
+  background: var(--pv-ink); border: 2px solid var(--pv-sheet); box-shadow: 0 0 0 1px var(--pv-ink); }
+.ctl-track input[type="range"]::-moz-range-track { background: transparent; }
+.ctl-track input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--pv-ink); border: 2px solid var(--pv-sheet); }
+/* A mark is a 16px target over the line; what shows is the small dot inside it. Pivots are the AI's, so yellow. */
+.ctl-mk { all: unset; position: absolute; top: 2px; width: 16px; height: 14px; margin-left: -8px; cursor: pointer; z-index: 1; display: grid; place-items: center; border-radius: 4px; }
+.ctl-mk i { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--pv-gold); border: 1.5px solid var(--pv-ink); }
+.ctl-mk.goal i { background: var(--pv-sheet); border: 2px solid var(--pv-ink); }
+.ctl-mk.goal.home i { background: var(--pv-home); }
+.ctl-mk.goal.away i { background: var(--pv-away); }
+.ctl-mk.red i { width: 7px; height: 10px; border-radius: 1px; background: var(--pv-red); }
+.ctl-mk.moment i { width: 8px; height: 8px; border-radius: 1px; transform: rotate(45deg); background: var(--pv-ink-2); border-color: var(--pv-ink-2); }
+.ctl-mk:hover i { box-shadow: 0 0 0 2px var(--pv-sheet), 0 0 0 4px var(--pv-ink-2); }
+.ctl-mk:focus-visible { outline: 2px solid var(--pv-focus); outline-offset: 2px; }
+.ctl-time { font-family: var(--pv-display); font-weight: 700; font-size: var(--pv-fs-lg); min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+.ctl .seg button { min-height: 32px; }
+@media (max-width: 480px) {
+  .ctl-track { order: -1; flex-basis: 100%; }
+  .ctl .seg button { padding-inline: 8px; }
+}
+
+/* A referee's yellow card is data, not the AI's pivot yellow, so it gets its own, warmer shade. */
+:root { --pv-card-yellow: #F2B800; --pv-ball: #FFFFFF; }
+
+/* The event cues on the pitch: drawn in, then faded on real time; held while paused. */
+.pitch .cue { animation: cue-fade 2.2s ease-in forwards; }
+.pitch .cue.goal, .pitch .cue.yellow, .pitch .cue.red { animation-duration: 5s; }
+.pitch .cue-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: cue-draw .35s ease-out forwards; }
+.pitch .cue.shot .cue-line, .pitch .cue.goal .cue-line { animation-duration: .25s; }
+.pitch .cue-flash { transform-box: fill-box; transform-origin: center; animation: cue-flash .7s ease-out forwards; }
+/* Paused (or scrubbed while paused): a cue holds where its fade is, drawn in full so a still frame reads. */
+.pitch.paused .cue { animation-play-state: paused; }
+.pitch.paused .cue-line { animation: none; stroke-dashoffset: 0; }
+.pitch.paused .cue-flash { animation: none; opacity: .7; }
+@keyframes cue-fade { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes cue-draw { to { stroke-dashoffset: 0; } }
+@keyframes cue-flash { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .pitch .cue { animation: none; }
+  .pitch .cue-line { animation: none; stroke-dashoffset: 0; }
+  .pitch .cue-flash { animation: none; opacity: .8; }
+}
+.pitch.anim .pl { transition: none; }
+.pitch.anim .ball-trail { stroke: var(--pv-ink); stroke-width: 2.5; stroke-dasharray: none; stroke-opacity: .4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The line under the pitch: what just happened, in the acting team's colour. */
+.pitch-cap .cap-ev { display: inline-flex; align-items: baseline; gap: 6px; }
+.pitch-cap .cap-ev::before { content: ""; width: 10px; height: 10px; flex: none; align-self: center; border-radius: 50%; background: var(--pv-home); }
+.pitch-cap .cap-ev.away::before { background: var(--pv-away); }
+
+/* On the wide board the bar and the keys sit under the pitch; the caption and shape numbers beside it. */
+@media (min-width: 720px) {
+  .pb-main:has(> .ctl) { grid-template-rows: auto auto 1fr; }
+  .pb-main:has(> .ctl) > :first-child { grid-row: 1; }
+  .pb-main > .ctl { grid-column: 1; grid-row: 2; }
+  .pb-main > .clip-keys { grid-column: 1; grid-row: 3; align-self: start; }
+  .pb-main:has(> .ctl) > .pitch-cap { grid-column: 2; grid-row: 1; }
+  .pb-main:has(> .ctl) > .shape-table { grid-column: 2; grid-row: 2 / 4; }
+}

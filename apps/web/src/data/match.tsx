@@ -4,7 +4,7 @@
 // local demo-1021 fixture on a timer so the board can be shown without a backend; add
 // `&degraded=1` to show every pivot as an automatic summary (the AI-down state). The fixture's
 // explanations come in the viewer's language (fixtures/demo-1021-i18n). Pages call useMatch() either way.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Match, Pivot1 as Pivot, Score } from "@pivot/contracts";
 import { DEMO_1021, ROSTER, clockLabel, type MatchFixture } from "../fixtures/demo-1021";
@@ -13,6 +13,7 @@ import { useLang, type Lang } from "../i18n";
 import { MatchChoiceContext, initialMatch, readSavedMatch, saveMatch, type MatchChoice } from "./choice";
 import LiveProvider from "./live/provider";
 import ReplayProvider, { replayStart } from "./live/replay";
+import { useReplayClock } from "./replayClock";
 import { FixtureContext, MatchContext, byShirt, computeStats, type MatchView, type Side, type Speed } from "./view";
 
 export * from "./view";
@@ -23,8 +24,6 @@ export function fixtureMode(search = window.location.search): boolean {
   if (q !== null) return q !== "0";
   return import.meta.env.VITE_PIVOT_FIXTURE === "1";
 }
-
-const TICK_MS = 250;
 
 // The fixture's ids end in the shirt number: "hcy-11" is Harbour City's number 11.
 const FIXTURE_SQUADS = Object.fromEntries((["home", "away"] as Side[]).map((side) => [
@@ -129,23 +128,10 @@ function ChosenLiveProvider({ children, fallback }: ProviderProps) {
 }
 
 export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: ReactNode; fixture?: MatchFixture }) {
-  const [clock, setClock] = useState(() => startClock(fixture));
-  const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState<Speed>(5);
+  const [start] = useState(() => startClock(fixture));
+  const { clock, playing, speed, now, seek, setPlaying, setSpeed } = useReplayClock(start, fixture.endAt, true, 5);
   const [degraded] = useState(() => new URLSearchParams(window.location.search).get("degraded") === "1");
   const lang = useLang();
-
-  useEffect(() => {
-    if (!playing) return;
-    const id = setInterval(() => {
-      setClock((c) => Math.min(fixture.endAt, c + (speed * TICK_MS) / 1000));
-    }, TICK_MS);
-    return () => clearInterval(id);
-  }, [playing, speed, fixture]);
-
-  useEffect(() => {
-    if (clock >= fixture.endAt) setPlaying(false);
-  }, [clock, fixture]);
 
   // Events and pivots only change on whole seconds, so recompute once per second of match time.
   const second = Math.floor(clock);
@@ -161,14 +147,15 @@ export function FixtureProvider({ children, fixture = DEMO_1021 }: { children: R
         setPlaying,
         setSpeed,
         restart: () => {
-          setClock(startClock(fixture));
+          seek(startClock(fixture));
           setPlaying(true);
         },
-        seek: (t: number) => setClock(Math.min(fixture.endAt, Math.max(0, t))),
+        seek,
         end: fixture.endAt,
+        now,
       },
     }),
-    [data, playing, fixture],
+    [data, playing, fixture, seek, setPlaying, setSpeed, now],
   );
 
   return <MatchContext.Provider value={value}>{children}</MatchContext.Provider>;

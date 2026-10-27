@@ -1,21 +1,25 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
-import { fixtureMode, useMatch } from "../data/match";
-import { useFrames, useFrameWindow } from "../data/live/frames";
+import { fixtureMode, useMatch, type Speed } from "../data/match";
+import { frameAt, useFrameStore, useFrameWindow } from "../data/live/frames";
+import { cueSpan, cuesAt } from "../data/motion";
 import { minuteAt, minuteLabel, PLAIN_PERIODS, useClock } from "../data/clock";
 import { isRedCard, type Side, type SquadPlayer } from "../data/view";
 import { useT, type MessageKey } from "../i18n";
 import Card from "./Card";
+import ControlBar, { barKey, type BarMark } from "./ControlBar";
 import { describe } from "./EventFeed";
+import { EventCues, smoothFor, usePitchMotion } from "./motion";
 import Pitch, { whoFromSquads } from "./Pitch";
 import { PlayerNumbers, usePlayerReport } from "./PlayerCard";
 import { backLineX, frameShape, lineOf, lineupAt, meanShape, shapeLines, type Lineup, type Role, type Shape } from "./shape";
 import "../styles/pitch-board.css";
 
-// A shot stays drawn this many seconds after it was taken.
-const SHOT_FOR = 3;
-// The dots glide at least this long between frames, so fast replays still look like movement.
-const MIN_STEP_MS = 250;
+// The board's speeds (Ax61): slow enough to follow a move; 20× is the replay's own default.
+const BOARD_SPEEDS = [0.5, 1, 2, 5, 20] as const;
+// The back and on buttons and ←/→ move this far; a mark on the line goes this long before it.
+const STEP_S = 10;
+const LEAD_S = 5;
 // The players in an event keep their ring this long after it.
 const MARK_FOR = 8;
 // For this long after a pivot its evidence players stay marked and the shape is compared with the five minutes before it.
@@ -36,11 +40,37 @@ const LINE_ORDER = ["GK", "DF", "MF", "AM", "FW"];
 export default function PitchBoard() {
   const { match, playback, squads, sheets, teams, events, pivots, playerName, eventById } = useMatch();
   const t = useT();
+  const { at, clock, minute: minuteOf } = useClock();
   // The fixture has no frames to fetch; neither has a page rendered with no browser (the tests).
   const [fixture] = useState(() => typeof window === "undefined" || fixtureMode());
   const now = Math.floor(match.clock);
   const matchId = fixture ? null : match.match_id;
-  const { frame, missing } = useFrames(matchId, now);
+  const store = useFrameStore(matchId, match.clock);
+  const { missing } = store;
+  // The frame React draws from (who is on, rings); the motion loop moves the dots between frames.
+  const shown = useRef<TrackingFrame | null>(null);
+  const frame = useMemo(() => {
+    const f = frameAt(store.around(now), now);
+    if (f) shown.current = f;
+    return shown.current;
+  }, [store.around, store.version, now]);
+  const svg = useRef<SVGSVGElement>(null);
+  const scrub = useRef<HTMLInputElement>(null);
+  const time = useRef<HTMLSpanElement>(null);
+  const held = useRef<{ t: number; frames: TrackingFrame[]; smooth: number } | null>(null);
+  const clockAt = useRef(match.clock);
+  clockAt.current = match.clock;
+  usePitchMotion(svg, () => {
+    const at = playback?.now ? playback.now() : clockAt.current;
+    const frames = store.around(at);
+    if (frames.length) held.current = { t: at, frames, smooth: playback?.playing ? smoothFor(match.speed) : 0 };
+    return held.current;
+  }, (at) => {
+    // The thumb follows the clock unless the viewer is holding it.
+    if (scrub.current && !scrub.current.matches(":active")) scrub.current.value = String(at);
+    const text = clock(at);
+    if (time.current && time.current.textContent !== text) time.current.textContent = text;
+  });
   const [picked, setPicked] = useState<string | null>(null);
   const [shapeOn, setShapeOn] = useState(true);
   const [compare, setCompare] = useState(false);
@@ -89,9 +119,11 @@ export default function PitchBoard() {
     );
   }
 
-  // events are newest first: the latest one at or before the frame, and shots just taken.
-  const latest = events.find((e) => e.t <= now);
-  const shots = events.filter((e) => e.type === "shot" && e.location && e.t <= now && now - e.t <= SHOT_FOR);
+  // events are newest first: the latest one at or before the frame, and the cues of the last few seconds.
+  const speed = playback?.playing ? match.speed : 1;
+  const cues = cuesAt(events, now, cueSpan(speed));
+  const cued = cues.length ? eventById(cues.at(-1)!.id) : undefined;
+  const latest = cued ?? events.find((e) => e.t <= now);
   const marked = new Set<string>();
   const mark = (e: MatchEvent | undefined) => {
     if (e?.player_id) marked.add(e.player_id);
@@ -99,9 +131,19 @@ export default function PitchBoard() {
   };
   if (latest && now - latest.t <= MARK_FOR) mark(latest);
   if (pivot) for (const id of pivot.trigger_event_ids) mark(eventById(id));
-  // One frame per second of play: at 1× that is a second between frames, faster replays less.
-  const stepMs = Math.max(MIN_STEP_MS, 1000 / (playback?.playing ? match.speed : 1));
   const isHome = (id: string) => who(id).home;
+  const marks: BarMark[] = [
+    ...events.filter((e) => e.type === "shot" && e.shot_outcome === "goal").map((e): BarMark => ({
+      t: e.t, kind: "goal", side: e.team, label: t("ctl.goal", { minute: at(e.t), team: teams[e.team].short_name }),
+    })),
+    ...[...new Set(pivots.map((p) => p.minute))].map((m): BarMark => ({ t: m * 60, kind: "pivot", label: t("ctl.pivot", { minute: minuteOf(m) }) })),
+  ];
+  const play = (on: boolean) => {
+    if (!playback) return;
+    if (on && match.clock >= playback.end) playback.seek(0);    // play again from kick-off
+    playback.setPlaying(on);
+  };
+  const seekBy = (d: number) => playback && playback.seek((playback.now?.() ?? match.clock) + d);
   return (
     <>
       <Card title={t("board.pitch")} note={note} className="pitch-board more-pitch">
@@ -118,23 +160,32 @@ export default function PitchBoard() {
             <small className="muted">{t("board.legend")}</small>
           </div>
         )}
-        <div className="pb-main">
+        <div className="pb-main" tabIndex={playback ? 0 : undefined} aria-keyshortcuts={playback ? "Space K ArrowLeft ArrowRight" : undefined}
+          onKeyDown={playback ? (e) => barKey(e, { toggle: () => play(!playback.playing), seekBy, step: STEP_S }) : undefined}>
           {frame ? (
-            <Pitch frame={frame} actions={shots} selected={null} who={who} stepMs={stepMs}
+            <Pitch frame={frame} actions={[]} selected={null} who={who} animated svgRef={svg}
+              className={playback && !playback.playing ? "paused" : undefined}
               label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })}
               picked={picked} onPick={setPicked} marked={marked} tag={tag}
-              under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />} />
+              under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
+              over={<EventCues cues={cues} />} />
           ) : (
             <div className="empty-box muted">{t("board.pitchLoading")}</div>
           )}
-          <p className="pitch-cap">
+          {playback && (
+            <ControlBar playing={playback.playing} onPlaying={play} value={match.clock} min={0} max={playback.end} onSeek={playback.seek}
+              step={STEP_S} speeds={BOARD_SPEEDS} speed={match.speed} onSpeed={(s) => playback.setSpeed(s as Speed)} marks={marks}
+              lead={LEAD_S} format={clock} inputRef={scrub} timeRef={time} />
+          )}
+          <p className="pitch-cap" aria-live="off">
             {latest && (
-              <>
-                <b>{latest.clock_label} · {teams[latest.team].short_name}</b> {describe(latest, playerName, t)}
-              </>
+              <span className={`cap-ev ${latest.team}`}>
+                <b>{at(latest.t)}′</b> {describe(latest, playerName, t)}
+              </span>
             )}
             {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
           </p>
+          {playback && <small className="muted clip-keys">{t("board.keys")}</small>}
           {shapeOn && lineup && frame && (
             <ShapeTable frame={frame} lineup={lineup} before={compare ? before : undefined} beforeLabel={beforeLabel}
               isHome={isHome} names={names} />
