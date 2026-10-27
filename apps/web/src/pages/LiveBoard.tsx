@@ -9,8 +9,10 @@ import MomentumChart from "../components/MomentumChart";
 import { MomentCards, OpenMoment } from "../components/Moments";
 import PitchBoard from "../components/PitchBoard";
 import PlayerCard from "../components/PlayerCard";
+import PreMatch from "../components/PreMatch";
 import SetPiecesAndShots from "../components/SetPieces";
 import StartDemoButton from "../components/StartDemoButton";
+import TeamTactics from "../components/TeamTactics";
 import { useClock } from "../data/clock";
 import { keyMoments, matchPhase } from "../data/keyMoments";
 import { useMatch } from "../data/match";
@@ -137,6 +139,11 @@ export default function LiveBoard() {
           <summary>
             {t("moments.more")} <small>{t("moments.moreNote")}</small>
           </summary>
+          {/* Ax60: here until the pre-match tab (Ax59) gives these a slot of their own. */}
+          <div className="more-pre">
+            <PreMatch />
+            <TeamTactics />
+          </div>
           <div className="more-bd">
             {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them, the AI's work on its own row. */}
             {!scheduled && <PitchBoard key={match.match_id} />}
