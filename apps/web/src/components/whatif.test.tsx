@@ -14,7 +14,7 @@ import {
 } from "../data/scenarios";
 import { translator } from "../i18n";
 import WhatIfLab from "../pages/WhatIfLab";
-import { RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText } from "./WhatIf";
+import { ArmCompare, RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText, storyLine } from "./WhatIf";
 
 const ev = (id: string, minute: number, team: "home" | "away", type: MatchEvent["type"], extra: Partial<MatchEvent> = {}) =>
   ({ event_id: id, seq: minute, t: minute * 60, minute, period: minute < 45 ? 1 : 2, team, type, meta: {}, shot_outcome: null, ...extra }) as MatchEvent;
@@ -271,5 +271,70 @@ describe("mock mode (?fixture=1)", () => {
     expect(html).toContain("Loading the scenarios…");
     expect(html).toContain("Pick a scenario to set up the replay.");
     expect(page("/whatif/nope")).toContain("Pivot not found");
+  });
+});
+
+describe("the result as a story, with the two arms side by side (Ax51)", () => {
+  const d = (h: number, dr: number, a: number) => ({ home_win: h, draw: dr, away_win: a, home_advance: null, ci95: {} });
+  const spread = (mean: number) => ({ mean, sd: 0, p10: mean, p90: mean });
+  const side = (shots: number, on: number, xg: number, red: number) => ({
+    goals: spread(1), shots: spread(shots), shots_on_target: spread(on), xg: spread(xg), possession_pct: spread(50),
+    cards: spread(red), red_cards: spread(red), scored_share: 0.5,
+  });
+  const arm = (scores: [number, number, number][], home: ReturnType<typeof side>, away: ReturnType<typeof side>) => ({
+    n_runs: 200, from_t: 38 * 60, top_scores: scores.map(([h, a, share]) => ({ home: h, away: a, share })), home, away,
+  });
+  const withStats = {
+    baseline: d(0.82, 0.12, 0.06), counterfactual: d(0.46, 0.3, 0.24), significant: { home_win: true },
+    baseline_stats: arm([[3, 1, 0.21], [2, 1, 0.18], [3, 0, 0.12], [4, 1, 0.08]], side(9.4, 3.2, 1.21, 0.02), side(2.1, 0.6, 0.18, 0.31)),
+    counterfactual_stats: arm([[1, 1, 0.19], [2, 1, 0.15], [1, 0, 0.11]], side(5.3, 1.9, 0.62, 0.05), side(4.8, 1.7, 0.57, 0.04)),
+  };
+  const teams = matchView().teams;
+  const input = { result: withStats, type: "remove_red_card", minute: "38", change: "Remove 38′ red card", teams };
+
+  it("tells it in a sentence built from the result's own numbers, in every language", () => {
+    expect(storyLine(input, en)).toBe(
+      "Without the 38′ red card, Harbour City's chance of winning falls from 82% to 46%, and the most likely score goes from 3–1 to 1–1.");
+    expect(storyLine(input, translator("zh"))).toBe("如果没有 38′ 这张红牌，Harbour City 赢球的机会从 82% 掉到 46%，最常见的比分从 3–1 变成 1–1。");
+    expect(storyLine(input, translator("es"))).toBe(
+      "Sin la roja del 38′, las opciones de victoria de Harbour City bajan del 82% al 46%, y el resultado más probable pasa de 3–1 a 1–1.");
+  });
+
+  it("drops the score for a result stored before the stats, and names other changes plainly", () => {
+    const old = { ...input, result: { ...withStats, baseline_stats: null, counterfactual_stats: undefined } };
+    expect(storyLine(old, en)).toBe("Without the 38′ red card, Harbour City's chance of winning falls from 82% to 46%.");
+    expect(storyLine({ ...input, type: "change_press", pressLower: true }, translator("zh"))).toMatch(/^如果从 38′ 起压得更低，/);
+    expect(storyLine({ ...input, type: "change_formation", change: "Switch to 3-5-2" }, en)).toMatch(/^With the change \(Switch to 3-5-2\), /);
+    const same = { ...input, result: { ...withStats, counterfactual_stats: { ...withStats.counterfactual_stats, top_scores: withStats.baseline_stats.top_scores } } };
+    expect(storyLine(same, en)).toMatch(/and the most likely score stays 3–1\.$/);
+  });
+
+  it("lists the top three scores and each side's shots, on target, xG and red cards from the saved minute", () => {
+    const html = render(<ArmCompare was={withStats.baseline_stats} now={withStats.counterfactual_stats} teams={teams} from="38" />);
+    expect(html).toContain("From 38′ to the final whistle");
+    expect(html).toContain("HCY – NVR");
+    expect(html.match(/<li /g)).toHaveLength(6);               // three per arm; 4–1 is left out
+    expect(html).not.toContain("4–1");
+    expect(html).toContain('aria-label="3–1 in 21% of replays"');
+    expect(html).toContain("9.4 – 2.1");                         // shots
+    expect(html).toContain("1.9 – 1.7");                         // on target, with the change
+    expect(html).toContain("1.21 – 0.18");                       // xG
+    expect(html).toContain("0.02 – 0.31");                       // red cards
+  });
+
+  it("leaves the comparison out of a result without stats", async () => {
+    const view = matchView();
+    const source = mockScenarioApi(() => ({ view, lang: "en" }), steppingClock(10_000));
+    const body = { pivot_id: "p63", type: "cancel_substitution" as const, n_runs: 200 as const };
+    const scenario = await runScenario(source, body, { signal: new AbortController().signal, pollMs: 1, onUpdate: () => {} });
+    const state = { phase: "done", body, scenario, cached: false } as Extract<RunState, { phase: "done" }>;
+    const props = { option: mockOptions(view, "p63")[0], teams: view.teams, onReset: () => {}, source };
+    const plain = render(<ScenarioResult state={state} {...props} />);
+    expect(plain).not.toContain("Side by side");
+    expect(plain).toMatch(/Without the 63′ substitution, Harbour City&#x27;s chance of winning (rises|falls) from \d+% to \d+%\./);
+    const rich = { ...state, scenario: { ...scenario, result: { ...scenario.result!, ...withStats } } };
+    const html = render(<ScenarioResult state={rich} {...props} />);
+    expect(html).toContain("Side by side");
+    expect(html).toContain("and the most likely score goes from 3–1 to 1–1.");
   });
 });
