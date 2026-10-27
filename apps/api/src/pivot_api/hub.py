@@ -7,7 +7,8 @@ GET /api/hub
   (now - LIVE_ANCHOR) mod (its length + LIVE_BREAK_S); after the final whistle and a short break
   it kicks off again. The page replays the stored match up to that second (data/live/replay.tsx);
   nothing is simulated on the server. `PIVOT_LIVE_MATCH` picks the match, else the second listed
-  (the first is the one the site has always opened, the demo video's).
+  (the first is the one the site opens, the demo video's). With sims.FIXTURE_IDS that is
+  S2026-29-BRI-FAL, a game of the latest played round (#364).
 - `next`: the next round's fixtures (nextround.py), each with its prediction when one was worked out.
 - `schedule` (C15): every round still to come, matchdays 31-38, with its date; a fixture's
   prediction is there only when its round was worked out ahead of time.
@@ -16,7 +17,8 @@ GET /api/hub
 - `history` (#364): the whole league's season so far, every round in eval/fixtures/season-2026.json
   (matchdays 1-29, 290 games), latest first, each game with its score and red cards. A game links to
   its full match (`match_id`) only when one is stored under the season fixture's id
-  (`S2026-07-COR-TES`, world.fixture_match); the rest are scores only.
+  (`S2026-07-COR-TES`, world.fixture_match): the 20 of sims.FIXTURE_IDS by default; the rest are
+  scores only.
 
 Read-only. A finished match's line is kept in memory after the first request.
 """

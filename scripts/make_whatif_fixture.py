@@ -5,7 +5,7 @@
   uv run scripts/make_whatif_fixture.py --list             # the chips and what they would cost, nothing run
   uv run scripts/make_whatif_fixture.py --runs 200 --workers 8
   uv run scripts/make_whatif_fixture.py --table            # what is in the file, as a Markdown table
-  uv run scripts/make_whatif_fixture.py --match M-seed-101 M-seed-212 --runs 200   # the site's matches (Bx14)
+  uv run scripts/make_whatif_fixture.py --match S2026-27-TES-VAN S2026-29-BRI-FAL --runs 200   # the site's matches (Bx14)
 
 With `--match` the site's simulated matches are run instead of the demo: each one is simulated and stored
 as the server does it (`build_one`, `store_one`) and gets its own file, eval/fixtures/whatif/<id>.whatif.json,
@@ -37,7 +37,7 @@ from pathlib import Path
 os.environ["PIVOT_RESULTS"] = "0"          # in memory: nothing from earlier server runs is read back
 
 from pivot_adapters import build_adapters  # noqa: E402
-from pivot_api.sims import FIXTURE, Replay, build_one, load_fixture, paths, specs_first, store_one  # noqa: E402
+from pivot_api.sims import FIXTURE, Replay, build_one, load_fixture, paths, spec_by_id, store_one  # noqa: E402
 from pivot_api.whatif import (  # noqa: E402
     WhatIf, load_precomputed, portable_sim_version, precomputed_path, seed_precomputed_path, write_precomputed,
 )
@@ -47,7 +47,6 @@ from pivot_worker.pipeline import FakePipeline  # noqa: E402
 from pivot_worker.worker import Worker  # noqa: E402
 
 RUNS = (200, 500, 1000)
-MAX_SPECS = 40                               # --match looks for the match among the site's first this many
 
 
 async def pivots(adapters) -> None:
@@ -69,9 +68,9 @@ async def demo(fixture: Path):
 async def seed(match_id: str, data_dir: Path):
     """A simulated match of the site (Bx14), built and stored as the server does (`build_one`, `store_one`),
     under the version a Linux checkout gives it (`portable_sim_version`), the one the server will match."""
-    spec = next((s for s in specs_first(MAX_SPECS) if s.match_id == match_id), None)
+    spec = spec_by_id(match_id)
     if spec is None:
-        raise SystemExit(f"{match_id} is not one of the site's first {MAX_SPECS} simulated matches")
+        raise SystemExit(f"{match_id} is neither a season fixture nor one of the seed matches")
     version = portable_sim_version()
     build_one(spec, data_dir, version)
     adapters = build_adapters("local")
@@ -191,5 +190,5 @@ if __name__ == "__main__":
     parser.add_argument("--table", action="store_true", help="print what is in the file as a Markdown table")
     parser.add_argument("--fixture", type=Path, default=FIXTURE)
     parser.add_argument("--match", nargs="+", metavar="MATCH_ID",
-                        help="the site's simulated matches instead of the demo, e.g. M-seed-101 M-seed-212 (Bx14)")
+                        help="the site's simulated matches instead of the demo, e.g. S2026-27-TES-VAN S2026-29-BRI-FAL (Bx14)")
     sys.exit(asyncio.run(main(parser.parse_args())))

@@ -52,7 +52,7 @@ def test_met_001_to_023_whole_match_equals_the_table_kept_with_the_demo(client):
 
 
 def test_met_001_to_023_a_simulated_match_equals_the_stat_calculator(tmp_path, monkeypatch):
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "1")   # the seed matches (conftest: no fixtures)
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     spec = sims.SPECS[0]

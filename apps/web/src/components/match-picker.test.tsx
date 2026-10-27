@@ -124,6 +124,8 @@ describe("match picker", () => {
     expect(matchLabel(MATCHES[2], t)).toBe("HBC 1–2 ROV (sample, Live)");
     expect(matchLabel(MATCHES[0], translator("zh"))).toBe("HBC 4–5 ROV (第 101 场)");
     expect(matchLabel(MATCHES[3], translator("zh"))).toBe("HBC 1–0 ROV (演示)");
+    // #364: a season fixture played in full says its matchday, not its seed
+    expect(matchLabel(match("S2026-27-TES-VAN", 20262705, "finished", 4, 3), t)).toBe("HBC 4–3 ROV (MD27)");
   });
 
   it("lists every match in the API's order and selects the followed one", () => {

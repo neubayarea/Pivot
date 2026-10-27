@@ -69,7 +69,7 @@ async def _match_or_404(request: Request, match_id: str) -> Match:
 
 @router.get("/matches")
 async def list_matches(request: Request) -> list[Match]:
-    """Stored matches: the simulated ones in seed-list order (SPECS), the first being the one the site
+    """Stored matches: the simulated ones in listing order (sims.FIXTURE_IDS), the first being the one the site
     opens by default (Ax55), then any others, most recent first. The next round's fixtures (C14,
     not played yet) are on the match centre (`/api/hub`), not here."""
     nxt = getattr(request.app.state, "next_round", None)

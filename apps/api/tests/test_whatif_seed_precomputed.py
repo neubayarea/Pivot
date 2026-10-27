@@ -59,7 +59,7 @@ def test_the_server_reads_a_seed_matchs_file_at_startup(tmp_path, monkeypatch):
     async def no_sims(*_, **__):
         return None
 
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "2")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "2")   # the seed matches (conftest: no fixtures)
     monkeypatch.setenv("PIVOT_WHATIF_WARM", "0")
     monkeypatch.setenv("PIVOT_PREWARM_LANGS", "none")
     monkeypatch.setattr(app_module, "load_sims", no_sims)

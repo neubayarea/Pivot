@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the simulated matches on this computer and keep them in Azure Blob Storage (Ax15).
 
-  uv run scripts/sims_blob.py generate-upload --count 50     # simulate (what is not in Blob yet) and upload
+  uv run scripts/sims_blob.py generate-upload --count 20     # simulate (what is not in Blob yet) and upload
   uv run scripts/sims_blob.py generate-upload --seeds 101,212
   uv run scripts/sims_blob.py list                           # what Blob holds, per version, with sizes
   uv run scripts/sims_blob.py clean                          # dry run: what of other versions would go
@@ -30,20 +30,21 @@ from pathlib import Path
 from pivot_adapters.azure.blob import DEFAULT_CONTAINER, BlobSimStore
 from pivot_adapters.local import SimBlob, SimStore
 from pivot_api import sims
-from pivot_api.sims import SIM_VERSION, SPECS, SimSpec, specs_first
+from pivot_api.sims import FIXTURE_IDS, SIM_VERSION, SimSpec, Spec, fixtures_first, specs_first
 
 
 def mb(n: int) -> str:
     return f"{n / 1e6:.1f} MB"
 
 
-def pick_specs(count: int | None, seeds: list[int] | None) -> list[SimSpec]:
-    """`--count N` is the same rule as PIVOT_SIM_MATCHES; `--seeds` picks from that list by seed
-    (an unlisted seed gets an even match)."""
+def pick_specs(count: int | None, seeds: list[int] | None) -> list[Spec]:
+    """`--count N` is the same rule as PIVOT_SIM_MATCHES: the first N season fixtures the site lists
+    (sims.FIXTURE_IDS, all of them by default); `--seeds` picks the older seed matches by seed (an unlisted
+    seed gets an even match)."""
     if seeds:
-        known = {s.seed: s for s in specs_first(max(len(SPECS), 100))}
+        known = {s.seed: s for s in specs_first(100)}
         return [known.get(seed) or SimSpec(seed, 70, 70, "4-3-3", "4-4-2") for seed in seeds]
-    return specs_first(len(SPECS) if count is None else count)
+    return fixtures_first(len(FIXTURE_IDS) if count is None else count)
 
 
 def banner() -> None:
@@ -52,7 +53,7 @@ def banner() -> None:
     print("!! 规则改完、合并之后，要重新运行 generate-upload。\n")
 
 
-async def generate_upload(store: SimStore, specs: list[SimSpec], data_dir: Path, force: bool) -> int:
+async def generate_upload(store: SimStore, specs: list[Spec], data_dir: Path, force: bool) -> int:
     present = {b.name for b in await store.list()}
     todo, skipped = [], 0
     for spec in specs:
@@ -67,7 +68,7 @@ async def generate_upload(store: SimStore, specs: list[SimSpec], data_dir: Path,
     loop = asyncio.get_running_loop()
     started, total, failed, done = time.monotonic(), 0, 0, 0
 
-    async def one(spec: SimSpec) -> None:
+    async def one(spec: Spec) -> None:
         nonlocal total, failed, done
         try:
             simulated = await loop.run_in_executor(executor, sims.build_one, spec, data_dir, SIM_VERSION)
@@ -161,7 +162,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--container", help="容器名，默认读 PIVOT_BLOB_CONTAINER，再默认 sims")
     sub = p.add_subparsers(dest="cmd", required=True)
     g = sub.add_parser("generate-upload", help="生成比赛并上传（云端已有这个版本的会跳过）")
-    g.add_argument("--count", type=int, help="场数，规则同 PIVOT_SIM_MATCHES（默认 6）")
+    g.add_argument("--count", type=int, help="场数，规则同 PIVOT_SIM_MATCHES：赛季赛程里前 N 场（默认全部 20 场）")
     g.add_argument("--seeds", type=lambda s: [int(x) for x in s.split(",") if x], help="指定种子，逗号分隔，例如 101,212")
     g.add_argument("--work-dir", help="生成的文件先放哪，默认 PIVOT_DATA_DIR/sims（.pivot-data/sims）")
     g.add_argument("--force", action="store_true", help="云端已有也重新上传")

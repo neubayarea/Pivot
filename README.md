@@ -16,7 +16,7 @@ All matches, clubs and players are synthetic (see [Data](#data-and-disclaimer)).
 
 **Live demo: https://pivot.in-stacks.com/**
 
-No sign-in is needed. The site has 20 simulated matches and opens the demo match, **Harbour City 3–3 Northgate Rovers** (`?match=M-seed-101`); the others are in the match menu in the top bar. Every match is an ordinary simulation: nothing in it is staged. A private window works best, because the site remembers your language, viewer settings and last match.
+No sign-in is needed. The site has 20 simulated matches, real fixtures of the simulated season played in full, and opens **Tessmouth United 4–3 Vantry Town** (`?match=S2026-27-TES-VAN`); the others are in the match menu in the top bar. Every match is an ordinary simulation: nothing in it is staged. A private window works best, because the site remembers your language, viewer settings and last match.
 
 The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Preview**. Each tab has its own link (`?tab=overview|whatif|replay|stats|lineups|preview`); old links with `?tab=pre|live|post` still open Preview, Replay and Overview.
 
@@ -35,7 +35,7 @@ The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Previ
 
 The live server has only 2 CPU cores. The what-if chips on the demo match were computed in advance, so a stored one, such as **Disallow 65′ goal**, answers at once. A scenario that is not stored takes a few minutes there and queues behind the others. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
 
-To see what the AI agents did, click **Trace** in the top bar. It lists each step (Judge, Explainer, Verifier) for every turning point, the model used, latency, tokens and the verdict. The raw data is at `https://pivot.in-stacks.com/api/pivots/<pivot id>/traces`. The pivot id (such as `M-seed-101:p34`) is in the link once a turning point is open (`&pivot=`).
+To see what the AI agents did, click **Trace** in the top bar. It lists each step (Judge, Explainer, Verifier) for every turning point, the model used, latency, tokens and the verdict. The raw data is at `https://pivot.in-stacks.com/api/pivots/<pivot id>/traces`. The pivot id (such as `S2026-27-TES-VAN:p34`) is in the link once a turning point is open (`&pivot=`).
 
 | Pivot detail with evidence | What-if result |
 |---|---|
@@ -165,7 +165,7 @@ uv sync && pnpm install && pnpm --filter web build
 PIVOT_PIPELINE=fake PIVOT_SIM_MATCHES=1 PIVOT_WHATIF_WARM=0 PIVOT_DATA_DIR=.pivot-data uv run python -m pivot_api.single
 ```
 
-Open http://127.0.0.1:8000/. It opens the first simulated match (`PIVOT_SIM_MATCHES=1` makes just one, seed 101, in a few seconds). The site, API, WebSocket, simulator, agents and what-if runner all run in this one process. Explanations are template text in this mode, which is expected. A 200-run what-if takes about 30 seconds on a laptop. Add `PORT=8011` in front to use another port.
+Open http://127.0.0.1:8000/. It opens the first simulated match (`PIVOT_SIM_MATCHES=1` makes just one, `S2026-27-TES-VAN`, in a few seconds). The site, API, WebSocket, simulator, agents and what-if runner all run in this one process. Explanations are template text in this mode, which is expected. A 200-run what-if takes about 30 seconds on a laptop. Add `PORT=8011` in front to use another port.
 
 Checks and tests:
 
