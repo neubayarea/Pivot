@@ -32,3 +32,31 @@ export default function Skeleton() {
     </div>
   );
 }
+
+/**
+ * Ax79: neutral grey blocks in the shape of the content that is on its way, so the page does not jump
+ * when it lands. The loading words stay in the page for screen readers (and for tests), hidden from sight.
+ */
+export function Placeholder({ label, lines = 2, block, chips, className }: {
+  label: string;
+  /** Text-line bars under the block. */
+  lines?: number;
+  /** Height in px of one tall block (a chart, a pitch, a card). */
+  block?: number;
+  /** A row of short pills, the shape of a set of choices. */
+  chips?: number;
+  className?: string;
+}) {
+  return (
+    <div className={className ? `ph ${className}` : "ph"} aria-busy="true">
+      <span className="sr-only" role="status">{label}</span>
+      <div className="ph-body" aria-hidden="true">
+        {block !== undefined && <span className="sk sk-shim ph-block" style={{ height: block }} />}
+        {chips !== undefined && (
+          <span className="ph-chips">{Array.from({ length: chips }, (_, i) => <span key={i} className="sk sk-shim ph-chip" />)}</span>
+        )}
+        {Array.from({ length: lines }, (_, i) => <span key={i} className="sk sk-shim sk-line" />)}
+      </div>
+    </div>
+  );
+}

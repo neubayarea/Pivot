@@ -8,6 +8,7 @@ import { useMatch } from "../data/match";
 import { bestPlayer, other, result, strengthsAndWeaknesses, teamLine, usePersona, usePlayers, type StatEdge } from "../data/persona";
 import { isMessageKey, usePrefs, type T } from "../i18n";
 import FollowButton from "./FollowButton";
+import { Placeholder } from "./Skeleton";
 import { statText, useTeamStats } from "./TeamStats";
 
 /** The stat's name in the viewer's words: plain for fans where there is a plain one. */
@@ -64,7 +65,7 @@ export default function YourTeamSummary({ report, upTo = null }: { report?: Team
         <h2 id="you-hd">{t("you.title", { team })}</h2>
         <span className="you-score num" aria-hidden="true">{match.score[side]}–{match.score[other(side)]}</span>
       </header>
-      {stats ? <p className="you-line">{line}</p> : <p className="muted" role="status">{t("you.loading")}</p>}
+      {stats ? <p className="you-line">{line}</p> : <Placeholder label={t("you.loading")} lines={4} />}
       {stats && (
         <div className="you-cols">
           {strengths.length > 0 && <Edges title={t("you.strengths")} edges={strengths} report={stats} fan={fan} t={t} />}

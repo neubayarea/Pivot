@@ -14,6 +14,7 @@ import LangTag from "./LangTag";
 import { pivotHeadline } from "./PivotList";
 import { usePlayerReport } from "./PlayerCard";
 import Segmented from "./Segmented";
+import { Placeholder } from "./Skeleton";
 import { Heatmap, PassNetwork, ShotMap, VizBox, useHeatmaps, usePassNetwork, useShotMap } from "./viz";
 
 type Pic = "heat" | "shots" | "net";
@@ -35,7 +36,7 @@ export default function PlayerSpotlight({ upTo = null, onPivot }: { upTo?: numbe
   const shots = useShotMap(player && pic === "shots" ? match.match_id : null, opts);
   const net = usePassNetwork(player && pic === "net" ? match.match_id : null, opts);
   if (!player) return null;
-  if (report === undefined) return <section className="spot"><p className="muted" role="status">{t("spot.loading")}</p></section>;
+  if (report === undefined) return <section className="spot"><Placeholder label={t("spot.loading")} block={200} lines={3} /></section>;
   if (!report) return null;
 
   const side = report.team;

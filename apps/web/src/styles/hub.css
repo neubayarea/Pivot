@@ -99,3 +99,4 @@
 .hub-alt > .hub-note { padding: var(--pv-s3) var(--pv-s2) 0; }
 .hub-alt > ul { list-style: none; margin: 0; padding: 0 0 0 var(--pv-s4); border-left: 3px solid var(--pv-hair); }
 .hub-alt > ul > li + li { border-top: 1px solid var(--pv-hair); }
+.hub-ph { margin-block: var(--pv-s3, 16px); max-width: 960px; }
