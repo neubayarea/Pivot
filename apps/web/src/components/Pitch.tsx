@@ -134,7 +134,7 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
             {onPick && <circle r={16} fill="transparent" />}
             {followed && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />}
             {ring === "picked" && <circle r={15} fill="none" stroke="var(--pv-ink)" strokeWidth={3} />}
-            {ring === "marked" && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} strokeDasharray="5 3" />}
+            {ring === "marked" && <circle r={14} fill="none" stroke="var(--pv-ink)" strokeWidth={2.5} strokeDasharray="5 3" />}
             {ring === "carrier" && (
               <>
                 <circle r={14} fill="none" stroke="var(--pv-ink)" strokeWidth={6} />
@@ -157,7 +157,7 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
       <g className="pl" data-ball="" pointerEvents="none"
         style={animated ? undefined : { transform: `translate(${ball[0] + 8}px, ${ball[1] - 8}px)` }}>
         <circle r={7} fill="none" stroke="var(--pv-ink)" strokeOpacity={0.35} strokeWidth={4} />
-        <circle r={5} fill="#fff" stroke="var(--pv-ink)" strokeWidth={2} />
+        <circle r={5} fill="var(--pv-ball)" stroke="var(--pv-ink)" strokeWidth={2} />
       </g>
       {!animated && pickedAt && tag && <Label x={pickedAt.x * S} y={pickedAt.y * S} text={tag(pickedAt.player_id)} />}
     </svg>

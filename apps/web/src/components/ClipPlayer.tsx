@@ -218,7 +218,7 @@ function Marks({ marks }: { marks: ClipMark[] }) {
     <g className="clip-marks" pointerEvents="none">
       {marks.map((m, i) => m.at && (
         <g key={i}>
-          <circle className="cue-flash" cx={m.at[0] * S} cy={m.at[1] * S} r={22} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />
+          <circle className="cue-flash" cx={m.at[0] * S} cy={m.at[1] * S} r={22} fill="none" stroke="var(--pv-ink)" strokeWidth={3} />
           <KeyMark kind={m.kind} side={m.side} x={m.at[0] * S} y={m.at[1] * S - 20} size={1.6} />
         </g>
       ))}

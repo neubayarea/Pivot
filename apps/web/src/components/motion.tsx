@@ -102,8 +102,8 @@ export function EventCues({ cues }: { cues: Cue[] }) {
             {c.kind === "pass" && c.to && <circle cx={x2} cy={y2} r={5} fill={stroke} stroke="var(--pv-sheet)" strokeWidth={1.5} />}
             {c.kind === "goal" && c.to && (
               <>
-                <circle className="cue-flash" cx={x2} cy={y2} r={18} fill="none" stroke="var(--pv-gold)" strokeWidth={4} />
-                <circle cx={x2} cy={y2} r={8} fill={stroke} stroke="var(--pv-gold)" strokeWidth={3} />
+                <circle className="cue-flash" cx={x2} cy={y2} r={18} fill="none" stroke={stroke} strokeWidth={4} />
+                <circle cx={x2} cy={y2} r={8} fill={stroke} stroke="var(--pv-sheet)" strokeWidth={3} />
               </>
             )}
             {c.kind === "shot" && c.to && (
@@ -122,7 +122,7 @@ export function EventCues({ cues }: { cues: Cue[] }) {
               </g>
             )}
             {(c.kind === "yellow" || c.kind === "red") && (
-              <rect x={x1 - 6} y={y1 - 32} width={12} height={17} rx={1.5} fill={c.kind === "red" ? "var(--pv-red)" : "#f2c200"}
+              <rect x={x1 - 6} y={y1 - 32} width={12} height={17} rx={1.5} fill={c.kind === "red" ? "var(--pv-red)" : "var(--pv-card-yellow)"}
                 stroke="var(--pv-ink)" strokeWidth={1.5} transform={`rotate(12 ${x1} ${y1 - 24})`} />
             )}
           </g>
