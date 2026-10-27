@@ -5,6 +5,7 @@ import Playback from "./components/Playback";
 import ScoreHeader from "./components/ScoreHeader";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
+import WatchPrompt from "./components/WatchPrompt";
 import { useHeaderFold } from "./data/headerFold";
 import { MatchProvider } from "./data/match";
 import { usePrefs } from "./i18n";
@@ -35,6 +36,8 @@ export default function App() {
     <MatchProvider fallback={WAITING}>
       <KitColours />
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
+      {/* C13: asked once, on a first visit: fan or analyst. */}
+      <WatchPrompt />
       <ConnectionBanner />
       <MissingMatchBanner />
       {/* Ax59: the score and the replay bar stay at the top of the window while the page scrolls;
