@@ -226,3 +226,13 @@
 .post .mom-mk .mk-lean-txt { font-family: var(--pv-body); font-weight: 700; font-size: 11px; }
 .post .pr .lean-tag { font-size: 12px; padding: 1px 8px; white-space: nowrap; justify-self: end; }
 .post .pr .lean-tag.against { background: transparent; color: var(--pv-ink); box-shadow: inset 0 0 0 1.5px var(--tc); }
+
+/* ---------- C18 (#367): the three gaps on the Overview and Line-ups ---------- */
+/* The fan's five numbers use the card's width. */
+.post .ts-fan .ts-groups, .post .ts-fan .ts-teams { max-width: none; }
+/* A key moment's tags sit in a column close to what happened, not across the row. */
+.post .km { grid-template-columns: 3.4em 16px 3.4em minmax(0, 28em) minmax(0, 1fr); }
+.post .km-tags { justify-content: flex-start; }
+/* The match-up table: zone, roles and count hug the left; the verdict takes the rest. */
+.lineups-tab .mu-line { grid-template-columns: minmax(7em, max-content) auto auto auto minmax(0, 1fr); }
+.lineups-tab .mu-edge { justify-self: start; }
