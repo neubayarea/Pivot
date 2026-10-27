@@ -843,7 +843,7 @@ export const zh: Messages = {
 
   // Ax59 · tab contents
   "header.og": "（乌龙）",
-  "live.alert": "转折点 · {minute}′",
+  "live.alert": "{minute}′ 出现转折点",
   "live.alertOpen": "看为什么会转折",
   "live.alertClose": "关闭",
   "live.replayHint": "比赛已经结束。重放一遍，可以看到球员跑动，转折点也会在发生时弹出来。",

@@ -845,7 +845,7 @@ export const es: Messages = {
 
   // Ax59 · tab contents
   "header.og": "(p.p.)",
-  "live.alert": "Punto de giro · {minute}′",
+  "live.alert": "Punto de giro en el {minute}′",
   "live.alertOpen": "Por qué cambió",
   "live.alertClose": "Cerrar",
   "live.replayHint": "El partido terminó. Repítelo para ver moverse a los jugadores y aparecer los puntos de giro en su momento.",

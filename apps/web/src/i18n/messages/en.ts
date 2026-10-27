@@ -844,7 +844,7 @@ export const en = {
 
   // Ax59 · tab contents
   "header.og": "(og)",
-  "live.alert": "Pivot · {minute}′",
+  "live.alert": "Turning point at {minute}′",
   "live.alertOpen": "Why it turned",
   "live.alertClose": "Close",
   "live.replayHint": "The match is over. Replay it to watch the players move and the pivots appear as they happen.",
