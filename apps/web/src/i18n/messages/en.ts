@@ -485,6 +485,8 @@ export const en = {
   "sp.wallNone": "No wall: fewer than two defenders between the ball and the goal",
   "sp.then": "What happened",
   "sp.how": "Stopped one second before the kick (positions are recorded once a second). Shaded: the box being attacked. Dashed lines join each attacker to their marker. The result follows the next 15 seconds. Man-to-man means at least 3 in 5 attackers in the box had a defender within 2.5 m; zonal, 1 in 3 or fewer. Tap a dot to see who it is.",
+  "sp.howPlain": "Stopped one second before the kick (positions are recorded once a second). Shaded: the box being attacked. The result follows the next 15 seconds. Tap a dot to see who it is.",
+  "sp.simNote": "Player positions come from the simulator, which does not yet line players up for set pieces, so marking and walls are not shown.",
   "shots.none": "No shots yet.",
   "shots.noneHere": "No shots of this kind.",
   "shots.filter": "Where the shot came from",
