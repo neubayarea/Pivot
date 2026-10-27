@@ -54,6 +54,7 @@ from pivot_core.domain import Match, MatchEvent, MinuteMetric, PivotCandidate, P
 from pivot_core.ports import PIVOT_CANDIDATES
 from pivot_core.sim import PRESETS, build_demo_match, simulate
 from pivot_core.sim.season import load_season, site_matchday, with_prematch
+from pivot_core.sim.styles import with_coach_styles
 
 log = logging.getLogger("uvicorn.error")
 
@@ -86,9 +87,13 @@ class SimSpec:
     def match_id(self) -> str:
         return f"M-seed-{self.seed}"
 
+    def build(self) -> Match:
+        """The match before kick-off: the seed's squads, each coach playing a style from the seed (Bx13)."""
+        return with_coach_styles(build_demo_match(self.seed, self.home_strength, self.away_strength,
+                                                  self.home_formation, self.away_formation))
+
     def replay(self) -> Replay:
-        return Replay(SIM_VERSION, partial(build_demo_match, self.seed, self.home_strength, self.away_strength,
-                                       self.home_formation, self.away_formation))
+        return Replay(SIM_VERSION, self.build)
 
 
 SPECS = [
@@ -146,8 +151,7 @@ def build_one(spec: SimSpec, data_dir: Path, version: str = SIM_VERSION) -> bool
     if data_path.is_file() and frames_path.is_file():
         return False
     data_dir.mkdir(parents=True, exist_ok=True)
-    match = build_demo_match(spec.seed, spec.home_strength, spec.away_strength, spec.home_formation,
-                             spec.away_formation)
+    match = spec.build()
     out = simulate(match)
     events = out.events_as_models()
     frames = out.frames_as_models()

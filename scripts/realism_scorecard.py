@@ -36,9 +36,12 @@ from pathlib import Path
 import numpy as np
 
 from pivot_core.domain import PlantSpec
+import os
+
 from pivot_core.sim import build_demo_match
 from pivot_core.sim.engine import Engine, Params
 from pivot_core.sim.formations import DEFENDER_ROLES as DEFENDERS
+from pivot_core.sim.styles import with_coach_styles
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "eval" / "realism" / "reference.json"
@@ -310,6 +313,8 @@ def _frame_metrics(out) -> dict:
 def _run_one(job: tuple) -> dict:
     scenario, seed, overrides, plant = job
     m = build_demo_match(seed, **SCENARIOS[scenario])
+    if os.environ.get("PIVOT_COACH_STYLES") == "1":          # --styles, set before the pool starts
+        m = with_coach_styles(m)
     params = Params(**overrides) if overrides else None
     eng = Engine(m, seed, params, [RED] if plant else None)
     out = eng.run()
@@ -830,8 +835,11 @@ def main() -> None:
     ap.add_argument("--as", dest="ref_name", default="pl1516", help="name of the data set --build-reference writes")
     ap.add_argument("--build-recent", type=Path, nargs="+", help="football-data.co.uk E0.csv files")
     ap.add_argument("--json", type=Path, help="also write the simulated numbers here")
+    ap.add_argument("--styles", action="store_true", help="each coach plays a style from the seed (Bx13)")
     ap.add_argument("--set-pieces", action="store_true", help="only the set-piece positions (Ax44)")
     args = ap.parse_args()
+    if args.styles:
+        os.environ["PIVOT_COACH_STYLES"] = "1"
 
     if args.build_reference or args.build_recent:
         ref = json.loads(REFERENCE.read_text(encoding="utf-8")) if REFERENCE.exists() else {"literature": {}}
