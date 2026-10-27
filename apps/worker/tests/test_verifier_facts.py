@@ -400,6 +400,47 @@ def test_333_goal_words_negations_and_other_lifts_still_pass(p74, lang, headline
     assert issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away") == []
 
 
+def test_333_the_live_spanish_remontada_is_credit_too(p74):
+    # Live p74 in Spanish (#330 QA): "... impulsa la remontada de Harbour City", while it swung to Northgate Rovers.
+    narrative = card("El gol de Miquingorini en el 65' impulsa la remontada de Harbour City.", lang="es",
+                     evidence=["m066-s01196"])
+    wrong = [m for c, m in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away")
+             if c == "direction_mismatch"]
+    assert len(wrong) == 1 and "remontada de Harbour City" in wrong[0]
+    assert not [c for c, _ in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")
+                if c == "direction_mismatch"]
+
+
+def test_333_a_translated_club_name_is_sent_back(p74):
+    # Live p74 in Chinese: "激活海港城" (海港城 is Harbour City translated).
+    narrative = card("Miquingorini在65'的进球激活海港城。", lang="zh", evidence=["m066-s01196"])
+    found = issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")
+    assert [c for c, _ in found] == ["schema_invalid"]
+    assert "'海港城' for Harbour City; keep club names as written: Harbour City, Northgate Rovers" in found[0][1]
+    # Written as the data has it, the same words are the momentum claim and are checked as one.
+    latin = card("Miquingorini在65'的进球激活Harbour City。", lang="zh", evidence=["m066-s01196"])
+    assert issues(latin, p74, minute=74, team_names=TEAMS_505, direction="home") == []
+    assert [c for c, _ in issues(latin, p74, minute=74, team_names=TEAMS_505, direction="away")] == \
+        ["direction_mismatch"]
+
+
+@pytest.mark.parametrize("lang,text,form", [
+    ("zh", "Harbour City输给了北门流浪者。", "北门流浪者"),
+    ("zh", "哈伯城在65'扳平比分。", "哈伯城"),
+    ("zh", "北门在65'之后压了上来。", "北门"),
+    ("es", "Ciudad Puerto empató en el 65'.", "Ciudad Puerto"),
+])
+def test_333_other_translated_club_names_are_sent_back(p74, lang, text, form):
+    found = issues(card(text, lang=lang, evidence=["m066-s01196"]), p74, minute=74, team_names=TEAMS_505)
+    assert any(c == "schema_invalid" and f"'{form}'" in m for c, m in found), found
+
+
+def test_333_the_writers_are_told_to_keep_club_names(p74):
+    from pivot_api.personalize import TRANSLATE_PROMPT
+    from pivot_worker.languages import INSTRUCTIONS
+    assert "not 海港城" in INSTRUCTIONS["zh"] and "never 海港城" in TRANSLATE_PROMPT
+
+
 def test_333_the_explainer_is_told_the_headline_follows_the_momentum():
     text = ex.system_prompt(ViewerPrefs(), TEAMS_505).text
     assert "The headline is about `pivot.towards`" in text
