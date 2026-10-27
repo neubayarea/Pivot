@@ -12,6 +12,7 @@ import StartDemoButton from "../../components/StartDemoButton";
 import { useHeightVar } from "../../data/headerFold";
 import { useMatch } from "../../data/match";
 import { usePersona } from "../../data/persona";
+import { notPlayed } from "../../data/tab";
 import { useT } from "../../i18n";
 
 type Stop = { id: string; label: string };
@@ -79,8 +80,9 @@ export function PreviewTab() {
   const t = useT();
   const { preMatch, match } = useMatch();
   const { order } = usePersona();
-  // Before kick-off this is the tab the match opens on, so it is where the match is started.
-  const start = match.status === "scheduled" && (
+  // Before kick-off this is the tab the match opens on, so it is where the match is started; a
+  // next-round fixture (S2026-…) is never played on the site, so it has no Start button (#354).
+  const start = match.status === "scheduled" && !notPlayed(match.status, match.match_id) && (
     <div className="live-start">
       <p className="muted">{t("board.kickoffPending")}</p>
       <StartDemoButton matchId={match.match_id}>{t("demo.startMatch")}</StartDemoButton>
