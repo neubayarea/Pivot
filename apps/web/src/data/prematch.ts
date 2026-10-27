@@ -3,8 +3,9 @@
 // the page still treats every part as possibly missing (a match the season file does not know, a
 // team with no games yet) and leaves that part out.
 import type {
-  PrematchFixture, PrematchFormStats, PrematchGame, PrematchMeeting, PrematchRecord, PrematchReport, PrematchTeam, PrematchUsualXi,
+  PrematchFixture, PrematchFormStats, PrematchGame, PrematchMeeting, PrematchRecord, PrematchReport, PrematchTeam, PrematchText, PrematchUsualXi,
 } from "@pivot/contracts";
+import { useLang } from "../i18n";
 import { useVizData } from "./viz";
 
 export type { PrematchFixture, PrematchFormStats, PrematchGame, PrematchMeeting, PrematchRecord, PrematchReport, PrematchTeam, PrematchUsualXi };
@@ -13,6 +14,19 @@ export const PERIODS: readonly Period[] = ["0-15", "16-30", "31-45", "46-60", "6
 
 export const usePreMatchReport = (matchId: string | null) =>
   useVizData<PrematchReport>(matchId ? `/api/matches/${encodeURIComponent(matchId)}/prematch` : null);
+
+/**
+ * The pre-match tab's news headlines and effect notes in the page's language (#355):
+ * `GET /api/matches/{id}/prematch/text?lang=`. The result gives the translation of one English
+ * sentence, or null (an English page, no API, a sentence the API could not translate).
+ */
+export function usePreMatchText(matchId: string | null): (text: string) => string | null {
+  const lang = useLang();
+  const { data } = useVizData<PrematchText>(
+    matchId && lang !== "en" ? `/api/matches/${encodeURIComponent(matchId)}/prematch/text?lang=${lang}` : null,
+  );
+  return (text) => (data && data.lang === lang ? (data.texts[text] ?? null) : null);
+}
 
 /** A record with games in it; an empty one is left out, never shown as zeros. */
 export const played = (r: PrematchRecord | null | undefined): r is PrematchRecord => !!r && r.played > 0;

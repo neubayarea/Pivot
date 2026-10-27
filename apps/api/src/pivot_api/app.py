@@ -17,6 +17,8 @@ from .personalize import personalizer_from_env
 from .pictures import router as pictures_router
 from .players import router as players_router
 from .prematch import router as prematch_router
+from .pretext import pretext_from_env
+from .pretext import router as pretext_router
 from .realtime import router as realtime_router
 from .routes import router
 from .sims import Replay, SimStatus, data_dir_from_env, fixture_from_env, load_fixture, load_sims, specs_from_env
@@ -36,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.adapters = build_adapters()
     log.info("PIVOT_PROFILE=%s", app.state.adapters.profile)
     app.state.personalizer = personalizer_from_env(app.state.adapters.matches)
+    app.state.pretext = pretext_from_env()
     # The site shows the simulated matches below (Ax55). The hand-made sample (demo.py, its narratives
     # written by hand, never verified) is test data only: PIVOT_SAMPLE_MATCH=1 (Ax54); PIVOT_DEMO=0 keeps it out.
     app.state.fixture_frames = {}
@@ -142,6 +145,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
 app.include_router(players_router)
 app.include_router(prematch_router)
+app.include_router(pretext_router)
 app.include_router(team_stats_router)
 app.include_router(pictures_router)
 app.include_router(realtime_router)

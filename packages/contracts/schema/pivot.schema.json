@@ -4798,6 +4798,38 @@
       "title": "PrematchTeam",
       "type": "object"
     },
+    "PrematchText": {
+      "additionalProperties": false,
+      "description": "`texts`: each English sentence of the pre-match tab that has a translation, and that translation.\nA sentence missing here is shown in English. `untranslated` lists those sentences.",
+      "properties": {
+        "lang": {
+          "type": "string"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "texts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "untranslated": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "match_id",
+        "lang",
+        "texts",
+        "untranslated"
+      ],
+      "title": "PrematchText",
+      "type": "object"
+    },
     "PrematchUsualXi": {
       "additionalProperties": false,
       "properties": {

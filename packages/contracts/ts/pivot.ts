@@ -1575,6 +1575,21 @@ export interface PrematchUsualXi {
   usual_xi_named: boolean;
 }
 /**
+ * `texts`: each English sentence of the pre-match tab that has a translation, and that translation.
+ * A sentence missing here is shown in English. `untranslated` lists those sentences.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PrematchText".
+ */
+export interface PrematchText {
+  lang: string;
+  match_id: string;
+  texts: {
+    [k: string]: string;
+  };
+  untranslated: string[];
+}
+/**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "Recap".
  */
