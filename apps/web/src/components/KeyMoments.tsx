@@ -6,6 +6,7 @@ import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { keyClip } from "../data/clips";
 import { linkedPivot, type KeyKind, type KeyMoment, type Window } from "../data/keyMoments";
+import { scrollBehavior } from "../data/motion";
 import { useMatch, type Side } from "../data/match";
 import { useT, type MessageKey, type T } from "../i18n";
 import ClipPlayer, { KeyMark, usePeople } from "./ClipPlayer";
@@ -65,7 +66,7 @@ function KeyClip({ k }: { k: KeyMoment }) {
     if (!playback) return;
     playback.setPlaying(false);
     playback.seek(k.event.t);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
   };
   const from = Math.max(0, Math.floor(clip.parts[0][0] / 60));
   return (
@@ -79,7 +80,7 @@ function KeyClip({ k }: { k: KeyMoment }) {
           <small className="muted">{t(`keys.clipHow.${k.kind}` as MessageKey, { span })}</small>
           {playback
             ? <button type="button" className="btn ghost" onClick={show}>{t("keys.inMain")}</button>
-            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")} →</a>}
+            : <a href={`/?match=${encodeURIComponent(match.match_id)}&from=${from}`}>{t("keys.replayFrom")}</a>}
         </p>
       </ClipPlayer>
     </div>
@@ -102,7 +103,7 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick,
   const linked = pivots.map((p) => ({ minute: p.minute, trigger_event_ids: p.trigger_event_ids, window: windows(p) }));
   // Picked from the momentum line, the moment may be out of sight.
   useEffect(() => {
-    if (selected) document.getElementById(`km-${selected}`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    if (selected) document.getElementById(`km-${selected}`)?.scrollIntoView?.({ block: "nearest", behavior: scrollBehavior() });
   }, [selected]);
   return (
     <section className="keys" aria-labelledby={heading ? "keys-hd" : undefined} aria-label={heading ? undefined : t("keys.title")}>

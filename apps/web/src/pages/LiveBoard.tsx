@@ -18,18 +18,18 @@ export default function LiveBoard() {
   const [evidence, setEvidence] = useState<ReadonlySet<string>>(new Set());
   // Pivots still being checked get a mark on the line but no card yet; the checker's rejects get neither.
   const moments = pivots.filter((p) => p.status === "confirmed" || p.status === "degraded").sort((a, b) => a.minute - b.minute);
-  const open = moments.find((p) => p.pivot_id === params.get("pivot")) ?? null;
+  // C11: with none in the link the first one is open, so the page lands on an explanation.
+  const asked = params.get("pivot");
+  const open = asked ? moments.find((p) => p.pivot_id === asked) ?? null : moments[0] ?? null;
   const [key, setKey] = useState<string | null>(null);
 
   // Another match or another moment: the evidence picked for the last one no longer applies.
   useEffect(() => setKey(null), [match.match_id]);
   useEffect(() => setEvidence(new Set()), [open?.pivot_id]);
 
-  // Picking the open one again folds it away.
   const pick = (id: string) =>
     setParams((q) => {
-      if (id === open?.pivot_id) q.delete("pivot");
-      else q.set("pivot", id);
+      q.set("pivot", id);
       return q;
     }, { replace: true, preventScrollReset: true });
   const toggle = (id: string) =>

@@ -1,6 +1,6 @@
 // The board's numbered moments (Ax32): one card per pivot, and the one picked opened up with its
 // explanation, the pitch at that moment and the what-if chips. Layout follows docs/design/redesign-mockup.html.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
@@ -151,25 +151,41 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
         {state.phase === "failed" && <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={reset} />}
         {state.phase === "done" && <ScenarioResult state={state} option={option} teams={teams} onReset={() => { reset(); setChosen(null); }} source={source} />}
       </div>
-      <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")} →</Link>
+      <Link to={`/whatif/${pivot.pivot_id}`} className="more-link">{t("moments.lab")}</Link>
     </section>
   );
 }
 
-/** The one moment opened up: why it mattered and where everyone stood. What-if has its own section (Ax59). */
-export function OpenMoment({ pivot, n, evidence, onEvidence }: {
+/** The one moment opened up: why it mattered, where everyone stood, and (C11) what-if for this moment under them. */
+export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, children }: {
   pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void;
+  /** The turning points either side, one at a time on the same line; absent at either end. */
+  onPrev?: () => void; onNext?: () => void; children?: ReactNode;
 }) {
   const { teams } = useMatch();
   const t = useT();
   const { minute } = useClock();
+  const cause = useCause(pivot);
   const picked = [...evidence].at(-1) ?? null;
+  const sentences = pivot.narrative?.sentences ?? [];
+  const claims = sentences.reduce((k, s) => k + s.claims.length, 0);
+  const events = new Set(sentences.flatMap((s) => s.evidence_ids)).size;
   return (
-    <section className="open-mo" aria-label={`${n} · ${minute(pivot.minute)}′`}>
+    <section className={`open-mo to-${pivot.direction}`} aria-labelledby="open-mo-hd">
       <div className="open-hd">
         <span className="badge" aria-hidden="true">{n}</span>
-        <h2>{minute(pivot.minute)}′ · {pivotHeadline(pivot, teams, t)}</h2>
-        <Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")} →</Link>
+        <span className="open-min num">{minute(pivot.minute)}′</span>
+        <h2 id="open-mo-hd">{pivotHeadline(pivot, teams, t)}</h2>
+        <nav className="open-nav" aria-label={t("post.pivots")}>
+          <button type="button" className="btn" onClick={onPrev} disabled={!onPrev} aria-label={t("moments.prevLabel")}>{t("moments.prev")}</button>
+          <button type="button" className="btn" onClick={onNext} disabled={!onNext} aria-label={t("moments.nextLabel")}>{t("moments.next")}</button>
+        </nav>
+        <dl className="open-facts">
+          {cause && <div><dt>{t("open.trigger")}</dt><dd>{cause}</dd></div>}
+          <div className={`to-${pivot.direction}`}><dt>{t("open.swung")}</dt><dd>{teams[pivot.direction].name}</dd></div>
+          {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims, evidence: events })}</dd></div>}
+          <div className="open-more"><Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link></div>
+        </dl>
       </div>
       {pivot.status === "degraded" && (
         <div className="banner warn" role="status">
@@ -180,6 +196,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence }: {
         <WhyItTurned pivot={pivot} selected={evidence} onToggle={onEvidence} chipHint={t("moments.chipHint")} />
         <MomentPitch pivot={pivot} picked={picked} />
       </div>
+      {children && <div className="open-wi">{children}</div>}
     </section>
   );
 }

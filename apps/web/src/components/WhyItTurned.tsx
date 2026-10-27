@@ -82,6 +82,8 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   // shows them. Analysts always see them (Ax59, #276).
   const fan = prefs.audience === "fan";
   const [opened, setOpened] = useState<ReadonlySet<number>>(new Set());
+  // The sentence whose sources were just shown: its first chip takes the focus the button had.
+  const [justOpened, setJustOpened] = useState<number | null>(null);
   if (!pivot || !narrative) {
     return (
       <Card title={t("why.title")} className="why">
@@ -113,11 +115,11 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
             <>
               {" "}
               <button type="button" className="ev-more" aria-expanded={false}
-                onClick={() => setOpened(new Set(opened).add(i))}>
+                onClick={() => (setOpened(new Set(opened).add(i)), setJustOpened(i))}>
                 {t("why.sources", { n: s.evidence_ids.length })}
               </button>
             </>
-          ) : s.evidence_ids.map((id) => {
+          ) : s.evidence_ids.map((id, k) => {
             const e = eventById(id);
             // ★ marks the evidence the followed player took part in.
             const star = !!e && involves(e, focus);
@@ -126,6 +128,7 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
               <Fragment key={id}>
                 {" "}
                 <button type="button" className={`ev${selected.has(id) ? " on" : ""}${star ? " star" : ""}${out ? " out" : ""}`}
+                  ref={k === 0 && justOpened === i ? (el) => el?.focus() : undefined}
                   aria-pressed={selected.has(id)} title={chipHint ?? t("why.chipHint")} onClick={() => onToggle(id)}>
                   {star && "★ "}#{e?.seq ?? id}
                   {out && <span className="ev-out"> · {t("why.outside")}</span>}
