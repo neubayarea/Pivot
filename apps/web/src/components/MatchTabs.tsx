@@ -4,6 +4,7 @@
 // keys, Home and End move to another tab and open it.
 import { useRef, type KeyboardEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useMatch } from "../data/match";
 import { TABS, tabSearch, type MatchTab } from "../data/tab";
 import { useT } from "../i18n";
 
@@ -11,6 +12,8 @@ export default function MatchTabs({ tab }: { tab: MatchTab }) {
   const { search } = useLocation();
   const navigate = useNavigate();
   const t = useT();
+  // C13: the replay is "Live" while the match is being played.
+  const live = ["live", "paused"].includes(useMatch().match.status);
   const list = useRef<HTMLDivElement>(null);
   const move = (e: KeyboardEvent) => {
     const i = TABS.indexOf(tab);
@@ -27,7 +30,7 @@ export default function MatchTabs({ tab }: { tab: MatchTab }) {
         {TABS.map((id) => (
           <Link key={id} id={`tab-${id}`} role="tab" aria-selected={id === tab} aria-controls={id === tab ? `panel-${id}` : undefined}
             tabIndex={id === tab ? 0 : -1} to={{ search: tabSearch(search, id) }} preventScrollReset>
-            {t(`tabs.${id}`)}
+            {t(id === "replay" && live ? "tabs.live" : `tabs.${id}`)}
           </Link>
         ))}
       </div>

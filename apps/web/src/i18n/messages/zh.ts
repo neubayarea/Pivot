@@ -906,6 +906,13 @@ export const zh: Messages = {
 
   // Ax59 · match tabs
   "tabs.label": "比赛分页",
+  "tabs.overview": "概况",
+  "tabs.whatif": "假如",
+  "tabs.replay": "回放",
+  "tabs.stats": "数据",
+  "tabs.lineups": "阵容",
+  "tabs.preview": "赛前",
+  "tabs.previewNone": "这场比赛没有赛前资料。",
   "tabs.pre": "赛前",
   "tabs.live": "赛中",
   "tabs.post": "赛后",
