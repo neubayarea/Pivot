@@ -362,6 +362,44 @@ def test_339_every_template_headline_fits_its_own_side(p74, lang):
                 assert [m for c, m in found if c == "direction_mismatch"] == [], (key, team, direction)
 
 
+@pytest.mark.parametrize("lang,headline", [
+    # On the live site (fan, following Harbour City), and in the demo video script: both credit Harbour City.
+    ("en", "Harbour City fights back with Miquingorini's goal"),
+    ("en", "Miquingorini's goal lifts Harbour City"),
+    ("en", "Harbour City fought back after the goal"),
+    ("en", "Harbour City's fightback after the goal"),
+    ("en", "Harbour City lifted by Miquingorini's goal"),
+    ("zh", "Miquingorini进球后Harbour City振作起来"),
+    ("zh", "Miquingorini的进球提振了Harbour City"),
+    ("es", "Harbour City se rehace con el gol"),
+    ("es", "El gol de Miquingorini levanta a Harbour City"),
+])
+def test_333_fighting_back_and_being_lifted_are_credit_too(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    # Only rule 10 here: "fightback" is also a score word, which the score check judges on its own.
+    wrong = [m for c, m in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away")
+             if c == "direction_mismatch"]
+    assert len(wrong) == 1 and wrong[0].startswith("The headline")
+    assert not [c for c, _ in issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="home")
+                if c == "direction_mismatch"]
+
+
+@pytest.mark.parametrize("lang,headline", [
+    ("en", "Harbour City pull one back through Miquingorini"),
+    ("en", "Harbour City failed to fight back"),
+    ("en", "Miquingorini's goal fails to lift Harbour City"),
+    ("en", "Miquingorini lifts the ball over the keeper"),
+    ("zh", "Harbour City打出反击"),
+    ("zh", "Harbour City没能振作"),
+    ("es", "Harbour City no reacciona"),
+])
+def test_333_goal_words_negations_and_other_lifts_still_pass(p74, lang, headline):
+    first = {"en": "Miquingorini scored at 65'.", "zh": "Miquingorini在65'进球。", "es": "Miquingorini marcó en el 65'."}
+    narrative = card(first[lang], lang=lang, evidence=["m066-s01196"], headline=headline)
+    assert issues(narrative, p74, minute=74, team_names=TEAMS_505, direction="away") == []
+
+
 def test_333_the_explainer_is_told_the_headline_follows_the_momentum():
     text = ex.system_prompt(ViewerPrefs(), TEAMS_505).text
     assert "The headline is about `pivot.towards`" in text

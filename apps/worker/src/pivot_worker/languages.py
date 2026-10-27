@@ -307,17 +307,26 @@ MOMENTUM_GAIN = {
            r"claim\w*|stole|steal\w*|wrest\w*|snatch\w*)\s+(?:back\s+)?(?:the\s+)?(?:\w+\s+)?momentum\b",
            # Without the word momentum (#333): "sparks Harbour City revival", "Harbour City take control".
            # Kept small and next to the name; goal and score words (hit back, comeback) are not here.
-           r"(?P<t>{T})(?:'s?)?\s+" + _GAP_EN + r"(?:revival|resurgence|renaissance|reawakening)\b",
+           r"(?P<t>{T})(?:'s?)?\s+" + _GAP_EN + r"(?:revival|resurgence|renaissance|reawakening|fightback|fight-back)\b",
            r"\b(?:revival|resurgence)\s+(?:of|for|by)\s+(?:the\s+)?(?P<t>{T})",
            r"(?P<t>{T})\s+" + _GAP_EN + r"(?:take|takes|took|taking|seize|seizes|seized|seizing|wrest|wrests|wrested|"
            r"grab|grabs|grabbed|regain|regains|regained)\s+(?:back\s+)?(?:the\s+)?(?:control|command|charge|initiative)\b"
            + _NOT_UNTIL_EN,
            r"(?P<t>{T})\s+(?:are\s+|were\s+|is\s+|was\s+)?(?:back\s+)?(?:in control|in command|on top|take over|"
-           r"takes over|took over|taking over)\b" + _NOT_UNTIL_EN),
+           r"takes over|took over|taking over)\b" + _NOT_UNTIL_EN,
+           # Fighting back and being lifted (#333 follow-up: "Harbour City fights back with Miquingorini's goal",
+           # "Miquingorini's goal lifts Harbour City"). Goal words ("hit back", "pull one back") stay out.
+           r"(?P<t>{T})\s+" + _GAP_EN + r"(?:fight|fights|fought|fighting)\s+back\b" + _NOT_UNTIL_EN,
+           r"(?<!to )(?<!not )(?<!n't )\b(?:lift|lifts|lifted|lifting)\s+(?:the\s+)?(?P<t>{T})(?!['’]s)\b",
+           r"(?P<t>{T})\s+(?:are\s+|were\s+|is\s+|was\s+)?lifted\b",
+           r"(?P<t>{T})\s+" + _GAP_EN + r"(?:lift|lifts|lifted|lifting)\s+(?:their|its)\s+(?:game|level|tempo|intensity)\b"),
     "zh": (r"势头[^。；！？]{0,12}?(?:倒向|转向|偏向|转到|转移到|移向|归于|站在)\s*(?P<t>{T})",
            r"(?P<t>{T})[^。；！？]{0,10}?(?:掌握|占据|夺回|抢回|抢到|赢得|拿到|获得|取得)(?:了)?[^。；！？]{0,4}?势头",
            r"(?P<t>{T})[^。；！？，,]{0,6}?" + _NOT_NEGATED_ZH + r"(?:复苏|复兴|掌控(?:了)?(?:比赛|局面|节奏)|"
-           r"控制(?:了)?(?:比赛|局面)|占据(?:了)?(?:主动|上风)|夺回(?:了)?(?:主动|控制权)|重新掌控)" + _NOT_UNTIL_ZH),
+           r"控制(?:了)?(?:比赛|局面)|占据(?:了)?(?:主动|上风)|夺回(?:了)?(?:主动|控制权)|重新掌控)" + _NOT_UNTIL_ZH,
+           # 反击 is left out: it is also a counter-attack, a way of playing.
+           r"(?P<t>{T})[^。；！？，,]{0,6}?" + _NOT_NEGATED_ZH + r"(?:振作|重振|反扑)",
+           r"(?<!没有)(?<!没)(?<!未)提振(?:了)?\s*(?P<t>{T})"),
     "es": (r"(?:impulso|inercia)[^.;!?]{0,60}?\b(?:a favor de|hacia|pas[óo] a|pasa a|para|del lado de)\s+"
            r"(?:el\s+|los\s+)?(?P<t>{T})",
            r"(?P<t>{T})\s+(?:\w+\s+){0,3}?(?:tom[óoa]\w*|gan[óoa]\w*|recuper[óoa]\w*|se adueñ[óo] de|se hizo con|"
@@ -325,7 +334,9 @@ MOMENTUM_GAIN = {
            r"(?P<t>{T})\s+" + _GAP_ES + r"(?:toma|tomó|toman|tomaron|recupera|recuperó|asume|asumió)\s+el\s+"
            r"(?:control|mando)\b" + _NOT_UNTIL_ES,
            r"(?P<t>{T})\s+(?:se hace|se hizo|se hacen|se hicieron)\s+con\s+el\s+(?:control|mando)\b" + _NOT_UNTIL_ES,
-           r"\b(?:resurgir|resurgimiento)\s+(?:de|del)\s+(?P<t>{T})"),
+           r"\b(?:resurgir|resurgimiento)\s+(?:de|del)\s+(?P<t>{T})",
+           r"(?P<t>{T})\s+" + _GAP_ES + r"(?:se rehace|se rehizo|se rehízo|reacciona|reaccionó)\b",
+           r"(?<!no )\blevant(?:a|ó|an|aron)\s+a\s+(?:los\s+)?(?P<t>{T})"),
 }
 MOMENTUM_LOSE = {
     "en": (r"\bmomentum\b[^.;!?]{0,40}?\baway from\s+(?:the\s+)?(?P<t>{T})",

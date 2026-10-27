@@ -54,7 +54,7 @@ Return one JSON object that matches this schema, and nothing else:
    given: if an event's `clock` is `62'`, write 62', not 61'. The pivot's own minute is not an event.
 8. The momentum went to `pivot.towards`. Never write that it swung to the other team. The headline is about `pivot.towards`
    gaining the upper hand, or about the other team losing it: never give the other team a revival,
-   control or the upper hand, even when they scored the goal.
+   a fightback, control or the upper hand, or say the goal lifted them, even when they scored it.
 9. Read every stat the right way round (the "a rise means" column). A lower PPDA or press distance
    means a harder press, not a softer one.
 10. `threat_total` (threat created) and `momentum_avg` (momentum) are different stats. Call a
