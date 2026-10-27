@@ -70,8 +70,11 @@ async def _match_or_404(request: Request, match_id: str) -> Match:
 @router.get("/matches")
 async def list_matches(request: Request) -> list[Match]:
     """Stored matches: the simulated ones in seed-list order (SPECS), the first being the one the site
-    opens by default (Ax55), then any others, most recent first."""
-    matches = await _adapters(request).matches.list_matches()
+    opens by default (Ax55), then any others, most recent first. The next round's fixtures (C14,
+    not played yet) are on the match centre (`/api/hub`), not here."""
+    nxt = getattr(request.app.state, "next_round", None)
+    hidden = set(nxt["order"]) if nxt else set()
+    matches = [m for m in await _adapters(request).matches.list_matches() if m.match_id not in hidden]
     status = getattr(request.app.state, "sims", None)
     order = {m: n for n, m in enumerate(status.order if status else [])}
     return sorted(matches, key=lambda m: order.get(m.match_id, len(order)))

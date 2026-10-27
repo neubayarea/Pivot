@@ -10,6 +10,12 @@ import { useMatch } from "./match";
 export const TABS = ["overview", "whatif", "replay", "stats", "lineups", "preview"] as const;
 export type MatchTab = (typeof TABS)[number];
 
+/** C14: a match not played yet (the next round) has only these; the others are greyed out. */
+export const BEFORE_KICKOFF: readonly MatchTab[] = ["lineups", "preview"];
+
+export const tabOpen = (tab: MatchTab, status: Match["status"] | undefined) =>
+  status !== "scheduled" || BEFORE_KICKOFF.includes(tab);
+
 /** The Ax59 tabs, for links recorded before C13. */
 const OLD: Record<string, MatchTab> = { pre: "preview", live: "replay", post: "overview" };
 
@@ -22,7 +28,8 @@ export function defaultTab(status: Match["status"] | undefined): MatchTab {
 
 export function tabFrom(search: string, status?: Match["status"]): MatchTab {
   const asked = new URLSearchParams(search).get("tab") ?? "";
-  return TABS.find((t) => t === asked) ?? OLD[asked] ?? defaultTab(status);
+  const tab = TABS.find((t) => t === asked) ?? OLD[asked] ?? defaultTab(status);
+  return tabOpen(tab, status) ? tab : defaultTab(status);
 }
 
 /** The same link with another tab open; the match, replay and viewer settings in it stay. */

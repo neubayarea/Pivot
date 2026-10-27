@@ -39,6 +39,20 @@ export const zh: Messages = {
   "hub.failed.title": "没有可显示的比赛",
   "hub.failed": "比赛没能加载出来。API 在运行吗？",
   "hub.generating": "还有模拟比赛正在生成。",
+  "hub.next.title": "下一轮",
+  "hub.next.note": "第 {n} 轮：每场由模拟器从开球踢 {runs} 次",
+  "hub.next.noPrediction": "还没有预测",
+  "hub.next.open": "{home} 对 {away}：打开赛前",
+  "hub.pred.label": "{home} 胜 {h}%，平 {d}%，{away} 胜 {a}%",
+  "hub.pred.range": "{lo}–{hi}%",
+  "hub.pred.say": "预测",
+  "hub.pred.fav": "{team} 更有希望赢",
+  "hub.pred.close": "难分高下",
+  "hub.pred.score": "最可能的比分",
+  "hub.pred.scoreFan": "最可能的比分",
+  "hub.pred.share": "（{n}%）",
+  "hub.pred.xg": "期望进球",
+  "tabs.notYet": "还没开赛",
 
   // Match pictures (Bx12): components/viz
   "viz.attacks": "进攻方向 →",
@@ -102,6 +116,7 @@ export const zh: Messages = {
   "picker.label": "比赛",
   "picker.seed": "第 {seed} 场",
   "picker.demo": "演示",
+  "picker.next": "下一轮",
   "picker.sample": "手写样例",
   "picker.generating": "正在生成比赛… {ready}/{total}",
 

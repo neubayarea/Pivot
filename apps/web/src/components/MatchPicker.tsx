@@ -35,9 +35,11 @@ export default function MatchPicker() {
   const { match, playback } = useMatch();
   const list = useMatchList(choice !== null);
   if (!choice) return null;
-  // C14: the simulated live match shows its score so far, not the final one.
+  // C14: the simulated live match shows its score so far, not the final one; the next round's
+  // fixtures are on the match centre, not in this list (unless one is open).
+  const listed = list.matches.filter((m) => m.status !== "scheduled" || m.match_id === match.match_id);
   const matches = playback?.goLive
-    ? list.matches.map((m) => (m.match_id === match.match_id ? { ...m, score: match.score, status: match.status } : m))
-    : list.matches;
+    ? listed.map((m) => (m.match_id === match.match_id ? { ...m, score: match.score, status: match.status } : m))
+    : listed;
   return <MatchPickerView {...list} matches={matches} value={match.match_id} onChange={choice.choose} />;
 }

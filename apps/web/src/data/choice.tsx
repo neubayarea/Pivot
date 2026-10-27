@@ -43,6 +43,8 @@ export function initialMatch(search: string, saved: string | null): MatchChoice 
 
 /** "HBC 4–5 ROV (game 101)"; the recorded demo and the hand-made sample say so instead of a seed. */
 export function matchLabel(m: Match, t: T): string {
+  // C14: a fixture of the next round has no score and no seed worth showing yet.
+  if (m.status === "scheduled") return `${m.home.short_name} v ${m.away.short_name} (${t("picker.next")})`;
   const tag = isRecordedDemo(m)
     ? t("picker.demo")
     : m.match_id === DEMO_MATCH_ID

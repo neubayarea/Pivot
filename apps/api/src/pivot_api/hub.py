@@ -8,6 +8,7 @@ GET /api/hub
   it kicks off again. The page replays the stored match up to that second (data/live/replay.tsx);
   nothing is simulated on the server. `PIVOT_LIVE_MATCH` picks the match, else the second listed
   (the first is the one the site has always opened, the demo video's).
+- `next`: the next round's fixtures (nextround.py), each with its prediction when one was worked out.
 - `matches`: every stored match in the /api/matches order, with its matchday, score, how many
   turning points it has and its best-rated player. The live one is in the list, marked.
 
@@ -87,8 +88,16 @@ async def hub(request: Request) -> dict:
     lines = [await _line(request, m) for m in matches]
     live = live_id(matches)
     status = getattr(request.app.state, "sims", None)
+    nxt = getattr(request.app.state, "next_round", None)
+    by_id = {m.match_id: m for i in (nxt["order"] if nxt else [])
+             if (m := await request.app.state.adapters.matches.get_match(i)) is not None}
     out = {"matches": [{**line, "live": line["match_id"] == live} for line in lines], "live": None,
-           "generating": bool(status and status.as_dict()["generating"])}
+           "generating": bool(status and status.as_dict()["generating"]), "next": None}
+    if nxt:
+        out["next"] = {"matchday": nxt["matchday"], "fixtures": [
+            {"match_id": i, "home": _team(by_id[i].home), "away": _team(by_id[i].away),
+             "venue": by_id[i].context.venue, "prediction": nxt["predictions"].get(i)}
+            for i in nxt["order"] if i in by_id]}
     if live is not None:
         match = next(m for m in matches if m.match_id == live)
         events = await request.app.state.adapters.matches.list_events(live)
