@@ -6,7 +6,7 @@ import { useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useClock } from "../data/clock";
 import { useMatch } from "../data/match";
-import { coreStats, teamRating, usePersona, usePlayers, type StatKey } from "../data/persona";
+import { coreStats, roleGroup, teamRating, usePersona, usePlayers, type StatKey } from "../data/persona";
 import { usePrefs } from "../i18n";
 import { describe } from "./EventFeed";
 import LangTag from "./LangTag";
@@ -53,7 +53,7 @@ export default function PlayerSpotlight({ upTo = null, onPivot }: { upTo?: numbe
         <div>
           <p className="spot-k">{t("spot.title")}</p>
           <h2 id="spot-hd">{report.name}</h2>
-          <p className="muted">{teams[side].name}, {report.role}</p>
+          <p className="muted">{teams[side].name}, {fan ? t(`role.${roleGroup(report.role)}`) : report.role}</p>
         </div>
         {s && (
           <div className="spot-rating">

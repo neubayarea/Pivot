@@ -119,11 +119,11 @@ describe("match picker", () => {
 
   it("labels each match with its score and seed, the recorded demo as the demo", () => {
     const t = translator("en");
-    expect(matchLabel(MATCHES[0], t)).toBe("HBC 4–5 ROV · seed 101");
-    expect(matchLabel(MATCHES[3], t)).toBe("HBC 1–0 ROV · demo");
-    expect(matchLabel(MATCHES[2], t)).toBe("HBC 1–2 ROV · sample · Live");
-    expect(matchLabel(MATCHES[0], translator("zh"))).toBe("HBC 4–5 ROV · 种子 101");
-    expect(matchLabel(MATCHES[3], translator("zh"))).toBe("HBC 1–0 ROV · 演示");
+    expect(matchLabel(MATCHES[0], t)).toBe("HBC 4–5 ROV (game 101)");
+    expect(matchLabel(MATCHES[3], t)).toBe("HBC 1–0 ROV (demo)");
+    expect(matchLabel(MATCHES[2], t)).toBe("HBC 1–2 ROV (sample, Live)");
+    expect(matchLabel(MATCHES[0], translator("zh"))).toBe("HBC 4–5 ROV (第 101 场)");
+    expect(matchLabel(MATCHES[3], translator("zh"))).toBe("HBC 1–0 ROV (演示)");
   });
 
   it("lists every match in the API's order and selects the followed one", () => {
@@ -132,7 +132,7 @@ describe("match picker", () => {
     expect([...html.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1])).toEqual([
       "M-seed-101", "M-seed-212", "M-api-demo", "M-seed-41",
     ]);
-    expect(html).toContain('<option value="M-seed-212" selected="">HBC 3–2 ROV · seed 212</option>');
+    expect(html).toContain('<option value="M-seed-212" selected="">HBC 3–2 ROV (game 212)</option>');
     expect(html).not.toContain("Generating");
   });
 

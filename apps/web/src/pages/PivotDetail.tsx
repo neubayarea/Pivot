@@ -160,7 +160,7 @@ export default function PivotDetail() {
           <p className="pitch-cap">
             {picked ? (
               <>
-                <b>#{picked.seq} · {picked.clock_label}</b> {describe(picked, playerName, tr)}
+                <b>#{picked.seq}, {(picked.clock_label ?? "").replace(/'/g, "′")}</b> {describe(picked, playerName, tr)}
                 {!picked.location && <span className="muted">{tr("detail.noDraw")}</span>}
                 {outside.has(picked.event_id) && <span className="muted">{tr("detail.outside")}</span>}
               </>
@@ -185,11 +185,11 @@ export default function PivotDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.beforeAfter.map((r) => (
-                    <tr key={r.label}>
+                  {detail.beforeAfter.map((r, i) => (
+                    <tr key={`${r.label}-${i}`}>
                       <td>{r.label}</td>
-                      {[r.before, r.after].map((c, i) => (
-                        <td key={i} className="big">
+                      {[r.before, r.after].map((c, j) => (
+                        <td key={j} className="big">
                           <Sourced claim={c}>{formatValue(c)}</Sourced>
                         </td>
                       ))}

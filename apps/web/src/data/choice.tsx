@@ -41,15 +41,15 @@ export function initialMatch(search: string, saved: string | null): MatchChoice 
   return asked ? { id: asked, fromUrl: true } : { id: saved, fromUrl: false };
 }
 
-/** "HBC 4–5 ROV · seed 101"; the recorded demo and the hand-made sample say so instead of a seed. */
+/** "HBC 4–5 ROV (game 101)"; the recorded demo and the hand-made sample say so instead of a seed. */
 export function matchLabel(m: Match, t: T): string {
   const tag = isRecordedDemo(m)
     ? t("picker.demo")
     : m.match_id === DEMO_MATCH_ID
       ? t("picker.sample")
       : t("picker.seed", { seed: m.seed });
-  const status = m.status === "finished" ? "" : ` · ${t(`status.${m.status}`)}`;
-  return `${m.home.short_name} ${m.score.home}–${m.score.away} ${m.away.short_name} · ${tag}${status}`;
+  const status = m.status === "finished" ? "" : `, ${t(`status.${m.status}`)}`;
+  return `${m.home.short_name} ${m.score.home}–${m.score.away} ${m.away.short_name} (${tag}${status})`;
 }
 
 /** `missing`: the match the link asked for, when it was gone and the default is shown instead. */

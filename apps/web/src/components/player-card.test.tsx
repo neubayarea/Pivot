@@ -60,10 +60,10 @@ describe("the followed player's card", () => {
     withWindow("?player=hcy-11");
     const html = render(<PlayerCardView report={REPORT} upTo={2400} numbered={["pv-38"]} onPivot={() => {}} />);
     expect(html).toContain("Following A. Moreau");
-    expect(html).toContain("#11 · HCY · ST");
+    expect(html).toContain("#11, HCY, ST");
     expect(html).toContain("xG</dt><dd>0.41");
     expect(html).toContain("18 · 83%");
-    expect(html).toContain("1 · 38′ · set it off");
+    expect(html).toContain("1: 38′, set it off");
   });
 
   it("gives a fan plain words and no xG or rating", () => {

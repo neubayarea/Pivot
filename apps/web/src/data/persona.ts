@@ -97,6 +97,15 @@ export function teamRating(players: readonly PlayerReport[], side: Side): number
 
 export type StatKey = keyof NonNullable<PlayerReport["stats"]>;
 
+/** The line a position code belongs to, for words a fan reads: "AM" is a midfielder (C13 QA). */
+export function roleGroup(role: string): "gk" | "def" | "mid" | "fwd" {
+  const r = role.toUpperCase();
+  if (r === "GK") return "gk";
+  if (/^(CB|LB|RB|LWB|RWB|SW)$/.test(r)) return "def";
+  if (/^(DM|CDM|CM|LM|RM|AM|CAM)$/.test(r)) return "mid";
+  return "fwd";
+}
+
 /** The six numbers that say most about a player in his position. */
 export function coreStats(role: string): StatKey[] {
   const r = role.toUpperCase();
