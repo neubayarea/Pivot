@@ -225,6 +225,12 @@ svg text { font-family: var(--pv-label); }
 .feed { display: grid; font-family: var(--pv-label); font-size: 13px; }
 .feed div { display: grid; grid-template-columns: 48px 40px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--pv-hair); animation: pv-in .4s ease-out; }
 .feed div.key { font-weight: 700; }
+.feed-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.feed-kinds .chip { padding: 3px 10px; font-size: 13px; }
+.feed-kinds .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+.feed-note { font-size: 13px; margin: 0 0 8px; }
+/* The filter row sits between the card's title and the scrolling feed. */
+.more-events:has(> .feed-kinds, > .feed-note) { grid-template-rows: auto auto minmax(0, 1fr); }
 .feed div.on { background: var(--pv-gold-soft); }
 .feed .t { font-weight: 700; font-variant-numeric: tabular-nums; }
 .feed .h { color: var(--pv-home); font-weight: 700; }

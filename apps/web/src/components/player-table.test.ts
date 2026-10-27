@@ -1,10 +1,11 @@
-// C16 (#366): the analyst's player table keeps one side's players who played, sorted by a column,
+// C16 (#366): the analyst's player table and the event feed's filter. The table keeps one side's players who played, sorted by a column,
 // and every column has a short name and a definition in all three languages.
 import { describe, expect, it } from "vitest";
-import type { PlayerMatchStats, PlayerReport } from "@pivot/contracts";
+import type { MatchEvent, PlayerMatchStats, PlayerReport } from "@pivot/contracts";
 import { en } from "../i18n/messages/en";
 import { es } from "../i18n/messages/es";
 import { zh } from "../i18n/messages/zh";
+import { bigMoment, feedKind } from "./EventFeed";
 import { PLAYER_COLS, playerRows } from "./PlayerTable";
 
 const row = (id: string, team: "home" | "away", shirt: number, s: Partial<PlayerMatchStats>) =>
@@ -32,5 +33,25 @@ describe("metric definitions", () => {
         expect(m[`metric.${c}.def`]).toBeTruthy();
       }
     }
+  });
+});
+
+describe("event feed filter (C16)", () => {
+  const ev = (e: Partial<MatchEvent>) => ({ event_id: "e1", type: "pass", pass_type: "regular", play_pattern: "open_play", shot_outcome: null, foul: null, ...e } as MatchEvent);
+  const none = new Set<string>();
+  it("sorts events into the analyst's kinds", () => {
+    expect(feedKind(ev({ type: "shot" }), "shots", none)).toBe(true);
+    expect(feedKind(ev({ pass_type: "corner" }), "setpieces", none)).toBe(true);
+    expect(feedKind(ev({ type: "shot", play_pattern: "penalty" }), "setpieces", none)).toBe(true);
+    expect(feedKind(ev({ type: "shot" }), "setpieces", none)).toBe(false);
+    expect(feedKind(ev({ type: "card" }), "fouls", none)).toBe(true);
+    expect(feedKind(ev({ type: "substitution" }), "subs", none)).toBe(true);
+    expect(feedKind(ev({}), "pivots", new Set(["e1"]))).toBe(true);
+  });
+  it("shows a fan only the big moments", () => {
+    expect(bigMoment(ev({ type: "shot", shot_outcome: "goal" }), none)).toBe(true);
+    expect(bigMoment(ev({ type: "shot", shot_outcome: "saved" }), none)).toBe(false);
+    expect(bigMoment(ev({}), none)).toBe(false);
+    expect(bigMoment(ev({}), new Set(["e1"]))).toBe(true);
   });
 });
