@@ -14,14 +14,28 @@ import ClipPlayer from "./ClipPlayer";
 import { keyWhat } from "./KeyMoments";
 import { pivotHeadline } from "./PivotList";
 
-type Item = { id: string; t: number; side: Side; pivot?: Pivot; n?: number; key?: KeyMoment };
+type Item = { id: string; t: number; side: Side; pivot?: Pivot; n?: number; key?: KeyMoment; also?: KeyMoment[] };
 
-/** Up to `max` items: every turning point first, then goals (decisive ones first) and red cards, in time order. */
+/**
+ * Up to `max` items: every turning point first, then goals (decisive ones first) and red cards, in time order.
+ * A goal or red card that set a turning point off, or came within a minute of it, is a line on that
+ * turning point's card (`also`), not a card of its own (C13 QA: 35′ was told twice).
+ */
 export function storyItems(pivots: readonly Pivot[], keys: readonly KeyMoment[], max = 4): Item[] {
   const moments = pivots.filter((p) => p.status === "confirmed" || p.status === "degraded").sort((a, b) => a.minute - b.minute);
-  const items: Item[] = moments.map((p, i) => ({ id: p.pivot_id, t: p.minute * 60, side: p.direction, pivot: p, n: i + 1 }));
   const weight = (k: KeyMoment) => (k.kind === "goal" ? (k.situation && k.situation !== "opener" ? 3 : 2) : k.kind === "red" ? 1 : 0);
-  const extra = keys.filter((k) => weight(k) > 0).sort((a, b) => weight(b) - weight(a) || a.event.t - b.event.t);
+  const big = keys.filter((k) => weight(k) > 0).sort((a, b) => a.event.t - b.event.t);
+  const host = (k: KeyMoment) => moments.find((p) => p.trigger_event_ids.includes(k.event.event_id))
+    ?? moments.find((p) => Math.abs(k.event.t / 60 - p.minute) <= 1);
+  const also = new Map<string, KeyMoment[]>();
+  const loose: KeyMoment[] = [];
+  for (const k of big) {
+    const p = host(k);
+    if (p) also.set(p.pivot_id, [...(also.get(p.pivot_id) ?? []), k]);
+    else loose.push(k);
+  }
+  const items: Item[] = moments.map((p, i) => ({ id: p.pivot_id, t: p.minute * 60, side: p.direction, pivot: p, n: i + 1, also: also.get(p.pivot_id) }));
+  const extra = loose.sort((a, b) => weight(b) - weight(a) || a.event.t - b.event.t);
   for (const k of extra) {
     if (items.length >= max) break;
     items.push({ id: k.event.event_id, t: k.event.t, side: k.side, key: k });
@@ -53,10 +67,16 @@ export default function MatchStory() {
   const { side } = usePersona();
   const [open, setOpen] = useState<string | null>(null);
   const items = useMemo(() => storyItems(pivots, keyMoments(events, match.status === "finished")), [pivots, events, match.status]);
-  const opened = items.find((i) => i.id === open && i.key);
-  const clip = useMemo(() => (opened?.key ? keyClip(opened.key, events) : null), [opened, events]);
+  const opened = items.flatMap((i) => (i.key ? [i.key] : i.also ?? [])).find((k) => k.event.event_id === open);
+  const clip = useMemo(() => (opened ? keyClip(opened, events) : null), [opened, events]);
   if (!items.length) return <p className="muted">{t("story.empty")}</p>;
   const leanOf = (s: Side): Lean => lean({ direction: s }, side);
+  const what = (k: KeyMoment) => keyWhat(k, t, playerName, (s) => teams[s].short_name);
+  const watch = (id: string) => (
+    <button type="button" className="btn story-watch" aria-expanded={open === id} onClick={() => setOpen(open === id ? null : id)}>
+      {t(open === id ? "story.close" : "story.watch")}
+    </button>
+  );
 
   return (
     <div className="story">
@@ -65,7 +85,7 @@ export default function MatchStory() {
           const l = leanOf(it.side);
           const label = it.pivot
             ? pivotHeadline(it.pivot, teams, t)
-            : keyWhat(it.key!, t, playerName, (s) => teams[s].short_name);
+            : what(it.key!);
           const at = it.pivot ? `${minute(it.pivot.minute)}′` : it.key!.event.clock_label.replace(/'/g, "′");
           return (
             <li key={it.id} className={`story-card${it.pivot ? " pivot" : ""}${l ? ` ${l}` : ""}`} style={{ "--tc": `var(--pv-${it.side})` } as CSSProperties}>
@@ -78,11 +98,15 @@ export default function MatchStory() {
                 <>
                   <Swing metrics={metrics} minute={it.pivot.minute} />
                   <p className="muted story-sub">{t("story.turn", { team: teams[it.side].name })}</p>
+                  {it.also?.map((k) => (
+                    <div key={k.event.event_id} className="story-also">
+                      <p><span className="num">{k.event.clock_label.replace(/'/g, "′")}</span> {what(k)}</p>
+                      {watch(k.event.event_id)}
+                    </div>
+                  ))}
                 </>
               ) : (
-                <button type="button" className="btn story-watch" aria-expanded={open === it.id} onClick={() => setOpen(open === it.id ? null : it.id)}>
-                  {t(open === it.id ? "story.close" : "story.watch")}
-                </button>
+                watch(it.id)
               )}
               {l && <span className={`story-lean ${l}`}>{t(l === "for" ? "you.for" : "you.against")}</span>}
             </li>
@@ -91,7 +115,7 @@ export default function MatchStory() {
       </ol>
       {opened && clip && (
         <div className="story-clip">
-          <ClipPlayer clip={clip} label={keyWhat(opened.key!, t, playerName, (s) => teams[s].short_name)} intro={t("keys.clipIntro")} />
+          <ClipPlayer clip={clip} label={what(opened)} intro={t("keys.clipIntro")} />
         </div>
       )}
     </div>
