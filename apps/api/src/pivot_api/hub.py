@@ -33,7 +33,6 @@ from pivot_core.domain import Match
 from pivot_core.sim.world import BY_ID, SEASON
 
 from . import nextround, sims
-
 from .players import _cache, _stored_lines
 from .prematch import matchday_of
 from .routes import list_matches

@@ -66,3 +66,17 @@ def test_the_league_history_lists_every_played_round_with_scores(client):
     assert history[0]["date"] < "2026-10-21"
     assert all(g["match_id"] is None for r in history for g in r["results"])   # no fixture replays stored yet
     assert sum(g["reds"]["home"] + g["reds"]["away"] for r in history for g in r["results"]) > 0
+
+
+def test_a_season_fixture_spec_builds_the_match_the_season_file_was_played_from(monkeypatch):
+    from pivot_api import sims
+    from pivot_core.sim.world import fixture_match, schedule
+
+    spec = sims.FixtureSpec.from_id("S2026-14-ELM-SAL")
+    fx = next(f for f in schedule() if f.matchday == 14 and f.home == "club-elm")
+    assert (spec.seed, spec.match_id) == (fx.seed, fixture_match(fx).match_id)
+    assert spec.build() == fixture_match(fx) == spec.replay().build()
+    monkeypatch.setenv("PIVOT_SIM_FIXTURES", "S2026-14-ELM-SAL, S2099-01-AAA-BBB")
+    assert [s.match_id for s in sims.fixture_specs_from_env()] == ["S2026-14-ELM-SAL"]
+    monkeypatch.delenv("PIVOT_SIM_FIXTURES")
+    assert sims.fixture_specs_from_env() == []

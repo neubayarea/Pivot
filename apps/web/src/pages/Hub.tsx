@@ -306,7 +306,7 @@ function PastRow({ g, fav, label }: { g: HubPast; fav: string | null; label?: st
       <span className="hub-score num">{score}</span>
       <TeamName team={g.away} fav={fav} />
       <span className="hub-meta">{reds > 0 && t("hub.hist.reds", { n: reds })}</span>
-      <span className="hub-meta">{g.match_id ? t("hub.hist.full") : t("hub.hist.scoreOnly")}</span>
+      <span className="hub-meta">{g.match_id && t("hub.hist.full")}</span>
     </>
   );
   return (

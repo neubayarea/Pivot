@@ -222,9 +222,9 @@ FIXTURE_ID = re.compile(r"S(\d{4})-(\d{2})-[A-Z]+-[A-Z]+")   # world.fixture_mat
 def matchday_of(match: Match) -> int | None:
     """The matchday the match is played as: 30 for the recorded demo (the season's matchday-30 fixture,
     on the demo's seed), and for a seed match the one `with_seed_season` draws (the same draw from the
-    same generator); a season fixture not played yet (the next round, C14) by its id
+    same generator); a season fixture (the next round, C14, or one played in full, #364) by its id
     (`S2026-31-LUN-HBC`); None for any other match between other clubs."""
-    if match.status == "scheduled" and (m := FIXTURE_ID.fullmatch(match.match_id)) and int(m[1]) == SEASON:
+    if (m := FIXTURE_ID.fullmatch(match.match_id)) and int(m[1]) == SEASON:
         return int(m[2])
     if (match.home.club_id, match.away.club_id) != (HBC.club_id, ROV.club_id):
         return None

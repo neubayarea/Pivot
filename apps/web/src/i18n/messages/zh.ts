@@ -53,7 +53,6 @@ export const zh: Messages = {
   "hub.hist.note": "第 {from}–{to} 轮的全部联赛比赛，共 {n} 场，来自赛季文件",
   "hub.hist.reds": "红牌：{n}",
   "hub.hist.full": "完整比赛",
-  "hub.hist.scoreOnly": "仅比分",
   "hub.next.title": "下一轮",
   "hub.next.note": "第 {n} 轮：每场由模拟器从开球踢 {runs} 次",
   "hub.next.noPrediction": "还没有预测",

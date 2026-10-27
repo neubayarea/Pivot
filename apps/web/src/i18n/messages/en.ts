@@ -52,7 +52,6 @@ export const en = {
   "hub.hist.note": "Every league game of matchdays {from}–{to}, {n} in all, from the season file",
   "hub.hist.reds": "Red cards: {n}",
   "hub.hist.full": "Full match",
-  "hub.hist.scoreOnly": "Score only",
   "hub.next.title": "Next round",
   "hub.next.note": "Matchday {n}: each game played {runs} times from kick-off by the simulator",
   "hub.next.noPrediction": "No prediction yet",
