@@ -335,6 +335,10 @@ export const en = {
   "alarm.note": "From the momentum per minute (home above zero), the way the alarm reads it.",
   "whatif.forYou": "{team}’s chance of winning: {was}% as played, {now}% with the change.",
 
+  "follow.follow": "Follow",
+  "follow.following": "Following",
+  "follow.label": "Follow {name}",
+  "follow.stopLabel": "Stop following {name}",
   "player.title": "★ Following {player}",
   "player.titleLoading": "★ Player you follow",
   "player.loading": "Loading their numbers…",

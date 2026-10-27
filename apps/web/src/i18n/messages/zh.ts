@@ -335,6 +335,10 @@ export const zh: Messages = {
   "alarm.note": "按每分钟的势头算（主队在零以上），和报警器的算法一样。",
   "whatif.forYou": "{team} 赢球的机会：原来 {was}%，改动后 {now}%。",
 
+  "follow.follow": "关注",
+  "follow.following": "已关注",
+  "follow.label": "关注 {name}",
+  "follow.stopLabel": "取消关注 {name}",
   "player.title": "★ 关注：{player}",
   "player.titleLoading": "★ 关注的球员",
   "player.loading": "正在读取数据…",

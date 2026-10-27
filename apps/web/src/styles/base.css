@@ -813,3 +813,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .open-facts dt { font-size: 13px; font-weight: 500; color: var(--pv-ink-2); }
 .open-facts dd { margin: 0; font-size: 15px; font-weight: 600; }
 .wi-you { font-weight: 700; font-size: 17px; padding-left: 12px; box-shadow: inset 4px 0 var(--tc); }
+
+/* ☆ Follow / ★ Following (C13 #316): a small pill wherever a player appears; following is ink, not yellow. */
+.follow { display: inline-flex; align-items: center; gap: 6px; justify-self: start; font-weight: 600; font-size: var(--pv-fs-sm); padding: 3px 12px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; }
+.follow:hover { border-color: var(--pv-ink-2); }
+.follow.on { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
