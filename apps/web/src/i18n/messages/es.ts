@@ -663,7 +663,7 @@ export const es: Messages = {
   "pre.kind.charity": "Solidaridad",
   "pre.kind.milestone": "Hito",
   "pre.kind.new_contract": "Nuevo contrato",
-  "pre.factorsNote": "lo que el simulador aplica al inicio",
+  "pre.factorsNote": "lo que podría influir en los jugadores (solo como contexto; no se aplica en el partido)",
   "pre.target.composure": "Temple",
   "pre.target.motivation": "Motivación",
   "pre.target.concentration": "Concentración",
@@ -796,7 +796,7 @@ export const es: Messages = {
   "pre.h2hWins": "Victorias {team}",
   "pre.h2hDraws": "Empates",
   "pre.stories": "Historias",
-  "pre.storiesNote": "Lo que se dice antes del partido, los reencuentros con antiguos clubes y compañeros, y lo que el simulador tiene en cuenta.",
+  "pre.storiesNote": "Lo que se dice antes del partido, lo que podría influir en los jugadores y los reencuentros con antiguos clubes y compañeros.",
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "Fuentes ({n})",

@@ -58,7 +58,7 @@ export function PreMatchTop() {
   );
 }
 
-/** The news first and widest with what the simulator applies at kick-off beside it, then the reunions; nothing without any. */
+/** The news first and widest with what could tip the players beside it, then the reunions; nothing without any. */
 export function PreMatchStories() {
   const pre = usePre();
   if (!pre) return null;
@@ -103,7 +103,7 @@ function Occasion({ context: c, t }: { context: MatchContext; t: T }) {
     <div className="pre-occasion">
       {(stakes || c.derby) && (
         <p className="pre-tags">
-          {stakes && <span className="stamp live">{t(`pre.stakes.${stakes}`)}</span>}
+          {stakes && <span className="stamp line">{t(`pre.stakes.${stakes}`)}</span>}
           {c.derby && <span className="stamp line">{t("pre.derby")}</span>}
         </p>
       )}

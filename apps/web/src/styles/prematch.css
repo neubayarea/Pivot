@@ -1,13 +1,15 @@
 /* Ax60: the pre-match cards and the coach's plan. Home reads in --pv-home, away in --pv-away, as on the stats.
- * C11 (Ax63): a match preview. The tale of the tape is the biggest thing on the tab; each team block
- * opens on a rule in its kit colour, and every team or person name carries a small kit swatch. */
+ * C11 (Ax63), after docs/design/c11-design-plan.md: a match preview. The tale of the tape is the
+ * biggest thing on the tab; each team block opens on a rule in its kit colour and every team or
+ * person name carries a kit dot. No yellow (nothing here is AI-checked), no red (not live, not an
+ * error): results and tones read from ink, grey and the words themselves. Nothing floats. */
 :is(.pre-kit, .pre-team, .pre-tally li, .pre-split i, .plan-head, .plan-val, .lu-team, .lu-list).home { --tc: var(--pv-home); }
 :is(.pre-kit, .pre-team, .pre-tally li, .pre-split i, .plan-head, .plan-val, .lu-team, .lu-list).away { --tc: var(--pv-away); }
-.pre-kit { display: inline-block; flex: none; width: 10px; height: 10px; margin-right: 8px; border-radius: 3px; background: var(--tc); vertical-align: 0; }
+.pre-kit { display: inline-block; flex: none; width: 10px; height: 10px; margin-right: 8px; border-radius: var(--pv-r-pill); background: var(--tc); vertical-align: 0; }
 .pre-top, .pre-stories .card, .plan { overflow-wrap: anywhere; }
 
 /* The tale of the tape: the match facts on a strip, then table and form facing the head-to-head. */
-.card.pre-top { padding: 0; gap: 0; box-shadow: var(--pv-lift); overflow: hidden; }
+.card.pre-top { padding: 0; gap: 0; overflow: hidden; }
 .pre-occasion { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; padding: 14px 24px; background: var(--pv-sunk); border-bottom: 1px solid var(--pv-hair); }
 .pre-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .pre-facts { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0; }
@@ -32,10 +34,10 @@
 .pre-place b { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: .95; }
 .pre-place small { font-size: var(--pv-fs-md); font-weight: 600; color: var(--pv-ink-2); }
 .pre-wdl { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
-.pre-wdl li { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
+.pre-wdl li { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--pv-r-ctl); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
 .pre-wdl .r-W { background: var(--pv-ink); color: var(--pv-sheet); }
 .pre-wdl .r-D { background: var(--pv-draw); color: var(--pv-ink); }
-.pre-wdl .r-L { background: var(--pv-red); color: var(--pv-on-red); }
+.pre-wdl .r-L { background: var(--pv-sheet); color: var(--pv-ink-2); box-shadow: inset 0 0 0 1px var(--pv-hair); }
 .pre-wdl li:last-child { outline: 2px solid var(--pv-ink); outline-offset: 2px; }
 .pre-goals { font-size: var(--pv-fs-sm); }
 .pre-hint { font-size: var(--pv-fs-xs); }
@@ -51,7 +53,7 @@
 .pre-meetings { list-style: none; margin: 0; padding: 0; display: grid; font-variant-numeric: tabular-nums; }
 .pre-meetings li { display: grid; grid-template-columns: 3.5em minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--pv-hair); font-size: var(--pv-fs-sm); font-weight: 500; color: var(--pv-ink-2); }
 .pre-meetings li > :nth-child(2) { text-align: right; }
-.pre-meetings b { min-width: 3.4em; text-align: center; padding: 1px 8px; border-radius: 6px; background: var(--pv-sunk); color: var(--pv-ink); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
+.pre-meetings b { min-width: 3.4em; text-align: center; padding: 1px 8px; border-radius: var(--pv-r-ctl); background: var(--pv-sunk); color: var(--pv-ink); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
 .pre-meetings .won { color: var(--pv-ink); font-weight: 800; }
 
 /* The storylines: the news widest with the context effects beside it, then the ties across the width. */
@@ -74,8 +76,8 @@
 .pre-who { display: inline-flex; align-items: center; font-weight: 700; }
 .pre-meta .pre-who { font-size: var(--pv-fs-sm); }
 .pre-kind, .pre-tone, .pre-chip { display: inline-block; padding: 1px 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); font-size: var(--pv-fs-xs); font-weight: 600; line-height: 1.6; white-space: nowrap; }
-.pre-tone.negative, .pre-chip.down { background: var(--pv-bad-bg); color: var(--pv-bad-fg); }
-.pre-tone.positive { background: transparent; box-shadow: inset 0 0 0 1px var(--pv-hair); }
+.pre-tone, .pre-chip.down { background: transparent; box-shadow: inset 0 0 0 1px var(--pv-hair); }
+.pre-tone.negative { color: var(--pv-ink-2); }
 .pre-when { margin-left: auto; }
 
 .pre-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); }
@@ -84,7 +86,6 @@
 .pre-list li:last-child { padding-bottom: 0; }
 .pre-chip { justify-self: start; }
 .pre-chip small { color: var(--pv-ink-2); font-size: inherit; }
-.pre-chip.down small { color: inherit; }
 .pre-list .pre-who { display: flex; }
 .pre-note { display: block; margin-top: 2px; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
 .pre-pair { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
@@ -114,7 +115,7 @@
 .plan-val.away .plan-meter:not(.lanes) { flex-direction: row-reverse; }
 .plan-meter i { width: 28px; height: 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); box-shadow: inset 0 0 0 1px var(--pv-hair); }
 .plan-meter i.on { background: var(--tc); box-shadow: none; }
-.plan-meter.lanes i { width: 10px; height: 18px; border-radius: 3px; }
+.plan-meter.lanes i { width: 10px; height: 18px; border-radius: var(--pv-r-pill); }
 .plan-col { display: grid; gap: 4px; align-content: start; min-width: 0; }
 .plan-cols h4 { font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); margin: 8px 0 0; }
 .plan-cols .plan-col-team { display: inline-flex; align-items: center; margin: 0 0 2px; font-size: var(--pv-fs-sm); font-weight: 700; color: var(--pv-ink); }

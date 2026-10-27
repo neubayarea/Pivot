@@ -662,7 +662,7 @@ export const en = {
   "pre.kind.charity": "Charity",
   "pre.kind.milestone": "Milestone",
   "pre.kind.new_contract": "New contract",
-  "pre.factorsNote": "what the simulator applies at kick-off",
+  "pre.factorsNote": "what could tip the players (shown for context; not applied in play)",
   "pre.target.composure": "Composure",
   "pre.target.motivation": "Motivation",
   "pre.target.concentration": "Focus",
@@ -795,7 +795,7 @@ export const en = {
   "pre.h2hWins": "{team} wins",
   "pre.h2hDraws": "Draws",
   "pre.stories": "Storylines",
-  "pre.storiesNote": "The talk before kick-off, the old clubs and teammates meeting again, and what the simulator weighs in.",
+  "pre.storiesNote": "The talk before kick-off, what could tip the players, and old clubs and teammates meeting again.",
 
   // Ax59 · fan mode hides the evidence numbers
   "why.sources": "Sources ({n})",
