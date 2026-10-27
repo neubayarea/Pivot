@@ -235,6 +235,7 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | --- | --- |
 | `PIVOT_DOMAIN` | 公网域名，Caddy 用它申请证书，网页的 WebSocket 地址也由它拼出来 |
 | `PIVOT_DEMO` | `1` 启动时放入演示比赛，`0` 空着启动 |
+| `PIVOT_SAMPLE_MATCH` | 默认 `0`；`1` 时再放入手写的样例比赛 `M-api-demo`（只给测试和本机调试用，线上不要开） |
 | `PIVOT_WORKER` / `PIVOT_SIMULATOR` | `1` 在同一个进程里运行 AI 小组 / 模拟器，`0` 关掉（模拟器的实时入口还没做，做好后自动启用） |
 | `PIVOT_PIPELINE` | `fake` 用固定解释，`detect` 用真正的判定、写稿、核对流程（D06） |
 | `PIVOT_FOUNDRY_ENDPOINT`、`PIVOT_FOUNDRY_API_VERSION`、`PIVOT_MODEL_STANDARD`、`PIVOT_MODEL_MINI` | Foundry 模型的地址和部署名，D 线提供 |

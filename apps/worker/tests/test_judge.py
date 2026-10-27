@@ -3,6 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from pivot_core.analytics import DetectorParams
 from pivot_core.domain import MinuteMetric, PivotCandidate
 from pivot_worker import judge
 from pivot_worker.testing import event
@@ -105,3 +106,18 @@ def test_fallback_severity_follows_the_swing(swing, severity):
 def test_make_pivot():
     p = judge.make_pivot(candidate(), judge.fallback_verdict(candidate()), chain_id="c1", status="degraded")
     assert p.pivot_id == "M-test:p63" and p.status == "degraded" and p.narrative is None
+
+
+@pytest.mark.parametrize("request_, verdict", judge.EXAMPLES)
+def test_examples_read_like_the_opta_style_momentum(request_, verdict):
+    """MET-024 / B06: the few-shot numbers are on the scale the Judge now sees, not the old tanh one."""
+    alarm, p = request_["alarm"], DetectorParams()
+    values = [m["momentum"] for m in request_["momentum_by_minute"]]
+    assert len(values) == 17 and max(abs(v) for v in values) <= 0.7      # 8 minutes either side; no tanh plateau
+    assert p.min_swing <= abs(alarm["swing"]) <= 0.6                    # what the detector can raise
+    assert (alarm["swing"] > 0) == (alarm["towards"] == request_["teams"]["home"])
+    assert p.h <= alarm["cusum"] <= 2.5
+    avg = request_["match_state"]["momentum_avg_10_min"]
+    assert max(abs(avg["before"]), abs(avg["after"])) <= 0.4
+    swing = sum(values[8:13]) / 5 - sum(values[3:8]) / 5                 # the detector's 5 after minus 5 before
+    assert abs(swing - alarm["swing"]) < 0.01

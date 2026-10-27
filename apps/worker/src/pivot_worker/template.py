@@ -23,8 +23,26 @@ from .vocabulary import STAT_TERMS, UNIT_SUFFIX
 
 # Stats the template tries, in order of preference when changes are equal.
 CANDIDATE_METRICS = ("threat_total", "passes_final_third", "box_entries", "shots", "pressures", "xg")
-# Fan wording that reads as a noun after "Rovers'"; xG is left out because its unit is jargon.
-FAN_METRICS = ("threat_total", "passes_final_third", "shots")
+# Fan versions only count things a fan can picture: no index (threat) and no xG, whose numbers mean
+# nothing without the model behind them. Each reads as a noun after "Rovers'" (possession has its own
+# sentence), and the sentence writes one number, the newer value.
+FAN_METRICS = ("shots", "shots_on_target", "box_entries", "passes_final_third", "possession_pct")
+# English fan nouns where StatTerm.fan_label is a clause ("times they got into the box").
+FAN_NOUNS_EN = {"box_entries": "trips into the box"}
+# How a relationship reads in a sentence; either person may come first, so none of these has a direction.
+RELATIONS_EN = {
+    "former_teammate": "{a} and {b} used to be teammates.",
+    "national_teammate": "{a} and {b} play together for their country.",
+    "former_coach": "{a} and {b} have worked together before, as coach and player.",
+    "former_player": "{a} and {b} have worked together before, as coach and player.",
+    "mentor": "{a} and {b} go back a long way, as mentor and pupil.",
+    "friend": "{a} and {b} are friends off the pitch.",
+    "rival": "{a} and {b} are old rivals.",
+    "feud": "{a} and {b} do not get on.",
+}
+# Kinds the template turns into a sentence, best story first. Effects ("pressure rating 58") are left
+# out: they are notes for the simulator and repeat what these say.
+CONTEXT_KINDS = ("former_club", "relationship", "news")
 COMPARE_MINUTES = 5
 _DECIMALS = {"count": 0, "pct": 0, "xg": 2, "index": 2, "m": 0, "km": 1, "ratio": 1}
 
@@ -47,7 +65,7 @@ def _label(metric: str, lang: str, fan: bool) -> str:
     if lang in LABELS:
         return (FAN_LABELS if fan else LABELS)[lang][metric]
     term = STAT_TERMS[metric]
-    return term.fan_label if fan else term.label
+    return FAN_NOUNS_EN.get(metric, term.fan_label) if fan else term.label
 
 
 def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, evidence: list[str],
@@ -77,7 +95,8 @@ def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, e
     verb = "rose" if b > a else "fell"
     if f"{verb}_pl" in phrases and label.startswith(("los ", "las ")):     # plural subject, plural verb
         verb += "_pl"
-    text = phrases["stat_fan" if fan else "stat"].format(
+    key = "stat_fan" if fan else "stat"
+    text = phrases.get(f"{key}_{metric}", phrases[key]).format(
         team=team, owner=possessive(team), label=label, verb=phrases[verb],
         a=format_value(a, unit), b=format_value(b, unit))
     if lang == "es":
@@ -95,13 +114,29 @@ def _evidence(c: PivotCandidate, events: Mapping[str, MatchEvent]) -> list[Match
     return nearby[:1]
 
 
+def context_text(item: ContextItem, people: set[str]) -> str | None:
+    """A context item as a whole English sentence (#219), the person in the event first; None if it has none."""
+    if item.kind == "former_club":                # "E. Quinvika played for Northgate Rovers before"
+        return f"{item.text}."
+    if item.kind == "news":                       # "E. Lisais: Harbour City fans plan a hostile welcome ..."
+        story = item.text.split(": ", 1)[-1].rstrip(".")
+        return f"In the news before the match: {story}." if story else None
+    if item.kind == "relationship" and item.relation in RELATIONS_EN and len(item.subject_names) == 2:
+        a, b = item.subject_names
+        if item.subject_ids[1] in people and item.subject_ids[0] not in people:
+            a, b = b, a
+        return RELATIONS_EN[item.relation].format(a=a, b=b)
+    return None
+
+
 def _context_sentence(trigger: MatchEvent, context: Sequence[ContextItem],
                       evidence: list[str]) -> ExplanationSentence | None:
-    """Cite the first context item about someone in the trigger event, if it reads cleanly."""
+    """Cite the best context item about someone in the trigger event, if it reads cleanly."""
     people = involved_in(trigger)
-    for item in context:
-        text = f"Off the pitch: {item.text}."
-        if people & set(item.subject_ids) and not re.search(r"\d", item.text) and len(text.split()) <= 30:
+    about = [i for i in context if i.kind in CONTEXT_KINDS and people & set(i.subject_ids)]
+    for item in sorted(about, key=lambda i: CONTEXT_KINDS.index(i.kind)):
+        text = context_text(item, people)
+        if text and not re.search(r"\d", text) and len(text.split()) <= 30:
             return ExplanationSentence(text=text, evidence_ids=evidence, context_ids=[item.context_id])
     return None
 
@@ -156,6 +191,10 @@ def template_explain(
         momentum = "momentum" if gaining else "momentum_lost"
         sentences.append(ExplanationSentence(text=phrases[momentum].format(team=team), evidence_ids=ids[:4]))
         fallback_headline = phrases[f"{momentum}_h"].format(team=team)
+        # A viewer who picked a team reads the headline from their side ("Northgate Rovers lose their
+        # grip"), not the event's ("A card changes the game").
+        if prefs.focus_team:
+            headline = fallback_headline
         return Narrative(prefs=prefs, headline=clean_headline(headline or fallback_headline, lang),
                          sentences=sentences[:3], source="template", verifier_attempts=verifier_attempts,
                          chain_id=chain_id)

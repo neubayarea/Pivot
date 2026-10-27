@@ -114,6 +114,43 @@ def test_explainer_down_falls_back_to_the_template_in_that_language(client):
     assert pivot["prefs"]["language"] == "zh" and pivot["narrative"]["source"] == "template"
 
 
+FAN = {"audience": "fan"}
+FAN_DRAFT = json.dumps({"headline": "Rovers take over after the change", "sentences": [{
+    "text": "Rovers levelled soon after their substitution and the game turned their way.",
+    "evidence_ids": ["m061-s00126", "m064-s00134"]}]})
+
+
+def test_a_model_hiccup_is_asked_once_more(client):
+    models = ScriptedModelClient(standard=[ModelUnavailable("429"), FAN_DRAFT])
+    use_models(models)
+    pivot = client.get(f"/api/pivots/{PIVOT_ID}", params=FAN).json()
+    assert pivot["narrative"]["source"] == "llm" and len(models.calls) == 2
+
+
+def test_a_template_fallback_is_written_again_later(client, monkeypatch):
+    # Two 429s in a row: this request gets the template. It used to stay the template until a restart (#242).
+    monkeypatch.setattr(personalize, "MODEL_REST_S", 0.0)
+    models = ScriptedModelClient(standard=[ModelUnavailable("429"), ModelUnavailable("429"), FAN_DRAFT])
+    use_models(models)
+    first = client.get(f"/api/pivots/{PIVOT_ID}", params=FAN).json()
+    soon = client.get(f"/api/pivots/{PIVOT_ID}", params=FAN).json()
+    assert first["narrative"]["source"] == soon["narrative"]["source"] == "template"
+    assert len(models.calls) == 2                                # served from memory for a while
+    monkeypatch.setattr(personalize, "FALLBACK_RETRY_S", 0.0)    # ... and once that while is over:
+    later = client.get(f"/api/pivots/{PIVOT_ID}", params=FAN).json()
+    assert later["narrative"]["source"] == "llm" and later["narrative"]["headline"] == "Rovers take over after the change"
+    assert later["prefs"]["audience"] == "fan" and len(models.calls) == 3
+
+
+def test_a_model_that_keeps_failing_rests_instead_of_being_asked_on_every_request(client, monkeypatch):
+    monkeypatch.setattr(personalize, "FALLBACK_RETRY_S", 0.0)    # every request may try again
+    models = ScriptedModelClient(standard=[ModelUnavailable("timeout")] * 2 + [FAN_DRAFT])
+    use_models(models)
+    for _ in range(3):
+        assert client.get(f"/api/pivots/{PIVOT_ID}", params=FAN).json()["narrative"]["source"] == "template"
+    assert len(models.calls) == 2                                # resting: not asked again for a minute
+
+
 def test_nothing_passes_the_verifier_so_english_is_served(client, monkeypatch):
     def broken_template(candidate, *, prefs, chain_id, **_):
         return Narrative(prefs=prefs, headline="坏稿", source="template", chain_id=chain_id,

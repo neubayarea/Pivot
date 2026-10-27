@@ -21,6 +21,8 @@ import Segmented from "./Segmented";
 import "../styles/setpieces.css";
 
 const S = 5;
+/** Off until the simulator lines players up for set pieces (#245): its marking and walls are not real yet. */
+const SHOW_MARKING = false;
 const HASHES = ["#set-pieces", "#shots"] as const;
 type Tab = "set" | "shots";
 
@@ -126,8 +128,8 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
       <Pitch frame={frame} actions={[sp.event]} selected={null} who={people.who} stepMs={1}
         label={t("sp.pitchLabel", { minute: `${at(sp.event.t)}′` })}
         picked={pickedPlayer} onPick={setPickedPlayer} tag={people.tag}
-        marked={new Set(setup.pairs.flat())}
-        under={<SetupLayer frame={frame} sp={sp} pairs={setup.pairs} wall={setup.wall} />} />
+        marked={SHOW_MARKING ? new Set(setup.pairs.flat()) : undefined}
+        under={<SetupLayer frame={frame} sp={sp} pairs={SHOW_MARKING ? setup.pairs : []} wall={SHOW_MARKING ? setup.wall : []} />} />
     );
   }
 
@@ -137,16 +139,21 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
         {at(sp.event.t)}′ · {kindLabel(sp, t)} · {att} · {playerName(sp.event.player_id)} <Result r={sp.result} />
       </h4>
       {pitch}
+      {!SHOW_MARKING && <small className="sp-sim">{t("sp.simNote")}</small>}
       {setup && (
         <dl className="sp-facts">
           <dt>{t("sp.inBox")}</dt>
           <dd>{t("sp.inBoxVal", { att, n: setup.attackersInBox.length, def, m: setup.defendersInBox.length })}</dd>
-          <dt>{t("sp.marking")}</dt>
-          <dd>
-            {setup.marking ? <b>{t(`sp.marking.${setup.marking}` as MessageKey)}</b> : t("sp.marking.few")}
-            {setup.marking && <small> · {t("sp.markingWhy", { k: setup.pairs.length, n: setup.attackersInBox.length, m: MARK_M })}</small>}
-          </dd>
-          {sp.kind === "free_kick" && (
+          {SHOW_MARKING && (
+            <>
+              <dt>{t("sp.marking")}</dt>
+              <dd>
+                {setup.marking ? <b>{t(`sp.marking.${setup.marking}` as MessageKey)}</b> : t("sp.marking.few")}
+                {setup.marking && <small> · {t("sp.markingWhy", { k: setup.pairs.length, n: setup.attackersInBox.length, m: MARK_M })}</small>}
+              </dd>
+            </>
+          )}
+          {SHOW_MARKING && sp.kind === "free_kick" && (
             <>
               <dt>{t("sp.wall")}</dt>
               <dd>{setup.wall.length ? t("sp.wallVal", { n: setup.wall.length, who: names(setup.wall) }) : t("sp.wallNone")}</dd>
@@ -156,7 +163,7 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
           <dd>{sp.decidedBy ? `${at(sp.decidedBy.t)}′ ${teams[sp.decidedBy.team].short_name} · ${describe(sp.decidedBy, playerName, t)}` : t("sp.result.kept")}</dd>
         </dl>
       )}
-      <small className="muted">{t("sp.how")}</small>
+      <small className="muted">{t(SHOW_MARKING ? "sp.how" : "sp.howPlain")}</small>
     </div>
   );
 }
