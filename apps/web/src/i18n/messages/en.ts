@@ -835,6 +835,10 @@ export const en = {
   "header.controls": "How you watch",
   "header.scorers": "{team} goals",
   "header.pen": "(pen)",
+  // Ax66: the header folds to a slim bar
+  "header.expand": "Expand",
+  "header.expand.label": "Expand the score header and how you watch",
+  "header.collapse.label": "Collapse the score header",
 
   // Ax59 · match tabs
   "tabs.label": "Match sections",

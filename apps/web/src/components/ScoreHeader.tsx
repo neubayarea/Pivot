@@ -2,7 +2,9 @@
 // score, the clock and state, the goal scorers under each team, and the viewer's own controls
 // (fan / analyst, ♥ team, ★ player) in plain sight instead of behind a Settings menu (#276).
 // It sticks to the top of the window with the replay bar (App); on phones it keeps to one score row.
-import { useEffect, type CSSProperties } from "react";
+// Scrolled past, it folds into a slim bar of names, score and clock (Ax66, data/headerFold.ts); a
+// button on each opens or folds it by hand, and the viewer's controls are behind the slim bar's.
+import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties, type RefObject } from "react";
 import type { MatchEvent, ViewerPrefs } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { goalFor } from "../data/keyMoments";
@@ -22,7 +24,15 @@ const audiences = (t: T) => [
 type Props = {
   prefs: ViewerPrefs;
   onPrefsChange: (prefs: ViewerPrefs) => void;
+  /** Folding with the scroll (App); without it the header always shows in full. */
+  fold?: { slim: boolean; toggle: () => void };
 };
+
+const Chevron = () => (
+  <svg className="mh-chev" viewBox="0 0 16 16" width={16} height={16} aria-hidden="true">
+    <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 /** One scorer per line, their goals in match order: "Moreau 12′, 67′ (pen)"; an own goal under the side it counts for. */
 export function scorers(events: MatchEvent[], side: Side, playerName: MatchView["playerName"], t: T, at: (t: number) => string): string[] {
@@ -59,9 +69,68 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
   );
 }
 
-export default function ScoreHeader({ prefs, onPrefsChange }: Props) {
+/** The folded header: each team's kit chip and name, the score and the clock, and the button that opens it. */
+function SlimBar({ favTeam, controls, onExpand, button, track }: {
+  favTeam: ViewerPrefs["focus_team"];
+  controls: string;
+  onExpand: () => void;
+  button: RefObject<HTMLButtonElement | null>;
+  track: { onFocus: () => void; onBlur: () => void };
+}) {
+  const { match, teams } = useMatch();
+  const t = useT();
+  const side = (s: Side) => (
+    <span className={`mh-bar-team ${s}${favTeam === s ? " fav" : ""}`} style={{ "--tc": teams[s].color } as CSSProperties} title={teams[s].name}>
+      <span className="mh-chip" aria-hidden="true" />
+      <span className="tm-full">{teams[s].name}</span>
+      <span className="tm-short">{teams[s].short_name}</span>
+      {favTeam === s && <span className="mh-fav" role="img" aria-label={t("top.team.label")}>♥</span>}
+    </span>
+  );
+  return (
+    <div className="mh-bar">
+      {side("home")}
+      <span className="mh-bar-mid">
+        <span className="mh-bar-sc num" role="img" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
+          <span>{match.score.home}</span>
+          <span className="mh-dash" aria-hidden="true">–</span>
+          <span>{match.score.away}</span>
+        </span>
+        {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
+        <Stamp tone={STATUS_TONE[match.status]}>{t(`status.${match.status}`)}</Stamp>
+      </span>
+      {side("away")}
+      <button ref={button} type="button" className="mh-toggle open" aria-expanded={false} aria-controls={controls}
+        aria-label={t("header.expand.label")} title={t("header.expand.label")} onClick={onExpand} {...track}>
+        <span className="mh-toggle-txt">{t("header.expand")}</span>
+        <Chevron />
+      </button>
+    </div>
+  );
+}
+
+export default function ScoreHeader({ prefs, onPrefsChange, fold }: Props) {
   const { match, teams, squads } = useMatch();
   const t = useT();
+  const id = useId();
+  const slim = !!fold?.slim;
+
+  // The button pressed goes away with the layout it was in; the one that undoes it takes the focus
+  // (without scrolling: Chrome would scroll a stuck header back to where it sits unstuck).
+  // The same when the scroll switches it while the button has the focus.
+  const button = useRef<HTMLButtonElement>(null);
+  const pressed = useRef(false);
+  const focused = useRef(false);
+  const press = () => {
+    pressed.current = true;
+    fold?.toggle();
+  };
+  const track = { onFocus: () => void (focused.current = true), onBlur: () => void (focused.current = false) };
+  useLayoutEffect(() => {
+    const lost = focused.current && (document.activeElement === document.body || !document.activeElement);
+    if (pressed.current || lost) button.current?.focus({ preventScroll: true });
+    pressed.current = false;
+  }, [slim]);
 
   // A player saved while watching another match is not in this one; the API would refuse him.
   const player = prefs.focus_player_id;
@@ -71,8 +140,22 @@ export default function ScoreHeader({ prefs, onPrefsChange }: Props) {
     if (!known) onPrefsChange({ ...prefs, focus_player_id: null });
   }, [known]);
 
+  if (slim) {
+    return (
+      <section className="mh slim" id={id} aria-label={t("header.label")}>
+        <SlimBar favTeam={prefs.focus_team} controls={id} onExpand={press} button={button} track={track} />
+      </section>
+    );
+  }
+
   return (
-    <section className="mh" aria-label={t("header.label")}>
+    <section className="mh" id={id} aria-label={t("header.label")}>
+      {fold && (
+        <button ref={button} type="button" className="mh-toggle shut" aria-expanded={true} aria-controls={id}
+          aria-label={t("header.collapse.label")} title={t("header.collapse.label")} onClick={press} {...track}>
+          <Chevron />
+        </button>
+      )}
       <div className="mh-score">
         <TeamSide side="home" fav={prefs.focus_team === "home"} />
         <div className="mh-mid">

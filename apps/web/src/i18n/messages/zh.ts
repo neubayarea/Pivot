@@ -834,6 +834,10 @@ export const zh: Messages = {
   "header.controls": "观看方式",
   "header.scorers": "{team} 进球",
   "header.pen": "（点球）",
+  // Ax66: the header folds to a slim bar
+  "header.expand": "展开",
+  "header.expand.label": "展开比分栏和观看方式",
+  "header.collapse.label": "收起比分栏",
 
   // Ax59 · match tabs
   "tabs.label": "比赛分页",

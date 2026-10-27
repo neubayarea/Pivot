@@ -5,6 +5,7 @@ import Playback from "./components/Playback";
 import ScoreHeader from "./components/ScoreHeader";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
+import { useHeaderFold } from "./data/headerFold";
 import { MatchProvider } from "./data/match";
 import { usePrefs } from "./i18n";
 import AgentTraces from "./pages/AgentTraces";
@@ -28,6 +29,7 @@ const WAITING = (
 
 export default function App() {
   const { prefs, setPrefs } = usePrefs();
+  const fold = useHeaderFold();
 
   return (
     <MatchProvider fallback={WAITING}>
@@ -35,9 +37,11 @@ export default function App() {
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <ConnectionBanner />
       <MissingMatchBanner />
-      {/* Ax59: the score and the replay bar stay at the top of the window while the page scrolls. */}
-      <div className="match-head">
-        <ScoreHeader prefs={prefs} onPrefsChange={setPrefs} />
+      {/* Ax59: the score and the replay bar stay at the top of the window while the page scrolls;
+          Ax66: the score folds to a slim bar once scrolled past (data/headerFold.ts). */}
+      <div ref={fold.anchor} className="match-head-anchor" aria-hidden="true" />
+      <div ref={fold.head} className="match-head">
+        <ScoreHeader prefs={prefs} onPrefsChange={setPrefs} fold={fold} />
         <Playback />
       </div>
       {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}

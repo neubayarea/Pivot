@@ -836,6 +836,10 @@ export const es: Messages = {
   "header.controls": "Cómo lo ves",
   "header.scorers": "Goles de {team}",
   "header.pen": "(p.)",
+  // Ax66: the header folds to a slim bar
+  "header.expand": "Desplegar",
+  "header.expand.label": "Desplegar el marcador y cómo lo ves",
+  "header.collapse.label": "Plegar el marcador",
 
   // Ax59 · match tabs
   "tabs.label": "Secciones del partido",
