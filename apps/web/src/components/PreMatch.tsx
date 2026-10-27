@@ -24,7 +24,7 @@ const MAX_TIES = 6;
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th"));
 
 /** A small square in the team's kit colour, before a team or person's name. */
-const Kit = ({ side }: { side: Side | undefined }) => (side ? <i className={`pre-kit ${side}`} aria-hidden="true" /> : null);
+export const Kit = ({ side }: { side: Side | undefined }) => (side ? <i className={`pre-kit ${side}`} aria-hidden="true" /> : null);
 
 function usePre() {
   const { preMatch, teams, squads, playerName } = useMatch();

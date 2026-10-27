@@ -164,3 +164,117 @@
   .pre-list { grid-template-columns: minmax(0, 1fr); }
   .pre-list li { gap: 6px; }
 }
+
+/* #315: the form in detail. Each card puts home on the left and away on the right under a rule in
+ * the kit colour. With a ♥ team picked its side keeps the colour ("mine") and the other side's bars
+ * and rules go grey ("theirs"); the record row that counts today sits on the sunk well. */
+:is(.pre-col, .pre-bars-hd > span, .pre-bar-val, .pre-periods, .pre-ground-tally > span).home { --tc: var(--pv-home); }
+:is(.pre-col, .pre-bars-hd > span, .pre-bar-val, .pre-periods, .pre-ground-tally > span).away { --tc: var(--pv-away); }
+.pre-deep :is(.pre-col, .pre-bar-val, .pre-periods).theirs { --tc: var(--pv-draw); }
+.pre-deep .pre-periods.theirs { --tc: var(--pv-ink-2); }
+.pre-deep-grid { display: grid; gap: 16px; }
+.pre-deep .card { overflow-wrap: anywhere; }
+.pre-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 32px; }
+.pre-cols > :only-child { grid-column: 1 / -1; }
+.pre-col { display: grid; gap: 10px; align-content: start; padding-top: 10px; border-top: 4px solid var(--tc); min-width: 0; }
+.pre-dh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pre-dh .pre-name { font-size: var(--pv-fs-md); }
+.pre-role { font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); }
+.pre-col.mine .pre-role { color: var(--pv-ink); }
+.pre-line { font-size: var(--pv-fs-sm); line-height: 1.5; }
+.pre-line.now { font-size: var(--pv-fs-md); font-weight: 600; }
+
+/* Home and away: a small league-table block per side. */
+.pre-rec { width: 100%; border-collapse: collapse; font-size: var(--pv-fs-sm); font-variant-numeric: tabular-nums; }
+.pre-rec th, .pre-rec td { padding: 6px 4px; text-align: right; border-top: 1px solid var(--pv-hair); }
+.pre-rec thead th { border-top: 0; font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); }
+.pre-rec abbr { text-decoration: none; }
+.pre-rec tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.pre-rec tbody th small { margin-left: 6px; font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); }
+.pre-rec tr.now > * { background: var(--pv-sunk); }
+.pre-rec tr.now > :first-child { border-radius: var(--pv-r-ctl) 0 0 var(--pv-r-ctl); }
+.pre-rec tr.now > :last-child { border-radius: 0 var(--pv-r-ctl) var(--pv-r-ctl) 0; }
+.pre-col.mine .pre-rec tr.now > :first-child { box-shadow: inset 4px 0 0 var(--tc); padding-left: 10px; }
+.pre-col.mine .pre-rec tr.now td { font-weight: 700; color: var(--pv-ink); }
+.pre-rec td { color: var(--pv-ink-2); }
+.pre-rec td b { color: var(--pv-ink); }
+
+.pre-ground { display: grid; gap: 8px; max-width: 640px; padding-top: 14px; border-top: 1px solid var(--pv-hair); }
+.pre-ground h4 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: var(--pv-fs-md); font-weight: 700; margin: 0; }
+.pre-ground h4 small { font-size: var(--pv-fs-sm); font-weight: 500; color: var(--pv-ink-2); }
+.pre-ground-tally { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: var(--pv-fs-sm); font-weight: 600; }
+.pre-ground-tally > span { display: inline-flex; align-items: center; }
+.pre-ground-tally > .theirs { color: var(--pv-ink-2); }
+.pre-ground .pre-meetings li { grid-template-columns: 3.5em minmax(0, 1fr) auto minmax(0, 1fr) auto; }
+
+/* The last five: one row a game, the result first, the half-time score beside the full-time one. */
+.pre-games { list-style: none; margin: 0; padding: 0; display: grid; }
+.pre-games li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--pv-hair); }
+.pre-games li:first-child { border-top: 0; padding-top: 2px; }
+.pre-res { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--pv-r-ctl); font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-md); }
+.pre-res.r-W { background: var(--pv-ink); color: var(--pv-sheet); }
+.pre-res.r-D { background: var(--pv-draw); color: var(--pv-ink); }
+.pre-res.r-L { background: var(--pv-sheet); color: var(--pv-ink-2); box-shadow: inset 0 0 0 1px var(--pv-hair); }
+.pre-game { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; }
+.pre-opp { font-weight: 600; flex: 1 1 10em; min-width: 0; }
+.pre-score { display: inline-flex; gap: 10px; font-size: var(--pv-fs-sm); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pre-score b { font-weight: 700; }
+.pre-gtags { display: flex; flex-wrap: wrap; gap: 4px; flex-basis: 100%; }
+.pre-chip.tag-dropped { background: transparent; box-shadow: inset 0 0 0 1px var(--pv-hair); }
+
+/* The last five in numbers: home grows left from the middle, away right, the stat's name between. */
+.pre-bars { display: grid; }
+.pre-bars-hd, .pre-bar-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9em, auto) minmax(0, 1fr); grid-template-areas: "home nm away"; gap: 4px 16px; align-items: center; }
+.pre-bars-hd { padding-bottom: 8px; font-weight: 700; }
+.pre-bars-hd > span { display: inline-flex; align-items: center; gap: 6px; }
+.pre-bars-hd > .home { grid-area: home; }
+.pre-bars-hd > .away { grid-area: away; flex-direction: row-reverse; }
+.pre-bars-hd > .away .pre-kit { margin: 0 0 0 8px; }
+.pre-bars-hd small { font-size: var(--pv-fs-xs); font-weight: 600; color: var(--pv-ink-2); }
+.pre-bar-row { padding: 8px 0; border-top: 1px solid var(--pv-hair); }
+.pre-bar-row .nm { grid-area: nm; text-align: center; font-size: var(--pv-fs-sm); font-weight: 600; color: var(--pv-ink-2); }
+.pre-bar-val { display: flex; align-items: center; gap: 10px; min-width: 0; font-variant-numeric: tabular-nums; }
+.pre-bar-val.home { grid-area: home; }
+.pre-bar-val.away { grid-area: away; flex-direction: row-reverse; }
+.pre-bar-val b { flex: none; min-width: 3.2em; font-weight: 700; white-space: nowrap; }
+.pre-bar-val.home b { text-align: left; }
+.pre-bar-val.away b { text-align: right; }
+.pre-bar-val.theirs b { color: var(--pv-ink-2); font-weight: 600; }
+.pre-bar { flex: 1; display: flex; height: 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); overflow: hidden; }
+.pre-bar-val.home .pre-bar { justify-content: flex-end; }
+.pre-bar > i { display: block; height: 100%; border-radius: var(--pv-r-pill); background: var(--tc); }
+
+/* Goals by quarter-hour: scored up in the kit colour, conceded down in grey, from one baseline. */
+.pre-periods-wrap { padding-top: 14px; border-top: 1px solid var(--pv-hair); }
+.pre-periods { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.pre-periods figcaption { display: inline-flex; align-items: center; font-size: var(--pv-fs-sm); font-weight: 700; }
+.pre-pchart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.pre-pcol { display: grid; grid-template-rows: 58px 58px auto; justify-items: center; min-width: 0; }
+.pre-pcol > span { width: 100%; max-width: 32px; display: flex; flex-direction: column; align-items: center; }
+.pre-pcol > .up { justify-content: flex-end; border-bottom: 1px solid var(--pv-ink-2); }
+.pre-pcol > .down { justify-content: flex-start; }
+.pre-pcol i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--tc); }
+.pre-pcol .down i { border-radius: 0 0 3px 3px; background: var(--pv-draw); }
+.pre-pcol b { font-size: var(--pv-fs-xs); font-weight: 700; line-height: 18px; font-variant-numeric: tabular-nums; }
+.pre-pcol small { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 4px; }
+.pre-plegend { display: flex; gap: 16px; font-size: var(--pv-fs-xs); }
+.pre-plegend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
+.pre-plegend .up::before { background: var(--tc); }
+.pre-plegend .down::before { background: var(--pv-draw); }
+
+/* What comes next and who rests. */
+.pre-fixture, .pre-rotation { display: grid; gap: 6px; }
+.pre-fx-what { font-size: var(--pv-fs-md); }
+.pre-rotation { padding-top: 8px; border-top: 1px solid var(--pv-hair); }
+.pre-who-list { flex-direction: column; gap: 6px; }
+.pre-who-list dd { font-weight: 600; }
+.pre-next .pre-hint { margin-top: 2px; }
+
+@media (max-width: 560px) {
+  .pre-cols { grid-template-columns: minmax(0, 1fr); }
+  .pre-bars-hd, .pre-bar-row { grid-template-columns: 1fr 1fr; grid-template-areas: "nm nm" "home away"; }
+  .pre-bars-hd { grid-template-areas: "home away"; }
+  .pre-rec th, .pre-rec td { padding: 6px 3px; }
+  .pre-ground .pre-meetings li { grid-template-columns: 3em minmax(0, 1fr) auto minmax(0, 1fr); }
+  .pre-ground .pre-meetings li > small { grid-column: 2 / -1; text-align: center; }
+}
