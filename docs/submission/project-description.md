@@ -65,16 +65,16 @@ Around the turning points, the match page has:
 
 Live site: https://pivot.in-stacks.com/ (no sign-in). It opens the demo match, **Harbour City 3–3 Northgate Rovers** (`?match=M-seed-101`). A private window works best, because the site remembers your language, viewer settings and last match.
 
-The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Preview**. If you see **Pre-match / Live / Post-match** instead, the six-tab layout (#323) is not deployed yet. Post-match is Overview. Live holds Replay and Stats. Pre-match holds Preview and Line-ups.
+The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Preview**. Each tab has its own link (`?tab=overview|whatif|replay|stats|lineups|preview`).
 
-1. **Overview** (Post-match): "The 3 moments that changed the course of this match", with a momentum chart marked ① 14′ ② 35′ ③ 72′.
+1. **Overview**: "The 3 moments that changed the course of this match", with a momentum chart marked ① 14′ ② 35′ ③ 72′.
 2. Click **② 35′, "Anbel's goal shifts momentum decisively"**. Under **Why it turned**, hover an underlined number to see the statistic it was checked against. Click an evidence chip such as **#676** to see the event on the mini pitch.
 3. In the top bar, switch **Analyst → Fan** and pick **♥ Harbour City**. The same moment is rewritten from Harbour City's side ("Harbour City lose grip after Northgate's second"). Try **中文** and **ES**. If a version hasn't been written yet, the analyst one shows for a few seconds first.
-4. Pick **★ M. Miquingorini** (three goals). Open **Stats** (Live) for his player card, the team's numbers, the shot map, heatmaps and pass network.
-5. Back on Overview, click **③ 72′**. Under **What if…** (or in the **What if** tab), click **Disallow 65′ goal**, then **Run simulation**. It was computed in advance, so it shows at once: Northgate's chance of winning goes from 26 % to 53 %. Please stay with the precomputed chips on the live server: it has 2 CPU cores, and a new scenario takes minutes.
+4. Pick **★ M. Miquingorini** (three goals). Open **Stats** for his player card, the team's numbers, the shot map, heatmaps and pass network.
+5. Back on Overview, click **③ 72′**. Under **What if…** (or in the **What if** tab, under **Pivot 3, 72′**), click **Disallow 65′ goal**, then **Run simulation**. It was computed in advance, so it shows at once: Northgate's chance of winning goes from 26 % to 53 %. Please stay with the precomputed chips on the live server: it has 2 CPU cores, and a new scenario takes minutes.
 6. Under **Key moments**, play any goal as a clip. Under **Set pieces & shots**, open the **60′ free kick** to see who was in the box and how they were marked.
-7. **Replay** (Live): **Start demo** replays the match from 0′ with momentum drawn live and turning points appearing as they happen. Add `&from=66` to the link to start at 66′.
-8. **Preview** and **Line-ups** (Pre-match): the table, form, head-to-head, storylines and each coach's plan.
+7. **Replay**: **Start demo** replays the match from 0′ with momentum drawn live and turning points appearing as they happen. Add `&from=66` to the link to start at 66′.
+8. **Preview** and **Line-ups**: the table, form, head-to-head, storylines and each coach's plan.
 9. **Trace** in the top bar: every step the AI took for each moment, with the model, the time it took and the Verifier's verdict.
 
 To run it locally without any keys, follow "Run it locally" in the README (`PIVOT_PIPELINE=fake`). Everything works there, including every what-if (about 30 seconds each on a laptop). Explanations are template text in that mode.
