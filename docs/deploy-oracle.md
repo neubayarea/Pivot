@@ -234,7 +234,8 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | 变量 | 说明 |
 | --- | --- |
 | `PIVOT_DOMAIN` | 公网域名，Caddy 用它申请证书，网页的 WebSocket 地址也由它拼出来 |
-| `PIVOT_DEMO` | `1` 启动时放入手写样例比赛 `M-api-demo`，`0` 不放（线上用 `0`） |
+| `PIVOT_DEMO` | 旧开关：`0` 时手写样例也不放。现在不用设，线上可以删掉 |
+| `PIVOT_SAMPLE_MATCH` | 默认 `0`；`1` 时再放入手写的样例比赛 `M-api-demo`（只给测试和本机调试用，线上不要开） |
 | `PIVOT_DEMO_FIXTURE` | 默认不设：网站不放测试用的固定比赛 demo-1021（Ax55）；`1` 放入它，也可以写别的文件路径 |
 | `PIVOT_WORKER` / `PIVOT_SIMULATOR` | `1` 在同一个进程里运行 AI 小组 / 模拟器，`0` 关掉（模拟器的实时入口还没做，做好后自动启用） |
 | `PIVOT_PIPELINE` | `fake` 用固定解释，`detect` 用真正的判定、写稿、核对流程（D06） |

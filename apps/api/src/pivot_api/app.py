@@ -33,7 +33,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.adapters = build_adapters()
     log.info("PIVOT_PROFILE=%s", app.state.adapters.profile)
     app.state.personalizer = personalizer_from_env(app.state.adapters.matches)
-    # Local profile starts empty, so put one demo match in for frontend work. PIVOT_DEMO=0 turns it off.
+    # The site shows the simulated matches below (Ax55). The hand-made sample (demo.py, its narratives
+    # written by hand, never verified) is test data only: PIVOT_SAMPLE_MATCH=1 (Ax54); PIVOT_DEMO=0 keeps it out.
     app.state.fixture_frames = {}
     app.state.fixture_files = {}
     # players.py: per-player numbers, worked out once per match on first use
@@ -42,7 +43,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     precomputed = {}                          # the recorded demo's what-ifs, run ahead of time (Bx11)
     demo_id = None
     if app.state.adapters.profile == "local" and os.getenv("PIVOT_DEMO", "1") != "0":
-        log.info("seeded demo match %s", await seed_demo(app.state.adapters.matches, app.state.adapters.traces))
+        if os.getenv("PIVOT_SAMPLE_MATCH", "0") == "1":
+            log.info("seeded sample match %s", await seed_demo(app.state.adapters.matches, app.state.adapters.traces))
     # The recorded demo (B02, eval/fixtures/demo-1021) is test data now, not on the site: only when
     # PIVOT_DEMO_FIXTURE asks for it (Ax55). The site opens the first simulated match instead.
     if app.state.adapters.profile == "local" and (fixture := fixture_from_env()) is not None:
