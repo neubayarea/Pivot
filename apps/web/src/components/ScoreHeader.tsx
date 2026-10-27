@@ -5,6 +5,7 @@
 import { useEffect, type CSSProperties } from "react";
 import type { MatchEvent, ViewerPrefs } from "@pivot/contracts";
 import { useClock } from "../data/clock";
+import { goalFor } from "../data/keyMoments";
 import { useMatch, type MatchView, type Side } from "../data/match";
 import { useT, type T } from "../i18n";
 import { PlayerPicker, TeamPicker, surname } from "./FocusPickers";
@@ -23,13 +24,13 @@ type Props = {
   onPrefsChange: (prefs: ViewerPrefs) => void;
 };
 
-/** One scorer per line, their goals in match order: "Moreau 12′, 67′ (pen)". */
+/** One scorer per line, their goals in match order: "Moreau 12′, 67′ (pen)"; an own goal under the side it counts for. */
 export function scorers(events: MatchEvent[], side: Side, playerName: MatchView["playerName"], t: T, at: (t: number) => string): string[] {
-  const goals = events.filter((e) => e.team === side && e.type === "shot" && e.shot_outcome === "goal").sort((a, b) => a.t - b.t);
+  const goals = events.filter((e) => goalFor(e) === side).sort((a, b) => a.t - b.t);
   const lines = new Map<string, string[]>();
   for (const e of goals) {
     const who = e.player_id ? surname(playerName(e.player_id)) : "";
-    const minute = `${at(e.t)}′` + (e.play_pattern === "penalty" ? ` ${t("header.pen")}` : "");
+    const minute = `${at(e.t)}′` + (e.type !== "shot" ? ` ${t("header.og")}` : e.play_pattern === "penalty" ? ` ${t("header.pen")}` : "");
     lines.set(who, [...(lines.get(who) ?? []), minute]);
   }
   return [...lines].map(([who, minutes]) => `${who} ${minutes.join(", ")}`.trim());
@@ -42,15 +43,15 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
   const team = teams[side];
   const goals = scorers(events, side, playerName, t, at);
   return (
-    <div className={`sh-team ${side}${fav ? " fav" : ""}`} style={{ "--tc": team.color } as CSSProperties}>
-      <span className="sh-name">
-        <span className="sh-crest" aria-hidden="true" />
+    <div className={`mh-team ${side}${fav ? " fav" : ""}`} style={{ "--tc": team.color } as CSSProperties}>
+      <span className="mh-name">
+        <span className="mh-crest" aria-hidden="true" />
         <span className="tm-full">{team.name}</span>
         <span className="tm-short">{team.short_name}</span>
-        {fav && <span className="sh-fav" aria-label={t("top.team.label")}>♥</span>}
+        {fav && <span className="mh-fav" aria-label={t("top.team.label")}>♥</span>}
       </span>
       {goals.length > 0 && (
-        <ul className="sh-goals" aria-label={t("header.scorers", { team: team.name })}>
+        <ul className="mh-goals" aria-label={t("header.scorers", { team: team.name })}>
           {goals.map((g) => <li key={g}>{g}</li>)}
         </ul>
       )}
@@ -71,24 +72,24 @@ export default function ScoreHeader({ prefs, onPrefsChange }: Props) {
   }, [known]);
 
   return (
-    <section className="sh" aria-label={t("header.label")}>
-      <div className="sh-score">
+    <section className="mh" aria-label={t("header.label")}>
+      <div className="mh-score">
         <TeamSide side="home" fav={prefs.focus_team === "home"} />
-        <div className="sh-mid">
-          <span className="sh-sc num" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
+        <div className="mh-mid">
+          <span className="mh-sc num" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
             <span>{match.score.home}</span>
-            <span className="sh-dash" aria-hidden="true">–</span>
+            <span className="mh-dash" aria-hidden="true">–</span>
             <span>{match.score.away}</span>
           </span>
-          <span className="sh-state">
-            {match.status !== "scheduled" && <span className="sh-clock num">{match.clockLabel}</span>}
+          <span className="mh-state">
+            {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
             <Stamp tone={STATUS_TONE[match.status]}>{t(`status.${match.status}`)}</Stamp>
           </span>
         </div>
         <TeamSide side="away" fav={prefs.focus_team === "away"} />
       </div>
-      <div className="sh-ctl" role="group" aria-label={t("header.controls")}>
-        <span className="sh-lbl">{t("top.audience")}</span>
+      <div className="mh-ctl" role="group" aria-label={t("header.controls")}>
+        <span className="mh-lbl">{t("top.audience")}</span>
         <Segmented
           label={t("top.audience")}
           options={audiences(t)}

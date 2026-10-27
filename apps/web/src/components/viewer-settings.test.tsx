@@ -165,7 +165,7 @@ describe("what the page shows", () => {
   it("marks the viewer's team in the match header and the stats", () => {
     withWindow("?from=80&team=away");
     const html = render(<><ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} onPrefsChange={() => {}} /><LiveBoard /></>);
-    expect(html).toMatch(/class="sh-team away fav"/);
+    expect(html).toMatch(/class="mh-team away fav"/);
     expect(html).toContain('class="r fav"');
   });
 

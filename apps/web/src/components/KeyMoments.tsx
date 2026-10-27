@@ -86,7 +86,7 @@ function KeyClip({ k }: { k: KeyMoment }) {
   );
 }
 
-export default function KeyMoments({ moments, pivots, windows, selected, onPick }: {
+export default function KeyMoments({ moments, pivots, windows, selected, onPick, heading = true }: {
   moments: KeyMoment[];
   /** The board's numbered pivots, in order, and each one's evidence window (elapsed seconds). */
   pivots: Pivot[];
@@ -94,6 +94,8 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick 
   selected: string | null;
   /** The moment opened, or null to close it. */
   onPick: (id: string | null) => void;
+  /** False when the page gives the list its own heading (the post-match tab). */
+  heading?: boolean;
 }) {
   const { teams, playerName } = useMatch();
   const t = useT();
@@ -103,11 +105,13 @@ export default function KeyMoments({ moments, pivots, windows, selected, onPick 
     if (selected) document.getElementById(`km-${selected}`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   }, [selected]);
   return (
-    <section className="keys" aria-labelledby="keys-hd">
-      <div className="keys-hd">
-        <h2 id="keys-hd">{t("keys.title")}</h2>
-        <p className="muted">{t("keys.note")}</p>
-      </div>
+    <section className="keys" aria-labelledby={heading ? "keys-hd" : undefined} aria-label={heading ? undefined : t("keys.title")}>
+      {heading && (
+        <div className="keys-hd">
+          <h2 id="keys-hd">{t("keys.title")}</h2>
+          <p className="muted">{t("keys.note")}</p>
+        </div>
+      )}
       {!moments.length ? (
         <p className="muted">{t("keys.empty")}</p>
       ) : (

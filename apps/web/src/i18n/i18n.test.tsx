@@ -54,7 +54,7 @@ const render = (node: ReactNode, path = "/") =>
     </PrefsProvider>,
   );
 
-const board = () => render(<FixtureProvider><LiveBoard /></FixtureProvider>);
+const board = () => render(<FixtureProvider><LiveBoard /></FixtureProvider>, "/?tab=post&pivot=pv-74");
 const pv74 = DEMO_1021.pivots.find((p) => p.pivot.pivot_id === "pv-74")!.pivot;
 
 describe("switching language", () => {

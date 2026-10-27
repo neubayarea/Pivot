@@ -291,7 +291,7 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 400; font-size: 1
   --pv-body: "Archivo", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --pv-label: "Archivo Narrow", "Archivo", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
-:lang(zh) :is(.brand, .sh-sc, .sh-name, .headline .x, .pv .m, .s2-head .min, .s2-head h2, table.ba td.big, .ov .mn, .ov .bd .x),
+:lang(zh) :is(.brand, .mh-sc, .mh-name, .headline .x, .pv .m, .s2-head .min, .s2-head h2, table.ba td.big, .ov .mn, .ov .bd .x),
 :lang(zh) .why.drop p:first-of-type::first-letter { font-weight: 900; font-synthesis: none; }
 :lang(zh) :is(.kicker, .stamp, .btn, .seg button, .card h3, .back, .placeholder, .playback .lbl, .label, .conf dt, .move-to label) { letter-spacing: .04em; }
 
@@ -405,14 +405,11 @@ details.more > summary small { font-weight: 600; letter-spacing: .04em; text-tra
 /* Ax41: "More details" fits one screen. Pitch (2/3) and stats on top, events and line-ups below
    at a fixed height that scroll inside their cells, the AI's work across the bottom. Narrower
    windows stack them: pitch, stats, line-ups, events, AI. */
-.more-bd { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "pitch" "stats" "roster" "events" "trace"; gap: 14px; padding: 0 16px 16px; --more-low: 420px; }
+.more-bd { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "pitch" "stats" "roster" "events"; gap: 14px; padding: 0 16px 16px; --more-low: 420px; }
 .more-pitch { grid-area: pitch; }
 .more-stats { grid-area: stats; }
 .more-roster { grid-area: roster; }
 .more-events { grid-area: events; }
-.more-trace { grid-area: trace; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-.more-trace h3 { grid-column: 1 / -1; }
-.more-trace p { margin: 0; }
 .more-events, .more-roster { max-height: var(--more-low); grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
 .more-events .feed, .more-roster .roster { min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
 .more-roster .roster { padding-right: 4px; }
@@ -423,8 +420,8 @@ details.more > summary small { font-weight: 600; letter-spacing: .04em; text-tra
   .pb-main > :first-child { grid-row: 1 / 3; }
 }
 @media (min-width: 1100px) {
-  .more-bd { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); grid-template-areas: "pitch stats" "events roster" "trace trace";
-    --more-low: clamp(220px, 100vh - 620px, 440px); grid-template-rows: auto var(--more-low) auto; }
+  .more-bd { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); grid-template-areas: "pitch stats" "events roster";
+    --more-low: clamp(220px, 100vh - 620px, 440px); grid-template-rows: auto var(--more-low); }
   .more-events, .more-roster { height: var(--more-low); }
 }
 
@@ -492,48 +489,134 @@ details.more > summary small { font-weight: 600; letter-spacing: .04em; text-tra
 
 /* ---------- Match header (Ax59): score, scorers and the viewer's controls ---------- */
 .match-head { position: sticky; top: 0; z-index: 15; }
-.sh { background: var(--pv-bar); color: var(--pv-on-bar); border-top: 1px solid var(--pv-bar-line); padding: 10px 20px 8px; display: grid; gap: 8px; }
-.sh-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 4px 20px; max-width: 980px; width: 100%; margin: 0 auto; }
-.sh-team { display: grid; gap: 4px; min-width: 0; }
-.sh-team.home { justify-items: end; text-align: right; }
-.sh-team.away { justify-items: start; text-align: left; }
-.sh-name { display: inline-flex; align-items: center; gap: 10px; font-family: var(--pv-display); font-size: clamp(17px, 2.2vw, 26px); line-height: 1.1; text-transform: uppercase; min-width: 0; max-width: 100%; }
-.sh-team.home .sh-name { flex-direction: row-reverse; }
-.sh-name .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sh-name .tm-short { display: none; }
-.sh-crest { flex: none; width: 14px; height: 30px; background: var(--tc, var(--pv-gold)); box-shadow: 0 0 0 2px var(--pv-on-bar); }
-.sh-fav { color: var(--pv-gold); font-family: var(--pv-body); font-size: .8em; }
-.sh-team.fav .tm-full, .sh-team.fav .tm-short { box-shadow: inset 0 -3px var(--pv-gold); }
-.sh-goals { list-style: none; margin: 0; padding: 0; font-family: var(--pv-label); font-weight: 600; font-size: var(--pv-fs-sm); line-height: 1.35; color: var(--pv-on-bar); opacity: .85; }
-.sh-goals li::before { content: "⚽ "; font-size: .85em; }
-.sh-team.home .sh-goals li::before { content: none; }
-.sh-team.home .sh-goals li::after { content: " ⚽"; font-size: .85em; }
-.sh-mid { display: grid; justify-items: center; gap: 4px; }
-.sh-sc { display: flex; align-items: center; gap: 6px; font-family: var(--pv-display); font-size: clamp(30px, 4.4vw, 48px); line-height: 1; }
-.sh-sc > span:not(.sh-dash) { background: var(--pv-gold); color: var(--pv-on-gold); min-width: 1.2em; padding: 2px 8px; text-align: center; }
-.sh-dash { color: var(--pv-on-bar); opacity: .6; }
-.sh-state { display: inline-flex; align-items: center; gap: 8px; }
-.sh-clock { font-family: var(--pv-label); font-weight: 700; font-size: 17px; }
-.sh-ctl { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; border-top: 1px solid var(--pv-bar-line); padding-top: 8px; }
-.sh-lbl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
-.sh .seg, .sh .seg button { color: var(--pv-on-bar); }
-.sh .seg button[aria-pressed="true"] { color: var(--pv-on-gold); }
-.sh .pick { border-color: var(--pv-on-bar); }
-.sh .pick.set { border-color: var(--pv-gold); }
-.sh .pick-pop { right: auto; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 28px); }
+.mh { background: var(--pv-bar); color: var(--pv-on-bar); border-top: 1px solid var(--pv-bar-line); padding: 10px 20px 8px; display: grid; gap: 8px; }
+.mh-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 4px 20px; max-width: 980px; width: 100%; margin: 0 auto; }
+.mh-team { display: grid; gap: 4px; min-width: 0; }
+.mh-team.home { justify-items: end; text-align: right; }
+.mh-team.away { justify-items: start; text-align: left; }
+.mh-name { display: inline-flex; align-items: center; gap: 10px; font-family: var(--pv-display); font-size: clamp(17px, 2.2vw, 26px); line-height: 1.1; text-transform: uppercase; min-width: 0; max-width: 100%; }
+.mh-team.home .mh-name { flex-direction: row-reverse; }
+.mh-name .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mh-name .tm-short { display: none; }
+.mh-crest { flex: none; width: 14px; height: 30px; background: var(--tc, var(--pv-gold)); box-shadow: 0 0 0 2px var(--pv-on-bar); }
+.mh-fav { color: var(--pv-gold); font-family: var(--pv-body); font-size: .8em; }
+.mh-team.fav .tm-full, .mh-team.fav .tm-short { box-shadow: inset 0 -3px var(--pv-gold); }
+.mh-goals { list-style: none; margin: 0; padding: 0; font-family: var(--pv-label); font-weight: 600; font-size: var(--pv-fs-sm); line-height: 1.35; color: var(--pv-on-bar); opacity: .85; }
+.mh-goals li::before { content: "⚽ "; font-size: .85em; }
+.mh-team.home .mh-goals li::before { content: none; }
+.mh-team.home .mh-goals li::after { content: " ⚽"; font-size: .85em; }
+.mh-mid { display: grid; justify-items: center; gap: 4px; }
+.mh-sc { display: flex; align-items: center; gap: 6px; font-family: var(--pv-display); font-size: clamp(30px, 4.4vw, 48px); line-height: 1; }
+.mh-sc > span:not(.mh-dash) { background: var(--pv-gold); color: var(--pv-on-gold); min-width: 1.2em; padding: 2px 8px; text-align: center; }
+.mh-dash { color: var(--pv-on-bar); opacity: .6; }
+.mh-state { display: inline-flex; align-items: center; gap: 8px; }
+.mh-clock { font-family: var(--pv-label); font-weight: 700; font-size: 17px; }
+.mh-ctl { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 10px; border-top: 1px solid var(--pv-bar-line); padding-top: 8px; }
+.mh-lbl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.mh .seg, .mh .seg button { color: var(--pv-on-bar); }
+.mh .seg button[aria-pressed="true"] { color: var(--pv-on-gold); }
+.mh .pick { border-color: var(--pv-on-bar); }
+.mh .pick.set { border-color: var(--pv-gold); }
+.mh .pick-pop { right: auto; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 28px); }
 @media (max-width: 720px) {
   /* Phones: one tight score row (codes, no scorers), the controls in a row under it. */
-  .sh { padding: 6px 12px; gap: 6px; }
-  .sh-score { gap: 4px 10px; align-items: center; }
-  .sh-name { font-size: 18px; gap: 6px; }
-  .sh-name .tm-full { display: none; }
-  .sh-name .tm-short { display: inline; }
-  .sh-crest { width: 8px; height: 20px; }
-  .sh-goals { display: none; }
-  .sh-sc { font-size: 26px; }
-  .sh-clock { font-size: 14px; }
-  .sh-state .stamp { padding: 0 5px; }
-  .sh-lbl { display: none; }
-  .sh-ctl { padding-top: 6px; gap: 6px; }
-  .sh .pick-label { display: none; }
+  .mh { padding: 6px 12px; gap: 6px; }
+  .mh-score { gap: 4px 10px; align-items: center; }
+  .mh-name { font-size: 18px; gap: 6px; }
+  .mh-name .tm-full { display: none; }
+  .mh-name .tm-short { display: inline; }
+  .mh-crest { width: 8px; height: 20px; }
+  .mh-goals { display: none; }
+  .mh-sc { font-size: 26px; }
+  .mh-clock { font-size: 14px; }
+  .mh-state .stamp { padding: 0 5px; }
+  .mh-lbl { display: none; }
+  .mh-ctl { padding-top: 6px; gap: 6px; }
+  .mh .pick-label { display: none; }
 }
+
+/* ---------- Match tabs (Ax59): before / during / after ---------- */
+.tabs { background: var(--pv-sheet); border-bottom: 3px solid var(--pv-ink); }
+.tabs [role="tablist"] { display: flex; justify-content: center; gap: 4px; max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+.tabs [role="tab"] { flex: 0 1 180px; text-align: center; padding: 11px 12px 9px; font-family: var(--pv-label); font-weight: 700; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; color: var(--pv-ink-2); border-bottom: 5px solid transparent; margin-bottom: -3px; }
+.tabs [role="tab"]:hover { color: var(--pv-ink); background: var(--pv-gold-soft); }
+.tabs [role="tab"][aria-selected="true"] { color: var(--pv-ink); border-bottom-color: var(--pv-gold); }
+.tab-panel { min-width: 0; }
+@media (max-width: 720px) {
+  .tabs [role="tablist"] { padding: 0 8px; gap: 0; }
+  .tabs [role="tab"] { flex: 1 1 0; font-size: 13px; letter-spacing: .06em; padding: 9px 4px 7px; }
+}
+:lang(zh) .tabs [role="tab"] { letter-spacing: .04em; }
+
+/* ---------- Tab contents (Ax59) ---------- */
+.live-bd { padding: 0; }
+.live-start { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; border: 3px solid var(--pv-ink); background: var(--pv-gold-soft); padding: 10px 14px; }
+.live-start p { flex: 1 1 18em; min-width: 0; color: var(--pv-ink); }
+/* A pivot the checker just signed off, over the live tab. */
+.pv-alert { position: fixed; right: 20px; bottom: 20px; z-index: 40; width: min(380px, calc(100vw - 28px)); display: grid; gap: 6px; background: var(--pv-sheet); border: 3px solid var(--pv-ink); border-left: 10px solid var(--pv-gold); box-shadow: 6px 6px 0 var(--pv-ink); padding: 10px 14px; animation: pv-in .4s ease-out; }
+.pv-alert.to-home { border-left-color: var(--pv-home); }
+.pv-alert.to-away { border-left-color: var(--pv-away); }
+.pv-alert-k { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; color: var(--pv-red); }
+.pv-alert-hd { font-size: 16px; line-height: 1.3; }
+.pv-alert-ft { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pv-alert .btn { padding: 2px 4px; font-size: 12px; }
+
+/* Post-match: numbered sections, one heading each. */
+.post-sec { display: grid; gap: 12px; min-width: 0; }
+.post-sec + .post-sec { border-top: 3px solid var(--pv-ink); padding-top: 18px; margin-top: 8px; }
+.sec-hd { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.sec-hd h2 { font-family: var(--pv-display); font-weight: 400; font-size: clamp(20px, 2.4vw, 28px); line-height: 1.1; text-transform: uppercase; }
+.sec-hd p { flex-basis: 100%; font-size: var(--pv-fs-sm); max-width: 60em; }
+.sec-n { width: 32px; height: 32px; display: grid; place-items: center; background: var(--pv-ink); color: var(--pv-gold); font-family: var(--pv-display); font-size: 17px; }
+.post-sec .keys { padding-top: 6px; }
+.post-sec .set-shots.open { border: 3px solid var(--pv-ink); background: var(--pv-sheet); }
+.set-shots.open .sp-count { padding: 10px 16px 0; font-size: var(--pv-fs-sm); }
+.set-shots.open .more-bd { padding-top: 10px; }
+.post-wi { display: grid; gap: 12px; border: 3px solid var(--pv-ink); background: var(--pv-sheet); padding: 12px 16px; min-width: 0; }
+.post-wi .mo-wi { border-top: 0; padding-top: 0; }
+.post-wi .mo-wi-hd { display: none; }
+.post-trace { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.post-trace p { margin: 0; }
+:lang(zh) .sec-hd h2 { letter-spacing: .02em; }
+
+/* Pre-match: both XIs on one pitch, each team's list beside it. */
+.lineups { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 340px) minmax(0, 1fr); grid-template-areas: "home pitch away"; gap: 14px; align-items: start; }
+.lineups.no-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "home away"; }
+.lu-pitch { grid-area: pitch; width: 100%; height: auto; display: block; border: 3px solid var(--pv-ink); background: var(--pv-pitch); }
+.lu-grass { fill: var(--pv-pitch); }
+.lu-line { stroke: var(--pv-pitch-line); stroke-width: .4; fill: none; opacity: .55; }
+.lu-team circle { fill: var(--tc, var(--pv-home)); stroke: var(--pv-sheet); stroke-width: .6; }
+.lu-no { fill: #fff; font-size: 3px; font-weight: 700; text-anchor: middle; }
+.lu-nm { fill: var(--pv-ink); font-size: 2.6px; font-weight: 700; text-anchor: middle; }
+.lu-list.home { grid-area: home; }
+.lu-list.away { grid-area: away; }
+.lu-list h3 > span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.lu-crest { width: 8px; height: 18px; flex: none; background: var(--tc, var(--pv-gold)); box-shadow: 0 0 0 1.5px var(--pv-ink); }
+.lu-list ol { list-style: none; margin: 0; padding: 0; display: grid; font-size: var(--pv-fs-sm); }
+.lu-list li { display: grid; grid-template-columns: 2em minmax(0, 1fr) auto; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--pv-hair); }
+.lu-list .no { text-align: right; font-family: var(--pv-label); font-weight: 700; color: var(--pv-ink-2); }
+.lu-list .nm { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.lu-list abbr { text-decoration: none; color: var(--pv-ink-2); }
+.lu-list .rl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); letter-spacing: .08em; color: var(--pv-ink-2); }
+.lu-list h4 { margin: 4px 0 0; font-family: var(--pv-label); font-size: var(--pv-fs-xs); letter-spacing: .14em; text-transform: uppercase; color: var(--pv-ink-2); }
+.lu-bench { font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+.pre-slot .placeholder { min-height: 140px; padding: 16px; text-align: center; }
+@media (max-width: 900px) {
+  .lineups { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "pitch pitch" "home away"; }
+  .lu-pitch { max-width: 360px; justify-self: center; }
+}
+@media (max-width: 560px) {
+  .lineups, .lineups.no-sheet { grid-template-columns: minmax(0, 1fr); grid-template-areas: "pitch" "home" "away"; }
+}
+
+/* Phones: nothing on the page may be wider than the window (#276: the kicker, h1 and lede were). */
+.kicker { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+.lead h1, .lead .lede { max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .pv-alert { right: 14px; bottom: 14px; }
+  .post-trace { grid-template-columns: minmax(0, 1fr); }
+}
+/* Fan mode: the evidence numbers fold behind one small tap per sentence. */
+.ev-more { display: inline-block; font-family: var(--pv-label); font-weight: 700; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 0 6px; border: 1.5px dashed var(--pv-ink-2); background: transparent; color: var(--pv-ink-2); cursor: pointer; line-height: 1.5; vertical-align: .1em; }
+.ev-more:hover { background: var(--pv-gold-soft); color: var(--pv-ink); }
+:lang(zh) .ev-more { letter-spacing: .02em; }

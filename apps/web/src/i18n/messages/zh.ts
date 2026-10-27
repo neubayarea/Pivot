@@ -119,8 +119,6 @@ export const zh: Messages = {
   "moments.wiPick": "先在上面选一个改动。不按「开始重踢」就不会跑。",
   "moments.wiHow": "从 {minute}′ 起两边各重放 200 次；没跑过的要几分钟，跑过的马上出结果",
   "moments.lab": "去「假如」实验室看更多选项",
-  "moments.more": "更多细节",
-  "moments.moreNote": "球场回放 · 全部事件 · 比赛数据 · AI 工作记录",
   "moments.traceNote": "每个时刻是哪个模型判断、撰写、核对的，各花了多久。",
   "board.halfTime": "半场",
   "board.phaseScore": "{phase} · {home} {score} {away}",
@@ -560,4 +558,34 @@ export const zh: Messages = {
   "header.controls": "观看方式",
   "header.scorers": "{team} 进球",
   "header.pen": "（点球）",
+
+  // Ax59 · match tabs
+  "tabs.label": "比赛分页",
+  "tabs.pre": "赛前",
+  "tabs.live": "赛中",
+  "tabs.post": "赛后",
+
+  // Ax59 · tab contents
+  "header.og": "（乌龙）",
+  "live.alert": "转折点 · {minute}′",
+  "live.alertOpen": "看为什么会转折",
+  "live.alertClose": "关闭",
+  "live.replayHint": "比赛已经结束。重放一遍，可以看到球员跑动，转折点也会在发生时弹出来。",
+  "post.pivots": "转折点",
+  "post.pivotsNote": "每个一句话。点开一个看完整解释，里面的数字都和比赛数据核对过。",
+  "post.whatIfFor": "改哪个转折点",
+  "post.whatIfAt": "转折点 {n} · {minute}′",
+  "post.whatIfNone": "「假如」要从一个转折点开始改，这场比赛还没有。",
+  "post.trace": "AI 工作记录",
+  "pre.lineups": "首发阵容",
+  "pre.lineupsNote": "两队教练排出的首发和阵型。",
+  "pre.pitchLabel": "首发阵型：{home}，{away}",
+  "pre.starters": "首发",
+  "pre.squad": "球员名单",
+  "pre.bench": "替补",
+  "pre.captain": "队长",
+  "pre.slot": "近期战绩、交锋记录和教练的战术安排会放在这里",
+
+  // Ax59 · fan mode hides the evidence numbers
+  "why.sources": "依据（{n}）",
 };

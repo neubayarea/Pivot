@@ -50,7 +50,7 @@ describe("the match header", () => {
   it("puts fan / analyst, team and player in plain sight, with no Settings menu", () => {
     withWindow("");
     const html = render();
-    const head = html.slice(html.indexOf('class="sh"'));
+    const head = html.slice(html.indexOf('class="mh"'));
     expect(head).toContain('aria-label="Viewing mode"');
     expect(head).toContain(">Fan</button>");
     expect(head).toContain(">Analyst</button>");

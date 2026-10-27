@@ -119,8 +119,6 @@ export const en = {
   "moments.wiPick": "Pick a change above. Nothing runs until you press Run simulation.",
   "moments.wiHow": "replays from {minute}′, 200 times each way; a new run takes a few minutes, one already run answers at once",
   "moments.lab": "More options in the what-if lab",
-  "moments.more": "More details",
-  "moments.moreNote": "Pitch replay · all events · match stats · AI work log",
   "moments.traceNote": "Which model judged, wrote and checked each moment, and how long it took.",
   "board.halfTime": "Half-time",
   "board.phaseScore": "{phase} · {home} {score} {away}",
@@ -561,4 +559,34 @@ export const en = {
   "header.controls": "How you watch",
   "header.scorers": "{team} goals",
   "header.pen": "(pen)",
+
+  // Ax59 · match tabs
+  "tabs.label": "Match sections",
+  "tabs.pre": "Pre-match",
+  "tabs.live": "Live",
+  "tabs.post": "Post-match",
+
+  // Ax59 · tab contents
+  "header.og": "(og)",
+  "live.alert": "Pivot · {minute}′",
+  "live.alertOpen": "Why it turned",
+  "live.alertClose": "Close",
+  "live.replayHint": "The match is over. Replay it to watch the players move and the pivots appear as they happen.",
+  "post.pivots": "Pivots",
+  "post.pivotsNote": "One line each. Pick one for the full explanation, checked against the match data.",
+  "post.whatIfFor": "Which pivot to change",
+  "post.whatIfAt": "Pivot {n} · {minute}′",
+  "post.whatIfNone": "What-if needs a pivot to start from; this match has none yet.",
+  "post.trace": "AI work log",
+  "pre.lineups": "Line-ups",
+  "pre.lineupsNote": "The starting XIs in their formations, as the coaches named them.",
+  "pre.pitchLabel": "Starting formations: {home}, {away}",
+  "pre.starters": "Starting XI",
+  "pre.squad": "Squad",
+  "pre.bench": "Bench",
+  "pre.captain": "Captain",
+  "pre.slot": "Form, head-to-head and the coaches' tactics go here",
+
+  // Ax59 · fan mode hides the evidence numbers
+  "why.sources": "Sources ({n})",
 };

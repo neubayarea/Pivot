@@ -120,8 +120,6 @@ export const es: Messages = {
   "moments.wiPick": "Elige un cambio arriba. No se ejecuta nada hasta que pulses Ejecutar simulación.",
   "moments.wiHow": "repite desde el {minute}′, 200 veces cada versión; una simulación nueva tarda unos minutos, una ya hecha responde al instante",
   "moments.lab": "Más opciones en el laboratorio",
-  "moments.more": "Más detalles",
-  "moments.moreNote": "Repetición en el campo · todos los eventos · estadísticas · registro de la IA",
   "moments.traceNote": "Qué modelo juzgó, escribió y comprobó cada momento, y cuánto tardó.",
   "board.halfTime": "Descanso",
   "board.phaseScore": "{phase} · {home} {score} {away}",
@@ -562,4 +560,34 @@ export const es: Messages = {
   "header.controls": "Cómo lo ves",
   "header.scorers": "Goles de {team}",
   "header.pen": "(p.)",
+
+  // Ax59 · match tabs
+  "tabs.label": "Secciones del partido",
+  "tabs.pre": "Previa",
+  "tabs.live": "En directo",
+  "tabs.post": "Después del partido",
+
+  // Ax59 · tab contents
+  "header.og": "(p.p.)",
+  "live.alert": "Punto de giro · {minute}′",
+  "live.alertOpen": "Por qué cambió",
+  "live.alertClose": "Cerrar",
+  "live.replayHint": "El partido terminó. Repítelo para ver moverse a los jugadores y aparecer los puntos de giro en su momento.",
+  "post.pivots": "Puntos de giro",
+  "post.pivotsNote": "Una línea cada uno. Elige uno para ver la explicación completa, comprobada con los datos del partido.",
+  "post.whatIfFor": "Qué punto de giro cambiar",
+  "post.whatIfAt": "Punto de giro {n} · {minute}′",
+  "post.whatIfNone": "El «¿y si…?» parte de un punto de giro y este partido aún no tiene.",
+  "post.trace": "Registro del trabajo de la IA",
+  "pre.lineups": "Alineaciones",
+  "pre.lineupsNote": "Los onces iniciales en su sistema, tal como los dieron los entrenadores.",
+  "pre.pitchLabel": "Sistemas iniciales: {home}, {away}",
+  "pre.starters": "Once inicial",
+  "pre.squad": "Plantilla",
+  "pre.bench": "Banquillo",
+  "pre.captain": "Capitán",
+  "pre.slot": "Aquí irán la forma, los precedentes y la táctica de los entrenadores",
+
+  // Ax59 · fan mode hides the evidence numbers
+  "why.sources": "Fuentes ({n})",
 };

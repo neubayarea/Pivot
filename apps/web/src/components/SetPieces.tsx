@@ -24,25 +24,35 @@ const S = 5;
 const HASHES = ["#set-pieces", "#shots"] as const;
 type Tab = "set" | "shots";
 
-export default function SetPiecesAndShots() {
+/** `folded={false}`: always open, with no fold of its own, under a heading the page gives it (Ax59). */
+export default function SetPiecesAndShots({ folded = true }: { folded?: boolean }) {
   const { events } = useMatch();
   const t = useT();
-  const [open, setOpen] = useState(() => typeof window !== "undefined" && (HASHES as readonly string[]).includes(window.location.hash));
+  const [open, setOpen] = useState(() => !folded || (typeof window !== "undefined" && (HASHES as readonly string[]).includes(window.location.hash)));
   const [tab, setTab] = useState<Tab>(() => (typeof window !== "undefined" && window.location.hash === "#shots" ? "shots" : "set"));
   const corners = events.filter((e) => e.type === "pass" && e.pass_type === "corner").length;
   const shots = events.filter((e) => e.type === "shot").length;
+  const body = (
+    <div className="more-bd">
+      <Segmented label={t("sp.title")} value={tab} onChange={setTab}
+        options={[{ value: "set", label: t("sp.tabSet") }, { value: "shots", label: t("sp.tabShots") }]} />
+      {tab === "set" ? <SetPieceBoard /> : <ShotBoard />}
+    </div>
+  );
+  if (!folded) {
+    return (
+      <div className="set-shots open" id="set-pieces">
+        <p className="muted sp-count">{t("sp.titleNote", { corners, shots })}</p>
+        {body}
+      </div>
+    );
+  }
   return (
     <details className="more set-shots" id="set-pieces" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary>
         {t("sp.title")} <small>{t("sp.titleNote", { corners, shots })}</small>
       </summary>
-      {open && (
-        <div className="more-bd">
-          <Segmented label={t("sp.title")} value={tab} onChange={setTab}
-            options={[{ value: "set", label: t("sp.tabSet") }, { value: "shots", label: t("sp.tabShots") }]} />
-          {tab === "set" ? <SetPieceBoard /> : <ShotBoard />}
-        </div>
-      )}
+      {open && body}
     </details>
   );
 }

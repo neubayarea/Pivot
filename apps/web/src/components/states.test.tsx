@@ -115,8 +115,10 @@ describe("live board states", () => {
     const html = render(<LiveBoard />, matchView({}, "scheduled"));
     expect(html).toContain("Kick-off pending");
     expect(html).toContain("Start match");
-    expect(html).toContain("No pivots yet");
     expect(html).toContain("No events yet");
+    const post = render(<LiveBoard />, matchView({}, "scheduled"), "/?tab=post");
+    expect(post).toContain("Kick-off pending");
+    expect(post).toContain("Start match");
   });
 
   it("offers Start demo once a live match is over", () => {
@@ -125,7 +127,7 @@ describe("live board states", () => {
   });
 
   it("shows the cream banner and Auto summary stamp for a degraded pivot", () => {
-    const html = render(<LiveBoard />, matchView({ pivots: [pivot(63, "degraded")] }));
+    const html = render(<LiveBoard />, matchView({ pivots: [pivot(63, "degraded")] }), "/?tab=post&pivot=p63");
     expect(html).toContain("AI explanations delayed. Showing automatic summaries.");
     expect(html).toContain('stamp warn">Auto summary');
     expect(html).not.toContain("Verified ✓");
@@ -144,11 +146,11 @@ describe("live board states", () => {
     expect(render(<LiveBoard />, matchView({}, "scheduled"))).not.toContain("On the pitch");
   });
 
-  it("gives each part of More details its own grid cell, the line-ups apart from the pitch", () => {
+  it("gives each part of the live tab its own grid cell, the line-ups apart from the pitch", () => {
     const html = render(<LiveBoard />, matchView());
-    // styles/base.css places these cells by name: pitch and stats on top, events and line-ups under, the AI's work below.
+    // styles/base.css places these cells by name: pitch and stats on top, events and line-ups under.
     const cells = [...html.matchAll(/class="card [^"]*\bmore-(\w+)/g)].map((m) => m[1]);
-    expect(cells.sort()).toEqual(["events", "pitch", "roster", "stats", "trace"]);
+    expect(cells.sort()).toEqual(["events", "pitch", "roster", "stats"]);
     expect(html).toContain("Line-ups");
   });
 
