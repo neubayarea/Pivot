@@ -96,7 +96,8 @@ export default function TeamStats({ state, only }: { state: VizState<TeamStatsRe
       <div className="ts-groups">
         {groups.map((g) => (
           <table key={g} className="ts-table">
-            <caption>{g === "key" ? t("ts.key") : isMessageKey(`ts.group.${g}`) ? t(`ts.group.${g}` as never) : g}</caption>
+            {/* With `only` the page names the section itself; the caption stays for screen readers. */}
+            <caption className={only ? "sr-only" : undefined}>{g === "key" ? t("ts.key") : isMessageKey(`ts.group.${g}`) ? t(`ts.group.${g}` as never) : g}</caption>
             <thead className="sr-only">
               <tr><th scope="col">{teams.home.name}</th><th scope="col">{t("ts.title")}</th><th scope="col">{teams.away.name}</th></tr>
             </thead>
