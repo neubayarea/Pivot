@@ -1,9 +1,13 @@
 // Ax36: who is who on the pitch board, and the team-shape numbers. Static HTML, no DOM.
+import type React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, describe, expect, it } from "vitest";
 import type { MatchEvent, TeamSheet, TrackingFrame } from "@pivot/contracts";
+import { FixtureProvider } from "../data/match";
+import { PrefsProvider } from "../i18n";
 import Pitch from "./Pitch";
-import { Roster, ShapeTable } from "./PitchBoard";
+import { PlayerDetail, Roster, ShapeTable } from "./PitchBoard";
 import { frameShape, lineupAt, meanShape, shapeLines } from "./shape";
 
 const slot = (player_id: string, role: TeamSheet["starters"][number]["role"]) => ({ player_id, role, slot: 0, anchor: [0, 0] });
@@ -84,5 +88,31 @@ describe("who is who", () => {
     expect(html).toMatch(/class="cameOn".*Sub.*on</);
     expect(html).toMatch(/class="sentOff".*Red.*sent off/);
     expect(html).not.toContain("Unused");
+  });
+});
+
+describe("a player in the line-ups card (Ax59)", () => {
+  const g = globalThis as { window?: unknown };
+  afterEach(() => void delete g.window);
+  const view = (node: React.ReactNode) => {
+    g.window = { location: { search: "?fixture=1" }, localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } };
+    return renderToStaticMarkup(<PrefsProvider><MemoryRouter><FixtureProvider>{node}</FixtureProvider></MemoryRouter></PrefsProvider>);
+  };
+  const okafor = { player_id: "hcy-9", name: "D. Okafor", shirt: 9 };
+
+  it("shows who it is, their side and role, and a Back button to the list", () => {
+    const html = view(<PlayerDetail player={okafor} role="ST" onBack={() => {}} />);
+    expect(html).toContain("← Back");
+    expect(html).toContain("D. Okafor");
+    expect(html).toContain("Harbour City · ST");
+    expect(html).toContain('class="roster-detail home"');
+    // The fixture has no player numbers to fetch: it says so instead of an empty box.
+    expect(html).toContain("No numbers for this player in this match yet.");
+  });
+
+  it("tells the viewer a name or a dot opens the player", () => {
+    expect(view(<Roster squads={{ home: [okafor], away: [] }} frame={null} now={0} events={[]} roleOf={() => "ST"}
+      picked={null} marked={new Set()} onPick={() => {}} names={{ home: "HCY", away: "NVR" }} />))
+      .toContain("Tap a name or a dot on the pitch for the player&#x27;s numbers.");
   });
 });

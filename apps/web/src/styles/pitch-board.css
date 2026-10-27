@@ -16,7 +16,7 @@
 .shape-table > small { font-size: 12px; }
 
 .roster { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
-.roster h4 { font-family: var(--pv-label); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; border-bottom: 2px solid var(--pv-ink); margin: 0 0 2px; }
+.roster h4 { font-family: var(--pv-label); font-size: 12px; border-bottom: 1px solid var(--pv-hair); margin: 0 0 2px; }
 .roster-team.home h4 { color: var(--pv-home); }
 .roster-team.away h4 { color: var(--pv-away); }
 .roster ol { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -38,3 +38,15 @@
 @media (max-width: 480px) {
   .roster { grid-template-columns: 1fr; }
 }
+/* Ax59: one player in the line-ups card, in the same box as the list. */
+.roster-detail { display: grid; gap: 10px; align-content: start; }
+.pd-back { justify-self: start; padding: 2px 4px; font-size: 13px; }
+.pd-hd { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--pv-hair); padding-bottom: 8px; }
+.pd-hd > span { display: grid; min-width: 0; }
+.pd-no { min-width: 44px; height: 44px; display: grid; place-items: center; font-family: var(--pv-display); font-size: 20px; color: #fff; background: var(--pv-home); }
+.roster-detail.away .pd-no { background: var(--pv-away); }
+.pd-nm { font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+.pd-hd small { font-size: 12px; }
+.roster-detail .player-stats { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+/* Back gets focus when the card swaps; keep it clear of the sticky match header when that scrolls it into view. */
+.pd-back { scroll-margin-top: 280px; }

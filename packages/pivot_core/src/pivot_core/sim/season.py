@@ -321,8 +321,8 @@ def derived_news(teams: list[Team], results: list[dict], stats: dict) -> list[Of
         if goals >= 5:
             out.append(OffFieldEvent(news_id=f"news-{best.player_id}-goals", subject_id=best.player_id,
                                      kind="milestone", hours_before_kickoff=72, sentiment="positive",
-                                     headline=f"{best.name} has {goals} league goals this season, "
-                                              f"the most at {team.name}"))
+                                     # no count: the simulator's strikers score more than real ones do
+                                     headline=f"{best.name} is {team.name}'s top scorer in the league this season"))
     return out
 
 

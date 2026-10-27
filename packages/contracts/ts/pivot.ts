@@ -129,6 +129,37 @@ export interface AttributeSummary {
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AveragePosition".
+ */
+export interface AveragePosition {
+  in_possession: PitchPoint | null;
+  out_of_possession: PitchPoint | null;
+  player_id: string;
+  seconds: number;
+  team: "home" | "away";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PitchPoint".
+ */
+export interface PitchPoint {
+  x: number;
+  y: number;
+}
+/**
+ * GET /api/matches/{id}/positions: everyone who played, from the tracking frames.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AveragePositionsReport".
+ */
+export interface AveragePositionsReport {
+  match_id: string;
+  period: (1 | 2 | 3 | 4 | 5) | null;
+  players: AveragePosition[];
+  up_to_t: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "BallPosition".
  */
 export interface BallPosition {
@@ -423,6 +454,42 @@ export interface PastMeeting {
   home_club_id: string;
   home_goals: number;
   season: string;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "HeatGrid".
+ */
+export interface HeatGrid {
+  cells: number[];
+  samples: number;
+}
+/**
+ * GET /api/matches/{id}/heatmaps: where each team and player spent their time.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "HeatmapReport".
+ */
+export interface HeatmapReport {
+  cols: number;
+  match_id: string;
+  period: (1 | 2 | 3 | 4 | 5) | null;
+  players: PlayerHeat[];
+  rows: number;
+  source: "frames" | "events";
+  teams: {
+    [k: string]: HeatGrid;
+  };
+  up_to_t: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PlayerHeat".
+ */
+export interface PlayerHeat {
+  cells: number[];
+  player_id: string;
+  samples: number;
+  team: "home" | "away";
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
@@ -1121,6 +1188,50 @@ export interface OverlayTimeline {
 }
 /**
  * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PassNetworkEdge".
+ */
+export interface PassNetworkEdge {
+  from_id: string;
+  passes: number;
+  to_id: string;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PassNetworkNode".
+ */
+export interface PassNetworkNode {
+  passes: number;
+  player_id: string;
+  received: number;
+  x: number;
+  y: number;
+}
+/**
+ * GET /api/matches/{id}/pass-network: each side's starting eleven and who passed to whom.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "PassNetworkReport".
+ */
+export interface PassNetworkReport {
+  match_id: string;
+  min_passes: number;
+  period: (1 | 2 | 3 | 4 | 5) | null;
+  teams: {
+    [k: string]: TeamPassNetwork;
+  };
+  up_to_t: number;
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "TeamPassNetwork".
+ */
+export interface TeamPassNetwork {
+  edges: PassNetworkEdge[];
+  nodes: PassNetworkNode[];
+  source: "frames" | "events";
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "Pivot".
  */
 export interface Pivot1 {
@@ -1326,6 +1437,44 @@ export interface SetPieceTactics1 {
   free_kick_style: "direct" | "cross" | "short" | "mixed";
   players_back_on_corners: number;
   players_forward_on_corners: number;
+}
+/**
+ * GET /api/matches/{id}/shots: every shot so far (the shootout left out).
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "ShotMap".
+ */
+export interface ShotMap {
+  match_id: string;
+  period: (1 | 2 | 3 | 4 | 5) | null;
+  shots: ShotMapShot[];
+  up_to_t: number;
+}
+/**
+ * One shot: where from and where to, from the shooter's side, the goal they attack at x = 105.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "ShotMapShot".
+ */
+export interface ShotMapShot {
+  body_part: ("left_foot" | "right_foot" | "head" | "other") | null;
+  clock_label: string;
+  end_x: number | null;
+  end_y: number | null;
+  event_id: string;
+  first_time: boolean;
+  outcome: ("goal" | "saved" | "off_target" | "blocked" | "post" | "disallowed") | null;
+  period: 1 | 2 | 3 | 4 | 5;
+  play_pattern:
+    ("open_play" | "counter" | "corner" | "free_kick" | "throw_in" | "goal_kick" | "kick_off" | "penalty") | null;
+  player_id: string | null;
+  t: number;
+  team: "home" | "away";
+  technique: ("normal" | "volley" | "half_volley" | "lob" | "backheel" | "diving_header" | "overhead_kick") | null;
+  under_pressure: boolean;
+  x: number;
+  xg: number | null;
+  y: number;
 }
 /**
  * How the page labels one stat, so it hard-codes nothing (the D02 vocabulary, MET-001 to MET-023).

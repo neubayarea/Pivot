@@ -232,7 +232,8 @@ class VerifierNode(Executor):
                 v = r.view
                 verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=v.events, stats=v.stats,
                                  context=explainer.shown_context(r.candidate, v.events, v.context),
-                                 team_names=v.team_names)
+                                 team_names=v.team_names, player_names=v.player_names,
+                                 direction=r.candidate.direction)
             narrative = None
             if verdict.passed:
                 narrative = with_computed(r.draft, r.view.stats).model_copy(update={"verifier_attempts": r.checks})

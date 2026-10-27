@@ -103,15 +103,20 @@ FIXTURE = FIXTURES / "demo-1021.json"
 
 
 @lru_cache(maxsize=1)
-def _season() -> dict:
-    return load_season(FIXTURES)
+def _season() -> dict | None:
+    try:
+        return load_season(FIXTURES)
+    except OSError:
+        log.warning("no season file in %s: simulated matches get only the basic pre-match context", FIXTURES)
+        return None
 
 
 def seed_match(seed: int, home_strength: float, away_strength: float, home_formation: str,
                away_formation: str) -> Match:
     """A seed match before kick-off: the squads, each coach's own tactics and the pre-match context."""
-    match = build_demo_match(seed, home_strength, away_strength, home_formation, away_formation)
-    return with_seed_season(styled(match), _season())
+    match = styled(build_demo_match(seed, home_strength, away_strength, home_formation, away_formation))
+    season = _season()
+    return match if season is None else with_seed_season(match, season)
 
 
 SPECS = [

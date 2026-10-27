@@ -31,7 +31,8 @@ const FAN: Row[] = [
 /** The report for one player up to `upTo` seconds (null: the whole match); undefined while it loads, null when there is none. */
 export function usePlayerReport(matchId: string, playerId: string | null, upTo: number | null): PlayerReport | null | undefined {
   const [fixture] = useState(() => typeof window === "undefined" || fixtureMode());
-  const [report, setReport] = useState<PlayerReport | null | undefined>(undefined);
+  // Nothing to fetch on the fixture: no report from the start, not a loading flash.
+  const [report, setReport] = useState<PlayerReport | null | undefined>(() => (fixture || !playerId ? null : undefined));
   useEffect(() => {
     if (fixture || !playerId) return setReport(null);
     let alive = true;
@@ -65,15 +66,26 @@ export default function PlayerCard({ upTo, ...rest }: Props) {
 /** The card for a report already fetched (undefined: still loading). */
 export function PlayerCardView({ report, upTo, numbered = [], onPivot }: Props & { report: PlayerReport | undefined }) {
   const { match, teams } = useMatch();
-  const { prefs, t } = usePrefs();
-  const { minute, at } = useClock();
-  const fan = prefs.audience === "fan";
-  const label = fan ? "player.fan" : "player";
+  const { t } = usePrefs();
+  const { at } = useClock();
   const title = report ? t("player.title", { player: report.name }) : t("player.titleLoading");
   const note = report && `#${report.shirt_number} · ${teams[report.team].short_name} · ${report.role}` +
     ` · 0′–${at(upTo ?? match.clock)}′`;
   return (
     <Card title={title} note={note} className="player-card">
+      <PlayerNumbers report={report} numbered={numbered} onPivot={onPivot} />
+    </Card>
+  );
+}
+
+/** A report's numbers and the moments the player was in; also the line-ups card's player view (Ax59). */
+export function PlayerNumbers({ report, numbered = [], onPivot }: Pick<Props, "numbered" | "onPivot"> & { report: PlayerReport | undefined }) {
+  const { prefs, t } = usePrefs();
+  const { minute } = useClock();
+  const fan = prefs.audience === "fan";
+  const label = fan ? "player.fan" : "player";
+  return (
+    <>
       {report === undefined ? (
         <p className="muted">{t("player.loading")}</p>
       ) : !report.stats ? (
@@ -102,6 +114,6 @@ export function PlayerCardView({ report, upTo, numbered = [], onPivot }: Props &
           })}
         </p>
       )}
-    </Card>
+    </>
   );
 }

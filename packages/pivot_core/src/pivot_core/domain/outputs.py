@@ -6,7 +6,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from .common import ClockSeconds, Minute, Model, Period, Side
+from .common import X, Y, ClockSeconds, Minute, Model, Period, Side
+from .events import BodyPart, PlayPattern, ShotOutcome, ShotTechnique
 from .match import Score
 from .narrative import Language, Narrative
 
@@ -60,6 +61,114 @@ class PlayerMatchStats(Model):
     distance_km: Annotated[float, Field(ge=0, le=20)] = 0.0
     top_speed_kmh: Annotated[float, Field(ge=0, le=45)] = 0.0
     sprints: Annotated[int, Field(ge=0)] = 0
+
+
+# --- match pictures (Bx12): every point in the acting team's attacking view (CONV-002) ----------
+
+class ShotMapShot(Model):
+    """One shot: where from and where to, from the shooter's side, the goal they attack at x = 105."""
+
+    event_id: str
+    t: ClockSeconds
+    period: Period
+    clock_label: str                          # "38'", "45+2'"
+    team: Side
+    player_id: str | None = None
+    x: X
+    y: Y
+    end_x: X | None = None
+    end_y: Y | None = None
+    xg: Annotated[float, Field(ge=0, le=1)] | None = None
+    outcome: ShotOutcome | None = None
+    body_part: BodyPart | None = None
+    play_pattern: PlayPattern | None = None
+    technique: ShotTechnique | None = None
+    under_pressure: bool = False
+    first_time: bool = False
+
+
+class ShotMap(Model):
+    """GET /api/matches/{id}/shots: every shot so far (the shootout left out)."""
+
+    match_id: str
+    up_to_t: ClockSeconds
+    period: Period | None = None              # set when one period was asked for
+    shots: list[ShotMapShot]
+
+
+class HeatGrid(Model):
+    samples: Annotated[int, Field(ge=0)]      # player-seconds (frames) or on-ball events counted
+    cells: list[Annotated[float, Field(ge=0, le=1)]]   # row-major, a share of the busiest cell
+
+
+class PlayerHeat(HeatGrid):
+    player_id: str
+    team: Side
+
+
+class HeatmapReport(Model):
+    """GET /api/matches/{id}/heatmaps: where each team and player spent their time."""
+
+    match_id: str
+    up_to_t: ClockSeconds
+    period: Period | None = None
+    source: Literal["frames", "events"]       # tracking frames (time spent) or on-ball events when there are none
+    cols: Annotated[int, Field(ge=1)]         # along x, from the team's own goal
+    rows: Annotated[int, Field(ge=1)]         # along y, from the team's right touchline
+    teams: dict[Side, HeatGrid]
+    players: list[PlayerHeat]
+
+
+class PitchPoint(Model):
+    x: X
+    y: Y
+
+
+class AveragePosition(Model):
+    player_id: str
+    team: Side
+    seconds: Annotated[int, Field(ge=0)]      # on the pitch in the frames counted
+    in_possession: PitchPoint | None = None   # mean position while their team had the ball
+    out_of_possession: PitchPoint | None = None   # ... while the other team had it
+
+
+class AveragePositionsReport(Model):
+    """GET /api/matches/{id}/positions: everyone who played, from the tracking frames."""
+
+    match_id: str
+    up_to_t: ClockSeconds
+    period: Period | None = None
+    players: list[AveragePosition]
+
+
+class PassNetworkNode(Model):
+    player_id: str
+    x: X                                      # mean position while their team had the ball
+    y: Y
+    passes: Annotated[int, Field(ge=0)]       # completed passes made
+    received: Annotated[int, Field(ge=0)]     # completed passes received
+
+
+class PassNetworkEdge(Model):
+    from_id: str
+    to_id: str
+    passes: Annotated[int, Field(ge=1)]       # completed passes from one to the other
+
+
+class TeamPassNetwork(Model):
+    source: Literal["frames", "events"]       # where the node positions come from
+    nodes: list[PassNetworkNode]              # the starting eleven
+    edges: list[PassNetworkEdge]              # most passes first
+
+
+class PassNetworkReport(Model):
+    """GET /api/matches/{id}/pass-network: each side's starting eleven and who passed to whom."""
+
+    match_id: str
+    up_to_t: ClockSeconds
+    period: Period | None = None
+    min_passes: Annotated[int, Field(ge=1)]
+    teams: dict[Side, TeamPassNetwork]
 
 
 class PlayerPivotLink(Model):

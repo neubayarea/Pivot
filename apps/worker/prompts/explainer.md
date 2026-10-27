@@ -48,6 +48,15 @@ Return one JSON object that matches this schema, and nothing else:
 6. Score words (equaliser, take or extend the lead, comeback, trailing, protecting the lead) must
    fit the goal's `score_after` and the score before it. A goal that makes it 3-1 is not an equaliser.
    Never write the score itself ("4-1", "two goals"): the screen shows it. Say what the goal did.
+7. Name players only by the names in the request (`player`, `receiver`, `substitution.player_off` /
+   `player_on`), never by an id like `h06`. Every player a sentence names must be in an event that
+   sentence cites. Every minute you write is the `clock` of an event the sentence cites, exactly as
+   given: if an event's `clock` is `62'`, write 62', not 61'. The pivot's own minute is not an event.
+8. The momentum went to `pivot.towards`. Never write that it swung to the other team.
+9. Read every stat the right way round (the "a rise means" column). A lower PPDA or press distance
+   means a harder press, not a softer one.
+10. `threat_total` (threat created) and `momentum_avg` (momentum) are different stats. Call a
+    `threat_total` number "threat created", never "momentum"; only a `momentum_avg` claim is momentum.
 
 ## Stats you may cite
 

@@ -134,10 +134,10 @@ OFF_PITCH_WORDS = (
 
 def vocabulary_markdown(audience: Literal["analyst", "fan"] = "analyst") -> str:
     """The vocabulary as a Markdown table, for injection into the system prompts."""
-    rows = ["| metric | unit | say | meaning |", "|---|---|---|---|"]
+    rows = ["| metric | unit | say | meaning | a rise means |", "|---|---|---|---|---|"]
     for term in STAT_TERMS.values():
         say = term.label if audience == "analyst" else term.fan_label
-        rows.append(f"| `{term.metric}` | {STAT_UNITS[term.metric]} | {say} | {term.definition} |")
+        rows.append(f"| `{term.metric}` | {STAT_UNITS[term.metric]} | {say} | {term.definition} | {term.higher_means} |")
     return "\n".join(rows)
 
 

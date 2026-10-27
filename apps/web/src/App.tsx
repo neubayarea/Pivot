@@ -1,6 +1,8 @@
 import { Route, Routes } from "react-router-dom";
 import ConnectionBanner, { MissingMatchBanner } from "./components/ConnectionBanner";
+import KitColours from "./components/KitColours";
 import Playback from "./components/Playback";
+import ScoreHeader from "./components/ScoreHeader";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import { MatchProvider } from "./data/match";
@@ -29,10 +31,15 @@ export default function App() {
 
   return (
     <MatchProvider fallback={WAITING}>
+      <KitColours />
       <TopBar prefs={prefs} onPrefsChange={setPrefs} />
       <ConnectionBanner />
       <MissingMatchBanner />
-      <Playback />
+      {/* Ax59: the score and the replay bar stay at the top of the window while the page scrolls. */}
+      <div className="match-head">
+        <ScoreHeader prefs={prefs} onPrefsChange={setPrefs} />
+        <Playback />
+      </div>
       {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}
       <main className="page" data-fav={prefs.focus_team ?? undefined}>
         <Routes>
