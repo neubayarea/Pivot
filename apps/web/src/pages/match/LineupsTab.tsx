@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import FollowTeam from "../../components/FollowTeam";
 import Lineups from "../../components/Lineups";
 import TeamTactics from "../../components/TeamTactics";
+import { AveragePositions, VizBox, useAveragePositions } from "../../components/viz";
 import { useMatch, type Side } from "../../data/match";
 import { lines, tacticsDiff, type ApiLine, type Diff } from "../../data/matchup";
 import { other, usePersona } from "../../data/persona";
@@ -74,8 +75,8 @@ function Matchup({ side }: { side: Side }) {
 export function LineupsTab() {
   const t = useT();
   // The coach's plan below names each shape; the lists then leave it out.
-  const { preMatch } = useMatch();
-  const { side } = usePersona();
+  const { preMatch, match } = useMatch();
+  const { side, fan } = usePersona();
   return (
     <div className="post lineups-tab">
       <section className="post-sec" aria-labelledby="lu-side-hd" id="lu-side">
@@ -97,7 +98,58 @@ export function LineupsTab() {
         </header>
         <Lineups up={side ?? "home"} follow facts formation={!preMatch} />
       </section>
+      {!fan && match.status !== "scheduled" && <PaperVsActual />}
       <TeamTactics />
     </div>
+  );
+}
+
+const SIDES = ["home", "away"] as const;
+
+/**
+ * Each starter's slot in the formation on paper ("4-2-3-1": the keeper, then one row per number, back
+ * to front, each row left to right), in metres in the team's own frame, attacking to the right, as
+ * the average positions are. Empty when the sheet's slots do not add up to its formation.
+ */
+export function paperSlots(sheet: { formation: string; starters: readonly { player_id: string; slot: number }[] }): Map<string, [number, number]> {
+  const rows = [1, ...sheet.formation.split("-").map(Number)];
+  const slots = [...sheet.starters].sort((a, b) => a.slot - b.slot);
+  const out = new Map<string, [number, number]>();
+  if (rows.some((n) => !Number.isInteger(n) || n < 1) || rows.reduce((n, r) => n + r, 0) !== slots.length) return out;
+  let i = 0;
+  rows.forEach((count, row) => {
+    for (let k = 0; k < count; k++, i++) {
+      const depth = row === 0 ? 5 : 20 + ((row - 1) * 48) / Math.max(1, rows.length - 2);
+      // The team's left is the far touchline when it attacks to the right.
+      out.set(slots[i].player_id, [depth, 68 - (68 * (k + 1)) / (count + 1)]);
+    }
+  });
+  return out;
+}
+
+/**
+ * C18 (#366): the analyst's "on paper vs where they played": each side's formation from the team
+ * sheet beside the average positions the pictures API gives (the same picture as the Stats tab's).
+ */
+function PaperVsActual() {
+  const t = useT();
+  const { match, teams, sheets, squads } = useMatch();
+  const pos = useAveragePositions(match.match_id, { stepS: 60 });
+  const names = { home: teams.home.name, away: teams.away.name };
+  const starters = new Set(SIDES.flatMap((s) => sheets?.[s].starters.map((p) => p.player_id) ?? []));
+  const ghosts = new Map(SIDES.flatMap((s) => (sheets ? [...paperSlots(sheets[s])] : [])));
+  return (
+    <section className="post-sec" aria-labelledby="lu-real-hd" id="lu-real">
+      <header className="sec-hd">
+        <h2 id="lu-real-hd">{t("lu.realTitle")}</h2>
+        <p className="muted">{t("lu.realNote", {
+          home: teams.home.short_name, away: teams.away.short_name,
+          hf: sheets?.home.formation ?? "–", af: sheets?.away.formation ?? "–",
+        })}</p>
+      </header>
+      <div className="card lu-real">
+        <VizBox state={pos}>{(d) => <AveragePositions data={d} squads={squads} teamNames={names} starters={starters} ghosts={ghosts} />}</VizBox>
+      </div>
+    </section>
   );
 }
