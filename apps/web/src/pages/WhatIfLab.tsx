@@ -10,6 +10,7 @@ import { RunFailed, RunProgress, ScenarioChips, ScenarioResult } from "../compon
 import { useClock } from "../data/clock";
 import { useFixture, useMatch } from "../data/match";
 import { mockScenarioApi } from "../data/scenarioMock";
+import { numberLocale } from "../data/motion";
 import {
   DEFAULT_RUNS, MOVE_RANGE, RUN_COUNTS, clockMinute, liveScenarioApi, optionLabel, useOptionMinute, useScenarioRun, type RunCount,
   type ScenarioApi, type ScenarioOption, type StartScenario,
@@ -127,7 +128,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
       </div>
       <div className="headline">
         <Kicker>{t("whatif.kicker")}</Kicker>
-        <span className="x">{t("whatif.question")}</span>
+        <h1 className="x">{t("whatif.question")}</h1>
         <span className="sp" />
         <Stamp tone="warn">{t("whatif.simulated")}</Stamp>
       </div>
@@ -178,7 +179,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
                   <dd>
                     <Segmented
                       label={t("whatif.runsLabel")}
-                      options={RUN_COUNTS.map((n) => ({ value: String(n), label: n.toLocaleString() }))}
+                      options={RUN_COUNTS.map((n) => ({ value: String(n), label: n.toLocaleString(numberLocale()) }))}
                       value={String(runs)}
                       onChange={edit((v: string) => setRuns(Number(v) as RunCount))}
                     />
@@ -215,7 +216,7 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
         <Card
           title={t("whatif.resultTitle")}
           note={state.phase === "done"
-            ? t("whatif.resultNote", { n: state.scenario.spec.n_runs.toLocaleString(), s: (state.scenario.result.runtime_ms / 1000).toFixed(1) })
+            ? t("whatif.resultNote", { n: state.scenario.spec.n_runs.toLocaleString(numberLocale()), s: (state.scenario.result.runtime_ms / 1000).toFixed(1) })
             : undefined}
         >
           <div ref={resultRef} tabIndex={-1} className="result-slot">

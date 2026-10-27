@@ -5,6 +5,7 @@ import type { ArmStats, OutcomeDist, Scenario, ScoreShare, SimResult, Spread } f
 import { useClock } from "../data/clock";
 import { ApiError } from "../data/live/api";
 import type { MatchView } from "../data/match";
+import { numberLocale } from "../data/motion";
 import {
   OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, useComparisonIn, useOptionMinute,
   type Outcome, type RunState, type ScenarioApi, type ScenarioOption,
@@ -118,7 +119,7 @@ export function RunProgress({ scenario }: { scenario: Scenario | null }) {
     <div className="run-prog">
       <div className="run-head" role="status" aria-live="polite">
         <Stamp tone="live">{status}</Stamp>
-        {scenario && <span className="num">{t("whatif.progress", { done: done.toLocaleString(), total: total.toLocaleString() })}</span>}
+        {scenario && <span className="num">{t("whatif.progress", { done: done.toLocaleString(numberLocale()), total: total.toLocaleString(numberLocale()) })}</span>}
       </div>
       <div
         className="run-bar"
@@ -175,11 +176,11 @@ export function Distribution({ label, dist, teams, significant }: {
         ))}
       </div>
       <span className="ci">
-        {OUTCOMES.map((k, i) => {
+        {OUTCOMES.map((k) => {
           const [lo, hi] = ci(dist, k);
           return (
             <span key={k}>
-              {i > 0 && " · "}
+
               {significant?.[k] && <b className="sig-mark" aria-hidden="true">◆ </b>}
               {outcomeShort(k, teams, t)} {pct(dist[k])}% ({pct(lo)}–{pct(hi)})
             </span>
@@ -307,7 +308,7 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
   return (
     <div className="result">
       <div className="stamps">
-        <Stamp tone="warn">{t("whatif.stamp", { n: n.toLocaleString() })}</Stamp>
+        <Stamp tone="warn">{t("whatif.stamp", { n: n.toLocaleString(numberLocale()) })}</Stamp>
         {cached && <Stamp tone="line">{t("whatif.cached")}</Stamp>}
       </div>
       <div className={`verdict${shift.significant ? "" : " flat"}`}>
