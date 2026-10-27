@@ -1033,4 +1033,5 @@ export const es: Messages = {
   "pre.thenLeagueHome": "Después, en liga: {team} en casa, dentro de {n} días.",
   "pre.thenLeagueAway": "Después, en liga: en campo de {team}, dentro de {n} días.",
   "pre.usualFrom": "El once de siempre: quienes fueron titulares en al menos 3 de las últimas {n} jornadas de liga.",
+  "pre.tag.levelled": "Empató tras ir perdiendo",
 };

@@ -9,7 +9,8 @@ import { useMatch, type Side } from "../data/match";
 import { usePersona } from "../data/persona";
 import {
   PERIODS, gameTags, played, usePreMatchReport,
-  type Meeting, type NextFixture, type PreMatchReport, type RecentGame, type RecentStats, type TeamPreMatch, type TeamRecord, type UsualXi,
+  type PrematchFixture, type PrematchFormStats, type PrematchGame, type PrematchMeeting, type PrematchRecord, type PrematchReport,
+  type PrematchTeam, type PrematchUsualXi,
 } from "../data/prematch";
 import { isMessageKey, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
@@ -32,7 +33,7 @@ type Ctx = {
 };
 
 /** The four blocks from one report; split out so tests can render it without a fetch. */
-export function PreMatchDeepView({ report }: { report: PreMatchReport }) {
+export function PreMatchDeepView({ report }: { report: PrematchReport }) {
   const { teams, playerName, preMatch } = useMatch();
   const { prefs, t } = usePrefs();
   const { fan, side: mine } = usePersona();
@@ -71,7 +72,7 @@ function About({ text, k, t }: { text: string; k: string | null | undefined; t: 
   return <p className="pre-about muted">{k && isMessageKey(k) ? t(k) : <>{text} <LangTag lang="en" /></>}</p>;
 }
 
-const hasAny = (x: TeamPreMatch | null) =>
+const hasAny = (x: PrematchTeam | null) =>
   !!x && (played(x.overall) || x.last5.length > 0 || !!x.next_fixture || !!x.usual_xi_today);
 
 /** "Your team" / "Opponent" under a team's name when a ♥ team is picked. */
@@ -94,7 +95,7 @@ type Split = "overall" | "home_only" | "away_only";
 const today: Record<Side, Split> = { home: "home_only", away: "away_only" };
 
 function Venue({ at, h2h, homeClub, venue, title, ...c }: Ctx & {
-  at: PreMatchReport["teams"]; h2h: PreMatchReport["head_to_head"]; homeClub: string | null; venue: string | null; title: string;
+  at: PrematchReport["teams"]; h2h: PrematchReport["head_to_head"]; homeClub: string | null; venue: string | null; title: string;
 }) {
   const sides = SIDES.filter((s) => played(at[s]?.overall) || played(at[s]?.[today[s]]));
   const ground = h2h?.at_this_ground;
@@ -119,12 +120,12 @@ function Venue({ at, h2h, homeClub, venue, title, ...c }: Ctx & {
 }
 
 /** Fan mode: one sentence for the split that counts today. */
-function VenueLine({ side, rec, t, name }: Ctx & { side: Side; rec: TeamRecord | null }) {
+function VenueLine({ side, rec, t, name }: Ctx & { side: Side; rec: PrematchRecord | null }) {
   if (!played(rec)) return null;
   return <p className="pre-line now">{t(side === "home" ? "pre.atHomeLine" : "pre.awayLine", { team: name(side), w: rec.w, d: rec.d, l: rec.l })}</p>;
 }
 
-function RecordTable({ side, team, t, num }: Ctx & { side: Side; team: TeamPreMatch }) {
+function RecordTable({ side, team, t, num }: Ctx & { side: Side; team: PrematchTeam }) {
   const rows = (["overall", "home_only", "away_only"] as Split[]).filter((k) => played(team[k]));
   if (!rows.length) return null;
   return (
@@ -158,13 +159,13 @@ function RecordTable({ side, team, t, num }: Ctx & { side: Side; team: TeamPreMa
 }
 
 /** The meetings at this match's ground: the tally, then each with its half-time score. */
-function Ground({ ground, meetings, venue, t, short, mine }: Ctx & { ground: NonNullable<NonNullable<PreMatchReport["head_to_head"]>["at_this_ground"]>; meetings: Meeting[]; venue: string }) {
+function Ground({ ground, meetings, venue, t, short, mine }: Ctx & { ground: NonNullable<NonNullable<PrematchReport["head_to_head"]>["at_this_ground"]>; meetings: PrematchMeeting[]; venue: string }) {
   const parts: [string, string][] = [
     ["home", t("pre.wins", { team: short("home"), n: ground.home_w })],
     ["draw", t("pre.draws", { n: ground.d })],
     ["away", t("pre.wins", { team: short("away"), n: ground.away_w })],
   ];
-  const won = (m: Meeting): Side | null => (m.ft[0] === m.ft[1] ? null : m.ft[0] > m.ft[1] ? "home" : "away");
+  const won = (m: PrematchMeeting): Side | null => (m.ft[0] === m.ft[1] ? null : m.ft[0] > m.ft[1] ? "home" : "away");
   return (
     <section className="pre-ground" aria-labelledby="pre-ground-hd">
       <h4 id="pre-ground-hd">
@@ -201,7 +202,7 @@ function Ground({ ground, meetings, venue, t, short, mine }: Ctx & { ground: Non
 
 // 2. The last five with half-time scores. --------------------------------------------------------
 
-function LastFive({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; title: string }) {
+function LastFive({ at, title, ...c }: Ctx & { at: PrematchReport["teams"]; title: string }) {
   const sides = SIDES.filter((s) => (at[s]?.last5.length ?? 0) > 0);
   if (!sides.length) return null;
   return (
@@ -220,7 +221,7 @@ function LastFive({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; titl
   );
 }
 
-function Game({ g, t }: Ctx & { g: RecentGame }) {
+function Game({ g, t }: Ctx & { g: PrematchGame }) {
   const tags = gameTags(g);
   return (
     <li>
@@ -243,13 +244,13 @@ function Game({ g, t }: Ctx & { g: RecentGame }) {
 
 // 3. The last five in numbers. -------------------------------------------------------------------
 
-type StatKey = Exclude<keyof RecentStats, "goals_by_period" | "conceded_by_period" | "ht_lead_won" | "ht_lead_dropped">;
+type StatKey = Exclude<keyof PrematchFormStats, "games" | "goals_by_period" | "conceded_by_period" | "ht_lead_won" | "ht_lead_dropped">;
 /** Averages run to the larger side's value (at least 2 a game); counts are out of the games played. */
 const AVERAGES = new Set<StatKey>(["gf_avg", "ga_avg", "avg_rating"]);
 const FAN_STATS: StatKey[] = ["gf_avg", "ga_avg", "clean_sheets", "scored_first"];
 const ALL_STATS: StatKey[] = ["gf_avg", "ga_avg", "clean_sheets", "failed_to_score", "btts", "over_2_5", "scored_first", "reds", "avg_rating"];
 
-function Numbers({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; title: string }) {
+function Numbers({ at, title, ...c }: Ctx & { at: PrematchReport["teams"]; title: string }) {
   const { t, fan, mine, num } = c;
   const stats = (s: Side) => at[s]?.last5_stats ?? null;
   const games = (s: Side) => stats(s)?.games ?? (at[s]?.last5.length || 5);
@@ -308,7 +309,7 @@ function Numbers({ at, title, ...c }: Ctx & { at: PreMatchReport["teams"]; title
 }
 
 /** Goals scored (up, kit colour) and conceded (down, grey) in each quarter-hour, as a small chart. */
-function Periods({ side, stats, t, mine, short }: Ctx & { side: Side; stats: RecentStats }) {
+function Periods({ side, stats, t, mine, short }: Ctx & { side: Side; stats: PrematchFormStats }) {
   const scored = stats.goals_by_period ?? {};
   const let_in = stats.conceded_by_period ?? {};
   const top = Math.max(1, ...PERIODS.map((p) => Math.max(scored[p] ?? 0, let_in[p] ?? 0)));
@@ -351,7 +352,7 @@ function Periods({ side, stats, t, mine, short }: Ctx & { side: Side; stats: Rec
 
 // 4. What comes next, and who rests. -------------------------------------------------------------
 
-function NextUp({ at, title, about, ...c }: Ctx & { at: PreMatchReport["teams"]; title: string; about: boolean }) {
+function NextUp({ at, title, about, ...c }: Ctx & { at: PrematchReport["teams"]; title: string; about: boolean }) {
   const sides = SIDES.filter((s) => at[s]?.next_fixture || at[s]?.usual_xi_today);
   if (!sides.length) return null;
   const madeUp = sides.some((s) => at[s]?.next_fixture?.fictional);
@@ -380,7 +381,7 @@ function Stage({ stage, t }: { stage: string; t: T }) {
   return isMessageKey(key) ? <>{t(key)}</> : <>{stage} <LangTag lang="en" /></>;
 }
 
-function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: NextFixture; league: NextFixture | null }) {
+function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: PrematchFixture; league: PrematchFixture | null }) {
   // A cup tie comes first: say when the next league game is too, for the analyst.
   const then = !fan && league && f.fictional && (league.opponent !== f.opponent || league.days_until !== f.days_until) ? league : null;
   return (
@@ -411,7 +412,7 @@ function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: NextFixture; leag
 }
 
 /** How many of the usual starters begin today, who sits out, who comes in; worked out from the season. */
-function Rotation({ side, xi, t, fan, playerName, name, names }: Ctx & { side: Side; xi: UsualXi }) {
+function Rotation({ side, xi, t, fan, playerName, name, names }: Ctx & { side: Side; xi: PrematchUsualXi }) {
   const benched = xi.regulars_benched.map(playerName);
   const fresh = xi.newcomers.map(playerName);
   return (

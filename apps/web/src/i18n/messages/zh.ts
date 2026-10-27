@@ -1031,4 +1031,5 @@ export const zh: Messages = {
   "pre.thenLeagueHome": "之后的联赛：主场对{team}，{n} 天后。",
   "pre.thenLeagueAway": "之后的联赛：客场对{team}，{n} 天后。",
   "pre.usualFrom": "惯用首发：最近 {n} 场联赛里至少首发 3 场的球员。",
+  "pre.tag.levelled": "落后扳平",
 };

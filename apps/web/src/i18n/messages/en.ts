@@ -1032,4 +1032,5 @@ export const en = {
   "pre.thenLeagueHome": "Then in the league: {team} at home, in {n} days.",
   "pre.thenLeagueAway": "Then in the league: away to {team}, in {n} days.",
   "pre.usualFrom": "The usual XI: whoever started at least 3 of the last {n} league games.",
+  "pre.tag.levelled": "Came back to draw",
 };

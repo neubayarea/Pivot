@@ -1,0 +1,761 @@
+{
+ "match_id": "M-seed-101",
+ "season": 2026,
+ "matchday": 27,
+ "about": "Pre-match background from the season so far. The cup schedule is fictional and past half-time scores are estimated from goal times. None of it changes how the simulator plays the match.",
+ "about_key": "prematch.about",
+ "teams": {
+  "home": {
+   "club_id": "club-hbc",
+   "name": "Harbour City",
+   "overall": {
+    "played": 26,
+    "w": 14,
+    "d": 6,
+    "l": 6,
+    "gf": 48,
+    "ga": 38,
+    "pts": 48,
+    "ppg": 1.85,
+    "position": 3
+   },
+   "home_only": {
+    "played": 12,
+    "w": 6,
+    "d": 3,
+    "l": 3,
+    "gf": 22,
+    "ga": 16,
+    "pts": 21,
+    "ppg": 1.75,
+    "position": null
+   },
+   "away_only": {
+    "played": 14,
+    "w": 8,
+    "d": 3,
+    "l": 3,
+    "gf": 26,
+    "ga": 22,
+    "pts": 27,
+    "ppg": 1.93,
+    "position": null
+   },
+   "last5": [
+    {
+     "season": 2026,
+     "matchday": 26,
+     "opponent": "Vantry Town",
+     "opponent_id": "club-van",
+     "venue": "A",
+     "ft": [
+      1,
+      2
+     ],
+     "ht": [
+      1,
+      1
+     ],
+     "result": "L",
+     "scored_first": false,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 25,
+     "opponent": "Dunmere FC",
+     "opponent_id": "club-dun",
+     "venue": "H",
+     "ft": [
+      0,
+      2
+     ],
+     "ht": [
+      0,
+      1
+     ],
+     "result": "L",
+     "scored_first": false,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 24,
+     "opponent": "Kelvar Wanderers",
+     "opponent_id": "club-kel",
+     "venue": "A",
+     "ft": [
+      0,
+      3
+     ],
+     "ht": [
+      0,
+      3
+     ],
+     "result": "L",
+     "scored_first": false,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 23,
+     "opponent": "Ostrin Albion",
+     "opponent_id": "club-ost",
+     "venue": "H",
+     "ft": [
+      4,
+      1
+     ],
+     "ht": [
+      3,
+      1
+     ],
+     "result": "W",
+     "scored_first": true,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 22,
+     "opponent": "Fallowden",
+     "opponent_id": "club-fal",
+     "venue": "A",
+     "ft": [
+      1,
+      1
+     ],
+     "ht": [
+      0,
+      1
+     ],
+     "result": "D",
+     "scored_first": false,
+     "came_from_behind": true
+    }
+   ],
+   "last5_stats": {
+    "games": 5,
+    "gf_avg": 1.2,
+    "ga_avg": 1.8,
+    "clean_sheets": 0,
+    "failed_to_score": 2,
+    "btts": 3,
+    "over_2_5": 3,
+    "scored_first": 1,
+    "ht_lead_won": 1,
+    "ht_lead_dropped": 0,
+    "goals_by_period": {
+     "0-15": 1,
+     "16-30": 1,
+     "31-45": 2,
+     "46-60": 0,
+     "61-75": 0,
+     "76-90": 2
+    },
+    "conceded_by_period": {
+     "0-15": 1,
+     "16-30": 2,
+     "31-45": 4,
+     "46-60": 0,
+     "61-75": 1,
+     "76-90": 1
+    },
+    "reds": 2,
+    "avg_rating": 6.52
+   },
+   "next_fixture": {
+    "competition": "Freeland League",
+    "stage": null,
+    "matchday": 28,
+    "opponent": "Tessmouth United",
+    "opponent_id": "club-tes",
+    "venue": "A",
+    "days_until": 7,
+    "importance": "medium",
+    "fictional": false,
+    "rotation_risk": "low",
+    "rotation_note": "Next league game: Tessmouth United (away) in 7 days, no midweek game. The usual starting XI all start today.",
+    "rotation_note_key": "prematch.rotation.league_all_start",
+    "rotation_params": {
+     "opponent": "Tessmouth United",
+     "venue": "A",
+     "days": 7,
+     "benched": 0
+    }
+   },
+   "next_league": {
+    "competition": "Freeland League",
+    "stage": null,
+    "matchday": 28,
+    "opponent": "Tessmouth United",
+    "opponent_id": "club-tes",
+    "venue": "A",
+    "days_until": 7,
+    "importance": "medium",
+    "fictional": false,
+    "rotation_risk": "low",
+    "rotation_note": "Next league game: Tessmouth United (away) in 7 days, no midweek game. The usual starting XI all start today.",
+    "rotation_note_key": "prematch.rotation.league_all_start",
+    "rotation_params": {
+     "opponent": "Tessmouth United",
+     "venue": "A",
+     "days": 7,
+     "benched": 0
+    }
+   },
+   "usual_xi_today": {
+    "games": 5,
+    "regulars": [
+     "h01",
+     "h02",
+     "h03",
+     "h04",
+     "h05",
+     "h06",
+     "h07",
+     "h08",
+     "h09",
+     "h10",
+     "h11"
+    ],
+    "regulars_starting": 11,
+    "regulars_benched": [],
+    "newcomers": []
+   }
+  },
+  "away": {
+   "club_id": "club-rov",
+   "name": "Northgate Rovers",
+   "overall": {
+    "played": 26,
+    "w": 13,
+    "d": 7,
+    "l": 6,
+    "gf": 50,
+    "ga": 32,
+    "pts": 46,
+    "ppg": 1.77,
+    "position": 5
+   },
+   "home_only": {
+    "played": 8,
+    "w": 4,
+    "d": 2,
+    "l": 2,
+    "gf": 19,
+    "ga": 10,
+    "pts": 14,
+    "ppg": 1.75,
+    "position": null
+   },
+   "away_only": {
+    "played": 18,
+    "w": 9,
+    "d": 5,
+    "l": 4,
+    "gf": 31,
+    "ga": 22,
+    "pts": 32,
+    "ppg": 1.78,
+    "position": null
+   },
+   "last5": [
+    {
+     "season": 2026,
+     "matchday": 26,
+     "opponent": "Fallowden",
+     "opponent_id": "club-fal",
+     "venue": "H",
+     "ft": [
+      1,
+      4
+     ],
+     "ht": [
+      0,
+      2
+     ],
+     "result": "L",
+     "scored_first": false,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 25,
+     "opponent": "Saltreach Rangers",
+     "opponent_id": "club-sal",
+     "venue": "H",
+     "ft": [
+      3,
+      0
+     ],
+     "ht": [
+      3,
+      0
+     ],
+     "result": "W",
+     "scored_first": true,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 24,
+     "opponent": "Quarrystone United",
+     "opponent_id": "club-qua",
+     "venue": "H",
+     "ft": [
+      5,
+      0
+     ],
+     "ht": [
+      3,
+      0
+     ],
+     "result": "W",
+     "scored_first": true,
+     "came_from_behind": false
+    },
+    {
+     "season": 2026,
+     "matchday": 23,
+     "opponent": "Hollin Park",
+     "opponent_id": "club-hol",
+     "venue": "H",
+     "ft": [
+      1,
+      1
+     ],
+     "ht": [
+      0,
+      1
+     ],
+     "result": "D",
+     "scored_first": false,
+     "came_from_behind": true
+    },
+    {
+     "season": 2026,
+     "matchday": 22,
+     "opponent": "Thornwick Athletic",
+     "opponent_id": "club-tho",
+     "venue": "H",
+     "ft": [
+      4,
+      0
+     ],
+     "ht": [
+      3,
+      0
+     ],
+     "result": "W",
+     "scored_first": true,
+     "came_from_behind": false
+    }
+   ],
+   "last5_stats": {
+    "games": 5,
+    "gf_avg": 2.8,
+    "ga_avg": 1.0,
+    "clean_sheets": 3,
+    "failed_to_score": 0,
+    "btts": 2,
+    "over_2_5": 4,
+    "scored_first": 3,
+    "ht_lead_won": 3,
+    "ht_lead_dropped": 0,
+    "goals_by_period": {
+     "0-15": 3,
+     "16-30": 3,
+     "31-45": 3,
+     "46-60": 2,
+     "61-75": 2,
+     "76-90": 1
+    },
+    "conceded_by_period": {
+     "0-15": 1,
+     "16-30": 0,
+     "31-45": 2,
+     "46-60": 1,
+     "61-75": 1,
+     "76-90": 0
+    },
+    "reds": 0,
+    "avg_rating": 6.7
+   },
+   "next_fixture": {
+    "competition": "Freeland League",
+    "stage": null,
+    "matchday": 28,
+    "opponent": "Vantry Town",
+    "opponent_id": "club-van",
+    "venue": "H",
+    "days_until": 7,
+    "importance": "medium",
+    "fictional": false,
+    "rotation_risk": "low",
+    "rotation_note": "Next league game: Vantry Town (home) in 7 days, no midweek game. The usual starting XI all start today.",
+    "rotation_note_key": "prematch.rotation.league_all_start",
+    "rotation_params": {
+     "opponent": "Vantry Town",
+     "venue": "H",
+     "days": 7,
+     "benched": 0
+    }
+   },
+   "next_league": {
+    "competition": "Freeland League",
+    "stage": null,
+    "matchday": 28,
+    "opponent": "Vantry Town",
+    "opponent_id": "club-van",
+    "venue": "H",
+    "days_until": 7,
+    "importance": "medium",
+    "fictional": false,
+    "rotation_risk": "low",
+    "rotation_note": "Next league game: Vantry Town (home) in 7 days, no midweek game. The usual starting XI all start today.",
+    "rotation_note_key": "prematch.rotation.league_all_start",
+    "rotation_params": {
+     "opponent": "Vantry Town",
+     "venue": "H",
+     "days": 7,
+     "benched": 0
+    }
+   },
+   "usual_xi_today": {
+    "games": 5,
+    "regulars": [
+     "a01",
+     "a02",
+     "a03",
+     "a04",
+     "a05",
+     "a06",
+     "a07",
+     "a08",
+     "a09",
+     "a10",
+     "a11"
+    ],
+    "regulars_starting": 11,
+    "regulars_benched": [],
+    "newcomers": []
+   }
+  }
+ },
+ "head_to_head": {
+  "all": {
+   "played": 5,
+   "home_w": 2,
+   "d": 1,
+   "away_w": 2
+  },
+  "at_this_ground": {
+   "played": 2,
+   "home_w": 1,
+   "d": 1,
+   "away_w": 0
+  },
+  "meetings": [
+   {
+    "season": 2024,
+    "matchday": 12,
+    "venue_club": "club-rov",
+    "home_club": "club-rov",
+    "away_club": "club-hbc",
+    "ft": [
+     2,
+     1
+    ],
+    "ht": [
+     2,
+     1
+    ]
+   },
+   {
+    "season": 2024,
+    "matchday": 31,
+    "venue_club": "club-hbc",
+    "home_club": "club-hbc",
+    "away_club": "club-rov",
+    "ft": [
+     3,
+     2
+    ],
+    "ht": [
+     2,
+     0
+    ]
+   },
+   {
+    "season": 2025,
+    "matchday": 12,
+    "venue_club": "club-rov",
+    "home_club": "club-rov",
+    "away_club": "club-hbc",
+    "ft": [
+     2,
+     1
+    ],
+    "ht": [
+     1,
+     1
+    ]
+   },
+   {
+    "season": 2025,
+    "matchday": 31,
+    "venue_club": "club-hbc",
+    "home_club": "club-hbc",
+    "away_club": "club-rov",
+    "ft": [
+     2,
+     2
+    ],
+    "ht": [
+     1,
+     2
+    ]
+   },
+   {
+    "season": 2026,
+    "matchday": 11,
+    "venue_club": "club-rov",
+    "home_club": "club-rov",
+    "away_club": "club-hbc",
+    "ft": [
+     2,
+     3
+    ],
+    "ht": [
+     0,
+     3
+    ]
+   }
+  ]
+ },
+ "matchup": {
+  "perspective": "home",
+  "home_formation": "4-3-3",
+  "away_formation": "4-2-3-1",
+  "lines": [
+   {
+    "zone": "home_wide_left",
+    "home": [
+     "LB",
+     "LW"
+    ],
+    "away": [
+     "RB",
+     "RW"
+    ],
+    "home_players": [
+     "h02",
+     "h09"
+    ],
+    "away_players": [
+     "a05",
+     "a10"
+    ],
+    "note": "Harbour City's left flank: LB LW against RB RW, 2 v 2",
+    "note_key": "prematch.line.flank",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "LB LW",
+     "theirs": "RB RW",
+     "n": 2,
+     "m": 2,
+     "flank": "left"
+    }
+   },
+   {
+    "zone": "home_wide_right",
+    "home": [
+     "RB",
+     "RW"
+    ],
+    "away": [
+     "LB",
+     "LW"
+    ],
+    "home_players": [
+     "h05",
+     "h11"
+    ],
+    "away_players": [
+     "a02",
+     "a08"
+    ],
+    "note": "Harbour City's right flank: RB RW against LB LW, 2 v 2",
+    "note_key": "prematch.line.flank",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "RB RW",
+     "theirs": "LB LW",
+     "n": 2,
+     "m": 2,
+     "flank": "right"
+    }
+   },
+   {
+    "zone": "midfield",
+    "home": [
+     "CM",
+     "DM",
+     "CM"
+    ],
+    "away": [
+     "DM",
+     "DM",
+     "AM"
+    ],
+    "home_players": [
+     "h06",
+     "h07",
+     "h08"
+    ],
+    "away_players": [
+     "a06",
+     "a07",
+     "a09"
+    ],
+    "note": "3 v 3 in midfield",
+    "note_key": "prematch.line.midfield_even",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "CM DM CM",
+     "theirs": "DM DM AM",
+     "n": 3,
+     "m": 3
+    }
+   },
+   {
+    "zone": "home_attack",
+    "home": [
+     "ST"
+    ],
+    "away": [
+     "CB",
+     "CB"
+    ],
+    "home_players": [
+     "h10"
+    ],
+    "away_players": [
+     "a03",
+     "a04"
+    ],
+    "note": "Harbour City's 1 forward against Northgate Rovers' 2 centre-backs",
+    "note_key": "prematch.line.our_attack",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "ST",
+     "theirs": "CB CB",
+     "n": 1,
+     "m": 2,
+     "forwards": 1,
+     "centre_backs": 2
+    }
+   },
+   {
+    "zone": "away_attack",
+    "home": [
+     "CB",
+     "CB"
+    ],
+    "away": [
+     "ST"
+    ],
+    "home_players": [
+     "h03",
+     "h04"
+    ],
+    "away_players": [
+     "a11"
+    ],
+    "note": "Northgate Rovers' 1 forward against Harbour City's 2 centre-backs",
+    "note_key": "prematch.line.their_attack",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "CB CB",
+     "theirs": "ST",
+     "n": 2,
+     "m": 1,
+     "forwards": 1,
+     "centre_backs": 2
+    }
+   }
+  ],
+  "tactics_diff": [
+   {
+    "field": "press",
+    "home": "low",
+    "away": "mid",
+    "note": "Harbour City press less than Northgate Rovers (low v mid)",
+    "note_key": "prematch.tactics.press_less",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "low",
+     "theirs": "mid"
+    }
+   },
+   {
+    "field": "tempo",
+    "home": "slow",
+    "away": "normal",
+    "note": "Harbour City play slower than Northgate Rovers (slow v normal)",
+    "note_key": "prematch.tactics.tempo_less",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "slow",
+     "theirs": "normal"
+    }
+   },
+   {
+    "field": "passing",
+    "home": "direct",
+    "away": "mixed",
+    "note": "Harbour City go more direct than Northgate Rovers (direct v mixed)",
+    "note_key": "prematch.tactics.passing_more",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "direct",
+     "theirs": "mixed"
+    }
+   },
+   {
+    "field": "attack_focus",
+    "home": "balanced",
+    "away": "centre",
+    "note": "Harbour City attack mostly on both flanks, Northgate Rovers through the middle",
+    "note_key": "prematch.tactics.attack_focus",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "balanced",
+     "theirs": "centre"
+    }
+   },
+   {
+    "field": "time_wasting",
+    "home": "true",
+    "away": "false",
+    "note": "Harbour City slow the game down when ahead; Northgate Rovers do not",
+    "note_key": "prematch.tactics.time_wasting_mine",
+    "params": {
+     "team": "Harbour City",
+     "other": "Northgate Rovers",
+     "mine": "true",
+     "theirs": "false"
+    }
+   }
+  ]
+ }
+}
