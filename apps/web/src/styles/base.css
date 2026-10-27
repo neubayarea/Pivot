@@ -471,6 +471,25 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   .open-bd { padding: 12px; }
 }
 
+/* One moment at a time on the line (after The Immortals): previous / next, then the facts as label over value. */
+.open-nav { display: flex; gap: 6px; }
+.open-nav .btn { padding: 5px 12px; }
+.btn:disabled, .btn:disabled:hover { opacity: .4; cursor: default; background: var(--pv-sheet); border-color: var(--pv-hair); transform: none; }
+.open-facts { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: 8px 36px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--pv-hair); }
+.open-facts > div { display: grid; min-width: 0; }
+.open-facts dt { font-size: 13px; font-weight: 500; color: var(--pv-ink-2); }
+.open-facts dd { margin: 0; font-size: 15px; font-weight: 600; }
+.open-facts .to-home dd { color: var(--pv-home); }
+.open-facts .to-away dd { color: var(--pv-away); }
+.open-facts .open-more { margin-left: auto; }
+/* The page's one reveal (after The Last Tango): momentum draws from kick-off to full time, then the pins drop in at their minute. */
+@media (prefers-reduced-motion: no-preference) {
+  .turns .mom-draw { animation: mom-draw 1.2s cubic-bezier(.3, .7, .2, 1) both; }
+  .turns .mom-mk { animation: pin-in .45s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(.2s + var(--at, 0) * 1.1s); }
+}
+@keyframes mom-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes pin-in { from { opacity: 0; transform: translateY(-10px); } }
+
 /* ---------- Match board: key moments (Ax38) ---------- */
 .mom-key { cursor: pointer; }
 .mom-key .hit { fill: transparent; }

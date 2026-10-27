@@ -157,20 +157,35 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
 }
 
 /** The one moment opened up: why it mattered, where everyone stood, and (C11) what-if for this moment under them. */
-export function OpenMoment({ pivot, n, evidence, onEvidence, children }: {
-  pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void; children?: ReactNode;
+export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, children }: {
+  pivot: Pivot; n: number; evidence: ReadonlySet<string>; onEvidence: (id: string) => void;
+  /** The turning points either side, one at a time on the same line; absent at either end. */
+  onPrev?: () => void; onNext?: () => void; children?: ReactNode;
 }) {
   const { teams } = useMatch();
   const t = useT();
   const { minute } = useClock();
+  const cause = useCause(pivot);
   const picked = [...evidence].at(-1) ?? null;
+  const sentences = pivot.narrative?.sentences ?? [];
+  const claims = sentences.reduce((k, s) => k + s.claims.length, 0);
+  const events = new Set(sentences.flatMap((s) => s.evidence_ids)).size;
   return (
     <section className={`open-mo to-${pivot.direction}`} aria-labelledby="open-mo-hd">
       <div className="open-hd">
         <span className="badge" aria-hidden="true">{n}</span>
         <span className="open-min num">{minute(pivot.minute)}′</span>
         <h2 id="open-mo-hd">{pivotHeadline(pivot, teams, t)}</h2>
-        <Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link>
+        <nav className="open-nav" aria-label={t("post.pivots")}>
+          <button type="button" className="btn" onClick={onPrev} disabled={!onPrev} aria-label={t("moments.prevLabel")}>{t("moments.prev")}</button>
+          <button type="button" className="btn" onClick={onNext} disabled={!onNext} aria-label={t("moments.nextLabel")}>{t("moments.next")}</button>
+        </nav>
+        <dl className="open-facts">
+          {cause && <div><dt>{t("open.trigger")}</dt><dd>{cause}</dd></div>}
+          <div className={`to-${pivot.direction}`}><dt>{t("open.swung")}</dt><dd>{teams[pivot.direction].name}</dd></div>
+          {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims, evidence: events })}</dd></div>}
+          <div className="open-more"><Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link></div>
+        </dl>
       </div>
       {pivot.status === "degraded" && (
         <div className="banner warn" role="status">

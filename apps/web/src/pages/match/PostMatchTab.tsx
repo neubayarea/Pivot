@@ -117,7 +117,9 @@ export function PostMatchTab({ moments, open, onPick, evidence, onEvidence, keyS
       </section>
 
       {open && (
-        <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={onEvidence}>
+        <OpenMoment key={open.pivot_id} pivot={open} n={n} evidence={evidence} onEvidence={onEvidence}
+          onPrev={n > 1 ? () => onPick(moments[n - 2].pivot_id) : undefined}
+          onNext={n < moments.length ? () => onPick(moments[n].pivot_id) : undefined}>
           <WhatIfInline key={open.pivot_id} pivot={open} />
         </OpenMoment>
       )}

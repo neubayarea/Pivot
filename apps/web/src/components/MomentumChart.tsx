@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import type { MinuteMetric, Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import type { KeyKind } from "../data/keyMoments";
@@ -91,9 +91,12 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
       <text x={4} y={H - B - 4} fontSize={11} fontWeight={700} fill="var(--pv-away)">
         {awayLabel}
       </text>
-      <path d={area} fill="var(--pv-home)" fillOpacity={0.85} clipPath={`url(#${clip}up)`} />
-      <path d={area} fill="var(--pv-away)" fillOpacity={0.85} clipPath={`url(#${clip}dn)`} />
-      <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
+      {/* C11: the one reveal on the page, kick-off to full time (base.css, reduced motion skips it). */}
+      <g className="mom-draw">
+        <path d={area} fill="var(--pv-home)" fillOpacity={0.85} clipPath={`url(#${clip}up)`} />
+        <path d={area} fill="var(--pv-away)" fillOpacity={0.85} clipPath={`url(#${clip}dn)`} />
+        <path d={line} fill="none" stroke="var(--pv-ink)" strokeWidth={1.5} />
+      </g>
       {pivots.map((p) => {
         const pending = p.status === "pending";
         const label = `${minute(p.minute)}′`;
@@ -102,7 +105,7 @@ export default function MomentumChart({ metrics, pivots, homeLabel, awayLabel, n
           const cx = x(p.minute);
           const open = () => onPick(p.pivot_id);
           return (
-            <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} role="button" tabIndex={0}
+            <g key={p.pivot_id} className={`mom-mk${p.pivot_id === selected ? " on" : ""}`} style={{ "--at": p.minute / end } as CSSProperties} role="button" tabIndex={0}
               aria-pressed={p.pivot_id === selected} aria-label={t("moments.open", { n: n + 1, minute: minute(p.minute) })}
               onClick={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open())}>
               <line x1={cx} x2={cx} y1={T + 2} y2={H - B} />
