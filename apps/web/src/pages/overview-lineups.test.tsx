@@ -115,7 +115,7 @@ describe("the ♥ beside each team in the score header", () => {
     withWindow("?fixture=1&from=95&team=away");
     const html = renderToStaticMarkup(
       <PrefsProvider><MemoryRouter><FixtureProvider>
-        <ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} fold={{ slim: true, toggle: () => {} }} />
+        <ScoreHeader prefs={{ ...DEFAULT_PREFS, focus_team: "away" }} fold={{ mode: "slim", stuck: false, expand: () => {}, collapse: () => {} }} />
       </FixtureProvider></MemoryRouter></PrefsProvider>,
     );
     expect(html).toContain('class="mh-bar"');

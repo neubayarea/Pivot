@@ -1,7 +1,8 @@
 /* Base styles and shared components (C11 "kit clash", #288). Colours and fonts come from tokens.css.
    Labels are sentence case at reading size; colour, weight and position carry rank, not capitals. */
 * { box-sizing: border-box; }
-html { scroll-padding-top: 220px; }
+/* Ax77: anchors land under whatever sticks at the top (data/headerFold.ts), not under it. */
+html { scroll-padding-top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + var(--pv-sub-h, 0px) + 16px); }
 body {
   margin: 0;
   min-height: 100vh;
@@ -191,7 +192,7 @@ button { font: inherit; color: inherit; }
 .pick em { font-style: normal; color: inherit; font-weight: 700; }
 .headline .latest { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; animation: pv-in .5s ease-out; }
 @keyframes pv-in { from { opacity: 0; transform: translateY(-6px); } }
-/* The replay bar: under the match header, stuck to the top of the window with it (.match-head). */
+/* The replay bar: under the match header, stuck to the top of the window under the slim bar (.match-stick). */
 .playback { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 6px 32px 2px; background: var(--pv-sheet); border-bottom: 1px solid var(--pv-hair); }
 .playback .lbl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
 .playback .btn { padding: 3px 10px; font-size: 12px; }
@@ -526,7 +527,14 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 
 /* ---------- Match header (Ax59, C11): the two kits meet at the score ---------- */
 /* The band keeps the clubs' real kit colours in both themes; text on it is always white. */
-.match-head { position: sticky; top: 0; z-index: 15; margin-bottom: var(--mh-reserve, 0px); }
+/* Ax77: the band scrolls away with the page. Under it, .match-stick (slim bar and replay bar) sticks,
+   pulled up by the slim bar's height so the hidden bar lies over the band's bottom until the band has
+   scrolled up to it (data/headerFold.ts). Pinned open, the band itself sticks and the block under it. */
+.mh.pinned { position: sticky; top: 0; z-index: 16; }
+.match-stick { position: sticky; top: 0; z-index: 15; pointer-events: none; }
+.match-stick > * { pointer-events: auto; }
+.match-stick.auto { margin-top: -48px; }
+.match-stick.full { top: var(--mh-full-h, 0px); }
 .mh { position: relative; color: #FFFFFF; background: linear-gradient(90deg, var(--pv-home-kit, #1E6B45) 0 50%, var(--pv-away-kit, #4A1D57) 50% 100%); padding: 14px 32px 16px; display: grid; gap: 10px; }
 .mh-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 4px 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
 .mh-team { display: grid; gap: 4px; min-width: 0; padding-top: 14px; }
@@ -568,8 +576,9 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 }
 
 /* Ax66: scrolled past, the band folds to a 48px bar on the panel colour; the kits stay as chips.
-   .match-head keeps a bottom margin for the folded rows (--mh-reserve, data/headerFold.ts), so the page under it never moves. */
+   It is always in the page, hidden over the band's bottom until the band has scrolled up to it, so showing it moves nothing. */
 .mh.slim { display: block; height: 48px; padding: 0 32px; color: var(--pv-ink); background: var(--pv-sheet); box-shadow: inset 0 -1px var(--pv-hair); }
+.mh.slim.off { visibility: hidden; opacity: 0; pointer-events: none; }
 .mh-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; height: 100%; max-width: 1280px; margin: 0 auto; padding-inline: 112px; }
 .mh-bar-team { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 700; font-size: var(--pv-fs-md); }
 .mh-bar-team.home { justify-self: end; flex-direction: row-reverse; }
@@ -591,11 +600,9 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .mh-toggle.shut:hover { background: rgba(0, 0, 0, .42); }
 .mh-toggle.shut .mh-chev { transform: rotate(180deg); }
 @media (prefers-reduced-motion: no-preference) {
-  .mh.slim .mh-bar { animation: mh-fold .16s ease-out; }
-  .mh:not(.slim) > .mh-score { animation: mh-unfold .16s ease-out; }
+  .mh.slim { transition: opacity .15s ease-out, visibility 0s; }
+  .mh.slim.off { transition: opacity .15s ease-out, visibility 0s .15s; }
 }
-@keyframes mh-fold { from { opacity: 0; transform: translateY(-4px); } }
-@keyframes mh-unfold { from { opacity: .4; } }
 @media (max-width: 720px) {
   .mh.slim { padding: 0 12px; }
   .mh-bar { gap: 8px; padding-inline: 40px; }
@@ -609,7 +616,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 }
 
 /* ---------- Match tabs (Ax59, C11): a white rail, left-aligned with the page ---------- */
-.tabs { background: var(--pv-sheet); box-shadow: 0 0 0 100vmax var(--pv-sheet), inset 0 -1px var(--pv-hair); clip-path: inset(0 -100vmax); }
+.tabs { position: sticky; top: var(--pv-stick-h, 0px); z-index: 14; background: var(--pv-sheet); box-shadow: 0 0 0 100vmax var(--pv-sheet), inset 0 -1px var(--pv-hair); clip-path: inset(0 -100vmax); }
 .tabs [role="tablist"] { display: flex; gap: 32px; padding: 0 32px; }
 .tabs [role="tab"] { padding: 14px 2px 11px; font-weight: 600; font-size: var(--pv-fs-md); text-decoration: none; color: var(--pv-ink-2); border-bottom: 3px solid transparent; }
 .tabs [role="tab"]:hover { color: var(--pv-ink); border-bottom-color: var(--pv-hair); }
@@ -859,6 +866,13 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 
 /* ---------- What-if tab (C13 #316): the lab inside the board, on the board's own gutters ---------- */
 .wi-pivots .chip[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); box-shadow: none; }
+/* Ax77: the What-if tab's turning points stick under the tabs, on the page colour from edge to edge. */
+.wi-pivots { position: sticky; top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px)); z-index: 13; padding-block: 10px; margin-block: -10px;
+  background: var(--pv-paper); box-shadow: 0 0 0 100vmax var(--pv-paper), inset 0 -1px var(--pv-hair); clip-path: inset(0 -100vmax); }
+@media (max-width: 720px) {
+  .wi-pivots { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .wi-pivots .chip { flex: none; max-width: 80vw; }
+}
 .wi-pivots .chip { align-items: center; max-width: 380px; padding: 6px 14px 6px 8px; }
 .wi-pivots .chip .badge { width: 24px; height: 24px; font-size: 14px; flex: none; }
 .wi-pivots .chip .wi-hd { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

@@ -1,14 +1,15 @@
 // The match header (Ax59), Premier League match-page style: both teams in their colours, the big
 // score, the clock and state, and the goal scorers under each team. The viewer's own controls
 // (fan / analyst, ♥ team, ★ player) are in the site bar above it (ViewerControls, Ax68).
-// It sticks to the top of the window with the replay bar (App); on phones it keeps to one score row.
-// Scrolled past, it folds into a slim bar of names, score and clock (Ax66, data/headerFold.ts); a
-// button on each opens or folds it by hand.
+// On phones it keeps to one score row. It scrolls away with the page, and a slim bar of names,
+// score and clock takes its place at the top, with the replay bar under it (Ax66, Ax77,
+// data/headerFold.ts); a button on each pins it open or folded.
 // Ax69: a ♥ beside each team's name, open or slim, picks it as the viewer's team and lets it go
 // again; under the open header a "Following: X ✕" chip while a ★ player is followed.
-import { useId, useLayoutEffect, useRef, type CSSProperties, type RefObject } from "react";
+import { useId, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import type { MatchEvent, ViewerPrefs } from "@pivot/contracts";
 import { useClock } from "../data/clock";
+import { slimShown, useHeaderFold, type HeaderFold } from "../data/headerFold";
 import { goalFor } from "../data/keyMoments";
 import { useMatch, type MatchView, type Side } from "../data/match";
 import { useT, type T } from "../i18n";
@@ -18,11 +19,7 @@ import Stamp from "./Stamp";
 
 const STATUS_TONE = { live: "live", paused: "warn", finished: "ok", scheduled: "line" } as const;
 
-type Props = {
-  prefs: ViewerPrefs;
-  /** Folding with the scroll (App); without it the header always shows in full. */
-  fold?: { slim: boolean; toggle: () => void };
-};
+type Props = { prefs: ViewerPrefs };
 
 const Chevron = () => (
   <svg className="mh-chev" viewBox="0 0 16 16" width={16} height={16} aria-hidden="true">
@@ -105,43 +102,42 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
   );
 }
 
-export default function ScoreHeader({ prefs, fold }: Props) {
+type Fold = Pick<HeaderFold, "mode" | "stuck" | "expand" | "collapse"> & Partial<Pick<HeaderFold, "anchor" | "full" | "stick">>;
+
+/**
+ * The full header, and with `fold` the sticky block under it: the slim bar and `children` (the
+ * replay bar). How they share the top of the window is in data/headerFold.ts.
+ */
+export default function ScoreHeader({ prefs, fold, children }: Props & { fold?: Fold; children?: ReactNode }) {
   const { match, teams } = useMatch();
   const t = useT();
   const id = useId();
-  const slim = !!fold?.slim;
+  const mode = fold?.mode ?? "auto";
+  const slim = !!fold && slimShown(mode, fold.stuck);
 
   // The button pressed goes away with the layout it was in; the one that undoes it takes the focus
   // (without scrolling: Chrome would scroll a stuck header back to where it sits unstuck).
-  // The same when the scroll switches it while the button has the focus.
-  const button = useRef<HTMLButtonElement>(null);
+  // The same when the scroll hides the button that has the focus.
+  const openBtn = useRef<HTMLButtonElement>(null);
+  const shutBtn = useRef<HTMLButtonElement>(null);
   const pressed = useRef(false);
   const focused = useRef(false);
-  const press = () => {
+  const press = (go?: () => void) => () => {
     pressed.current = true;
-    fold?.toggle();
+    go?.();
   };
   const track = { onFocus: () => void (focused.current = true), onBlur: () => void (focused.current = false) };
   useLayoutEffect(() => {
     const lost = focused.current && (document.activeElement === document.body || !document.activeElement);
-    if (pressed.current || lost) button.current?.focus({ preventScroll: true });
+    if (pressed.current || lost) (slim ? openBtn : shutBtn).current?.focus({ preventScroll: true });
     pressed.current = false;
-  }, [slim]);
+  }, [slim, mode]);
 
-
-  if (slim) {
-    return (
-      <section className="mh slim" id={id} aria-label={t("header.label")}>
-        <SlimBar favTeam={prefs.focus_team} controls={id} onExpand={press} button={button} track={track} />
-      </section>
-    );
-  }
-
-  return (
-    <section className="mh" id={id} aria-label={t("header.label")}>
+  const full = mode !== "slim" && (
+    <section ref={fold?.full} className={`mh${mode === "full" ? " pinned" : ""}`} id={id} aria-label={t("header.label")}>
       {fold && (
-        <button ref={button} type="button" className="mh-toggle shut" aria-expanded={true} aria-controls={id}
-          aria-label={t("header.collapse.label")} title={t("header.collapse.label")} onClick={press} {...track}>
+        <button ref={shutBtn} type="button" className="mh-toggle shut" aria-expanded={true} aria-controls={id}
+          aria-label={t("header.collapse.label")} title={t("header.collapse.label")} onClick={press(fold.collapse)} {...track}>
           <Chevron />
         </button>
       )}
@@ -163,4 +159,26 @@ export default function ScoreHeader({ prefs, fold }: Props) {
       <FollowingChip />
     </section>
   );
+
+  if (!fold) return <>{full}{children}</>;
+  return (
+    <>
+      <div ref={fold.anchor} className="mh-anchor" aria-hidden="true" />
+      {full}
+      <div ref={fold.stick} className={`match-stick ${mode}`}>
+        {mode !== "full" && (
+          <section className={`mh slim${slim ? "" : " off"}`} aria-label={mode === "slim" ? t("header.label") : undefined}>
+            <SlimBar favTeam={prefs.focus_team} controls={id} onExpand={press(fold.expand)} button={openBtn} track={track} />
+          </section>
+        )}
+        {children}
+      </div>
+    </>
+  );
+}
+
+/** The match page's header, folding with the scroll; a choice made with its buttons lasts for this match. */
+export function MatchHead({ prefs, children }: Props & { children?: ReactNode }) {
+  const fold = useHeaderFold(useMatch().match.match_id);
+  return <ScoreHeader prefs={prefs} fold={fold}>{children}</ScoreHeader>;
 }

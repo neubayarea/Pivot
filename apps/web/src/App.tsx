@@ -3,11 +3,10 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import ConnectionBanner, { MissingMatchBanner } from "./components/ConnectionBanner";
 import KitColours from "./components/KitColours";
 import Playback from "./components/Playback";
-import ScoreHeader from "./components/ScoreHeader";
+import { MatchHead } from "./components/ScoreHeader";
 import StartupScreen from "./components/StartupScreen";
 import TopBar from "./components/TopBar";
 import WatchPrompt from "./components/WatchPrompt";
-import { useHeaderFold } from "./data/headerFold";
 import { MatchProvider, fixtureMode } from "./data/match";
 import { usePrefs } from "./i18n";
 import AgentTraces from "./pages/AgentTraces";
@@ -32,7 +31,6 @@ const WAITING = (
 
 export default function App() {
   const { prefs, setPrefs } = usePrefs();
-  const fold = useHeaderFold();
   const { pathname, search } = useLocation();
   // Decided once, as in MatchProvider: in-app links drop `?fixture=1`.
   const [fixture] = useState(() => fixtureMode());
@@ -48,13 +46,11 @@ export default function App() {
       <WatchPrompt />
       <ConnectionBanner />
       <MissingMatchBanner />
-      {/* Ax59: the score and the replay bar stay at the top of the window while the page scrolls;
-          Ax66: the score folds to a slim bar once scrolled past (data/headerFold.ts). */}
-      <div ref={fold.anchor} className="match-head-anchor" aria-hidden="true" />
-      <div ref={fold.head} className="match-head">
-        <ScoreHeader prefs={prefs} fold={fold} />
+      {/* Ax59, Ax66, Ax77: the score scrolls away with the page and a slim bar with the replay bar
+          under it sticks in its place (data/headerFold.ts); the match tabs stick under those. */}
+      <MatchHead prefs={prefs}>
         <Playback />
-      </div>
+      </MatchHead>
       {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}
       <main className="page" data-fav={prefs.focus_team ?? undefined}>
         <Routes>

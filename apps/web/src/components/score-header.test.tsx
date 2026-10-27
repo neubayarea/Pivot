@@ -9,6 +9,7 @@ import { PLAIN_PERIODS, minuteAt } from "../data/clock";
 import { FixtureProvider } from "../data/match";
 import { DEFAULT_PREFS, PrefsProvider } from "../i18n";
 import { en } from "../i18n/messages/en";
+import type { FoldMode } from "../data/headerFold";
 import ScoreHeader, { scorers } from "./ScoreHeader";
 import TopBar from "./TopBar";
 
@@ -22,7 +23,7 @@ afterEach(() => {
   store.clear();
 });
 
-const render = (fold?: { slim: boolean; toggle: () => void }, prefs = DEFAULT_PREFS) =>
+const render = (fold?: Parameters<typeof ScoreHeader>[0]["fold"], prefs = DEFAULT_PREFS) =>
   renderToStaticMarkup(
     <PrefsProvider>
       <MemoryRouter>
@@ -86,10 +87,11 @@ describe("the match header", () => {
 // Ax66: folded, the header is one slim bar of names, kit chips, score and clock.
 describe("the folded header", () => {
   const noop = () => {};
+  const fold = (mode: FoldMode, stuck = false) => ({ mode, stuck, expand: noop, collapse: noop });
 
   it("shows names, kit chips, the score and the clock", () => {
     withWindow("?from=90");
-    const html = render({ slim: true, toggle: noop });
+    const html = render(fold("slim"));
     const head = html.slice(html.indexOf('class="mh slim"'));
     expect(head).toContain('class="mh-bar"');
     expect(head.match(/class="mh-chip"/g)).toHaveLength(2);
@@ -102,24 +104,22 @@ describe("the folded header", () => {
 
   it("has an expand button that says it is folded and what it opens", () => {
     withWindow("");
-    const html = render({ slim: true, toggle: noop });
-    const id = html.match(/<section class="mh slim" id="([^"]+)"/)?.[1];
-    expect(id).toBeTruthy();
-    expect(html).toContain(`<button type="button" class="mh-toggle open" aria-expanded="false" aria-controls="${id}" aria-label="Expand the score header"`);
+    const html = render(fold("slim"));
+    expect(html).toMatch(/<button type="button" class="mh-toggle open" aria-expanded="false" aria-controls="[^"]+" aria-label="Expand the score header"/);
     expect(html).toContain('<span class="mh-toggle-txt">Expand</span>');
   });
 
   it("in full, has a collapse button", () => {
     withWindow("");
-    const html = render({ slim: false, toggle: noop });
+    const html = render(fold("auto"));
     expect(html).toContain('class="mh-toggle shut" aria-expanded="true"');
     expect(html).toContain('aria-label="Collapse the score header"');
   });
 
   it("leaves the controls in the site bar whether the header is slim or full", () => {
     withWindow("");
-    for (const slim of [true, false]) {
-      const html = render({ slim, toggle: noop });
+    for (const mode of ["slim", "auto", "full"] as const) {
+      const html = render(fold(mode));
       expect(html.indexOf('aria-label="Viewing mode"')).toBeGreaterThan(-1);
       expect(html.indexOf('aria-label="Viewing mode"')).toBeLessThan(html.indexOf('aria-label="Match score"'));
     }
@@ -132,8 +132,39 @@ describe("the folded header", () => {
 
   it("marks the viewer's team in the slim bar too", () => {
     withWindow("");
-    const html = render({ slim: true, toggle: noop }, { ...DEFAULT_PREFS, focus_team: "away" });
+    const html = render(fold("slim"), { ...DEFAULT_PREFS, focus_team: "away" });
     expect(html).toContain('class="mh-bar-team away fav"');
     expect(html).toContain('class="mh-bar-team home"');
+  });
+
+  // Ax77: the header scrolls away; the slim bar lies hidden over its bottom until it has.
+  it("keeps the full header in the page and the slim bar hidden while the header is in view", () => {
+    withWindow("");
+    const html = render(fold("auto"));
+    expect(html).toContain('class="mh" id=');
+    expect(html).toContain('class="match-stick auto"');
+    expect(html).toContain('class="mh slim off"');
+  });
+
+  it("shows the slim bar once the header has scrolled past", () => {
+    withWindow("");
+    const html = render(fold("auto", true));
+    expect(html).toContain('class="mh slim"');
+    expect(html).not.toContain("mh slim off");
+  });
+
+  it("pinned open, the whole header sticks and there is no slim bar", () => {
+    withWindow("");
+    const html = render(fold("full", true));
+    expect(html).toContain('class="mh pinned"');
+    expect(html).toContain('class="match-stick full"');
+    expect(html).not.toContain("mh slim");
+  });
+
+  it("pinned folded, only the slim bar is left", () => {
+    withWindow("");
+    const html = render(fold("slim"));
+    expect(html).not.toContain('class="mh-score"');
+    expect(html).toContain('class="match-stick slim"><section class="mh slim" aria-label="Match score"');
   });
 });
