@@ -2,7 +2,8 @@
 // best spell, the most dangerous score state, the 15-minute block of a clock label, and the beeswarm
 // keeping dots apart. Every report key exists in all three languages.
 import { describe, expect, it } from "vitest";
-import { SAMPLE_ANALYSIS, blockOf } from "../../data/analysis";
+import { blockOf } from "../../data/analysis";
+import { SAMPLE_ANALYSIS } from "../../data/analysis.sample";
 import { en } from "../../i18n/messages/en";
 import { es } from "../../i18n/messages/es";
 import { zh } from "../../i18n/messages/zh";

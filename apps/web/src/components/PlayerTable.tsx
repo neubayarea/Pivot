@@ -2,7 +2,8 @@
 // played, sortable by any column, one team at a time. Every number is the API's own per-player
 // line (/players/stats, the verifier's StatCalculator); nothing is worked out here. Each header
 // carries its definition (metric.*), shown on hover and read out by screen readers.
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import type { PlayerReport } from "@pivot/contracts";
 import { useMatch, type Side } from "../data/match";
 import { usePersona, usePlayers } from "../data/persona";
@@ -41,10 +42,19 @@ export default function PlayerTable({ upTo }: { upTo: number | null }) {
   const { match, teams } = useMatch();
   const { prefs, t } = usePrefs();
   const { side: mine } = usePersona();
+  // C19: the report's player links land here as #pt-<id>: that player's team, his row in view.
+  const { hash } = useLocation();
+  const linked = hash.startsWith("#pt-") ? hash.slice(4) : null;
   const [side, setSide] = useState<Side>(mine ?? "home");
   const [col, setCol] = useState<Col | null>("rating");
   const [asc, setAsc] = useState(false);
   const { data, loading, error } = usePlayers(match.match_id, upTo);
+  const linkedSide = linked ? data?.players.find((p) => p.player_id === linked)?.team : undefined;
+  useEffect(() => {
+    if (!linkedSide) return;
+    setSide(linkedSide);
+    requestAnimationFrame(() => document.getElementById(`pt-${linked}`)?.scrollIntoView({ block: "center" }));
+  }, [linkedSide, linked]);
   const team = useTeamStats(match.match_id, upTo).data?.scopes.find((s) => s.scope === "match")?.[side];
   if (!data) return <p className="muted" role="status">{t(error ? "pt.error" : loading ? "pt.loading" : "pt.error")}</p>;
   const rows = playerRows(data.players, side, col, asc);
@@ -78,7 +88,8 @@ export default function PlayerTable({ upTo }: { upTo: number | null }) {
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.player_id} className={p.player_id === prefs.focus_player_id ? "on" : undefined}>
+              <tr key={p.player_id} id={`pt-${p.player_id}`}
+                className={[p.player_id === prefs.focus_player_id ? "on" : "", p.player_id === linked ? "linked" : ""].join(" ").trim() || undefined}>
                 <th scope="row" className="pt-who">
                   <span className="num pt-shirt">{p.shirt_number}</span> {p.name} <small>{p.role}</small>
                 </th>
