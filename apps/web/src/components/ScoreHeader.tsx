@@ -1,29 +1,22 @@
 // The match header (Ax59), Premier League match-page style: both teams in their colours, the big
-// score, the clock and state, the goal scorers under each team, and the viewer's own controls
-// (fan / analyst, ♥ team, ★ player) in plain sight instead of behind a Settings menu (#276).
+// score, the clock and state, and the goal scorers under each team. The viewer's own controls
+// (fan / analyst, ♥ team, ★ player) are in the site bar above it (ViewerControls, Ax68).
 // It sticks to the top of the window with the replay bar (App); on phones it keeps to one score row.
 // Scrolled past, it folds into a slim bar of names, score and clock (Ax66, data/headerFold.ts); a
-// button on each opens or folds it by hand, and the viewer's controls are behind the slim bar's.
-import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties, type RefObject } from "react";
+// button on each opens or folds it by hand.
+import { useId, useLayoutEffect, useRef, type CSSProperties, type RefObject } from "react";
 import type { MatchEvent, ViewerPrefs } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { goalFor } from "../data/keyMoments";
 import { useMatch, type MatchView, type Side } from "../data/match";
 import { useT, type T } from "../i18n";
-import { PlayerPicker, TeamPicker, surname } from "./FocusPickers";
-import Segmented from "./Segmented";
+import { surname } from "./FocusPickers";
 import Stamp from "./Stamp";
 
 const STATUS_TONE = { live: "live", paused: "warn", finished: "ok", scheduled: "line" } as const;
 
-const audiences = (t: T) => [
-  { value: "fan", label: t("top.audience.fan") },
-  { value: "analyst", label: t("top.audience.analyst") },
-] as const;
-
 type Props = {
   prefs: ViewerPrefs;
-  onPrefsChange: (prefs: ViewerPrefs) => void;
   /** Folding with the scroll (App); without it the header always shows in full. */
   fold?: { slim: boolean; toggle: () => void };
 };
@@ -109,8 +102,8 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
   );
 }
 
-export default function ScoreHeader({ prefs, onPrefsChange, fold }: Props) {
-  const { match, teams, squads } = useMatch();
+export default function ScoreHeader({ prefs, fold }: Props) {
+  const { match, teams } = useMatch();
   const t = useT();
   const id = useId();
   const slim = !!fold?.slim;
@@ -132,13 +125,6 @@ export default function ScoreHeader({ prefs, onPrefsChange, fold }: Props) {
     pressed.current = false;
   }, [slim]);
 
-  // A player saved while watching another match is not in this one; the API would refuse him.
-  const player = prefs.focus_player_id;
-  const known = !player || squads.home.length + squads.away.length === 0
-    || [...squads.home, ...squads.away].some((p) => p.player_id === player);
-  useEffect(() => {
-    if (!known) onPrefsChange({ ...prefs, focus_player_id: null });
-  }, [known]);
 
   if (slim) {
     return (
@@ -170,17 +156,6 @@ export default function ScoreHeader({ prefs, onPrefsChange, fold }: Props) {
           </span>
         </div>
         <TeamSide side="away" fav={prefs.focus_team === "away"} />
-      </div>
-      <div className="mh-ctl" role="group" aria-label={t("header.controls")}>
-        <span className="mh-lbl">{t("top.audience")}</span>
-        <Segmented
-          label={t("top.audience")}
-          options={audiences(t)}
-          value={prefs.audience}
-          onChange={(audience) => onPrefsChange({ ...prefs, audience })}
-        />
-        <TeamPicker prefs={prefs} onPrefsChange={onPrefsChange} />
-        <PlayerPicker prefs={prefs} onPrefsChange={onPrefsChange} />
       </div>
     </section>
   );

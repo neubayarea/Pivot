@@ -4,6 +4,7 @@ import { useMatch } from "../data/match";
 import { useT } from "../i18n";
 import MatchPicker from "./MatchPicker";
 import Segmented from "./Segmented";
+import ViewerControls from "./ViewerControls";
 
 // Each language names itself, so a viewer who cannot read the current one still finds theirs.
 const LANGUAGES = [
@@ -17,8 +18,8 @@ type Props = {
   onPrefsChange: (prefs: ViewerPrefs) => void;
 };
 
-// The site bar: brand, which match, language and the AI's work log. The score, the clock and the
-// viewer's own controls moved to the match header under it (ScoreHeader, Ax59).
+// The site bar: brand, which match, the viewer's own controls (Ax68), language and the AI's work
+// log. The score and the clock are in the match header under it (ScoreHeader, Ax59).
 export default function TopBar({ prefs, onPrefsChange }: Props) {
   const { pivots } = useMatch();
   const t = useT();
@@ -29,6 +30,7 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
       </Link>
       <MatchPicker />
       <span className="sp" />
+      <ViewerControls prefs={prefs} onPrefsChange={onPrefsChange} />
       <Segmented
         label={t("top.language")}
         options={LANGUAGES}

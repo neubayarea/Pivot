@@ -68,6 +68,7 @@ export const en = {
   "top.player.none": "No player",
   "top.player.search": "Search players",
   "top.player.empty": "No player matches",
+  "top.view": "View",
 
   "picker.label": "Match",
   "picker.seed": "seed {seed}",
@@ -889,7 +890,7 @@ export const en = {
   "header.pen": "(pen)",
   // Ax66: the header folds to a slim bar
   "header.expand": "Expand",
-  "header.expand.label": "Expand the score header and how you watch",
+  "header.expand.label": "Expand the score header",
   "header.collapse.label": "Collapse the score header",
 
   // Ax59 · match tabs

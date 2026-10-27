@@ -41,7 +41,7 @@ export default function App() {
           Ax66: the score folds to a slim bar once scrolled past (data/headerFold.ts). */}
       <div ref={fold.anchor} className="match-head-anchor" aria-hidden="true" />
       <div ref={fold.head} className="match-head">
-        <ScoreHeader prefs={prefs} onPrefsChange={setPrefs} fold={fold} />
+        <ScoreHeader prefs={prefs} fold={fold} />
         <Playback />
       </div>
       {/* The viewer's team tints the cards (base.css, `--pv-fav`). */}

@@ -69,6 +69,7 @@ export const es: Messages = {
   "top.player.none": "Ninguno",
   "top.player.search": "Buscar jugador",
   "top.player.empty": "Ningún jugador coincide",
+  "top.view": "Vista",
 
   "picker.label": "Partido",
   "picker.seed": "semilla {seed}",
@@ -890,7 +891,7 @@ export const es: Messages = {
   "header.pen": "(p.)",
   // Ax66: the header folds to a slim bar
   "header.expand": "Desplegar",
-  "header.expand.label": "Desplegar el marcador y cómo lo ves",
+  "header.expand.label": "Desplegar el marcador",
   "header.collapse.label": "Plegar el marcador",
 
   // Ax59 · match tabs

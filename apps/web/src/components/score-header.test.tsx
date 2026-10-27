@@ -1,5 +1,6 @@
-// Ax59: the match header shows the score with each team's scorers, and the viewer's controls
-// (fan / analyst, ♥ team, ★ player) sit in it, not behind a Settings menu. Static HTML, no DOM.
+// Ax59: the match header shows the score with each team's scorers. Ax68: the viewer's controls
+// (fan / analyst, ♥ team, ★ player) sit in the site bar above it, not behind a Settings menu.
+// Static HTML, no DOM.
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
@@ -27,7 +28,7 @@ const render = (fold?: { slim: boolean; toggle: () => void }, prefs = DEFAULT_PR
       <MemoryRouter>
         <FixtureProvider>
           <TopBar prefs={DEFAULT_PREFS} onPrefsChange={() => {}} />
-          <ScoreHeader prefs={prefs} onPrefsChange={() => {}} fold={fold} />
+          <ScoreHeader prefs={prefs} fold={fold} />
         </FixtureProvider>
       </MemoryRouter>
     </PrefsProvider>,
@@ -47,18 +48,31 @@ describe("the match header", () => {
     expect(html).toContain("Full time");
   });
 
-  it("puts fan / analyst, team and player in plain sight, with no Settings menu", () => {
+  it("puts fan / analyst, team and player in the site bar next to the language, not in the header", () => {
     withWindow("");
     const html = render();
-    const head = html.slice(html.indexOf('class="mh"'));
-    expect(head).toContain('aria-label="Viewing mode"');
-    expect(head).toContain(">Fan</button>");
-    expect(head).toContain(">Analyst</button>");
-    expect(head).toContain('aria-label="Your team"');
-    expect(head).toContain('title="Player to follow"');
+    const head = html.indexOf('class="mh"');
+    const bar = html.slice(html.indexOf('class="top"'), head);
+    expect(bar).toContain('class="top-view"');
+    expect(bar).toContain('aria-label="Viewing mode"');
+    expect(bar).toContain(">Fan</button>");
+    expect(bar).toContain(">Analyst</button>");
+    expect(bar).toContain('aria-label="Your team"');
+    expect(bar).toContain('title="Player to follow"');
+    // Right before the language switcher.
+    expect(bar.indexOf('aria-label="Viewing mode"')).toBeLessThan(bar.indexOf('aria-label="Language"'));
+    expect(html.slice(head)).not.toContain('aria-label="Viewing mode"');
     expect(html).not.toContain("settings");
-    // The match picker and the work log stay in the bar above.
+    // The match picker and the work log stay in the bar too.
     expect(html).toContain('class="btn top-trace"');
+  });
+
+  it("has one View button for phones that says whether the panel is open", () => {
+    withWindow("");
+    const html = render();
+    const id = html.match(/class="top-view-panel" role="group" aria-label="How you watch"/) && html.match(/<div id="([^"]+)" class="top-view-panel"/)?.[1];
+    expect(id).toBeTruthy();
+    expect(html).toContain(`<button type="button" class="btn top-view-btn" aria-expanded="false" aria-controls="${id}">View <span aria-hidden="true">▾</span></button>`);
   });
 
   it("lists one line per scorer, goals in order, penalties marked", () => {
@@ -69,12 +83,11 @@ describe("the match header", () => {
   });
 });
 
-// Ax66: folded, the header is one slim bar of names, kit chips, score and clock, and the viewer's
-// controls are behind its button.
+// Ax66: folded, the header is one slim bar of names, kit chips, score and clock.
 describe("the folded header", () => {
   const noop = () => {};
 
-  it("shows names, kit chips, the score and the clock, without the controls", () => {
+  it("shows names, kit chips, the score and the clock", () => {
     withWindow("?from=90");
     const html = render({ slim: true, toggle: noop });
     const head = html.slice(html.indexOf('class="mh slim"'));
@@ -84,7 +97,6 @@ describe("the folded header", () => {
     expect(head).toContain("Northvale Rovers");
     expect(head).toContain('aria-label="Harbour City 2, Northvale Rovers 1"');
     expect(head).toContain("Full time");
-    expect(head).not.toContain('aria-label="Viewing mode"');
     expect(head).not.toContain('class="mh-goals"');
   });
 
@@ -93,16 +105,24 @@ describe("the folded header", () => {
     const html = render({ slim: true, toggle: noop });
     const id = html.match(/<section class="mh slim" id="([^"]+)"/)?.[1];
     expect(id).toBeTruthy();
-    expect(html).toContain(`<button type="button" class="mh-toggle open" aria-expanded="false" aria-controls="${id}" aria-label="Expand the score header and how you watch"`);
+    expect(html).toContain(`<button type="button" class="mh-toggle open" aria-expanded="false" aria-controls="${id}" aria-label="Expand the score header"`);
     expect(html).toContain('<span class="mh-toggle-txt">Expand</span>');
   });
 
-  it("in full, has a collapse button and keeps the controls", () => {
+  it("in full, has a collapse button", () => {
     withWindow("");
     const html = render({ slim: false, toggle: noop });
     expect(html).toContain('class="mh-toggle shut" aria-expanded="true"');
     expect(html).toContain('aria-label="Collapse the score header"');
-    expect(html).toContain('aria-label="Viewing mode"');
+  });
+
+  it("leaves the controls in the site bar whether the header is slim or full", () => {
+    withWindow("");
+    for (const slim of [true, false]) {
+      const html = render({ slim, toggle: noop });
+      expect(html.indexOf('aria-label="Viewing mode"')).toBeGreaterThan(-1);
+      expect(html.indexOf('aria-label="Viewing mode"')).toBeLessThan(html.indexOf('aria-label="Match score"'));
+    }
   });
 
   it("has no button where the page does not fold it", () => {
