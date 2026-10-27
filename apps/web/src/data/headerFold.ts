@@ -1,139 +1,148 @@
-// The score header folds into a slim bar once the page scrolls past it, and opens again near the
-// top (Ax66). The header's place in the page never changes size: while slim, the sticky
-// `.match-head` carries a bottom margin for the rows it folded away, so nothing below it moves and
-// the fold cannot feed back into the scroll position that decided it.
+// The score header and what sticks at the top of the match page (Ax66, reworked in Ax77).
 //
-// Two lines, `SLIM_H` apart, keep it from flickering at the threshold:
-// - below `collapseAt` (the header's bottom, where it sat before it stuck) it folds;
-// - above `expandAt` (`SLIM_H` higher) it opens, since from there up the folded rows' space would
-//   show as a gap under the slim bar.
+// The full header sits in the page and scrolls away like the rest of it. Right under it, a sticky
+// block holds the slim score bar and the replay bar. That block is pulled up by the slim bar's
+// height, so the slim bar lies over the header's last `SLIM_H` pixels; while the header is in view
+// the slim bar is invisible. The block sticks at the moment those last pixels reach the top of the
+// window, and that is when the slim bar shows, over exactly the part of the header it replaces.
+// Nothing in the page changes size when it shows or hides, so the page never jumps and the scroll
+// cannot argue with itself.
 //
-// A press of the button wins over the scroll until the scroll argues back:
-// - opened by hand while scrolled down: stays open until the page is scrolled `RELEASE_PX` further
-//   down, or back up to where it opens by itself;
-// - folded by hand: stays slim until the page scrolls up past `expandAt`, or down past
-//   `collapseAt` (where it would fold anyway).
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+// The match tabs stick right under the block (`--pv-stick-h`) and a tab's own row of links under
+// the tabs (`--pv-tabs-h`); see base.css. The root's scroll padding keeps anchors clear of all three.
+//
+// A press of either button pins that choice until the page is reloaded or another match opens:
+// - "full": the whole header sticks at the top with the replay bar under it;
+// - "slim": the header is gone and the slim bar sits (and sticks) in its place.
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-/** Height of the slim bar (base.css `.mh.slim`). */
+/** Height of the slim bar (base.css `.mh.slim`, `.match-stick.auto`). */
 export const SLIM_H = 48;
-/** How far past the point where it was opened by hand the page scrolls down before it folds again. */
-export const RELEASE_PX = 200;
 
-export type Lines = { expandAt: number; collapseAt: number };
+/** "auto" follows the scroll; "full" and "slim" were picked with the buttons. */
+export type FoldMode = "auto" | "full" | "slim";
 
-export type FoldState = {
-  /** What the scroll alone would show. */
-  auto: boolean;
-  /** A choice made with the button, and the scroll position it was made at. */
-  manual: { slim: boolean; y: number } | null;
-};
+/** Whether the slim bar shows: picked, or the header has scrolled up to its last `SLIM_H` pixels. */
+export const slimShown = (mode: FoldMode, stuck: boolean) => mode === "slim" || (mode === "auto" && stuck);
 
-export type FoldAction =
-  | { type: "scroll"; y: number; lines: Lines }
-  | { type: "toggle"; y: number; lines: Lines };
-
-export const FOLD_START: FoldState = { auto: false, manual: null };
-
-/** Whether the header is slim now. */
-export const isSlim = (s: FoldState) => (s.manual ? s.manual.slim : s.auto);
-
-/** Where the slim/full lines sit, from the header's top before it stuck and its full height. */
-export const linesFor = (top: number, fullH: number): Lines => ({ expandAt: top + fullH - SLIM_H, collapseAt: top + fullH });
-
-function autoAt(auto: boolean, y: number, { expandAt, collapseAt }: Lines): boolean {
-  if (y > collapseAt) return true;
-  if (y < expandAt) return false;
-  return auto;
-}
-
-function settle(auto: boolean, manual: FoldState["manual"], y: number, lines: Lines): FoldState["manual"] {
-  if (!manual || y < lines.expandAt || manual.slim === auto) return null;
-  if (!manual.slim && y - manual.y > RELEASE_PX) return null;
-  return manual;
-}
-
-export function foldReducer(s: FoldState, a: FoldAction): FoldState {
-  const auto = autoAt(s.auto, a.y, a.lines);
-  if (a.type === "toggle") {
-    const slim = !isSlim(s);
-    return { auto, manual: slim === auto ? null : { slim, y: a.y } };
-  }
-  const manual = settle(auto, s.manual, a.y, a.lines);
-  return auto === s.auto && manual === s.manual ? s : { auto, manual };
-}
+/** The header's bottom edge, measured from the top of the window: at `SLIM_H` or less, the bar takes over. */
+export const isStuck = (headerBottom: number) => headerBottom <= SLIM_H + 0.5;
 
 export type HeaderFold = {
-  slim: boolean;
-  toggle: () => void;
-  /** A zero-height marker just before `.match-head`: where the header starts before it sticks. */
+  mode: FoldMode;
+  /** In "auto": the header has scrolled past, so the slim bar shows. */
+  stuck: boolean;
+  expand: () => void;
+  collapse: () => void;
+  /** A zero-height marker where the header starts. */
   anchor: (el: HTMLDivElement | null) => void;
-  /** The sticky `.match-head` itself. */
-  head: (el: HTMLDivElement | null) => void;
+  /** The full header (`.mh`). */
+  full: (el: HTMLElement | null) => void;
+  /** The sticky block with the slim bar and the replay bar (`.match-stick`). */
+  stick: (el: HTMLDivElement | null) => void;
 };
 
-/** Folds the score header with the scroll; `toggle` is the header's own button. */
-export function useHeaderFold(): HeaderFold {
-  const [state, dispatch] = useReducer(foldReducer, FOLD_START);
-  // Elements, not refs: the match head mounts only once the live feed has a match (MatchProvider).
-  const [anchor, setAnchor] = useState<HTMLDivElement | null>(null);
-  const [head, setHead] = useState<HTMLDivElement | null>(null);
-  const fullH = useRef(0);
-  const slim = isSlim(state);
+const setVar = (name: string, px: number | null) => {
+  const root = document.documentElement.style;
+  if (px === null) root.removeProperty(name);
+  else root.setProperty(name, `${Math.round(px)}px`);
+};
 
-  const lines = useCallback((): Lines | null => {
-    if (!anchor || !fullH.current) return null;
-    return linesFor(anchor.getBoundingClientRect().top + window.scrollY, fullH.current);
-  }, [anchor]);
-
-  // The full header's height, and the margin that stands in for it while slim. Written straight to
-  // the DOM before paint, so the frame that shows the slim bar already has the margin under it.
-  const reserve = useCallback(() => {
-    const mh = head?.querySelector<HTMLElement>(".mh");
-    if (!mh || !head) return;
-    const folded = mh.classList.contains("slim");
-    const h = mh.getBoundingClientRect().height;
-    if (!folded) fullH.current = h;
-    head.style.setProperty("--mh-reserve", `${folded ? Math.max(0, fullH.current - h) : 0}px`);
-  }, [head]);
-
-  useLayoutEffect(reserve, [slim, reserve]);
+/** Keeps `name` on the root set to the element's height while it is mounted (`--pv-tabs-h`, `--pv-sub-h`). */
+export function useHeightVar(name: string) {
+  const [el, setEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    const mh = head?.querySelector(".mh");
-    if (!mh || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(reserve);
-    ro.observe(mh);
-    return () => ro.disconnect();
-  }, [head, reserve]);
-
-  // Read on each scroll event: one layout read, and the reducer hands back the same state (no
-  // render) unless a line was crossed.
-  useEffect(() => {
-    const read = () => {
-      const l = lines();
-      if (l) dispatch({ type: "scroll", y: window.scrollY, lines: l });
+    if (!el) return;
+    const write = () => setVar(name, el.getBoundingClientRect().height);
+    write();
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(write);
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      setVar(name, null);
     };
+  }, [el, name]);
+  return setEl;
+}
+
+/** The fold for one match; a new `matchId` lets the scroll decide again. */
+export function useHeaderFold(matchId: string): HeaderFold {
+  const [mode, setMode] = useState<FoldMode>("auto");
+  const [stuck, setStuck] = useState(false);
+  // Elements, not refs: the full header comes and goes with the mode.
+  const [anchor, setAnchor] = useState<HTMLDivElement | null>(null);
+  const [full, setFull] = useState<HTMLElement | null>(null);
+  const [stick, setStick] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => setMode("auto"), [matchId]);
+
+  // One layout read per scroll event; React renders only when the bar should show or hide.
+  useEffect(() => {
+    if (!full) {
+      setStuck(false);
+      return;
+    }
+    const read = () => setStuck(isStuck(full.getBoundingClientRect().bottom));
     read();
     window.addEventListener("scroll", read, { passive: true });
     window.addEventListener("resize", read);
+    // Also when something above the header changes height without a scroll (a banner, the first
+    // visit's prompt, a page that loads already scrolled).
+    const io = typeof IntersectionObserver === "undefined" ? null
+      : new IntersectionObserver(read, { rootMargin: `-${SLIM_H}px 0px 0px 0px`, threshold: [0, 1] });
+    io?.observe(full);
     return () => {
+      io?.disconnect();
       window.removeEventListener("scroll", read);
       window.removeEventListener("resize", read);
     };
-  }, [lines]);
+  }, [full]);
 
-  const toggle = useCallback(() => {
-    const l = lines();
-    if (!l) return;
-    let y = window.scrollY;
-    // Folding near the top: bring the slim bar to the top of the window with the page right under
-    // it, rather than leave the folded rows' space as a gap.
-    if (!slim && y < l.expandAt) {
-      y = Math.ceil(l.expandAt);
-      window.scrollTo({ top: y, behavior: "instant" });
-    }
-    dispatch({ type: "toggle", y, lines: l });
-  }, [lines, slim]);
+  // How tall the stuck stack is above the tabs, and where the block sticks under a pinned header.
+  useEffect(() => {
+    if (!stick) return;
+    const write = () => {
+      const fullH = mode === "full" && full ? full.getBoundingClientRect().height : 0;
+      setVar("--mh-full-h", fullH);
+      setVar("--pv-stick-h", fullH + stick.getBoundingClientRect().height);
+    };
+    write();
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(write);
+    ro?.observe(stick);
+    if (full) ro?.observe(full);
+    return () => {
+      ro?.disconnect();
+      setVar("--mh-full-h", null);
+      setVar("--pv-stick-h", null);
+    };
+  }, [stick, full, mode]);
 
-  return { slim, toggle, anchor: setAnchor, head: setHead };
+  // A press that adds or removes the header while it is above the window would move the page under
+  // the viewer's eyes; scroll by the same amount so what they were reading stays put. Near the top,
+  // where the change is in view, the page simply follows it.
+  const keep = useRef<number | null>(null);
+  const page = () => document.querySelector<HTMLElement>("main.page");
+  const pin = useCallback((next: FoldMode) => {
+    const main = page();
+    keep.current = anchor && main && anchor.getBoundingClientRect().top < 0 ? main.getBoundingClientRect().top : null;
+    setMode(next);
+  }, [anchor]);
+  useLayoutEffect(() => {
+    const before = keep.current;
+    keep.current = null;
+    const main = page();
+    if (before === null || !main) return;
+    const moved = main.getBoundingClientRect().top - before;
+    if (Math.abs(moved) > 0.5) window.scrollBy({ top: moved, behavior: "instant" });
+  }, [mode]);
+
+  return {
+    mode,
+    stuck,
+    expand: useCallback(() => pin("full"), [pin]),
+    collapse: useCallback(() => pin("slim"), [pin]),
+    anchor: setAnchor,
+    full: setFull,
+    stick: setStick,
+  };
 }

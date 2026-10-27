@@ -4,6 +4,7 @@
 // keys, Home and End move to another tab and open it.
 import { useRef, type KeyboardEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useHeightVar } from "../data/headerFold";
 import { useMatch } from "../data/match";
 import { TABS, tabOpen, tabSearch, type MatchTab } from "../data/tab";
 import { useT } from "../i18n";
@@ -18,6 +19,8 @@ export default function MatchTabs({ tab }: { tab: MatchTab }) {
   // C14: before kick-off only the preview and the line-ups have anything to show.
   const open = TABS.filter((id) => tabOpen(id, status, match_id));
   const list = useRef<HTMLDivElement>(null);
+  // Ax77: the tabs stick under the slim score bar, and a tab's own row of links under them.
+  const rail = useHeightVar("--pv-tabs-h");
   const move = (e: KeyboardEvent) => {
     const i = open.indexOf(tab);
     const to = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: open.length - 1 } as Record<string, number>)[e.key];
@@ -28,7 +31,7 @@ export default function MatchTabs({ tab }: { tab: MatchTab }) {
     requestAnimationFrame(() => list.current?.querySelector<HTMLElement>(`#tab-${next}`)?.focus());
   };
   return (
-    <nav className="tabs" aria-label={t("tabs.label")}>
+    <nav ref={rail} className="tabs" aria-label={t("tabs.label")}>
       <div role="tablist" ref={list} onKeyDown={move}>
         {TABS.map((id) => !tabOpen(id, status, match_id) ? (
           <span key={id} id={`tab-${id}`} role="tab" aria-selected={false} aria-disabled="true" className="tab-off"
