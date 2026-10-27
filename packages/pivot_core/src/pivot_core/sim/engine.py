@@ -561,8 +561,9 @@ class Engine:
         elif kind == "free_kick" and norm(self._view(spot, k) - GOAL) < 32:
             taker_id = sheet.free_kick_taker_id
         ids = self.shapes[k].player_ids
-        if kind == "goal_kick" and "GK" in self.shapes[k].roles:
-            return self.shapes[k].roles.index("GK")
+        keeper = self._keeper(k)
+        if kind == "goal_kick" and keeper is not None:
+            return keeper
         if taker_id is not None and taker_id in ids:
             return ids.index(taker_id)
         return self._nearest(k, spot, outfield=True)
@@ -1457,11 +1458,14 @@ class Engine:
 
     def _react_to_red(self, k: int) -> None:
         """Coach reaction to a sending-off: pull a forward back so the back line stays whole
-        (4-4-1 with ten), and press less unless chasing the game."""
+        (4-4-1 with ten), and press less unless chasing the game. A keeper sent off is replaced in
+        goal by the deepest outfield player (#347): the reshape puts him in the keeper's slot."""
         shape = self.shapes[k]
-        if not any(p is not None and r == "GK" for p, r in zip(shape.player_ids, shape.roles)):
-            return
         outfield = sum(1 for p, r in zip(shape.player_ids, shape.roles) if p is not None and r != "GK")
+        if self._keeper(k) is None:
+            if outfield >= 2:
+                self._change_tactics(k, {"formation": self.sheets[k].formation})
+            return
         if outfield < 7:
             return
         # With ten the 11-man side takes about two thirds of the shots (scripts/red_card_report.py).
@@ -1476,6 +1480,8 @@ class Engine:
         on_pitch = [s for s in old if s.player_id in self.shapes[k].player_ids]
         gk = [s for s in on_pitch if s.role == "GK"]
         field = sorted((s for s in on_pitch if s.role != "GK"), key=lambda s: (s.anchor[0], -s.anchor[1]))
+        if not gk and field:                  # the keeper was sent off: the deepest player goes in goal (#347)
+            gk, field = field[:1], field[1:]
         template = FORMATIONS[formation]
         slots = sorted(range(1, len(template)), key=lambda n: (template[n][1], -template[n][2]))[:len(field)]
         starters = [LineupSlot(player_id=s.player_id, slot=1, role="GK", anchor=template[0][1:]) for s in gk]

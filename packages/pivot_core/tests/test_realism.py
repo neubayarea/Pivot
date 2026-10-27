@@ -421,3 +421,17 @@ def test_real_017_a_free_player_takes_a_poor_chance_closer_before_shooting():
     rule_on, rule_off = _shoots(Params().close_in), _shoots(1.0)
     assert Params().close_in < 1
     assert rule_off > 100 and rule_on < 0.7 * rule_off
+
+
+def test_347_a_keeper_sent_off_is_replaced_in_goal_and_goal_kicks_still_have_a_taker():
+    e = engine_on_ball()
+    k = 0
+    gk = e._keeper(k)
+    assert gk is not None
+    keeper_id = e.shapes[k].player_ids[gk]
+    e.shapes[k].player_ids[gk] = None                        # sent off, as _foul does on a red card
+    e._react_to_red(k)
+    new = e._keeper(k)
+    assert new is not None and e.shapes[k].player_ids[new] not in (None, keeper_id)
+    taker = e._choose_taker(k, "goal_kick", e.ball.copy())
+    assert taker == new and e.shapes[k].player_ids[taker] is not None
