@@ -160,3 +160,31 @@ export function usePlayers(matchId: string | null, upTo: number | null = null) {
   const q = upTo === null ? "" : `?up_to=${Math.floor(Math.max(0, upTo) / 60) * 60}`;
   return useVizData<PlayerStatsReport>(matchId ? `/api/matches/${encodeURIComponent(matchId)}/players/stats${q}` : null);
 }
+
+/**
+ * What-if choices in the order that matters to the ♥ team (C12): first what would have helped it
+ * (its own red card taken away, the other side's goal ruled out), then its own decisions (its
+ * substitutions, its press), then the rest. Same order as given without a team, or among equals.
+ */
+export function forYourTeam<O extends { type: string; team?: Side | null }>(options: readonly O[], side: Side | null): O[] {
+  if (!side) return [...options];
+  const score = (o: O) => {
+    if (!o.team) return 0;
+    if (o.type === "remove_red_card") return o.team === side ? 3 : -1;
+    if (o.type === "remove_goal") return o.team === side ? -1 : 3;
+    return o.team === side ? 2 : 0;
+  };
+  return options.map((o, i) => [o, i] as const).sort((a, b) => score(b[0]) - score(a[0]) || a[1] - b[1]).map(([o]) => o);
+}
+
+/** The alarm's view of a turning point, from momentum per minute (home +): the mean five minutes before and after, and the swing towards the side it turned to. */
+export function swingAt(metrics: readonly { minute: number; momentum: number }[], minute: number, direction: Side, span = 5) {
+  const mean = (from: number, to: number) => {
+    const v = metrics.filter((m) => m.minute >= from && m.minute < to).map((m) => m.momentum);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
+  const before = mean(minute - span, minute);
+  const after = mean(minute, minute + span);
+  const swing = before === null || after === null ? null : (after - before) * (direction === "home" ? 1 : -1);
+  return { before, after, swing };
+}

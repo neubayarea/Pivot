@@ -1,11 +1,12 @@
 // The pieces of S3 (What-if Lab), kept apart from the page so the tests can render each state.
 // Layout follows "07 S3" in docs/design/matchday-programme.html.
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import type { ArmStats, OutcomeDist, Scenario, ScoreShare, SimResult, Spread } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { ApiError } from "../data/live/api";
 import type { MatchView } from "../data/match";
 import { numberLocale } from "../data/motion";
+import { usePersona } from "../data/persona";
 import {
   OUTCOMES, biggestShift, ci, disabledReason, optionLabel, pct, progressOf, totalRuns, useComparisonIn, useOptionMinute,
   type Outcome, type RunState, type ScenarioApi, type ScenarioOption,
@@ -300,6 +301,9 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
   const n = scenario.spec.n_runs;
   const shift = biggestShift(r);
   const from = minute(scenario.spec.at_minute);
+  // C12: a fan gets the sentence and the two big bars; an analyst also the ranges and the score and shot tables.
+  // With a ♥ team, one line says what the change did to its chance of winning.
+  const { fan, side } = usePersona();
   const moveTo = typeof scenario.spec.params.new_minute === "number" ? scenario.spec.params.new_minute + 1 : undefined;
   const change = option ? optionLabel(option, t, moveTo, minuteOf(option)) : scenario.spec.type;
   const { narrative, writing } = useComparisonIn(source, scenario, prefs.language);
@@ -326,10 +330,15 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
         <Distribution label={t("whatif.asPlayed", { minute: from })} dist={r.baseline} teams={teams} />
         <Distribution label={t("whatif.changed", { change })} dist={r.counterfactual} teams={teams} significant={r.significant} />
       </div>
-      {r.baseline_stats && r.counterfactual_stats && (
+      {side && (
+        <p className="wi-you" style={{ "--tc": `var(--pv-${side})` } as CSSProperties}>
+          {t("whatif.forYou", { team: teams[side].name, was: pct(r.baseline[`${side}_win`]), now: pct(r.counterfactual[`${side}_win`]) })}
+        </p>
+      )}
+      {!fan && r.baseline_stats && r.counterfactual_stats && (
         <ArmCompare was={r.baseline_stats} now={r.counterfactual_stats} teams={teams} from={from} />
       )}
-      <Ranges result={r} teams={teams} />
+      {!fan && <Ranges result={r} teams={teams} />}
       <div className="why">
         <span className="label muted">{t("whatif.comparison")}</span>
         {narrative ? (

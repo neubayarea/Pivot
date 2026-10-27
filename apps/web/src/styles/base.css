@@ -749,3 +749,14 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .story-watch { justify-self: start; }
 .story-lean { justify-self: start; font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: var(--pv-r-pill); background: var(--tc); color: var(--pv-on-team); }
 .story-clip { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 16px 20px; }
+/* For / against the ♥ team: the colour of the side it went to (C12). */
+.lean-tag { display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: var(--pv-r-pill); background: var(--tc); color: var(--pv-on-team); }
+.alarm { margin: 0 32px; background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: 14px 20px; display: grid; gap: 6px; }
+.alarm h2 { font-size: var(--pv-fs-md); font-weight: 700; }
+.alarm .open-facts { grid-column: auto; margin: 0; padding-top: 4px; border-top: 0; }
+.alarm p { font-size: 13px; }
+.open-facts { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 36px; margin: 0; }
+.open-facts > div { display: grid; min-width: 0; }
+.open-facts dt { font-size: 13px; font-weight: 500; color: var(--pv-ink-2); }
+.open-facts dd { margin: 0; font-size: 15px; font-weight: 600; }
+.wi-you { font-weight: 700; font-size: 17px; padding-left: 12px; box-shadow: inset 4px 0 var(--tc); }
