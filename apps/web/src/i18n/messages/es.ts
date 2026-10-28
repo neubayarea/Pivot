@@ -1495,8 +1495,8 @@ export const es: Messages = {
   "lc.top.even": "Ningún equipo manda en este momento.",
   "lc.top.evenEnd": "Ningún equipo mandó en los últimos diez minutos.",
   "lc.metrics.title": "Últimos diez minutos ({from}′–{to}′)",
-  "lc.metrics.src": "Fuente: las cifras del verificador en estos diez minutos (/stats)",
-  "lc.metrics.srcRolling": "Fuente: las cifras del verificador en estos diez minutos (/stats); líneas: cada cinco minutos (/analysis)",
+  "lc.metrics.src": "Fuente: datos del partido de los últimos diez minutos.",
+  "lc.metrics.srcRolling": "Fuente: datos de los últimos diez minutos; tendencias en bloques de cinco minutos.",
   "lc.shot.title": "Tiro",
   "lc.shot.close": "Cerrar la ficha del tiro",
   "lc.shot.body": "Con",
@@ -1522,4 +1522,6 @@ export const es: Messages = {
   "moments.contextNote": "El minuto del giro señala el cambio de impulso. Los eventos relacionados pueden ser anteriores o posteriores; la asociación no demuestra una causa.",
   "pivot.languagePending": "La explicación en este idioma aún no está disponible. Este resumen usa la dirección del impulso registrada.",
   "event.cornerBare": "Córner",
+  "live.metrics.loading": "Cargando los últimos diez minutos…",
+  "live.metrics.kickoff": "Comienza el partido. El análisis aparece tras el primer minuto.",
 };

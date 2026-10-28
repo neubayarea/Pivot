@@ -1493,8 +1493,8 @@ export const zh: Messages = {
   "lc.top.even": "现在两队势均力敌。",
   "lc.top.evenEnd": "最后十分钟两队势均力敌。",
   "lc.metrics.title": "最近十分钟（{from}′–{to}′）",
-  "lc.metrics.src": "数据来源：核对员那套球队数据，只算这十分钟（/stats）",
-  "lc.metrics.srcRolling": "数据来源：核对员那套球队数据，只算这十分钟（/stats）；小线：每五分钟一段（/analysis）",
+  "lc.metrics.src": "来源：最近十分钟的比赛统计。",
+  "lc.metrics.srcRolling": "来源：最近十分钟的比赛统计；趋势线每五分钟汇总一次。",
   "lc.shot.title": "射门",
   "lc.shot.close": "关闭射门小卡",
   "lc.shot.body": "部位",
@@ -1520,4 +1520,6 @@ export const zh: Messages = {
   "moments.contextNote": "转折分钟标记势头发生变化的位置。关联事件可能发生在其前后；时间上的关联不等于它单独造成了转折。",
   "pivot.languagePending": "这个语言的解释暂未就绪。先按已记录的势头方向显示摘要。",
   "event.cornerBare": "角球",
+  "live.metrics.loading": "正在读取最近十分钟的数据…",
+  "live.metrics.kickoff": "比赛刚开始，第一分钟结束后显示实时分析。",
 };

@@ -13,13 +13,14 @@ import MatchStats from "../../components/MatchStats";
 import PitchBoard from "../../components/PitchBoard";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
 import PlayerTable from "../../components/PlayerTable";
-import LiveCentre from "../../components/live/LiveCentre";
+import LiveCentre, { LiveMetrics } from "../../components/live/LiveCentre";
 import FanPhases from "../../components/report/FanPhases";
 import PageNav from "../../components/report/PageNav";
 import PostMatchReport, { useReportTitle } from "../../components/report/PostMatchReport";
 import ReportBoundary from "../../components/report/ReportBoundary";
 import { pivotHeadline } from "../../components/PivotList";
 import StartDemoButton from "../../components/StartDemoButton";
+import { LoadFailed, Placeholder } from "../../components/Skeleton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
 import YourTeamSummary from "../../components/YourTeamSummary";
 import { useClock } from "../../data/clock";
@@ -40,7 +41,7 @@ function FanBars({ report }: { report: TeamStatsReport | null | undefined }) {
   const { teams } = useMatch();
   const t = useT();
   const scope = report?.scopes[0];
-  if (!scope) return null;
+  if (!scope) return <Placeholder label={t("ts.loading")} lines={3} block={60} />;
   return (
     <ul className="live-bars" aria-label={t("live.fan.bars")}>
       {FAN_BARS.map(([k, label]) => {
@@ -153,12 +154,14 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           {!scheduled && <Pitch key={match.match_id} simple />}
           <div className="live-side">
             <LiveCentre moments={moments} upTo={upTo} />
+            <section className="card live-fan-numbers" aria-label={t("live.fan.bars")}>
+              {report.error ? <LoadFailed message={t("ts.error")} fault={report.fault} onRetry={report.retry} /> : <FanBars report={report.data} />}
+            </section>
             <Card title={t("live.fan.moments")} note={t("board.autoScroll")} className="more-events live-big">
               <EventFeed highlight={evidence} />
             </Card>
           </div>
           <section className="live-below card" aria-label={t("board.stats")}>
-            <FanBars report={report.data} />
             <details className="live-more">
               <summary>{t("live.fan.more")}</summary>
               <MatchStats report={report.data} />
@@ -167,9 +170,14 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
         </div>
       ) : (
         <div className="live-lay an">
+          {!scheduled && (
+            <div className="live-metrics-strip">
+              <LiveMetrics upToMin={Math.floor((upTo ?? match.clock) / 60)} />
+            </div>
+          )}
           {!scheduled && <PitchBoard key={match.match_id} />}
           <div className="live-side">
-            <LiveCentre moments={moments} upTo={upTo} />
+            <LiveCentre moments={moments} upTo={upTo} hideMetrics />
           </div>
           <Card title={t("board.events")} note={t("board.autoScroll")} className="more-events">
             <EventFeed highlight={evidence} />

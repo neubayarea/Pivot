@@ -1494,8 +1494,8 @@ export const en = {
   "lc.top.even": "Neither side is on top at the moment.",
   "lc.top.evenEnd": "Neither side was on top over the last ten minutes.",
   "lc.metrics.title": "Last ten minutes ({from}′–{to}′)",
-  "lc.metrics.src": "Source: the verifier's team stats over these ten minutes (/stats)",
-  "lc.metrics.srcRolling": "Source: the verifier's team stats over these ten minutes (/stats); lines: each five minutes (/analysis)",
+  "lc.metrics.src": "Source: match data from the last ten minutes.",
+  "lc.metrics.srcRolling": "Source: match data from the last ten minutes; trend lines use five-minute blocks.",
   "lc.shot.title": "Shot",
   "lc.shot.close": "Close the shot card",
   "lc.shot.body": "With",
@@ -1521,4 +1521,6 @@ export const en = {
   "moments.contextNote": "The turning-point minute marks the momentum change. Related events can precede or follow it; their association alone does not establish a cause.",
   "pivot.languagePending": "The explanation in this language is not available yet. This summary uses the recorded momentum direction.",
   "event.cornerBare": "Corner",
+  "live.metrics.loading": "Reading the last ten minutes…",
+  "live.metrics.kickoff": "Kick-off. Live analysis starts after the first minute.",
 };

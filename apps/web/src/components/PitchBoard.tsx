@@ -85,11 +85,11 @@ export default function PitchBoard({ simple = false }: { simple?: boolean } = {}
     if (time.current && time.current.textContent !== text) time.current.textContent = text;
   });
   const [picked, setPicked] = useState<string | null>(null);
-  // C21 (#401): an analyst gets three layers, all off to start with; a fan keeps the shape on.
+  // The analyst lands on the tactical view; the fan's simple board hides all layers.
   const { fan } = usePersona();
-  const [shapeOn, setShapeOn] = useState(() => fan);
+  const [shapeOn, setShapeOn] = useState(true);
   const [pressOn, setPressOn] = useState(false);
-  const [lanesOn, setLanesOn] = useState(false);
+  const [lanesOn, setLanesOn] = useState(true);
   const [compare, setCompare] = useState(false);
 
   const who = useMemo(() => whoFromSquads(squads), [squads]);
