@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import type { ShotMapShot } from "@pivot/contracts";
 import { SOURCES, type ShotQualityLine, type Side } from "../../data/analysis";
 import { useT, type MessageKey } from "../../i18n";
+import { count, num, or0 } from "./fmt";
 
 const W = 1100, L = 120, R = 16, ROW = 56, TOP = 18;
 
@@ -35,7 +36,7 @@ export default function ShotQuality({ shots, quality, names, nameOf }: {
     const ys = swarm(own.map((s) => x(s.xg ?? 0)), 5);
     return { side, own, ys };
   });
-  const srcMax = quality ? Math.max(...(["home", "away"] as const).map((s) => SOURCES.reduce((n, k) => n + quality[s].by_source[k], 0)), 0.5) : 1;
+  const srcMax = quality ? Math.max(...(["home", "away"] as const).map((s) => SOURCES.reduce((n, k) => n + or0(quality[s]?.by_source?.[k]), 0)), 0.5) : 1;
   return (
     <div className="rp-shots">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t("rp.sq.label")}>
@@ -67,22 +68,25 @@ export default function ShotQuality({ shots, quality, names, nameOf }: {
         <div className="rp-src-bars">
           {(["home", "away"] as const).map((side) => {
             const q = quality[side];
-            const total = SOURCES.reduce((n, k) => n + q.by_source[k], 0);
+            const src = (k: (typeof SOURCES)[number]) => or0(q?.by_source?.[k]);
+            const total = SOURCES.reduce((n, k) => n + src(k), 0);
+            // Nothing to split before the first shot.
+            if (!q || total <= 0) return null;
             return (
               <div key={side} className="rp-src-row" style={{ "--tc": `var(--pv-${side})` } as CSSProperties}>
                 <span className="rp-row">{names[side]}</span>
                 <span className="rp-stack" style={{ width: `${(total / srcMax) * 100}%` }} role="img"
-                  aria-label={SOURCES.map((k) => `${t(`rp.src.${k}` as MessageKey)} ${q.by_source[k].toFixed(2)}`).join(", ")}>
-                  {SOURCES.map((k, i) => q.by_source[k] > 0 && (
-                    <i key={k} className={`s${i}`} style={{ flexGrow: q.by_source[k] }} title={`${t(`rp.src.${k}` as MessageKey)}: xG ${q.by_source[k].toFixed(2)}`}>
-                      {q.by_source[k] / total >= 0.18 && <b>{t(`rp.src.${k}` as MessageKey)} {q.by_source[k].toFixed(2)}</b>}
+                  aria-label={SOURCES.map((k) => `${t(`rp.src.${k}` as MessageKey)} ${num(src(k))}`).join(", ")}>
+                  {SOURCES.map((k, i) => src(k) > 0 && (
+                    <i key={k} className={`s${i}`} style={{ flexGrow: src(k) }} title={`${t(`rp.src.${k}` as MessageKey)}: xG ${num(src(k))}`}>
+                      {src(k) / total >= 0.18 && <b>{t(`rp.src.${k}` as MessageKey)} {num(src(k))}</b>}
                     </i>
                   ))}
                 </span>
                 <span className="rp-sq-nums">
-                  <span title={t("metric.xg_per_shot.def")}>{t("metric.xg_per_shot.short")} <b className="num">{q.xg_per_shot.toFixed(2)}</b></span>
-                  <span title={t("metric.big_chances.def")}>{t("metric.big_chances.short")} <b className="num">{q.big_chances}</b></span>
-                  <span title={t("metric.shots.def")}>{t("metric.shots.short")} <b className="num">{q.shots}</b></span>
+                  <span title={t("metric.xg_per_shot.def")}>{t("metric.xg_per_shot.short")} <b className="num">{num(q.xg_per_shot)}</b></span>
+                  <span title={t("metric.big_chances.def")}>{t("metric.big_chances.short")} <b className="num">{count(q.big_chances)}</b></span>
+                  <span title={t("metric.shots.def")}>{t("metric.shots.short")} <b className="num">{count(q.shots)}</b></span>
                 </span>
               </div>
             );

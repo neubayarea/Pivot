@@ -1,20 +1,22 @@
 // Game state (C19, #385): how each side played while level, ahead and behind, from the API's
 // StatCalculator windows cut at the goals. One row per state, each number with a small bar.
 import type { CSSProperties } from "react";
-import type { GameState, Side, StateLine } from "../../data/analysis";
+import { isNum, type GameState, type Side, type StateLine } from "../../data/analysis";
 import { useT, type MessageKey } from "../../i18n";
+import { count, num, or0, pct } from "./fmt";
 
 const COLS = [["xg_per90", "xg_per90"], ["xga_per90", "xga_per90"], ["possession_pct", "possession_pct"], ["field_tilt_pct", "field_tilt"]] as const;
 type Col = (typeof COLS)[number][0];
-const fmt = (c: Col, v: number) => (c.endsWith("per90") ? v.toFixed(2) : `${Math.round(v)}%`);
+const fmt = (c: Col, v: number | null) => (c.endsWith("per90") ? num(v) : pct(v));
 
 /** The row and side where a team made the most xG per 90: "most dangerous when behind". */
 export function mostDangerous(rows: readonly GameState[]): { row: GameState; side: Side } | null {
   let best: { row: GameState; side: Side } | null = null;
   for (const row of rows) {
-    if (row.minutes < 5) continue;
+    if (!isNum(row.minutes) || row.minutes < 5) continue;
     for (const side of ["home", "away"] as const) {
-      if (!best || row[side].xg_per90 > best.row[best.side].xg_per90) best = { row, side };
+      const v = row[side].xg_per90;
+      if (isNum(v) && (!best || v > or0(best.row[best.side].xg_per90))) best = { row, side };
     }
   }
   return best;
@@ -26,11 +28,11 @@ export const stateFor = (s: GameState["state"], side: Side): "level" | "ahead" |
 
 export default function GameStateTable({ rows, names }: { rows: GameState[]; names: Record<Side, string> }) {
   const t = useT();
-  const max = (c: Col) => Math.max(...rows.flatMap((r) => [r.home[c], r.away[c]]), c.endsWith("per90") ? 1 : 100);
+  const max = (c: Col) => Math.max(...rows.flatMap((r) => [or0(r.home[c]), or0(r.away[c])]), c.endsWith("per90") ? 1 : 100);
   const cell = (r: GameState, side: Side, c: Col) => {
     const v = (r[side] as StateLine)[c];
     return (
-      <td key={`${side}-${c}`} className="num" style={{ "--tc": `var(--pv-${side})`, "--w": `${(v / max(c)) * 100}%` } as CSSProperties}>
+      <td key={`${side}-${c}`} className="num" style={{ "--tc": `var(--pv-${side})`, "--w": `${(or0(v) / max(c)) * 100}%` } as CSSProperties}>
         <span className="rp-cell">{fmt(c, v)}</span>
         <span className="rp-inline" aria-hidden="true"><i /></span>
       </td>
@@ -58,7 +60,7 @@ export default function GameStateTable({ rows, names }: { rows: GameState[]; nam
           {rows.map((r) => (
             <tr key={r.state}>
               <th scope="row">{stateName(r.state)}</th>
-              <td className="num">{Math.round(r.minutes)}′</td>
+              <td className="num">{isNum(r.minutes) ? `${count(r.minutes)}′` : "–"}</td>
               {(["home", "away"] as const).flatMap((side) => COLS.map(([c]) => cell(r, side, c)))}
             </tr>
           ))}

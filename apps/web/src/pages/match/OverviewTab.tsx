@@ -18,6 +18,7 @@ import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments"
 import MatchStory from "../../components/MatchStory";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
 import PostMatchReport from "../../components/report/PostMatchReport";
+import ReportBoundary from "../../components/report/ReportBoundary";
 import SetPiecesAndShots from "../../components/SetPieces";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
@@ -97,17 +98,21 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
     // C18 (#366): an analyst's first block, the key numbers and the xG race (Opta / Understat).
     xgRace: (
       <Section id="post-xg" title={t("xg.title")} note={t("xg.note")} className="post-xg">
-        <KeyMetrics report={report.data} names={{ home: teams.home.short_name, away: teams.away.short_name }} />
-        {shots.data && (
-          <XgRace shots={shots.data.shots} events={events} pivots={moments} names={{ home: teams.home.name, away: teams.away.name }}
-            totals={{ home: xgOf(report.data, "home"), away: xgOf(report.data, "away") }} end={match.clock} />
-        )}
+        <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
+          <KeyMetrics report={report.data} names={{ home: teams.home.short_name, away: teams.away.short_name }} />
+          {shots.data && (
+            <XgRace shots={shots.data.shots} events={events} pivots={moments} names={{ home: teams.home.name, away: teams.away.name }}
+              totals={{ home: xgOf(report.data, "home"), away: xgOf(report.data, "away") }} end={match.clock} />
+          )}
+        </ReportBoundary>
       </Section>
     ),
     // C19 (#385): the analyst's post-match report, under the xG race.
     report: (
       <Section id="post-report" title={t("rp.title")} note={t("rp.note")} className="post-report">
-        <PostMatchReport moments={moments} upTo={upTo} />
+        <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
+          <PostMatchReport moments={moments} upTo={upTo} />
+        </ReportBoundary>
       </Section>
     ),
     // C12: the ♥ team's match, then (ORDER) the story for a fan and the numbers for an analyst.

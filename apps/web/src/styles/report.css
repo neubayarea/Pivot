@@ -136,3 +136,4 @@
 .pt-table tbody tr.linked { background: var(--pv-sunk); box-shadow: inset 4px 0 var(--pv-ink-2); }
 /* While the analysis loads: an empty outline where it will go, no numbers. */
 .rp-wait { grid-column: 1 / -1; min-height: 320px; border-radius: var(--pv-r-panel); border: 1.5px dashed var(--pv-hair); background: transparent; }
+.rp-failed { padding: var(--pv-s3) var(--pv-s4); border: 1.5px dashed var(--pv-hair); border-radius: var(--pv-r-panel); font-size: var(--pv-fs-sm); }
