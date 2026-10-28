@@ -3,7 +3,7 @@
 // the AI's turning points as numbered yellow badges over the block they fall in.
 import { useState } from "react";
 import type { Phase, Side } from "../../data/analysis";
-import { blockOf } from "../../data/analysis";
+import { blockOf, reached } from "../../data/analysis";
 import { usePrefs, type MessageKey } from "../../i18n";
 import Segmented from "../Segmented";
 
@@ -50,6 +50,16 @@ export default function Phases({ phases, names, marks, onMetric }: { phases: Pha
         {phases.map((p, i) => {
           const cx = L + cw * (i + 0.5);
           const hh = h(p.home[m]), ah = h(p.away[m]);
+          // A block the match has not reached yet: a grey outline, "not started", no bars.
+          if (!reached(p)) {
+            return (
+              <g key={p.from} className="rp-todo">
+                <rect x={cx - bw / 2} y={MID - AMP / 2} width={bw} height={AMP} rx={4} />
+                <text x={cx} y={MID + 4} textAnchor="middle">{t("rp.ph.notStarted")}</text>
+                <text x={cx} y={H - 4} textAnchor="middle" className="rp-axis">{span(p, i)}</text>
+              </g>
+            );
+          }
           const goals = marks.filter((k) => k.kind === "goal" && blockOf(phases, k.label) === i);
           const pivots = marks.filter((k) => k.kind === "pivot" && blockOf(phases, k.label) === i);
           return (

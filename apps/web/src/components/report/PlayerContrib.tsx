@@ -16,10 +16,10 @@ export function topContributors(players: readonly PlayerReport[], n = 8): Player
     .slice(0, n);
 }
 
-export default function PlayerContrib({ players, short }: { players: readonly PlayerReport[]; short: Record<"home" | "away", string> }) {
+export default function PlayerContrib({ players, short, n = 8 }: { players: readonly PlayerReport[]; short: Record<"home" | "away", string>; n?: number }) {
   const t = useT();
   const { search } = useLocation();
-  const top = topContributors(players);
+  const top = topContributors(players, n);
   if (!top.length) return <p className="muted">{t("rp.pl.none")}</p>;
   const max = Math.max(...top.map((p) => or0(p.stats?.xg) + or0(p.stats?.xa)));
   return (
