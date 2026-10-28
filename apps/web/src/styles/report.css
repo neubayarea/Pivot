@@ -165,6 +165,14 @@
 .rp-sec, .rp-sec > *, .post .kmet, .rp-dsv-key span { min-width: 0; }
 .rp-take, .rp-note, .rp-src, .rp-hd h2, .rp-hd h3, .rp-band-v { overflow-wrap: anywhere; }
 .rp-hd { flex-wrap: wrap; }
+
+/* Ax52 (#259): on a phone the wide charts keep a readable size and scroll sideways inside their own
+   card; the page itself never does. The lanes and the style profile stack. */
+@media (max-width: 720px) {
+  .rp-shots, .rp-phases { grid-template-columns: minmax(0, 1fr); overflow-x: auto; overscroll-behavior-x: contain; }
+  .rp-shots > svg, .rp-phases > svg { width: 860px; max-width: none; }
+  .rp-lanes, .rp .rp-radar, .rp.stack .rp-radar { grid-template-columns: minmax(0, 1fr); }
+}
 /* C21 (#401): the live centre on the Replay / Live tab. */
 .lc .live-hd { gap: 6px; }
 .lc-now { font-size: var(--pv-fs-lg); font-weight: 700; margin: 0; }
@@ -196,3 +204,10 @@
 .lc-turf-line { stroke: var(--pv-hair); }
 .lc-dot { fill: var(--tc); stroke: var(--pv-sheet); stroke-width: 1.5; }
 .lc-col { display: grid; gap: var(--pv-s4); min-width: 0; align-content: start; }
+
+/* Ax52 (#259): the live centre on a phone: two metrics a row, and the shot card stays on screen. */
+@media (max-width: 560px) {
+  .lc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lc-m:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .lc-shot { left: 12px; right: 12px; width: auto; bottom: 12px; }
+}
