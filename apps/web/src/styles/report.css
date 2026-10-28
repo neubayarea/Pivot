@@ -94,14 +94,15 @@
 .rp-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--pv-s4); }
 .rp-lane { margin: 0; display: grid; gap: 6px; }
 .rp-lane .rp-row { color: currentColor; font-weight: 700; font-size: 14px; }
-.rp-turf { fill: color-mix(in oklab, var(--pv-pitch, #DDE6DF) 60%, var(--pv-sheet)); stroke: var(--pv-hair); }
-.rp-turf-line { stroke: var(--pv-hair); stroke-width: 1.5; }
+/* Dx11: the grass is <Grass>; these are the chalk lines and the labels written on it. */
+.rp-turf { fill: none; stroke: var(--pv-pitch-line); stroke-width: 2; }
+.rp-turf-line { stroke: var(--pv-pitch-line); stroke-width: 1.5; opacity: .75; }
 .rp-turf-line.third { stroke-dasharray: 4 4; }
 .rp-turf-line.lane { stroke-dasharray: 2 6; }
-.rp-arrow { fill: currentColor; opacity: .85; }
-.rp-lane-k { font-size: 12px; font-weight: 600; fill: var(--pv-ink-2); }
-.rp-lane-pct { font-family: var(--pv-display); font-weight: 800; font-size: 20px; fill: var(--pv-ink); }
-.rp-lane-xg { font-size: 12px; font-weight: 600; fill: var(--pv-ink-2); }
+.rp-arrow { fill: currentColor; opacity: .9; stroke: var(--pv-pitch-line); stroke-width: 1.5; }
+.rp-lane-k { font-size: 12px; font-weight: 600; fill: var(--pv-pitch-line); paint-order: stroke; stroke: rgba(0, 0, 0, .35); stroke-linejoin: round; stroke-width: 3px; }
+.rp-lane-pct { font-family: var(--pv-display); font-weight: 800; font-size: 20px; fill: var(--pv-pitch-line); paint-order: stroke; stroke: rgba(0, 0, 0, .35); stroke-linejoin: round; stroke-width: 3px; }
+.rp-lane-xg { font-size: 12px; font-weight: 600; fill: var(--pv-pitch-line); paint-order: stroke; stroke: rgba(0, 0, 0, .35); stroke-linejoin: round; stroke-width: 3px; }
 
 /* Style profile */
 .rp-radar { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--pv-s3); align-items: center; }
@@ -200,8 +201,8 @@
 .lc-shot-bd dt { color: var(--pv-ink-2); }
 .lc-shot-bd dd { margin: 0; font-weight: 600; }
 .lc-xg { font-family: var(--pv-display); font-weight: 800; font-size: 22px; line-height: 1; }
-.lc-turf { fill: color-mix(in oklab, var(--pv-pitch, #DDE6DF) 60%, var(--pv-sheet)); stroke: var(--pv-hair); }
-.lc-turf-line { stroke: var(--pv-hair); }
+.lc-turf { fill: none; stroke: var(--pv-pitch-line); stroke-width: 1.5; }
+.lc-turf-line { stroke: var(--pv-pitch-line); opacity: .75; }
 .lc-dot { fill: var(--tc); stroke: var(--pv-sheet); stroke-width: 1.5; }
 .lc-col { display: grid; gap: var(--pv-s4); min-width: 0; align-content: start; }
 

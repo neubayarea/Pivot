@@ -4,6 +4,7 @@
 import type { Lanes as LanesData, Side } from "../../data/analysis";
 import { useT } from "../../i18n";
 import { count, num, or0 } from "./fmt";
+import Grass from "../Grass";
 
 export const LANES = ["left", "centre", "right"] as const;
 const W = 420, H = 272;
@@ -24,7 +25,8 @@ function Pitch({ side, lanes, name }: { side: Side; lanes: LanesData; name: stri
     <figure className="rp-lane" style={{ color: `var(--pv-${side})` }}>
       <figcaption className="rp-row">{name}</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={LANES.map((k) => `${t(`rp.ln.${k}`)} ${share[k]}%, xG ${num(lanes[k]?.xg)}`).join("; ")}>
-        <rect x={1} y={1} width={W - 2} height={H - 2} rx={6} className="rp-turf" />
+        <Grass w={W} h={H} />
+        <rect x={1} y={1} width={W - 2} height={H - 2} className="rp-turf" />
         <line x1={W / 2} x2={W / 2} y1={1} y2={H - 1} className="rp-turf-line" />
         <line x1={(W * 2) / 3} x2={(W * 2) / 3} y1={1} y2={H - 1} className="rp-turf-line third" />
         <line x1={1} x2={W - 1} y1={H / 3} y2={H / 3} className="rp-turf-line lane" />

@@ -45,9 +45,13 @@
   --pv-warn-bg: #FCEBC4; --pv-warn-fg: #6E4300; /* auto summary, degraded */
   --pv-bad-bg: #FADADF; --pv-bad-fg: #8E1220;  /* rejected claim, errors */
 
-  /* Pitch: mown grass, chalk lines */
-  --pv-pitch: #E2EAE3;
-  --pv-pitch-line: #9DB5A4;
+  /* Pitch (Dx11): mown grass in two shades of green, white chalk lines. Every pitch on the site reads these:
+   * SVG pitches draw <Grass> (components/Grass.tsx), CSS ones use --pv-pitch-grass as their background. */
+  --pv-pitch: #3B8A45;          /* the darker stripe, and the grass behind everything */
+  --pv-pitch-stripe: #45984F;   /* the lighter stripe */
+  --pv-pitch-line: #F4F8F2;     /* chalk */
+  --pv-pitch-edge: #2E7038;     /* the border round the pitch */
+  --pv-pitch-grass: repeating-linear-gradient(90deg, var(--pv-pitch) 0 calc(100% / 12), var(--pv-pitch-stripe) calc(100% / 12) calc(100% / 6));
 
   /* Type: Big Shoulders for numbers and the few big headings, Hanken Grotesk for everything read */
   --pv-display: "Big Shoulders Display", "Hanken Grotesk", "Noto Sans SC", sans-serif;
@@ -82,7 +86,7 @@
   --pv-win: #43B57D; --pv-on-win: #0F1114; --pv-loss: #E8615C; --pv-on-loss: #0F1114;
     --pv-win: #43B57D; --pv-on-win: #0F1114; --pv-loss: #E8615C; --pv-on-loss: #0F1114;
     --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451; --pv-bad-bg: #4A1820; --pv-bad-fg: #FFB3BA;
-    --pv-pitch: #18261F; --pv-pitch-line: #4B6758;
+    --pv-pitch: #1F4A28; --pv-pitch-stripe: #24532D; --pv-pitch-line: #D3DED4; --pv-pitch-edge: #173A1F;
     --pv-lift: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
@@ -95,7 +99,7 @@
   --pv-away: color-mix(in oklab, var(--pv-away-kit, #4A1D57) 50%, white);
   --pv-on-team: #0F1114; --pv-draw: #4A505B;
   --pv-warn-bg: #3A2F14; --pv-warn-fg: #F0B451; --pv-bad-bg: #4A1820; --pv-bad-fg: #FFB3BA;
-  --pv-pitch: #18261F; --pv-pitch-line: #4B6758;
+  --pv-pitch: #1F4A28; --pv-pitch-stripe: #24532D; --pv-pitch-line: #D3DED4; --pv-pitch-edge: #173A1F;
   --pv-lift: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
   color-scheme: dark;
 }

@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import type { Side, SquadPlayer } from "../../data/view";
 import { useT } from "../../i18n";
+import Grass from "../Grass";
 
 export const S = 5;
 export const W = 105 * S;
@@ -58,7 +59,7 @@ export function VizPitch({ label, children, under, arrow }: {
   return (
     <div className="viz-pitch">
       <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={label}>
-        <rect x={0} y={0} width={W} height={H} fill="var(--pv-pitch)" />
+        <Grass w={W} h={H} />
         {under}
         <g className="viz-lines"><Markings /></g>
         {children}

@@ -13,6 +13,7 @@ import { isNum, useAnalysis, type Side } from "../../data/analysis";
 import { useClock } from "../../data/clock";
 import { useMatch } from "../../data/match";
 import { usePersona } from "../../data/persona";
+import Grass from "../Grass";
 import { useVizData } from "../../data/viz";
 import { useT, type MessageKey } from "../../i18n";
 import MomentumChart from "../MomentumChart";
@@ -108,7 +109,8 @@ function ShotCard({ shot, onClose }: { shot: ShotMapShot; onClose: () => void })
       <p className="lc-shot-who">{playerName(shot.player_id)}</p>
       <div className="lc-shot-bd">
         <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-          <rect x={1} y={1} width={W - 2} height={H - 2} rx={4} className="lc-turf" />
+          <Grass w={W} h={H} />
+          <rect x={1} y={1} width={W - 2} height={H - 2} className="lc-turf" />
           <line x1={W / 2} x2={W / 2} y1={1} y2={H - 1} className="lc-turf-line" />
           <circle cx={(shot.team === "home" ? shot.x : 105 - shot.x) / 105 * W} cy={(shot.team === "home" ? shot.y : 68 - shot.y) / 68 * H} r={4} className="lc-dot" />
         </svg>

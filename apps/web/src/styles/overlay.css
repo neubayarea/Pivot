@@ -6,7 +6,7 @@ html.overlay-page body { background: transparent; }
 html.overlay-page body { overflow: hidden; }
 
 .ovs { position: fixed; left: 50%; top: 50%; width: 1920px; height: 1080px; overflow: hidden; transform-origin: center; }
-.ovs.preview { background: repeating-linear-gradient(90deg, #2F6B3A 0 140px, #2A6234 140px 280px); }
+.ovs.preview { background: var(--pv-pitch-grass); }
 .ovs.preview::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.35)); }
 html.overlay-page:has(.ovs.preview) body { background: #121A3A; }
 .ovs .tag { position: absolute; top: 48px; left: 64px; z-index: 1; font-family: var(--pv-label); font-weight: 700; font-size: 18px; color: #FFFFFF; background: rgba(0,0,0,.45); padding: 4px 12px; }

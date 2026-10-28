@@ -264,7 +264,7 @@ a.pv:hover { background: var(--pv-gold-soft); }
 .s2-head h1 { font-weight: 700; font-size: 32px; line-height: 1.15; letter-spacing: -.015em; }
 .s2-head .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .s2-head .acts { grid-row: span 2; display: flex; gap: 10px; align-items: center; }
-.pitch { display: block; width: 100%; height: auto; border: 1px solid var(--pv-hair); }
+.pitch { display: block; width: 100%; height: auto; border: 1px solid var(--pv-pitch-edge); }
 .pitch .pl { transition: transform var(--pv-step, .25s) linear; }
 .pitch-cap { font-family: var(--pv-label); font-size: 13px; min-height: 1.6em; }
 .scrub { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; user-select: none; align-items: center; font-family: var(--pv-label); font-weight: 700; font-size: 12px; }
@@ -706,12 +706,12 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 /* Pre-match: both XIs on one pitch, each team's list beside it. */
 .lineups { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 340px) minmax(0, 1fr); grid-template-areas: "home pitch away"; gap: 14px; align-items: start; }
 .lineups.no-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "home away"; }
-.lu-pitch { grid-area: pitch; width: 100%; height: auto; display: block; border: 1px solid var(--pv-hair); background: var(--pv-pitch); }
-.lu-grass { fill: var(--pv-pitch); }
-.lu-line { stroke: var(--pv-pitch-line); stroke-width: .4; fill: none; opacity: .55; }
+.lu-pitch { grid-area: pitch; width: 100%; height: auto; display: block; border: 1px solid var(--pv-pitch-edge); background: var(--pv-pitch); }
+.lu-line { stroke: var(--pv-pitch-line); stroke-width: .4; fill: none; opacity: .9; }
 .lu-team circle { fill: var(--tc, var(--pv-home)); stroke: var(--pv-sheet); stroke-width: .6; }
 .lu-no { fill: #fff; font-size: 3px; font-weight: 700; text-anchor: middle; }
-.lu-nm { fill: var(--pv-ink); font-size: 2.6px; font-weight: 700; text-anchor: middle; }
+/* Names and ratings on the grass: chalk white with a soft dark edge (Dx11). */
+.lu-nm { fill: var(--pv-pitch-line); font-size: 2.6px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: rgba(0, 0, 0, .35); stroke-linejoin: round; stroke-width: .5px; }
 .lu-list.home { grid-area: home; }
 .lu-list.away { grid-area: away; }
 .lu-list h3 > span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
@@ -737,9 +737,9 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .lu-sub { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); white-space: nowrap; }
 .lu-sub span { font-size: .8em; }
 .lu-rating { font-size: var(--pv-fs-xs); font-weight: 800; padding: 0 6px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); }
-.lu-rt { fill: var(--pv-ink); font-size: 2.2px; font-weight: 800; }
+.lu-rt { fill: var(--pv-pitch-line); font-size: 2.2px; font-weight: 800; paint-order: stroke; stroke: rgba(0, 0, 0, .35); stroke-linejoin: round; stroke-width: .45px; }
 .lu-ball { fill: #FFFFFF; stroke: var(--pv-ink); stroke-width: .35; }
-.lu-offmk { fill: var(--pv-ink-2); font-size: 2px; }
+.lu-offmk { fill: var(--pv-pitch-line); font-size: 2px; paint-order: stroke; stroke: rgba(0, 0, 0, .35); stroke-linejoin: round; stroke-width: .4px; }
 .lu-team .followed circle { stroke: var(--pv-ink); stroke-width: 1.2; }
 .lu-team .followed .lu-nm { text-decoration: underline; }
 .lu-list .rl { font-family: var(--pv-label); font-weight: 700; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
