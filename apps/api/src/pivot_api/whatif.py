@@ -173,7 +173,7 @@ SEED_PRECOMPUTED_DIR = FIXTURE.parent / "whatif"
 
 
 def seed_precomputed_path(match_id: str) -> Path:
-    """`M-seed-101` -> `eval/fixtures/whatif/M-seed-101.whatif.json`."""
+    """`S2026-27-TES-VAN` -> `eval/fixtures/whatif/S2026-27-TES-VAN.whatif.json`."""
     return SEED_PRECOMPUTED_DIR / f"{match_id}.whatif.json"
 
 
