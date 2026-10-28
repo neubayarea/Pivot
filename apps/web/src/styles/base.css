@@ -403,6 +403,13 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 800; font-size: 1
 .feed div.mine > span:last-child::before { content: "★ "; color: var(--pv-gold); text-shadow: 0 0 1px var(--pv-ink); }
 .scrub .mk.mine { box-shadow: 0 0 0 2px var(--pv-gold); }
 .focus-key { color: var(--pv-ink); font-weight: 700; box-shadow: inset 0 -3px var(--pv-gold); }
+/* Ax92: on every pitch the followed player is bigger, ringed and named; the other 21 step back a little. */
+.pitch.following .pl:not(.followed):not(.picked):not([data-ball]) { opacity: .62; }
+.pitch .follow-pulse { opacity: 0; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .pitch .follow-pulse { animation: pv-follow-pulse 1.6s ease-out infinite; }
+}
+@keyframes pv-follow-pulse { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.9); } }
 
 /* ---------- Match picker (Ax6) ---------- */
 .match-pick { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
@@ -984,3 +991,33 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .pv-body { display: contents; }
 .pv-nav .chip { padding: 6px 14px; font-weight: 500; white-space: nowrap; }
 .pv-nav .chip[aria-current="location"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+
+/* Ax92 (#435): the ★ player's match on the overview, and "involved" tags on the turning points. */
+.pm { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s5); margin-bottom: var(--pv-s5); }
+.pm header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: var(--pv-s4); }
+.pm h2 { font-size: 24px; letter-spacing: -.01em; }
+.pm header p { margin: 0; font-size: 14px; }
+.pm-strip { position: relative; height: 44px; margin: 0 12px var(--pv-s3); }
+.pm-axis { position: absolute; left: 0; right: 0; top: 14px; height: 4px; border-radius: 2px; background: var(--pv-sunk); box-shadow: inset 0 0 0 1px var(--pv-hair); }
+.pm-tick { position: absolute; top: 26px; transform: translateX(-50%); font-size: 12px; color: var(--pv-ink-2); }
+.pm-mk { position: absolute; top: 16px; transform: translate(-50%, -50%); }
+.pm-mk, .pm-ico { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--pv-ink); background: var(--pv-sheet); flex: none; }
+.pm-mk.goal, .pm-ico.goal { width: 18px; height: 18px; background: var(--pv-ink); box-shadow: 0 0 0 3px var(--pv-gold); }
+.pm-mk.shotOn, .pm-ico.shotOn { background: var(--pv-ink-2); }
+.pm-mk.shotOff, .pm-ico.shotOff { border-color: var(--pv-ink-2); border-style: dashed; }
+.pm-mk.keyPass, .pm-ico.keyPass, .pm-mk.assist, .pm-ico.assist { border-radius: 2px; transform: rotate(45deg); width: 12px; height: 12px; }
+.pm-mk.keyPass, .pm-mk.assist { transform: translate(-50%, -50%) rotate(45deg); }
+.pm-mk.assist, .pm-ico.assist { background: var(--pv-ink); }
+.pm-mk.yellow, .pm-ico.yellow, .pm-mk.red, .pm-ico.red { width: 11px; height: 15px; border-radius: 2px; border-width: 1px; }
+.pm-mk.yellow, .pm-ico.yellow { background: var(--pv-card-yellow); }
+.pm-mk.red, .pm-ico.red { background: var(--pv-red); }
+.pm-mk.subOn, .pm-ico.subOn, .pm-mk.subOff, .pm-ico.subOff { border-radius: 0; border: 0; background: transparent; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; }
+.pm-mk.subOn, .pm-ico.subOn { border-bottom: 12px solid var(--pv-ink); }
+.pm-mk.subOff, .pm-ico.subOff { border-top: 12px solid var(--pv-ink-2); }
+.pm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.pm-list button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-pill); background: var(--pv-sunk); color: var(--pv-ink); font: inherit; font-size: 14px; cursor: pointer; transition: background-color .15s, border-color .15s; }
+.pm-list button:hover { border-color: var(--pv-ink); background: var(--pv-sheet); }
+.pm-list b { font-family: var(--pv-display); font-size: 17px; font-variant-numeric: tabular-nums; }
+.inv-tag { display: inline-block; padding: 1px 8px; border-radius: var(--pv-r-pill); font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--pv-ink-2); border: 1px dashed var(--pv-hair); cursor: help; }
+.inv-tag.yes { color: var(--pv-on-gold); background: var(--pv-gold-soft); border: 1px solid var(--pv-gold); }
+.inv-tag.yes::before { content: "★ "; }
