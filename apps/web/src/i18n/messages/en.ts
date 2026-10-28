@@ -1506,4 +1506,10 @@ export const en = {
   "lc.pattern.goal_kick": "Goal kick",
   "lc.pattern.kick_off": "Kick-off",
   "lc.pattern.penalty": "Penalty",
+  // C21 (#401): the analyst's pitch overlays.
+  "ov.shape": "Shape lines",
+  "ov.press": "Pressing zones",
+  "ov.lanes": "Passing lanes",
+  "ov.pressKey": "Pressing in the last 5 minutes: {home} {h} pressures, {away} {a}.",
+  "ov.lanesKey": "Completed passes in the last 3 minutes, zone to zone; wider means more, bold means progressive.",
 };

@@ -55,3 +55,5 @@
 /* Back gets focus when the card swaps; keep it clear of the sticky match header when that scrolls it into view. */
 .pd-back { scroll-margin-top: 280px; }
 .pd-hd > .follow { margin-left: auto; flex: none; }
+/* C21 (#401): the analyst's overlay keys under the layer switches. */
+.ov-key { display: block; flex-basis: 100%; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }

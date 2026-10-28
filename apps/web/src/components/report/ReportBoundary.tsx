@@ -4,7 +4,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { useT } from "../../i18n";
 
-type Props = { children: ReactNode; resetKey?: unknown };
+type Props = { children: ReactNode; resetKey?: unknown; /** Draw nothing on failure (inside an SVG). */ quiet?: boolean };
 
 export default class ReportBoundary extends Component<Props, { error: Error | null; key: unknown }> {
   state = { error: null as Error | null, key: this.props.resetKey };
@@ -22,7 +22,8 @@ export default class ReportBoundary extends Component<Props, { error: Error | nu
   }
 
   render() {
-    return this.state.error ? <ReportFailed /> : this.props.children;
+    if (this.state.error) return this.props.quiet ? null : <ReportFailed />;
+    return this.props.children;
   }
 }
 

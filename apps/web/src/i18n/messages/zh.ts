@@ -1505,4 +1505,10 @@ export const zh: Messages = {
   "lc.pattern.goal_kick": "球门球",
   "lc.pattern.kick_off": "开球",
   "lc.pattern.penalty": "点球",
+  // C21 (#401): the analyst's pitch overlays.
+  "ov.shape": "阵型线",
+  "ov.press": "压迫区域",
+  "ov.lanes": "传球线路",
+  "ov.pressKey": "最近 5 分钟的逼抢：{home} {h} 次，{away} {a} 次。",
+  "ov.lanesKey": "最近 3 分钟的成功传球，按区域连线；越粗次数越多，深色是推进传球。",
 };

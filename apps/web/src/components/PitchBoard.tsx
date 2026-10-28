@@ -5,6 +5,9 @@ import { frameAt, useFrameStore, useFrameWindow } from "../data/live/frames";
 import { cueSpan, cuesAt } from "../data/motion";
 import { minuteAt, minuteLabel, PLAIN_PERIODS, useClock } from "../data/clock";
 import { isRedCard, type Side, type SquadPlayer } from "../data/view";
+import { usePersona } from "../data/persona";
+import { PassingLanes, PressingZones, ShapeBands, pressEvents } from "./live/PitchOverlays";
+import ReportBoundary from "./report/ReportBoundary";
 import { usePrefs, useT, type MessageKey } from "../i18n";
 import Card from "./Card";
 import ControlBar, { barKey, type BarMark } from "./ControlBar";
@@ -80,7 +83,11 @@ export default function PitchBoard() {
     if (time.current && time.current.textContent !== text) time.current.textContent = text;
   });
   const [picked, setPicked] = useState<string | null>(null);
-  const [shapeOn, setShapeOn] = useState(true);
+  // C21 (#401): an analyst gets three layers, all off to start with; a fan keeps the shape on.
+  const { fan } = usePersona();
+  const [shapeOn, setShapeOn] = useState(() => fan);
+  const [pressOn, setPressOn] = useState(false);
+  const [lanesOn, setLanesOn] = useState(false);
   const [compare, setCompare] = useState(false);
 
   const who = useMemo(() => whoFromSquads(squads), [squads]);
@@ -162,13 +169,29 @@ export default function PitchBoard() {
           <div className="pb-tools">
             <span className="seg" role="group" aria-label={t("board.layers")}>
               <button type="button" aria-pressed={shapeOn} onClick={() => setShapeOn(!shapeOn)}>
-                {t("board.layerShape")}
+                {t(fan ? "board.layerShape" : "ov.shape")}
               </button>
+              {!fan && (
+                <>
+                  <button type="button" aria-pressed={pressOn} onClick={() => setPressOn(!pressOn)}>{t("ov.press")}</button>
+                  <button type="button" aria-pressed={lanesOn} onClick={() => setLanesOn(!lanesOn)}>{t("ov.lanes")}</button>
+                </>
+              )}
               <button type="button" aria-pressed={compare && shapeOn} onClick={() => setCompare(!compare)} disabled={!shapeOn || minute === 0}>
                 {t("board.layerCompare")}
               </button>
             </span>
             <small className="muted">{t("board.legend")}</small>
+            {!fan && pressOn && (
+              <small className="ov-key">
+                {t("ov.pressKey", {
+                  home: teams.home.short_name, away: teams.away.short_name,
+                  h: pressEvents(events, now).filter((e) => e.type === "pressure" && e.team === "home").length,
+                  a: pressEvents(events, now).filter((e) => e.type === "pressure" && e.team === "away").length,
+                })}
+              </small>
+            )}
+            {!fan && lanesOn && <small className="ov-key">{t("ov.lanesKey")}</small>}
           </div>
         )}
         <div className="pb-main" tabIndex={playback ? 0 : undefined} aria-keyshortcuts={playback ? "Space K ArrowLeft ArrowRight" : undefined}
@@ -178,7 +201,14 @@ export default function PitchBoard() {
               className={[playback && !playback.playing && "paused", waited && "ph-in"].filter(Boolean).join(" ") || undefined}
               label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })}
               picked={picked} onPick={setPicked} marked={marked} tag={tag}
-              under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
+              under={(
+                <ReportBoundary quiet resetKey={now}>
+                  {!fan && pressOn && <PressingZones events={events} now={now} id={`ov-${match.match_id}`} />}
+                  {!fan && shapeOn && lineup && <ShapeBands frame={frame} roles={lineup.roles} isHome={isHome} />}
+                  {shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
+                  {!fan && lanesOn && <PassingLanes events={events} now={now} id={`ov-${match.match_id}`} />}
+                </ReportBoundary>
+              )}
               over={<EventCues cues={cues} />} />
           ) : store.error ? (
             <LoadFailed message={t("board.pitchFailed")} fault={faultOf(store.error)} onRetry={store.retry} ratio={PITCH_RATIO} />
