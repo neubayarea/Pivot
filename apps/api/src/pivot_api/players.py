@@ -100,7 +100,9 @@ async def player_stats(request: Request, match_id: str, up_to: int | None = Quer
         source, cut = "stored", lines[0].up_to_t if lines else end_t
     else:
         cut = end_t if up_to is None else min(up_to, end_t)
-        lines = await asyncio.to_thread(player_match_stats, calc, cut)
+        work = lambda: asyncio.to_thread(player_match_stats, calc, cut)  # noqa: E731
+        lines = await (matchdata.cut_answer(request, "player_lines", (match_id, cut), work)
+                       if match.status == "finished" else work())
         source = "computed"
     by_player = {s.player_id: s for s in lines}
 

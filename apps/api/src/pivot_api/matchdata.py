@@ -25,6 +25,7 @@ from pivot_core.domain import Match, MatchEvent, TrackingFrame
 from . import sims
 
 CUT_CACHE = 8                                # calculators cut at an up_to, per app (each holds frames)
+CUT_ANSWERS = 48                             # answers worked out at an up_to, per endpoint (a few kB each)
 MATCH_CACHE = int(os.getenv("PIVOT_MATCH_CACHE") or 4)   # matches whose events, frames and calculator are kept
 
 
@@ -40,6 +41,19 @@ def shared(request: Request, name: str, make):
     if getattr(state, name, None) is None:
         setattr(state, name, make())
     return getattr(state, name)
+
+
+async def cut_answer(request: Request, name: str, key: tuple, make):
+    """What an endpoint worked out for a finished match at an `up_to` (Ax90, #430), kept for the last
+    CUT_ANSWERS questions: a live match or a replay asks again at the same minute from every viewer
+    and on every tab switch, and working it out again takes a second. `make()` is awaited on a miss."""
+    cache = shared(request, f"{name}_cut", OrderedDict)
+    if key not in cache:
+        cache[key] = await make()
+        while len(cache) > CUT_ANSWERS:
+            cache.popitem(last=False)
+    cache.move_to_end(key)
+    return cache[key]
 
 
 def _forget(request: Request, match_id: str) -> None:
