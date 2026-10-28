@@ -28,6 +28,9 @@ The Verifier never calls a model. It recomputes every claim through a `StatSourc
 11. stat meaning: a pressing stat whose fall means a harder press (PPDA, press distance) is not read the
    other way round (#254)
 12. names: in Chinese and Spanish cards a club's name is not translated or transliterated (#333: 海港城)
+13. spelling: in pivot cards, a capitalised Latin word one or two letters off a player's surname, and not
+   itself a word of any player, coach or club name in the match, is a misspelt name (#396: "Sahltessen"
+   written for D. Sahaltessen), in every language
 
 Issue messages are written for the Explainer, which gets them back on a retry.
 """
@@ -464,6 +467,48 @@ def _named_players(text: str, forms: Mapping[str, set[str]]) -> list[tuple[str, 
     return found
 
 
+def _edit_distance(a: str, b: str, limit: int) -> int:
+    """Levenshtein distance between `a` and `b`, or `limit + 1` once it is sure to exceed `limit`."""
+    if abs(len(a) - len(b)) > limit:
+        return limit + 1
+    row = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        prev, row[0] = row[0], i
+        for j, cb in enumerate(b, 1):
+            prev, row[j] = row[j], min(row[j] + 1, row[j - 1] + 1, prev + (ca != cb))
+        if min(row) > limit:
+            return limit + 1
+    return row[-1]
+
+
+_LATIN_WORD = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]+")
+
+
+def _misspelt_names(text: str, player_names: Mapping[str, str], known: Iterable[str]) -> list[tuple[str, str]]:
+    """(word as written, the player it is close to) for each capitalised Latin word that is a near miss of a
+    surname (#396). Conservative, so real words are not sent back: only words of five letters or more, not a
+    word of any name in the match (players, coaches, clubs, `known`), starting with the surname's letter, at most
+    one edit from a surname of up to eight letters and two from a longer one. Names stay in Latin letters, so this works inside Chinese text too."""
+    words = {w.lower() for name in (*player_names.values(), *known) for w in _LATIN_WORD.findall(name)}
+    surnames: dict[str, str] = {}
+    for name in player_names.values():
+        parts = _LATIN_WORD.findall(name)
+        if parts and len(parts[-1]) >= 4:
+            surnames.setdefault(parts[-1].lower(), name)
+    found: list[tuple[str, str]] = []
+    for m in _LATIN_WORD.finditer(text):
+        word = m.group()
+        low = word.lower()
+        if len(word) < 5 or not word[0].isupper() or low in words or any(w == word for w, _ in found):
+            continue
+        for surname, name in surnames.items():
+            limit = 1 if len(surname) <= 8 else 2
+            if low[0] == surname[0] and _edit_distance(low, surname, limit) <= limit:
+                found.append((word, name))
+                break
+    return found
+
+
 def _ids_written(text: str, player_names: Mapping[str, str]) -> list[tuple[str, str]]:
     """Player ids written as if they were names ("H.06" for h06, #186), with the name they stand for."""
     found = []
@@ -544,6 +589,7 @@ def verify(
     replays: Replays | None = None,
     player_names: Mapping[str, str] | None = None,
     direction: str | None = None,
+    other_names: Collection[str] = (),
 ) -> Verdict:
     """Check a pivot card (or, with `significant`, a what-if comparison) against the data.
 
@@ -557,6 +603,8 @@ def verify(
     `team_names` ("home"/"away" to display names) let the number check see which team a number is about.
     `player_names` (player id to name) turns on the check that named players are in the cited events (#186);
     `direction` ("home"/"away", the side the pivot swung towards) the check on momentum words (#187).
+    With `player_names`, a near miss of a player's surname is sent back as a misspelling (#396); `other_names`
+    (the coaches, say) are names that check must also accept as written.
     """
     issues: list[VerifierIssue] = []
 
@@ -856,6 +904,15 @@ def verify(
                     where = "The headline" if i is None else f"Sentence {i + 1}"
                     issue("schema_invalid", f"{where} writes '{form}' for {name}; keep club names as written: {keep}.", i)
                     break
+
+    # 13. Spelling (#396): a near miss of a squad surname is a misspelt name ("Sahltessen" for Sahaltessen).
+    if score_check and player_names:
+        known = (*names.values(), *other_names, *(n for item in context for n in item.subject_names))
+        for i, text in [(None, narrative.headline), *enumerate(s.text for s in narrative.sentences)]:
+            for written, name in _misspelt_names(text, player_names, known):
+                where = "The headline" if i is None else f"Sentence {i + 1}"
+                issue("evidence_invalid", f"{where} writes '{written}', which is not a name in this match; "
+                      f"if you mean {name}, spell it exactly '{name.split()[-1]}'.", i)
 
     # 10. Momentum (#187): the card must not give the momentum to the side the pivot swung away from.
     if direction in ("home", "away") and momentum_phrases:

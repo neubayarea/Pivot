@@ -82,6 +82,7 @@ class MatchView:
     team_names: dict[str, str]
     player_names: dict[str, str] = field(default_factory=dict)
     context: list[ContextItem] = field(default_factory=list)
+    coach_names: list[str] = field(default_factory=list)
 
 
 async def load_view(repo: MatchRepository, match_id: str, stats_factory: StatsFactory | None = None) -> MatchView:
@@ -92,7 +93,8 @@ async def load_view(repo: MatchRepository, match_id: str, stats_factory: StatsFa
     players = {p.player_id: p.name for t in (match.home, match.away) for p in t.squad} if match else {}
     return MatchView(events={e.event_id: e for e in events}, metrics=metrics,
                      stats=stats_factory(match, events, metrics) if stats_factory else NoStats(),
-                     team_names=names, player_names=players, context=from_match(match) if match else [])
+                     team_names=names, player_names=players, context=from_match(match) if match else [],
+                     coach_names=[t.coach.name for t in (match.home, match.away)] if match else [])
 
 
 @dataclass(frozen=True)
@@ -233,7 +235,7 @@ class VerifierNode(Executor):
                 verdict = verify(r.draft, pivot_minute=r.candidate.minute, events=v.events, stats=v.stats,
                                  context=explainer.shown_context(r.candidate, v.events, v.context),
                                  team_names=v.team_names, player_names=v.player_names,
-                                 direction=r.candidate.direction)
+                                 direction=r.candidate.direction, other_names=v.coach_names)
             narrative = None
             if verdict.passed:
                 narrative = with_computed(r.draft, r.view.stats).model_copy(update={"verifier_attempts": r.checks})

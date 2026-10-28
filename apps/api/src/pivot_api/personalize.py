@@ -276,7 +276,8 @@ class Personalizer:
     def _verify(self, narrative: Narrative, candidate: PivotCandidate, view: MatchView) -> Verdict:
         return verify(narrative, pivot_minute=candidate.minute, events=view.events, stats=view.stats,
                       context=explainer.shown_context(candidate, view.events, view.context),
-                      team_names=view.team_names, player_names=view.player_names, direction=candidate.direction)
+                      team_names=view.team_names, player_names=view.player_names, direction=candidate.direction,
+                      other_names=view.coach_names)
 
 
 def translation_messages(source: Narrative, prefs: ViewerPrefs) -> list[dict[str, str]]:
