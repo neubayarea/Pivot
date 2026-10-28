@@ -114,3 +114,6 @@ a.hub-past-row:hover { background: var(--pv-sunk); }
   .hub-past-row > .hub-meta:empty { display: none; }
 }
 .hub-ph { margin-block: var(--pv-s3, 16px); max-width: 960px; }
+
+/* QA round 5: the game being played live, in the season list: a stamp where its score would be. */
+.hub-past-row .hub-past-live { font-size: var(--pv-fs-xs); }

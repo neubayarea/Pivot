@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isHubPage } from "../pages/Hub";
-import { byFixture, byMatchday, clubGames, liveNow, pinned, type HubLine, type HubLive } from "./hub";
+import { asLive, byFixture, byMatchday, clubGames, liveNow, pinned, type HubLine, type HubLive } from "./hub";
 import { TABS, tabFrom, tabOpen } from "./tab";
 import { LIVE_ANCHOR, LIVE_BREAK_S, boardHref, liveClock, msToKickoff } from "./liveClock";
 
@@ -77,6 +77,27 @@ describe("the schedule (C15)", () => {
       { matchday: 32, fixtures: [fx("c", "GRE", "LUN"), fx("d", "HBC", "ROV")] },
     ];
     expect(clubGames(rounds, "HBC").map((g) => [g.round.matchday, g.fixture.match_id])).toEqual([[31, "a"], [32, "d"]]);
+  });
+});
+
+describe("QA round 5: the live match never gives its final score away", () => {
+  const live: HubLive = {
+    match_id: "S2026-29-BRI-FAL", length_s: 95 * 60, periods: [{ period: 1, start_t: 0 }, { period: 2, start_t: 47 * 60 }],
+    goals: [{ t: 600, team: "home" }, { t: 3000, team: "away" }, { t: 5000, team: "home" }], pivot_minutes: [],
+  };
+  const final = { home: 2, away: 1, home_penalties: null, away_penalties: null };
+  const listed = { match_id: "S2026-29-BRI-FAL", score: final, status: "finished" };
+
+  it("lists it with the score at the wall-clock minute, as live", () => {
+    expect(asLive(listed, live, at(601))).toEqual({ ...listed, score: { ...final, home: 1, away: 0 }, status: "live" });
+    expect(asLive(listed, live, at(3001))).toMatchObject({ score: { home: 1, away: 1 }, status: "live" });
+  });
+
+  it("leaves the other matches, and the live one in the break after full time, as they are", () => {
+    const other = { ...listed, match_id: "S2026-27-TES-VAN" };
+    expect(asLive(other, live, at(601))).toBe(other);
+    expect(asLive(listed, live, at(95 * 60 + 5))).toBe(listed);
+    expect(asLive(listed, null, at(601))).toBe(listed);
   });
 });
 
