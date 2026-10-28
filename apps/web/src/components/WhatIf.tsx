@@ -41,6 +41,8 @@ export type StoryInput = {
   change: string;
   pressLower?: boolean;
   teams: Teams;
+  /** A fan's ♥ team (Ax91): the sentence follows its chance of winning instead of the outcome that moved most. */
+  side?: "home" | "away" | null;
 };
 
 /** The "If …" clause: what was changed, in words. Types without one read "With the change (…)". */
@@ -65,7 +67,7 @@ const possessive = (text: string) => text.replace(/s['’]s\b/g, "s’");
 
 export function storyLine(input: StoryInput, t: T): string {
   const { result: r, teams } = input;
-  const { outcome } = biggestShift(r);
+  const outcome: Outcome = input.side ? `${input.side}_win` : biggestShift(r).outcome;
   const [before, after] = [pct(r.baseline[outcome]), pct(r.counterfactual[outcome])];
   const way = after > before ? "up" : after < before ? "down" : "same";
   const chance = outcome === "draw"
@@ -337,9 +339,9 @@ export function WhatIfAnswer(props: AnswerProps) {
   return fan ? <FanAnswer {...props} /> : <AnalystAnswer {...props} />;
 }
 
-function useStory({ scenario, change, minute, pressLower, teams }: AnswerProps) {
+function useStory({ scenario, change, minute, pressLower, teams }: AnswerProps, side: "home" | "away" | null = null) {
   const t = useT();
-  return storyLine({ result: scenario.result, type: scenario.spec.type, minute, change, pressLower, teams }, t);
+  return storyLine({ result: scenario.result, type: scenario.spec.type, minute, change, pressLower, teams, side }, t);
 }
 
 function FanAnswer(props: AnswerProps) {
@@ -348,7 +350,7 @@ function FanAnswer(props: AnswerProps) {
   const { minute } = useClock();
   const { scenario, teams } = props;
   const r = scenario.result;
-  const story = useStory(props);
+  const story = useStory(props, side);
   // With a ♥ team, its chance of winning; otherwise the outcome that moved most.
   const focus: Outcome = side ? `${side}_win` : biggestShift(r).outcome;
   const team = focus === "draw" ? null : focus === "home_win" ? "home" : "away";
