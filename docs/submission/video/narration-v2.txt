@@ -1,7 +1,0 @@
-[1 Live, fan] Football stories don't end with the scoreline. Pivot ingests a synthetic match event by event, every pass, shot and tackle, and renders it beside the action. A fan sees the pitch, who's on top right now, and the big moments.
-[2 Live, analyst] Switch to Analyst, and the same match becomes a live data centre: expected goals, field tilt, pressing and possession over the last ten minutes, with shape, pressing zones and passing lanes on the pitch.
-[3 Explain] Pivot turns the events into momentum, and flags the minutes where the game swung. A Judge agent on Azure AI Foundry decides if it's a real turning point. An Explainer writes why. And a Verifier, plain code, recomputes every number from the event log: Vantry's passes into the final third went from four to fourteen.
-[4 Personalise] Then it personalises. Pick your club, and the same checked moment is told from your side, in English, Chinese or Spanish. Follow a player, and Pivot keeps that player in focus all match.
-[5 What if] And you can ask: what if? Pivot saves the match at that minute and replays the rest two hundred times each way. A fan gets their team's biggest what-ifs, in one line. An analyst gets the effect with its ninety-five percent range, and whether the difference is clear.
-[6 Analyst report] After full time, analysts get the deep dive: match phases, game state, shot quality, attacking lanes and style percentiles.
-[7 End card] The agents run on Azure AI Foundry and Microsoft Agent Framework, with results in Cosmos DB. Every club and player is synthetic. This is Pivot.

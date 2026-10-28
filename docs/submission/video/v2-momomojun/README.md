@@ -1,12 +1,16 @@
-# 演示视频 v2：思路、文稿和成片
+# 演示视频 v2（momomojun 这边）：思路、文稿和成片
+
+这个文件夹只放我们这一版的东西，不改共用的 `docs/submission/video-script.md` 和 `video-captions.srt`。
 
 - 成片：[pivot-demo-v2.mp4](pivot-demo-v2.mp4)
   - 1 分 41 秒，1920×1080，30 帧；
   - 英文 AI 配音，英文字幕已经烧进画面。
-- 镜头表和每句配音：[../video-script.md](../video-script.md)。
-- 配音原文：[narration-v2.txt](narration-v2.txt)。字幕：[../video-captions.srt](../video-captions.srt)。
-- 录制和剪辑脚本：[../../../scripts/video/](../../../scripts/video/)。
-- 结尾卡和标题卡：[end.png](end.png)、[title.png](title.png)。
+- 镜头表和每句配音（英文）：[video-script.md](video-script.md)。
+- 字幕：[video-captions.srt](video-captions.srt)。
+- 录制和剪辑脚本：[scripts/](scripts/)：
+  - `rec.mjs` 录镜头；
+  - `cards.py` 生成结尾卡、标题卡和小标签；
+  - `edit.py` 剪成片。
 
 ## 先看规则要什么
 
@@ -99,13 +103,19 @@ momomojun 选了 v2 上传提交。
 
 ## 怎么做出来的
 
-1. 配音：用 `edge-tts` 生成，微软神经语音 `en-GB-RyanNeural`，语速 +6%，一共 7 句。
-2. 录制：`scripts/video/rec.mjs`。
+1. 配音：
+   - 把 [video-script.md](video-script.md) 里的 7 句配音分别存成 `tts/s1.txt` 到 `tts/s7.txt`；
+   - 每句运行一次 `uvx edge-tts --voice en-GB-RyanNeural --rate=+6% --file tts/s1.txt --write-media tts/s1.mp3 --write-subtitles tts/s1.srt`。
+2. 录制：依次运行 `node scripts/rec.mjs live`，再把 `live` 换成 `explain`、`personal`、`follow`、`whatif`、`report`。
    - 用无头 Chrome（1920×1080）打开线上网站，按写好的步骤移动鼠标、点击、滚动；
    - 通过开发者工具的屏幕录制逐帧存下来，再按真实时间合成 30 帧视频；
    - 画面里的鼠标指针是脚本画上去的。
-3. 卡片：`scripts/video/cards.py` 生成结尾卡、标题卡和每段的小标签。
-4. 剪辑：`scripts/video/edit.py` 用 ffmpeg 剪片段、叠配音和标签、烧字幕、统一音量，导出成片。
+   - 一次只开一个浏览器，服务器只有 2 核。
+3. 卡片：`python scripts/cards.py`。
+4. 剪辑：`python scripts/edit.py`。
+   - 用 ffmpeg 剪片段、叠配音和标签、烧字幕、统一音量，导出成片；
+   - 脚本里的剪切点按 10-27 录的镜头定的，重录以后要重新对一遍。
+5. 需要的工具：Chrome、Node 22+、ffmpeg、uv。脚本默认 `takes/`、`tts/`、`cards/` 放在脚本所在的文件夹里，所以运行前先把 `scripts/` 里的三个文件复制到一个空的工作文件夹。
 
 所有镜头都在 10-27 22:48–23:05（太平洋时间）录自线上网站，#446 部署之后。有几处故意没拍：
 - ② ③ 两个转折点是自动摘要，没有打开；
