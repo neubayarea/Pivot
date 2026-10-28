@@ -137,6 +137,14 @@ export const en = {
 
   "common.retryNow": "Retry now",
   "common.reload": "Reload",
+  "load.retry": "Retry",
+  "load.reason.server": "The server had a problem (error {status}).",
+  "load.reason.refused": "The server turned the request down (error {status}).",
+  "load.reason.offline": "Could not reach the server.",
+  "load.reason.data": "The answer could not be read.",
+  "board.pitchFailed": "The player positions could not be loaded.",
+  "pre.loading": "Loading the build-up…",
+  "pre.failed": "The form in detail could not be loaded.",
 
   "banner.paused": "Data paused at {clock}",
   "banner.failed": "Live feed unavailable: {reason}.",

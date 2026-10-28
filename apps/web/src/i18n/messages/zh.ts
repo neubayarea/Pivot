@@ -138,6 +138,14 @@ export const zh: Messages = {
 
   "common.retryNow": "立即重试",
   "common.reload": "重新加载",
+  "load.retry": "重试",
+  "load.reason.server": "服务器出了问题（错误 {status}）。",
+  "load.reason.refused": "服务器拒绝了这次请求（错误 {status}）。",
+  "load.reason.offline": "连不上服务器。",
+  "load.reason.data": "返回的内容读不出来。",
+  "board.pitchFailed": "球员位置没能载入。",
+  "pre.loading": "正在载入赛前资料…",
+  "pre.failed": "详细战绩没能载入。",
 
   "banner.paused": "数据停在 {clock}",
   "banner.failed": "实时数据不可用：{reason}。",

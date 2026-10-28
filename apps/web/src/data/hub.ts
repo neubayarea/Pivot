@@ -1,10 +1,10 @@
 // The match centre's data (C14, #354): `GET /api/hub` (apps/api/src/pivot_api/hub.py), refetched
 // while the server is still generating its simulated matches, and the live match's clock, score
 // and latest turning point worked out in the browser every second from the wall clock.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Score } from "@pivot/contracts";
 import { minuteAt, minuteLabel, type PeriodStart } from "./clock";
-import { api } from "./live/api";
+import { api, faultOf, type LoadFault } from "./live/api";
 import { liveClock } from "./liveClock";
 
 export type HubTeam = { name: string; short_name: string; color: string };
@@ -71,19 +71,27 @@ export const pinned = <T extends { home: HubTeam; away: HubTeam }>(items: T[], f
   fav ? [...items].sort((a, b) => Number(![a.home.short_name, a.away.short_name].includes(fav))
     - Number(![b.home.short_name, b.away.short_name].includes(fav))) : items;
 
-export type HubState = { data: HubData | null; failed: boolean };
+export type HubState = {
+  data: HubData | null; failed: boolean;
+  /** Why the last try failed (Ax79). */
+  fault?: LoadFault | null;
+  /** Asks again now instead of at the next poll. */
+  retry?: () => void;
+};
 
 const POLL_MS = 3000;
 
 export function useHub(): HubState {
-  const [state, setState] = useState<HubState>({ data: null, failed: false });
+  const [state, setState] = useState<HubState>({ data: null, failed: false, fault: null });
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
-      const data = await api.hub().catch(() => null);
+      let fault: LoadFault | null = null;
+      const data = await api.hub().catch((e: unknown) => ((fault = faultOf(e)), null));
       if (!alive) return;
-      setState((prev) => ({ data: data ?? prev.data, failed: data === null && prev.data === null }));
+      setState((prev) => ({ data: data ?? prev.data, failed: data === null && prev.data === null, fault }));
       if (data === null || data.generating) timer = setTimeout(load, POLL_MS);
     };
     load();
@@ -91,8 +99,9 @@ export function useHub(): HubState {
       alive = false;
       clearTimeout(timer);
     };
-  }, []);
-  return state;
+  }, [tries]);
+  const retry = useCallback(() => setTries((n) => n + 1), []);
+  return useMemo(() => ({ ...state, retry }), [state, retry]);
 }
 
 /** The live match right now: its clock, score, minute label and the latest turning point it has reached. */

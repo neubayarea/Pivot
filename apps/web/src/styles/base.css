@@ -311,6 +311,22 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 800; font-size: 1
 .ph-chip { width: 96px; height: 30px; border-radius: 999px; }
 .ph-chip:nth-child(3n+2) { width: 128px; }
 @keyframes sk-shim { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+/* Ax79 (#365): what replaces a placeholder fades in, opacity only, so nothing moves. */
+.ph-in { animation: ph-in .18s ease-out; }
+@keyframes ph-in { from { opacity: 0; } }
+/* A load that failed: what, why, and Retry, where the placeholder was. */
+.load-failed { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 120px; padding: 16px; border: 1px dashed var(--pv-hair); text-align: center; }
+.load-failed p { margin: 0; max-width: 52ch; }
+.load-failed .muted { display: block; font-size: var(--pv-fs-sm); margin-top: 2px; }
+.load-failed.tall { width: 100%; min-height: 0; }
+.load-failed.viz-failed { min-height: 220px; }
+/* A version being written: a progress note with three dots that breathe in turn, beside the words. */
+.lang-note.writing { display: inline-flex; align-items: center; gap: 8px; }
+.wr-dots { display: inline-flex; gap: 3px; flex: none; }
+.wr-dots i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .3; animation: wr-dot 1.2s ease-in-out infinite; }
+.wr-dots i:nth-child(2) { animation-delay: .2s; }
+.wr-dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes wr-dot { 30% { opacity: 1; } 60% { opacity: .3; } }
 .empty-box { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; min-height: 220px; border: 1px dashed var(--pv-hair); font-family: var(--pv-label); font-weight: 700; text-align: center; padding: 12px; }
 .state-page { display: grid; justify-items: center; padding: 48px 20px; }
 .state-card { width: min(560px, 100%); gap: 12px; }
@@ -329,7 +345,8 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 800; font-size: 1
   .s2-head .acts { grid-row: auto; grid-column: 1 / -1; flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .stamp.live::before, .mom .mom-pending, .headline .latest, .feed div, .pv, .sk, .sk-shim, .run-bar i.wait { animation: none; }
+  .stamp.live::before, .mom .mom-pending, .headline .latest, .feed div, .pv, .sk, .sk-shim, .ph-in, .run-bar i.wait { animation: none; }
+  .wr-dots i { animation: none; opacity: .6; }
   .run-bar i { transition: none; }
   .stat .bar i, .pitch .pl { transition: none; }
   .btn.pri:active { transform: none; }

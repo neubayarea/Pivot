@@ -9,7 +9,7 @@ import { FAN_STATS } from "../data/persona";
 import { useVizData, type VizState } from "../data/viz";
 import { isMessageKey, usePrefs, type T } from "../i18n";
 import Segmented from "./Segmented";
-import { Placeholder } from "./Skeleton";
+import { LoadFailed, Placeholder } from "./Skeleton";
 
 // C12: fans get the five plain ones (data/persona.ts), analysts all 23.
 const FAN = new Set<string>(FAN_STATS);
@@ -70,7 +70,7 @@ export default function TeamStats({ state, only }: { state: VizState<TeamStatsRe
   const { data, error } = state;
   const [scope, setScope] = useState<TeamStatsScope["scope"]>("match");
   const fan = prefs.audience === "fan";
-  if (!data) return error ? <p className="muted" role="status">{t("ts.error")}</p> : <Placeholder label={t("ts.loading")} lines={8} />;
+  if (!data) return error ? <LoadFailed message={t("ts.error")} fault={state.fault} onRetry={state.retry} /> : <Placeholder label={t("ts.loading")} lines={8} />;
   const scopes = data.scopes.filter((s) => s.scope !== "window");
   const shown = scopes.find((s) => s.scope === scope) ?? scopes[0];
   if (!shown) return <p className="muted">{t("ts.error")}</p>;
