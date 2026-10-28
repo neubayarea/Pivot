@@ -1,3 +1,5 @@
+<img src="apps/web/public/favicon.svg" width="72" alt="Pivot logo">
+
 # Pivot
 
 **Pivot finds the moments that turned a football match, explains why they mattered with numbers it has checked itself, and lets you replay the match with one thing changed.**

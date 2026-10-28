@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
+import Brand from "./components/Brand";
 import ConnectionBanner, { MissingMatchBanner } from "./components/ConnectionBanner";
 import KitColours from "./components/KitColours";
 import Playback from "./components/Playback";
@@ -21,7 +22,7 @@ import WhatIfLab from "./pages/WhatIfLab";
 const WAITING = (
   <>
     <header className="top">
-      <span className="brand">Pivot</span>
+      <Brand />
     </header>
     <ConnectionBanner />
     <main className="page">
