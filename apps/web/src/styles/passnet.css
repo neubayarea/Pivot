@@ -1,0 +1,11 @@
+/* The pass network's fan and analyst views and its controls (C21, #401). */
+.viz-net-panel { display: grid; gap: 12px; min-width: 0; }
+.viz-net-ctl { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.viz-net-min { display: flex; align-items: center; gap: 10px; font-size: var(--pv-fs-sm); }
+.viz-net-min input { width: 160px; accent-color: var(--pv-ink); }
+
+.viz-net .viz-edge-n { font-size: 11px; font-weight: 700; fill: var(--pv-ink); paint-order: stroke; stroke: var(--pv-paper); stroke-width: 3px; font-variant-numeric: tabular-nums; }
+.viz-net .viz-node.faded { opacity: .3; }
+.viz-net .viz-net-name { font-size: 12px; font-weight: 700; fill: var(--pv-ink); paint-order: stroke; stroke: var(--pv-paper); stroke-width: 3px; }
+.viz-net .viz-pairs { display: grid; gap: 4px; padding-left: 20px; font-size: var(--pv-fs-sm); }
+.viz-net .viz-net-central { font-size: var(--pv-fs-sm); font-weight: 600; }

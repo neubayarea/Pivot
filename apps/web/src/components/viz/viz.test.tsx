@@ -109,9 +109,24 @@ describe("pass network", () => {
     const html = render(<PassNetwork data={NET} side="home" squads={SQUADS} />);
     expect(html.match(/class="viz-edge"/g)).toHaveLength(2);
     expect(html.match(/class="viz-node/g)).toHaveLength(3);
-    expect(html).toContain("B. Lind to A. Moreau: 9 passes");
+    // C21 (#401): a pair is both directions together, with its count on the line; the busiest player is ringed.
+    expect(html).toContain("B. Lind and A. Moreau: 9 passes (9 one way, 0 the other)");
+    expect(html).toContain('class="viz-edge-n" x="262.5" y="139" text-anchor="middle">9</text>');
+    expect(html).toContain("Most involved: B. Lind, 75 passes made and received");
     expect(html).toContain(`cx="${toPx(75, 34)[0]}"`);
     expect(html).toContain("3 or more completed passes");
+  });
+
+  it("a fan sees only the five busiest pairs, with names, and no counts", () => {
+    const edges = Array.from({ length: 7 }, (_, i) => ({ from_id: "h01", to_id: `h0${i + 2}`, passes: 10 + i }));
+    const nodes = Array.from({ length: 8 }, (_, i) => ({ player_id: `h0${i + 1}`, x: 20 + 10 * i, y: 34, passes: 10, received: 10 }));
+    const data = { ...NET, teams: { ...NET.teams, home: { source: "events", nodes, edges } } } as PassNetworkReport;
+    const html = render(<PassNetwork data={data} side="home" />, "?lang=en&mode=fan");
+    expect(html.match(/class="viz-edge"/g)).toHaveLength(5);
+    expect(html).not.toContain("viz-edge-n");
+    expect(html).not.toContain("Most involved");
+    expect(html.match(/class="viz-net-name"/g)?.length).toBe(6);       // h01 and the five it passed to most
+    expect(html).toContain("The 5 pairs who passed to each other most");
   });
 
   it("an empty side says so", () => {

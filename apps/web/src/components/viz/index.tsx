@@ -8,6 +8,7 @@ import { Placeholder } from "../Skeleton";
 export { default as ShotMap, shotRadius } from "./ShotMap";
 export { default as Heatmap, heatCells } from "./Heatmap";
 export { default as PassNetwork } from "./PassNetwork";
+export { default as PassNetworkPanel } from "./PassNetworkPanel";
 export { default as AveragePositions } from "./AveragePositions";
 export { whoFrom } from "./pitch";
 export { useAveragePositions, useHeatmaps, usePassNetwork, useShotMap } from "../../data/viz";
