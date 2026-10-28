@@ -47,9 +47,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.fixture_frames = {}
     app.state.fixture_files = {}
     # matchdata.py (players.py, team_stats.py): each match's frames and calculators, read once on first use
-    app.state.player_lines, app.state.match_calcs, app.state.match_calcs_cut = {}, {}, None
+    app.state.player_lines, app.state.match_calcs, app.state.match_calcs_cut = {}, None, None
     app.state.team_stats, app.state.pictures = {}, None
-    app.state.match_inputs, app.state.match_inputs_lock = {}, asyncio.Lock()
+    app.state.match_inputs, app.state.match_inputs_lock = None, asyncio.Lock()
     replays: dict[str, Replay] = {}           # how each stored match was simulated, for the what-if replays
     precomputed = {}                          # what-ifs run ahead of time: the recorded demo's (Bx11), the seeds' (Bx14)
     demo_id = None
