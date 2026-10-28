@@ -3,9 +3,9 @@
 // under it; a pivot the checker signs off while the viewer watches pops up as an alert with a link
 // to its explanation on the overview. Stats: the ♥ team's summary and the ★ player's spotlight
 // (C12), the grouped team stats and the match pictures.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
-import type { Pivot1 as Pivot } from "@pivot/contracts";
+import type { Pivot1 as Pivot, TeamStatsReport } from "@pivot/contracts";
 import Card from "../../components/Card";
 import EventFeed from "../../components/EventFeed";
 import MatchPictures from "../../components/MatchPictures";
@@ -26,7 +26,41 @@ import { useClock } from "../../data/clock";
 import { useMatch } from "../../data/match";
 import { usePersona } from "../../data/persona";
 import { tabSearch } from "../../data/tab";
-import { useT } from "../../i18n";
+import { useT, type MessageKey } from "../../i18n";
+import "../../styles/live-layout.css";
+
+// The UI sub-task gives PitchBoard a `simple` prop (no shape / tactics table, no "vs 5 min before",
+// no key hints) for fans; until it lands the prop is ignored.
+const Pitch = PitchBoard as unknown as ComponentType<{ simple?: boolean }>;
+
+const FAN_BARS = [["possession_pct", "possession"], ["shots", "shots"], ["shots_on_target", "sot"]] as const;
+
+/** A fan's three numbers under the pitch, each a bar split between the two teams (C21, #401). */
+function FanBars({ report }: { report: TeamStatsReport | null | undefined }) {
+  const { teams } = useMatch();
+  const t = useT();
+  const scope = report?.scopes[0];
+  if (!scope) return null;
+  return (
+    <ul className="live-bars" aria-label={t("live.fan.bars")}>
+      {FAN_BARS.map(([k, label]) => {
+        const h = scope.home[k] ?? null, a = scope.away[k] ?? null;
+        if (h === null || a === null) return null;
+        const total = h + a;
+        const share = total > 0 ? (100 * h) / total : 50;
+        const show = (v: number) => (k === "possession_pct" ? `${Math.round(v)}%` : String(Math.round(v)));
+        return (
+          <li key={k}>
+            <span className="live-bar-k">{t(`live.fan.bar.${label}` as MessageKey)}</span>
+            <span className="live-bar-v num home" aria-label={`${teams.home.name} ${show(h)}`}>{show(h)}</span>
+            <span className="live-bar" aria-hidden="true" style={{ "--share": `${share}%` } as CSSProperties}><i /></span>
+            <span className="live-bar-v num away" aria-label={`${teams.away.name} ${show(a)}`}>{show(a)}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 // An alert stays up this long unless the viewer closes it or opens it.
 const ALERT_MS = 15_000;
@@ -77,11 +111,18 @@ function useUpTo() {
   return { over, upTo: over ? null : match.clock };
 }
 
-/** Replay (Live while the match is played, C13 #316): the pitch, the five key stats and the events. */
+/**
+ * Replay (Live while the match is played, C13 #316). C21 (#401): the two viewers get two layouts.
+ *  - Analyst: the pitch (about 62 %) with the live centre beside it, sticky (the last ten minutes'
+ *    numbers, the deserved result so far, the shot card); the events and the match stats under them.
+ *  - Fan: a simpler pitch with, beside it, who is on top now, the momentum line and the big moments
+ *    only; under them three big bars, and the full stats folded away.
+ */
 export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: ReadonlySet<string> }) {
   const { match } = useMatch();
   const t = useT();
   const { at, minute } = useClock();
+  const { fan } = usePersona();
   const scheduled = match.status === "scheduled";
   const { over, upTo } = useUpTo();
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
@@ -107,18 +148,37 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           </span>
         </div>
       )}
-      <div className="more-bd live-bd">
-        {/* Ax41: one screen. Pitch and stats on top, events and line-ups under them. */}
-        {!scheduled && <PitchBoard key={match.match_id} />}
-        <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`} className="more-stats">
-          <MatchStats report={report.data} />
-        </Card>
-        <Card title={t("board.events")} note={t("board.autoScroll")} className="more-events">
-          <EventFeed highlight={evidence} />
-        </Card>
-      </div>
-      {/* C21 (#401): the live centre, a fan's "who is on top" and momentum, an analyst's numbers. */}
-      <LiveCentre moments={moments} upTo={upTo} />
+      {fan ? (
+        <div className="live-lay fan">
+          {!scheduled && <Pitch key={match.match_id} simple />}
+          <div className="live-side">
+            <LiveCentre moments={moments} upTo={upTo} />
+            <Card title={t("live.fan.moments")} note={t("board.autoScroll")} className="more-events live-big">
+              <EventFeed highlight={evidence} />
+            </Card>
+          </div>
+          <section className="live-below card" aria-label={t("board.stats")}>
+            <FanBars report={report.data} />
+            <details className="live-more">
+              <summary>{t("live.fan.more")}</summary>
+              <MatchStats report={report.data} />
+            </details>
+          </section>
+        </div>
+      ) : (
+        <div className="live-lay an">
+          {!scheduled && <PitchBoard key={match.match_id} />}
+          <div className="live-side">
+            <LiveCentre moments={moments} upTo={upTo} />
+          </div>
+          <Card title={t("board.events")} note={t("board.autoScroll")} className="more-events">
+            <EventFeed highlight={evidence} />
+          </Card>
+          <Card title={t("board.stats")} note={`0′–${at(match.clock)}′`} className="more-stats">
+            <MatchStats report={report.data} />
+          </Card>
+        </div>
+      )}
       <PivotAlert moments={moments} />
     </>
   );

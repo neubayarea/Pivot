@@ -1100,6 +1100,12 @@ export const zh: Messages = {
   // Ax59 · tab contents
   "header.og": "（乌龙）",
   "live.alert": "{minute}′ 出现转折点",
+  "live.fan.moments": "比赛大事",
+  "live.fan.bars": "目前的关键数字",
+  "live.fan.bar.possession": "控球率",
+  "live.fan.bar.shots": "射门",
+  "live.fan.bar.sot": "射正",
+  "live.fan.more": "更多数据",
   "live.alertOpen": "看为什么会转折",
   "live.alertClose": "关闭",
   "live.replayHint": "比赛已经结束。重放一遍，可以看到球员跑动，转折点也会在发生时弹出来。",

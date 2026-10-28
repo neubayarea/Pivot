@@ -1,0 +1,45 @@
+/* The Replay / Live tab's two layouts (C21, #401). PitchBoard renders the pitch card (.more-pitch)
+   and the roster card (.more-roster); the grid places them with the rest. */
+.live-lay { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 0 16px 16px;
+  grid-template-areas: "pitch" "side" "events" "stats" "below" "roster"; }
+.live-lay > .more-pitch { grid-area: pitch; }
+.live-lay > .more-roster { grid-area: roster; max-height: 420px; }
+.live-lay > .live-side { grid-area: side; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.live-lay > .more-events { grid-area: events; }
+.live-lay > .more-stats { grid-area: stats; }
+.live-lay > .live-below { grid-area: below; }
+.live-lay .live-side .lc { margin: 0; }
+/* Inside the side column the cards stack: base.css gives the events card a grid area of its own. */
+.live-lay .live-side > * { grid-area: auto; min-width: 0; }
+.live-lay .live-side .live-hd { display: grid; gap: 6px; }
+.live-lay .live-side .lc-row { grid-template-columns: minmax(0, 1fr); }
+
+@media (min-width: 1100px) {
+  .live-lay { grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); }
+  .live-lay.an { grid-template-areas: "pitch side" "events side" "stats side" "roster roster"; }
+  .live-lay.fan { grid-template-areas: "pitch side" "below side" "roster roster"; }
+  /* The live centre stays in view while the pitch plays, under the sticky bar and tabs. */
+  .live-lay > .live-side {
+    position: sticky; top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + 12px); align-self: start;
+    max-height: calc(100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain;
+  }
+}
+
+/* Fan: the line on who is on top, large, and the big moments in large rows. */
+.live-lay.fan .lc-now { font-family: var(--pv-display); font-size: var(--pv-fs-2xl); font-weight: 800; line-height: 1.15; color: var(--pv-ink); }
+.live-lay.fan .live-big { max-height: 460px; }
+.live-lay.fan .live-big .feed > div { font-size: var(--pv-fs-md); padding: 10px 4px; gap: 12px; }
+.live-lay.fan .live-big .feed .t { font-weight: 700; }
+
+/* Fan: three big bars, each split between the two kit colours. */
+.live-below { display: grid; gap: 16px; }
+.live-bars { list-style: none; display: grid; gap: 14px; }
+.live-bars li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "k k k" "h bar a"; gap: 6px 12px; align-items: center; }
+.live-bar-k { grid-area: k; font-weight: 700; font-size: var(--pv-fs-md); }
+.live-bar-v { font-family: var(--pv-display); font-size: var(--pv-fs-xl); font-weight: 800; min-width: 3ch; }
+.live-bar-v.home { grid-area: h; color: var(--pv-home); }
+.live-bar-v.away { grid-area: a; color: var(--pv-away); text-align: right; }
+.live-bar { grid-area: bar; display: block; height: 14px; border-radius: var(--pv-r-pill); background: var(--pv-away); overflow: hidden; }
+.live-bar i { display: block; height: 100%; width: var(--share); background: var(--pv-home); }
+.live-more summary { cursor: pointer; font-weight: 600; }
+.live-more[open] summary { margin-bottom: 12px; }
