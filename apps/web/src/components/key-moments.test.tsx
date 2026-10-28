@@ -145,7 +145,7 @@ describe("board without pivots", () => {
     // Four goals and a penalty marked on the line, and a legend for them; no numbered pivot in it.
     expect(html.match(/class="mom-key/g)).toHaveLength(5);
     expect(html).toContain("km-legend");
-    expect(html).not.toContain("Pivot: the run of play turned");
+    expect(html).not.toContain("Turning point: the run of play turned");
   });
 
   it("a match still going says it is watching, under the right phase", () => {
@@ -163,10 +163,10 @@ describe("board without pivots", () => {
     const html = render(view(SEED_29, "finished", [pivot(39, ["m037-s00678", "m039-s00714"]), pivot(69), pivot(89, ["m089-s01553"])]));
     expect(html).toContain("The 3 moments that changed the course of this match");
     expect(html).not.toContain("No clear swing");
-    expect(html).toContain(">Pivot ①<");
-    expect(html).toContain(">Pivot ③<");
+    expect(html).toContain(">Turning point ①<");
+    expect(html).toContain(">Turning point ③<");
     expect(html).toContain("VAR overturns it: no penalty");
-    expect(html).toContain("Pivot: the run of play turned");
+    expect(html).toContain("Turning point: the run of play turned");
     expect(html.indexOf("mc to-")).toBeLessThan(html.indexOf("Key moments"));
   });
 });

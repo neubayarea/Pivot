@@ -189,7 +189,7 @@ describe("live board states", () => {
 describe("pivot detail and crashes", () => {
   it("explains a missing pivot instead of a blank page", () => {
     const html = render(<PivotDetail />, matchView(), "/pivot/nope");
-    expect(html).toContain("Pivot not found");
+    expect(html).toContain("Turning point not found");
     expect(html).toContain("Back to the live board");
   });
 

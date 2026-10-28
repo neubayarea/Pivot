@@ -196,7 +196,7 @@ describe("failed runs", () => {
     expect(html).toContain("The simulation did not finish");
     expect(html).toContain("Run again");
     expect(html).toContain("Try another");
-    expect(failureText(new ApiError(422, "x"), en)).toContain("(422)");
+    expect(failureText(new ApiError(422, "x"), en)).toContain("(error 422)");
     expect(failureText(new ApiError(502, "x"), en)).toContain("Could not reach the server");
     expect(failureText(new TypeError("Failed to fetch"), en)).toContain("Could not reach the server");
   });
@@ -268,11 +268,11 @@ describe("mock mode (?fixture=1)", () => {
     );
     const html = page("/whatif/p63");
     expect(html).toContain('href="/pivot/p63"');
-    expect(html).toContain("Pivot 64′: Substitution flipped the left flank");   // elapsed minute 63
+    expect(html).toContain("Turning point 64′: Substitution flipped the left flank");   // elapsed minute 63
     expect(html).toContain("Simulated, not a prediction");
     expect(html).toContain("Loading the scenarios…");
     expect(html).toContain("Pick a scenario to set up the replay.");
-    expect(page("/whatif/nope")).toContain("Pivot not found");
+    expect(page("/whatif/nope")).toContain("Turning point not found");
   });
 });
 

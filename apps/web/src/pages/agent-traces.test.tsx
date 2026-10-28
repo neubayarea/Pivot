@@ -101,7 +101,7 @@ describe("S4 agent trace page", () => {
     expect(shown).toContain("Number does not match: The number 10 in sentence 1 has no matching claim.");
     expect(shown).toContain("Malformed output: 1 schema errors: Input should be");
     expect(shown).not.toMatch(/Malformed output: [^<]*field_tilt_pct'? Malformed/);  // cut in the list, whole in the verdict
-    expect(shown).toContain("Turning point · severity 3");
+    expect(shown).toContain("Turning point, severity 3");
     expect(shown).toContain("Rewrite 2");
     expect(shown).toContain("Template wrote the summary");
     expect(html.match(/class="trace-step"/g)).toHaveLength(10);       // p69 and p89 three each, p39 four
@@ -142,29 +142,29 @@ describe("S4 agent trace page", () => {
   it("shows one pivot's trace with a way back to it", () => {
     const one = groupChains(SEED29_TRACES).filter((c) => c.pivotId === "M-seed-29:p39");
     const shown = text(page({ kind: "ready", chains: one }, { at: "/trace/M-seed-29:p39" }));
-    expect(shown).toContain("← Pivot 40′");
+    expect(shown).toContain("← Turning point 40′");
     expect(shown).toContain("All turning points");
     expect(shown).not.toContain("65′");
   });
 
   it("hides chains the replay has not reached yet, a turned-down candidate included", () => {
     const shown = text(page(ready(DEMO_TRACES), { pivots: [], clock: 50 * 60 }));
-    expect(shown).toContain("No agent activity yet");
+    expect(shown).toContain("No AI activity yet");
     const later = text(page(ready(DEMO_TRACES), { pivots: [], clock: 52 * 60 }));
     expect(later).toContain("47′ · Candidate");             // elapsed 51, two minutes into the second half
-    expect(later).toContain("Not a pivot");
+    expect(later).toContain("Not a turning point");
     expect(later).not.toContain("Final text");
     expect(later).not.toContain("Rewrites");
   });
 
   it("has loading, error and empty states", () => {
     expect(page({ kind: "loading" })).toContain('aria-busy="true"');
-    expect(text(page({ kind: "loading" }))).toContain("Loading the agent trace");
+    expect(text(page({ kind: "loading" }))).toContain("Loading the AI work log");
     const failed = page({ kind: "error", error: new Error("x") });
     expect(failed).toContain('role="alert"');
     expect(text(failed)).toContain("Retry now");
     expect(text(page({ kind: "ready", chains: [] }, { at: "/trace/M-seed-29:p40" }))).toContain(
-      "No agent activity recorded for this turning point yet.");
+      "No AI activity recorded for this turning point yet.");
   });
 });
 

@@ -89,8 +89,8 @@ describe("the form in detail", () => {
 
   it("puts the last five in numbers side by side, with the goals by period", () => {
     const out = text(html(fx));
-    expect(out).toContain("Goals scored a game 1.2 2.8");
-    expect(out).toContain("Goals conceded a game 1.8 1.0");
+    expect(out).toContain("Goals scored per game 1.2 2.8");
+    expect(out).toContain("Goals conceded per game 1.8 1.0");
     expect(out).toContain("Clean sheets 0 of 5 3 of 5");
     expect(out).toContain("Over 2.5 goals 3 of 5 4 of 5");
     expect(out).toContain("Red cards 2 of 5 0 of 5");
