@@ -1418,4 +1418,8 @@ export const en = {
   "rp.fan.evenLive": "So far neither side has been on top for long.",
   "rp.fan.evenBlock": "Even",
   "rp.fan.onTop": "{team} on top",
+  // C21 (P0): a score state too short for per-90.
+  "rp.gs.shortNote": "Too short to scale to 90 minutes",
+  "rp.gs.xgRaw": "xG in total",
+  "rp.gs.xgaRaw": "xGA in total",
 };

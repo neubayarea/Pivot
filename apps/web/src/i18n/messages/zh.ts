@@ -1417,4 +1417,8 @@ export const zh: Messages = {
   "rp.fan.evenLive": "到目前为止，两队谁也没有长时间占上风。",
   "rp.fan.evenBlock": "势均力敌",
   "rp.fan.onTop": "{team} 占上风",
+  // C21 (P0): a score state too short for per-90.
+  "rp.gs.shortNote": "时间太短，不换算每 90 分钟",
+  "rp.gs.xgRaw": "共 xG",
+  "rp.gs.xgaRaw": "共 xGA",
 };

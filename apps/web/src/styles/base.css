@@ -757,6 +757,14 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   max-height: calc(100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - 24px); min-height: 0; }
 .pics-side > .seg { justify-self: start; }
 .pics-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; border-top: 1px solid var(--pv-rule-hair); }
+/* C21 (P0): the panel is a column whose list takes what is left and scrolls inside it, so the names and the
+ * Follow button never run past the card, however long the squad or the screen. */
+.pics-row.with-side .pics-side { display: flex; flex-direction: column; overflow: hidden;
+  top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + var(--pv-sub-h, 0px) + 12px);
+  max-height: calc(100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - var(--pv-sub-h, 0px) - 24px); }
+.pics-row.with-side .pics-side > * { flex: none; }
+.pics-row.with-side .pics-side > .pics-list { flex: 1 1 auto; min-height: 120px; overscroll-behavior: contain; }
+.pics-side .follow { align-self: flex-start; }
 .pics-list button { display: grid; grid-template-columns: 2em minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; width: 100%; padding: 7px 10px;
   border: 0; border-bottom: 1px solid var(--pv-rule-hair); background: transparent; color: var(--pv-ink); text-align: left; font: inherit; font-size: 14px; cursor: pointer; }
 .pics-list button:hover { background: var(--pv-paper); }

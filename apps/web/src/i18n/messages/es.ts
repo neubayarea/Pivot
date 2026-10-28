@@ -1419,4 +1419,8 @@ export const es: Messages = {
   "rp.fan.evenLive": "Hasta ahora ningún equipo ha mandado mucho tiempo.",
   "rp.fan.evenBlock": "Igualado",
   "rp.fan.onTop": "Manda {team}",
+  // C21 (P0): a score state too short for per-90.
+  "rp.gs.shortNote": "Demasiado corto para pasarlo a 90 minutos",
+  "rp.gs.xgRaw": "xG en total",
+  "rp.gs.xgaRaw": "xGA en total",
 };

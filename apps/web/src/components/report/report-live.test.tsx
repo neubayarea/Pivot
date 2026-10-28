@@ -47,7 +47,8 @@ describe("the report on a live match's partial analysis", () => {
 
   it("works out no sentence it has no numbers for", () => {
     expect(deservedVerdict(LIVE.deserved, { home: 0, away: 0 })).toBeNull();
-    expect(mostDangerous(LIVE.game_state)?.side).toBe("away");
+    // Ten minutes is too short a state to say who was most dangerous in it (C21).
+    expect(mostDangerous(LIVE.game_state)).toBeNull();
     expect(laneShares(LIVE.lanes.home)).toEqual({ left: 0, centre: 0, right: 0 });
     expect(topContributors([{ player_id: "p", name: "p", team: "home", shirt_number: 9, stats: { xg: null, xa: null, minutes_played: 10 } } as unknown as PlayerReport])).toEqual([]);
   });
