@@ -17,6 +17,8 @@ import MomentumChart from "../../components/MomentumChart";
 import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments";
 import MatchStory from "../../components/MatchStory";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
+import PostMatchReport, { useReportTitle } from "../../components/report/PostMatchReport";
+import ReportBoundary from "../../components/report/ReportBoundary";
 import SetPiecesAndShots from "../../components/SetPieces";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
@@ -78,6 +80,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   // The team stats follow the replay or the live clock, whole minutes, like the live tab's.
   const upTo = finished ? null : Math.floor(match.clock / 60) * 60;
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
+  const reportTitle = useReportTitle(upTo);
   // C18 (#366): the analyst's xG race; the shots are fetched only for an analyst.
   const shots = useShotMap(scheduled || fan ? null : match.match_id, { upTo, stepS: 60 });
 
@@ -96,11 +99,21 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
     // C18 (#366): an analyst's first block, the key numbers and the xG race (Opta / Understat).
     xgRace: (
       <Section id="post-xg" title={t("xg.title")} note={t("xg.note")} className="post-xg">
-        <KeyMetrics report={report.data} names={{ home: teams.home.short_name, away: teams.away.short_name }} />
-        {shots.data && (
-          <XgRace shots={shots.data.shots} events={events} pivots={moments} names={{ home: teams.home.name, away: teams.away.name }}
-            totals={{ home: xgOf(report.data, "home"), away: xgOf(report.data, "away") }} end={match.clock} />
-        )}
+        <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
+          <KeyMetrics report={report.data} names={{ home: teams.home.short_name, away: teams.away.short_name }} />
+          {shots.data && (
+            <XgRace shots={shots.data.shots} events={events} pivots={moments} names={{ home: teams.home.name, away: teams.away.name }}
+              totals={{ home: xgOf(report.data, "home"), away: xgOf(report.data, "away") }} end={match.clock} />
+          )}
+        </ReportBoundary>
+      </Section>
+    ),
+    // C19 (#385): the analyst's post-match report, under the xG race.
+    report: (
+      <Section id="post-report" title={reportTitle} note={t(upTo === null ? "rp.noteOverview" : "rp.noteLive")} className="post-report">
+        <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
+          <PostMatchReport parts={["deserved", "players"]} players={5} moments={moments} upTo={upTo} />
+        </ReportBoundary>
       </Section>
     ),
     // C12: the ♥ team's match, then (ORDER) the story for a fan and the numbers for an analyst.
@@ -181,7 +194,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   };
   // The blocks in the order each audience reads them (data/persona.ts); a fan also gets the core five, after the key moments.
   const order: string[] = [...persona.order.post];
-  if (!fan) order.unshift("xgRace");
+  if (!fan) order.unshift("xgRace", "report");
   if (fan && !order.includes("teamStats")) order.splice(order.indexOf("keys") + 1, 0, "teamStats");
 
   return (

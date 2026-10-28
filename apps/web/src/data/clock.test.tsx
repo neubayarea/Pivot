@@ -24,9 +24,12 @@ describe("match clock", () => {
   });
 
   it("runs the top-bar clock from 45:00 at the second-half kick-off", () => {
-    expect(clockAt(PERIODS, 46 * 60 + 30)).toBe("46:30");      // first-half stoppage runs on
+    expect(clockAt(PERIODS, 44 * 60 + 59)).toBe("44:59");
+    expect(clockAt(PERIODS, 46 * 60 + 30)).toBe("45+1:30");    // added time counts on from 45, like 45+2′
     expect(clockAt(PERIODS, 48 * 60 + 5)).toBe("45:05");
     expect(clockAt(PERIODS, 69 * 60)).toBe("66:00");
+    expect(clockAt(PERIODS, 48 * 60 + 98 * 60 + 37 - 45 * 60)).toBe("90+8:37"); // the 9th added minute: 90+9′
+    expect(minuteAt(PERIODS, 48 * 60 + 98 * 60 + 37 - 45 * 60)).toBe("90+9");
   });
 
   it("reads an event's own clock label", () => {

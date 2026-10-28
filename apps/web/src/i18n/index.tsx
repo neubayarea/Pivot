@@ -28,6 +28,16 @@ export const DEFAULT_PREFS: ViewerPrefs = { audience: "analyst", language: "en",
 /** For keys built from data (`metric.${name}`): true when the English table has it. */
 export const isMessageKey = (key: string): key is MessageKey => key in en;
 
+/** "1 number" / "8 numbers": a count with its noun in the right form (the `count.*.one|other` keys). */
+export const countOf = (t: T, noun: "numbers" | "events", n: number) =>
+  t(`count.${noun}.${n === 1 ? "one" : "other"}` as MessageKey, { n });
+
+/** `key` with `{n}`, or its `key.one` form when n is 1 and the language has one ("1 meeting", "1 empate"). */
+export const plural = (t: T, key: MessageKey, n: number, vars: Record<string, string | number> = {}) => {
+  const one = `${key}.one`;
+  return t(n === 1 && isMessageKey(one) ? one : key, { ...vars, n });
+};
+
 const isLang = (v: unknown): v is Lang => typeof v === "string" && (LANGS as readonly string[]).includes(v);
 const isAudience = (v: unknown): v is ViewerPrefs["audience"] => v === "analyst" || v === "fan";
 const isTeam = (v: unknown): v is "home" | "away" => v === "home" || v === "away";

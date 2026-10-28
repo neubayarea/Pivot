@@ -1,14 +1,13 @@
 // The viewer's ♥ team follows the club, not the side (QA round 4, #354). `focus_team` stays a side,
 // as the API reads it, but which club it means is saved too (`pivot.club`, its short name): when a
-// match opens where that club plays away, the ♥ moves to the away side. A choice saved before this
-// (a side only) meant Harbour City v Northgate Rovers, the only fixture there was.
+// match opens where that club plays away, the ♥ moves to the away side. A side with no club saved
+// (a `team=` link, or a choice from before clubs were saved) means that side of the match it opens on.
 import { useEffect, useRef } from "react";
 import { usePrefs } from "../i18n";
 import { useHub } from "./hub";
 import { useMatch, type Side } from "./match";
 
 const CLUB_KEY = "pivot.club";
-const LEGACY: Record<Side, string> = { home: "HBC", away: "ROV" };
 
 type Teams = Record<Side, { short_name: string }>;
 
@@ -35,11 +34,11 @@ export function sideOfClub(teams: Teams, club: string | null): Side | null {
 }
 
 /**
- * The club a saved choice means when this match opens: the saved club, else (a choice from before
- * clubs were saved) the club on that side of Harbour City v Northgate Rovers.
+ * The club a saved choice means when this match opens: the saved club, else (a `team=` link, or a
+ * choice from before clubs were saved) the club on that side of this match.
  */
-export function savedClub(club: string | null, side: Side | null): string | null {
-  return club ?? (side ? LEGACY[side] : null);
+export function savedClub(club: string | null, side: Side | null, teams: Teams): string | null {
+  return club ?? (side ? teams[side].short_name : null);
 }
 
 /** Keeps `focus_team` on the viewer's club in `teams`, and remembers the club they pick. */
@@ -53,7 +52,7 @@ export function useFollowClub(teams: Teams | null) {
     if (key !== seen.current) {
       // Another match: the saved club decides the side.
       seen.current = key;
-      const club = savedClub(readClub(), prefs.focus_team);
+      const club = savedClub(readClub(), prefs.focus_team, teams);
       const side = sideOfClub(teams, club);
       if (club && side !== prefs.focus_team) {
         // Moved to the club's side, or off both sides in a match it does not play; the club stays saved.

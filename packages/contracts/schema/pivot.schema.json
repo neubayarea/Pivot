@@ -106,6 +106,372 @@
       "title": "AgentTrace",
       "type": "object"
     },
+    "AnalysisDeserved": {
+      "additionalProperties": false,
+      "properties": {
+        "away_win": {
+          "type": "number"
+        },
+        "draw": {
+          "type": "number"
+        },
+        "home_win": {
+          "type": "number"
+        },
+        "n_sims": {
+          "type": "integer"
+        },
+        "xpts": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "n_sims",
+        "home_win",
+        "draw",
+        "away_win",
+        "xpts"
+      ],
+      "title": "AnalysisDeserved",
+      "type": "object"
+    },
+    "AnalysisGameState": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "$ref": "#/$defs/AnalysisStateTeam"
+        },
+        "home": {
+          "$ref": "#/$defs/AnalysisStateTeam"
+        },
+        "minutes": {
+          "type": "number"
+        },
+        "state": {
+          "enum": [
+            "level",
+            "home_leading",
+            "away_leading"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "minutes",
+        "home",
+        "away"
+      ],
+      "title": "AnalysisGameState",
+      "type": "object"
+    },
+    "AnalysisLane": {
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "integer"
+        },
+        "final_third_entries": {
+          "type": "integer"
+        },
+        "xg": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "final_third_entries",
+        "entries",
+        "xg"
+      ],
+      "title": "AnalysisLane",
+      "type": "object"
+    },
+    "AnalysisPhase": {
+      "additionalProperties": false,
+      "description": "`from` / `to`: the spell on the match clock (45 is the second half's kick-off); `window`: the\nelapsed minutes it covers (from <= minute < to).",
+      "properties": {
+        "away": {
+          "$ref": "#/$defs/AnalysisPhaseTeam"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "home": {
+          "$ref": "#/$defs/AnalysisPhaseTeam"
+        },
+        "to": {
+          "type": "integer"
+        },
+        "window": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "window",
+        "home",
+        "away"
+      ],
+      "title": "AnalysisPhase",
+      "type": "object"
+    },
+    "AnalysisPhaseTeam": {
+      "additionalProperties": false,
+      "properties": {
+        "field_tilt_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "possession_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ppda": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shots": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "xg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "xg",
+        "field_tilt_pct",
+        "possession_pct",
+        "ppda",
+        "shots"
+      ],
+      "title": "AnalysisPhaseTeam",
+      "type": "object"
+    },
+    "AnalysisProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "away": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "away_values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "baseline_matches": {
+          "type": "integer"
+        },
+        "home": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "home_values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "baseline_matches",
+        "metrics",
+        "home",
+        "away",
+        "home_values",
+        "away_values"
+      ],
+      "title": "AnalysisProfile",
+      "type": "object"
+    },
+    "AnalysisShotQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "big_chances": {
+          "type": "integer"
+        },
+        "by_source": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "open_play",
+              "set_piece",
+              "penalty",
+              "counter"
+            ]
+          },
+          "type": "object"
+        },
+        "shots": {
+          "type": "integer"
+        },
+        "xg_per_shot": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "shots",
+        "xg_per_shot",
+        "big_chances",
+        "by_source"
+      ],
+      "title": "AnalysisShotQuality",
+      "type": "object"
+    },
+    "AnalysisStateTeam": {
+      "additionalProperties": false,
+      "properties": {
+        "field_tilt_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "possession_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "xg_per90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "xga_per90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "xg_per90",
+        "xga_per90",
+        "possession_pct",
+        "field_tilt_pct"
+      ],
+      "title": "AnalysisStateTeam",
+      "type": "object"
+    },
     "ArmStats": {
       "additionalProperties": false,
       "description": "Why an arm came out as it did: its final scores and each team's numbers after the replay start.",
@@ -1310,6 +1676,81 @@
         "decided_by"
       ],
       "title": "Match",
+      "type": "object"
+    },
+    "MatchAnalysis": {
+      "additionalProperties": false,
+      "properties": {
+        "deserved": {
+          "$ref": "#/$defs/AnalysisDeserved"
+        },
+        "game_state": {
+          "items": {
+            "$ref": "#/$defs/AnalysisGameState"
+          },
+          "type": "array"
+        },
+        "lanes": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "$ref": "#/$defs/AnalysisLane"
+            },
+            "propertyNames": {
+              "enum": [
+                "left",
+                "centre",
+                "right"
+              ]
+            },
+            "type": "object"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        },
+        "match_id": {
+          "type": "string"
+        },
+        "phases": {
+          "items": {
+            "$ref": "#/$defs/AnalysisPhase"
+          },
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/AnalysisProfile"
+        },
+        "shot_quality": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AnalysisShotQuality"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        },
+        "up_to_t": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_id",
+        "up_to_t",
+        "deserved",
+        "phases",
+        "game_state",
+        "shot_quality",
+        "lanes",
+        "profile"
+      ],
+      "title": "MatchAnalysis",
       "type": "object"
     },
     "MatchContext": {

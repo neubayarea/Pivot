@@ -13,6 +13,10 @@ import MatchStats from "../../components/MatchStats";
 import PitchBoard from "../../components/PitchBoard";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
 import PlayerTable from "../../components/PlayerTable";
+import FanPhases from "../../components/report/FanPhases";
+import PageNav from "../../components/report/PageNav";
+import PostMatchReport, { useReportTitle } from "../../components/report/PostMatchReport";
+import ReportBoundary from "../../components/report/ReportBoundary";
 import { pivotHeadline } from "../../components/PivotList";
 import StartDemoButton from "../../components/StartDemoButton";
 import TeamStats, { useTeamStats } from "../../components/TeamStats";
@@ -123,21 +127,28 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
  * (C12) lead for a fan and follow the numbers for an analyst.
  */
 export function StatsTab() {
-  const { match } = useMatch();
+  const { match, pivots } = useMatch();
   const t = useT();
+  const root = useRef<HTMLDivElement>(null);
   const scheduled = match.status === "scheduled";
   const { over, upTo } = useUpTo();
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
   const { fan } = usePersona();
+  const reportTitle = useReportTitle(upTo);
   if (scheduled) return <div className="empty-box">{t("board.kickoffPending")}</div>;
+  const moments = pivots.filter((p) => p.status === "confirmed" || p.status === "degraded").sort((a, b) => a.minute - b.minute);
   const mine = (
     <>
       <YourTeamSummary report={report.data} upTo={upTo} />
       <PlayerSpotlight upTo={upTo} />
     </>
   );
+  // C20 (#391): the Stats tab is the deep read. An analyst gets the team stats, then the report's
+  // phases, game state, shot quality, lanes and style, the pictures and the player table, with an
+  // "on this page" row; a fan gets the key numbers, who was on top when, and the pictures.
   return (
-    <>
+    <div ref={root} className="stats-page">
+      <PageNav root={root} />
       {fan && mine}
       <section className="live-sec" aria-labelledby="live-stats-hd">
         <header className="live-hd">
@@ -146,6 +157,16 @@ export function StatsTab() {
         </header>
         <div className="card"><TeamStats state={report} /></div>
       </section>
+      {fan ? (
+        <ReportBoundary resetKey={`${match.match_id}:${upTo}`}><FanPhases upTo={upTo} /></ReportBoundary>
+      ) : (
+        <div className="live-sec stats-report">
+          <p className="rp-kicker">{reportTitle}</p>
+          <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
+            <PostMatchReport parts={["phases", "state", "shots", "lanes", "profile"]} level={2} stack moments={moments} upTo={upTo} />
+          </ReportBoundary>
+        </div>
+      )}
       <section className="live-sec" aria-labelledby="live-pics-hd">
         <header className="live-hd">
           <h2 id="live-pics-hd">{t("pics.title")}</h2>
@@ -160,6 +181,6 @@ export function StatsTab() {
         </section>
       )}
       {!fan && mine}
-    </>
+    </div>
   );
 }

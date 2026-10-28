@@ -33,15 +33,44 @@ function Named({ text, name }: { text: string; name: RegExp | null }) {
   );
 }
 
+const near = (a: number, b: number) => Math.abs(a - b) < 0.051;
+const sameStat = (a: Claim, b: Claim) =>
+  a.stat_ref.metric === b.stat_ref.metric && a.stat_ref.team === b.stat_ref.team && a.stat_ref.player_id === b.stat_ref.player_id;
+
+/**
+ * Which claims a highlighted figure ("0 to 5") was read from (#332): the claim whose value is the
+ * figure's last number, preferring one with a same-stat partner holding the first number ("from").
+ * Claims already given to an earlier figure are skipped; when no value matches, the next unused
+ * claim in order is used, as before.
+ */
+export function claimsFor(figure: string, claims: Claim[], used: Set<number>): { to: Claim; from?: Claim } | null {
+  const nums = (figure.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+  const free = claims.map((c, j) => [c, j] as const).filter(([, j]) => !used.has(j));
+  if (!free.length) return claims.length ? { to: claims[claims.length - 1] } : null;
+  const first = nums[0];
+  const last = nums[nums.length - 1];
+  const partner = (c: Claim, j: number) =>
+    nums.length > 1 ? free.find(([d, h]) => h !== j && sameStat(d, c) && near(d.value, first)) : undefined;
+  const to =
+    (last !== undefined && free.find(([c, j]) => near(c.value, last) && partner(c, j))) ||
+    (last !== undefined && free.find(([c]) => near(c.value, last))) ||
+    free.find(([c]) => nums.some((x) => near(c.value, x))) ||
+    free[0];
+  const from = partner(to[0], to[1]);
+  used.add(to[1]);
+  if (from) used.add(from[1]);
+  return { to: to[0], from: from?.[0] };
+}
+
 function Highlighted({ text, claims, name }: { text: string; claims: Claim[]; name: RegExp | null }) {
+  const used = new Set<number>();
   return (
     <>
       {text.split(FIGURE).map((part, i) => {
         if (!(i % 2)) return <Named key={i} text={part} name={name} />;
-        // Figures and claims line up in order; extra figures share the sentence's last claim.
-        const claim = claims[Math.min((i - 1) / 2, claims.length - 1)];
-        return claim ? (
-          <Sourced key={i} claim={claim} className="hl">
+        const src = claimsFor(part, claims, used);
+        return src ? (
+          <Sourced key={i} claim={src.to} from={src.from} className="hl">
             {part}
           </Sourced>
         ) : (

@@ -29,11 +29,17 @@ export function minuteAt(periods: PeriodStart[], t: number): string {
 /** An elapsed minute from the data (pivot, metric, window edge), read at its first second like the overlay. */
 export const minuteLabel = (periods: PeriodStart[], minute: number) => minuteAt(periods, minute * 60);
 
-/** Running clock "63:20": 45:00 when the second half kicks off; first-half added time runs on past 45:00. */
+const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+/** Running clock "63:20": 45:00 when the second half kicks off. Added time counts on from the
+ * period's end like the minute labels do (Ax83): "45+1:30", "90+8:37" (the 9th added minute, 90+9′). */
 export function clockAt(periods: PeriodStart[], t: number): string {
   const [period, periodT] = periodAt(periods, t);
-  const s = Math.floor((BASE[period] ?? 120) * 60 + periodT);
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const s = Math.max(0, Math.floor(periodT));
+  const length = LENGTH[period];
+  if (length === undefined) return mmss(Math.floor(120 * 60 + s));
+  if (s >= length * 60) return `${BASE[period] + length}+${String(Math.floor((s - length * 60) / 60))}:${String((s - length * 60) % 60).padStart(2, "0")}`;
+  return mmss(BASE[period] * 60 + s);
 }
 
 /** An event's own minute as the event list shows it, without the quote: "63'" -> "63". */

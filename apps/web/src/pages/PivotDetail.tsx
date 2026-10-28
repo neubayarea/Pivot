@@ -17,7 +17,7 @@ import { boardHref } from "../data/liveClock";
 import { fixtureMode, involves, useMatch } from "../data/match";
 import { swingAt, usePersona } from "../data/persona";
 import { inWindow } from "../data/window";
-import { usePrefs } from "../i18n";
+import { countOf, usePrefs } from "../i18n";
 import NotFound from "./NotFound";
 
 // Evidence actions stay drawn for a few seconds either side of the event.
@@ -131,7 +131,7 @@ export default function PivotDetail() {
         <span className="meta">
           <Severity level={pivot.severity} />
           {pivot.status === "confirmed" ? (
-            <Stamp tone="ok">{tr("detail.verified", { claims, evidence: evidence.length })}</Stamp>
+            <Stamp tone="ok">{tr("detail.verified", { claims: countOf(tr, "numbers", claims), evidence: countOf(tr, "events", evidence.length) })}</Stamp>
           ) : (
             <PivotStamp status={pivot.status} />
           )}

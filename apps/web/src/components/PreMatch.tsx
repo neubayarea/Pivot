@@ -5,13 +5,13 @@
 // C11 (Ax63): a match preview's order. `PreMatchTop` is the tale of the tape (table, form,
 // head-to-head) under one strip of match facts; `PreMatchStories` is the news and the context
 // effects, then the ties. Each person and team carries a small swatch in its own kit colour.
-import type { ContextEffect, MatchContext, PastMeeting, TeamForm } from "@pivot/contracts";
+import type { ContextEffect, HeadToHead as H2H, MatchContext, PastMeeting, TeamForm } from "@pivot/contracts";
 import { useMatch, type Side, type TeamPlan } from "../data/match";
-import { usePrefs, type MessageKey, type T } from "../i18n";
+import { plural, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import LangTag from "./LangTag";
 import { numberLocale } from "../data/motion";
-import { usePreMatchText } from "../data/prematch";
+import { formFromReport, h2hFromReport, usePreMatchReport, usePreMatchText } from "../data/prematch";
 import "../styles/prematch.css";
 
 const SIDES: Side[] = ["home", "away"];
@@ -48,14 +48,20 @@ function usePre() {
 /** The occasion, then both sides' place, points and form facing each other, and the head-to-head. */
 export function PreMatchTop() {
   const pre = usePre();
+  const { match } = useMatch();
+  // A season fixture's context has no form or head-to-head; `/prematch` has both (Ax83, #395).
+  const needsReport = !!pre && (!pre.context.form.length || !pre.context.head_to_head);
+  const { data: report } = usePreMatchReport(needsReport ? match.match_id : null);
   if (!pre) return null;
   const { context, plans, teams, t, title } = pre;
+  const form = context.form.length ? context.form : formFromReport(report);
+  const h2h = context.head_to_head ?? h2hFromReport(report);
   return (
     <section className="card pre-top" aria-label={title("occasion")}>
       <Occasion context={context} t={t} />
       <div className="pre-tape">
-        <Form form={context.form} t={t} title={title("form")} name={(s) => teams[s].name} />
-        <HeadToHead context={context} plans={plans} t={t} title={title("h2h")} short={(s) => teams[s].short_name} />
+        <Form form={form} t={t} title={title("form")} name={(s) => teams[s].name} />
+        <HeadToHead h={h2h} plans={plans} t={t} title={title("h2h")} short={(s) => teams[s].short_name} />
       </div>
     </section>
   );
@@ -137,7 +143,7 @@ function Form({ form, t, title, name }: Part & { form: TeamForm[]; name: (s: Sid
     <section className="pre-form" aria-labelledby="pre-form-hd">
       <h3 id="pre-form-hd">
         {title}
-        {gap && <small>{t("pre.gap", { n: gap })}</small>}
+        {gap && <small>{plural(t, "pre.gap", gap)}</small>}
       </h3>
       <div className="pre-teams">
         {rows.map((f) => (
@@ -171,10 +177,9 @@ function Form({ form, t, title, name }: Part & { form: TeamForm[]; name: (s: Sid
   );
 }
 
-function HeadToHead({ context, plans, t, title, short }: Part & {
-  context: MatchContext; plans: Record<Side, TeamPlan>; short: (s: Side) => string;
+function HeadToHead({ h, plans, t, title, short }: Part & {
+  h: H2H | null; plans: Record<Side, TeamPlan>; short: (s: Side) => string;
 }) {
-  const h = context.head_to_head;
   if (!h || h.played === 0) return null;
   const sideOf = (club: string): Side | null => SIDES.find((s) => plans[s].club_id === club) ?? null;
   const label = (club: string) => {
@@ -183,7 +188,7 @@ function HeadToHead({ context, plans, t, title, short }: Part & {
   };
   const parts: [string, number, string, string][] = [
     ["home", h.home_wins, t("pre.h2hWins", { team: short("home") }), t("pre.wins", { team: short("home"), n: h.home_wins })],
-    ["draw", h.draws, t("pre.h2hDraws"), t("pre.draws", { n: h.draws })],
+    ["draw", h.draws, t("pre.h2hDraws"), plural(t, "pre.draws", h.draws)],
     ["away", h.away_wins, t("pre.h2hWins", { team: short("away") }), t("pre.wins", { team: short("away"), n: h.away_wins })],
   ];
   const winner = (m: PastMeeting) => (m.home_goals === m.away_goals ? null : m.home_goals > m.away_goals ? m.home_club_id : m.away_club_id);
@@ -191,7 +196,7 @@ function HeadToHead({ context, plans, t, title, short }: Part & {
     <section className="pre-h2h" aria-labelledby="pre-h2h-hd">
       <h3 id="pre-h2h-hd">
         {title}
-        <small>{t("pre.played", { n: h.played })}</small>
+        <small>{plural(t, "pre.played", h.played)}</small>
       </h3>
       <ul className="pre-tally">
         {parts.map(([k, n, word, said]) => (
@@ -319,7 +324,7 @@ function Ties({ across, reunions, t, title, name, teamOf, said }: Part & People 
                 <span aria-hidden="true">↔</span>
                 <b className="pre-who"><Kit side={teamOf(r.other_id)} />{name(r.other_id)}</b>
               </span>
-              {r.shared_seasons > 0 && <span className="pre-note muted">{t("pre.seasons", { n: r.shared_seasons })}</span>}
+              {r.shared_seasons > 0 && <span className="pre-note muted">{plural(t, "pre.seasons", r.shared_seasons)}</span>}
             </span>
           </li>
         ))}

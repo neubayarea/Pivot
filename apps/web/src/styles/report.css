@@ -1,0 +1,159 @@
+/* The analyst's post-match report (C19, #385): sections in a two-column grid on wide screens, the
+ * charts full width. Kit colours from the match (--pv-home / --pv-away), yellow only for the AI's
+ * turning points, grids and axes recessive. */
+
+.rp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: var(--pv-s4); }
+.rp-sec { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s4) var(--pv-s5); display: grid; gap: var(--pv-s3); align-content: start; min-width: 0; }
+.rp-sec.wide { grid-column: 1 / -1; }
+@media (max-width: 1100px) { .rp { grid-template-columns: minmax(0, 1fr); } }
+.rp-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rp-hd h3 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-lg); line-height: 1.1; }
+.rp-take { font-size: var(--pv-fs-md); font-weight: 600; line-height: 1.4; max-width: 70ch; }
+.rp-src { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); margin: 0; }
+.rp svg { display: block; width: 100%; height: auto; }
+.rp svg text { font-family: var(--pv-body); }
+.rp-axis { font-size: 11px; fill: var(--pv-ink-2); }
+.rp-row { font-size: 13px; font-weight: 700; fill: currentColor; color: var(--pv-ink); }
+.rp-val { font-size: 12px; font-weight: 700; fill: var(--pv-ink); font-variant-numeric: tabular-nums; }
+.rp-base { stroke: var(--pv-ink-2); stroke-width: 1; }
+.rp-grid { stroke: var(--pv-hair); stroke-width: 1; }
+.rp-ref { stroke: var(--pv-ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.rp-key { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--pv-fs-xs); margin: 0; align-items: center; }
+.rp-key span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-key .home::before, .rp-key .away::before { content: ""; width: 12px; height: 12px; border-radius: 3px; }
+.rp-key .home::before { background: var(--pv-home); }
+.rp-key .away::before { background: var(--pv-away); }
+.rp-key .k-goal::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--pv-ink); }
+.rp-key .k-turn::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--pv-gold); border: 1.5px solid var(--pv-ink); }
+.rp-key .k-dot::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--pv-ink); }
+.rp-key .k-ring::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--pv-ink); }
+
+/* Deserved result */
+.rp-dsv { display: grid; gap: 10px; }
+.rp-dsv-bar { display: flex; gap: 2px; height: 34px; border-radius: 6px; overflow: hidden; }
+.rp-dsv-bar .seg { display: flex; align-items: center; justify-content: center; background: var(--c); min-width: 2px; }
+.rp-dsv-bar .seg b { font-size: 14px; color: #fff; }
+.rp-dsv-bar .seg.draw b { color: var(--pv-ink); }
+.rp-dsv-key { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-size: var(--pv-fs-sm); }
+.rp-dsv-pts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.rp-dsv-pts > div { border-left: 4px solid var(--tc); padding-left: 10px; }
+.rp-dsv-pts dt { font-size: var(--pv-fs-sm); font-weight: 700; }
+.rp-dsv-pts dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.rp-big { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-2xl); line-height: 1; }
+.rp-dsv-pts small { color: var(--pv-ink-2); }
+
+/* Match phases */
+.rp-phases { display: grid; gap: 10px; }
+.rp-phases > .seg { justify-self: start; }
+.rp-bar.home { fill: var(--pv-home); }
+.rp-bar.away { fill: var(--pv-away); }
+.rp-goal { fill: var(--pv-sheet); stroke-width: 2.5; }
+.rp-goal.home { stroke: var(--pv-home); }
+.rp-goal.away { stroke: var(--pv-away); }
+.rp-pivot circle { fill: var(--pv-gold); stroke: var(--pv-ink); stroke-width: 1.5; }
+.rp-pivot text { font-family: var(--pv-display); font-weight: 800; font-size: 12px; fill: var(--pv-ink); }
+
+/* Game state */
+.rp-scroll { overflow-x: auto; }
+.rp-gs { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.rp-gs th, .rp-gs td { padding: 6px 6px; border-top: 1px solid var(--pv-hair); text-align: left; vertical-align: middle; white-space: nowrap; }
+.rp-gs thead th { border-top: 0; font-weight: 600; color: var(--pv-ink-2); font-size: 12px; }
+.rp-gs thead th[title] { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.rp-gs thead .home { color: var(--pv-home); border-bottom: 2px solid var(--pv-home); }
+.rp-gs thead .away { color: var(--pv-away); border-bottom: 2px solid var(--pv-away); }
+.rp-gs tbody th { font-weight: 700; }
+.rp-cell { display: block; font-weight: 600; }
+.rp-inline { display: block; height: 4px; background: var(--pv-sunk); border-radius: 2px; margin-top: 3px; min-width: 32px; }
+.rp-inline i { display: block; height: 100%; width: var(--w); background: var(--tc); border-radius: 2px; }
+
+/* Shot quality */
+.rp-shots { display: grid; gap: 10px; }
+.rp-shot { fill: var(--pv-sheet); stroke: currentColor; stroke-width: 2; }
+.rp-shot.goal { fill: currentColor; stroke: var(--pv-sheet); stroke-width: 1.5; }
+.rp-src-bars { display: grid; gap: 8px; }
+.rp-src-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.rp-src-row .rp-row { color: var(--tc); }
+.rp-stack { display: flex; gap: 2px; height: 26px; min-width: 40px; }
+.rp-stack i { display: flex; align-items: center; padding: 0 6px; background: var(--tc); overflow: hidden; font-style: normal; }
+.rp-stack i:first-child { border-radius: 4px 0 0 4px; }
+.rp-stack i:last-child { border-radius: 0 4px 4px 0; }
+.rp-stack i b { font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; }
+/* Lighter steps of the team's colour for the other sources, mixed with the card (not faded, so the labels stay sharp). */
+.rp-stack .s1 { background: color-mix(in oklab, var(--tc) 72%, var(--pv-sheet)); }
+.rp-stack .s2 { background: color-mix(in oklab, var(--tc) 45%, var(--pv-sheet)); }
+.rp-stack .s3 { background: color-mix(in oklab, var(--tc) 25%, var(--pv-sheet)); }
+.rp-stack .s2 b, .rp-stack .s3 b { color: var(--pv-ink); }
+.rp-sq-nums { display: flex; gap: 14px; font-size: 13px; white-space: nowrap; }
+.rp-sq-nums span[title] { cursor: help; }
+.rp-key .k-src::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--pv-ink-2); }
+.rp-key .k-src.s1::before { background: color-mix(in oklab, var(--pv-ink-2) 72%, var(--pv-sheet)); }
+.rp-key .k-src.s2::before { background: color-mix(in oklab, var(--pv-ink-2) 45%, var(--pv-sheet)); }
+.rp-key .k-src.s3::before { background: color-mix(in oklab, var(--pv-ink-2) 25%, var(--pv-sheet)); }
+
+/* Attacking lanes */
+.rp-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--pv-s4); }
+.rp-lane { margin: 0; display: grid; gap: 6px; }
+.rp-lane .rp-row { color: currentColor; font-weight: 700; font-size: 14px; }
+.rp-turf { fill: color-mix(in oklab, var(--pv-pitch, #DDE6DF) 60%, var(--pv-sheet)); stroke: var(--pv-hair); }
+.rp-turf-line { stroke: var(--pv-hair); stroke-width: 1.5; }
+.rp-turf-line.third { stroke-dasharray: 4 4; }
+.rp-turf-line.lane { stroke-dasharray: 2 6; }
+.rp-arrow { fill: currentColor; opacity: .85; }
+.rp-lane-k { font-size: 12px; font-weight: 600; fill: var(--pv-ink-2); }
+.rp-lane-pct { font-family: var(--pv-display); font-weight: 800; font-size: 20px; fill: var(--pv-ink); }
+.rp-lane-xg { font-size: 12px; font-weight: 600; fill: var(--pv-ink-2); }
+
+/* Style profile */
+.rp-radar { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--pv-s3); align-items: center; }
+.rp-ring { fill: none; stroke: var(--pv-hair); stroke-width: 1; }
+.rp-spoke { stroke: var(--pv-hair); stroke-width: 1; }
+.rp-radar-k { font-size: 12px; fill: var(--pv-ink); font-weight: 600; }
+.rp-ring-k { font-size: 10px; }
+.rp-area { fill: currentColor; fill-opacity: .18; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.rp-vertex { fill: currentColor; stroke: var(--pv-sheet); stroke-width: 2; }
+.rp-pf-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.rp-pf-table th, .rp-pf-table td { padding: 4px 6px; border-top: 1px solid var(--pv-hair); text-align: left; }
+.rp-pf-table thead th { border-top: 0; color: var(--pv-ink-2); font-weight: 600; }
+.rp-pf-table thead .home { color: var(--pv-home); }
+.rp-pf-table thead .away { color: var(--pv-away); }
+
+/* Key players */
+.rp-pl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rp-pl li { display: grid; grid-template-columns: minmax(8em, 11em) minmax(0, 1fr) 7.5em; gap: 10px; align-items: center; }
+.rp-pl-name { font-weight: 600; font-size: 13px; color: var(--pv-ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-pl-name:hover { text-decoration: underline; }
+.rp-pl-name .num { display: inline-block; min-width: 2ch; text-align: right; color: var(--pv-ink-2); margin-right: 4px; }
+.rp-pl-name small { color: var(--tc); font-weight: 700; margin-left: 4px; }
+.rp-pl-bar { display: flex; gap: 2px; height: 18px; min-width: 4px; }
+.rp-pl-bar i { display: block; height: 100%; }
+.rp-pl-bar .xg { background: var(--tc); border-radius: 4px 0 0 4px; }
+.rp-pl-bar .xa { background: color-mix(in oklab, var(--tc) 40%, var(--pv-sheet)); border-radius: 0 4px 4px 0; }
+.rp-pl-bar i:only-child { border-radius: 4px; }
+.rp-pl-n { font-weight: 700; font-size: 13px; }
+.rp-pl-n small { font-weight: 500; color: var(--pv-ink-2); }
+.rp-key .k-xg::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--pv-ink-2); }
+.rp-key .k-xa::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: color-mix(in oklab, var(--pv-ink-2) 40%, var(--pv-sheet)); }
+.pt-table tbody tr.linked { background: var(--pv-sunk); box-shadow: inset 4px 0 var(--pv-ink-2); }
+/* While the analysis loads: an empty outline where it will go, no numbers. */
+.rp-wait { grid-column: 1 / -1; min-height: 320px; border-radius: var(--pv-r-panel); border: 1.5px dashed var(--pv-hair); background: transparent; }
+.rp-failed { padding: var(--pv-s3) var(--pv-s4); border: 1.5px dashed var(--pv-hair); border-radius: var(--pv-r-panel); font-size: var(--pv-fs-sm); }
+
+/* C20 (#391): "so far" while the match is on; blocks not reached; the fan's band; the Stats tab's report. */
+.rp-live { font-size: var(--pv-fs-xs); font-weight: 700; padding: 2px 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); color: var(--pv-ink-2); }
+.rp-note { font-size: var(--pv-fs-sm); margin: 0; }
+.rp-hd h2 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); line-height: 1.1; }
+.rp-todo rect { fill: none; stroke: var(--pv-hair); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.rp-todo text { font-size: 12px; fill: var(--pv-ink-2); }
+.rp-dsv-bar .seg { min-width: 8px; }
+.rp-kicker { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-lg); color: var(--pv-ink-2); margin: 0; }
+.stats-report { gap: var(--pv-s3); }
+.stats-page .rp-sec h2 { scroll-margin-top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + var(--pv-sub-h, 0px) + 12px); }
+.rp-fan { display: grid; gap: var(--pv-s3); }
+.rp-band { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+.rp-band li { display: grid; gap: 4px; padding: 10px 12px; border-radius: 6px; background: var(--pv-sunk); min-height: 64px; align-content: space-between; }
+.rp-band li.b-home, .rp-band li.b-away { background: var(--c); color: #fff; }
+.rp-band li.b-todo { background: transparent; border: 1.5px dashed var(--pv-hair); color: var(--pv-ink-2); }
+.rp-band-k { font-size: 12px; font-weight: 600; opacity: .85; }
+.rp-band-v { font-weight: 700; font-size: 14px; }
+.rp.stack > .rp-sec { grid-column: 1 / -1; }
+.rp.stack .rp-radar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-width: 1000px; }
