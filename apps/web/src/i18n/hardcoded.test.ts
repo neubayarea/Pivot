@@ -84,7 +84,7 @@ describe("codes from the API have words in every language", () => {
     expect(missing("event.type", contractEnum("MatchEvent", "type").filter((v) => !own.has(v)))).toEqual([]);
   });
 
-  it("agents, step statuses and verifier issues (the AI work log)", () => {
+  it("agents, step statuses and verifier issues (the AI log)", () => {
     expect(missing("trace.agent", contractEnum("AgentTrace", "agent"))).toEqual([]);
     expect(missing("trace.status", contractEnum("AgentTrace", "status"))).toEqual([]);
     expect(missing("trace.issue", contractEnum("VerifierIssue", "code"))).toEqual([]);

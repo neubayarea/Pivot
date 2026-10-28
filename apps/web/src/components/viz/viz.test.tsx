@@ -53,7 +53,7 @@ describe("shot map", () => {
 
   it("analyst: size and tooltip carry xG; fan: no xG anywhere, a legend in words", () => {
     const analyst = render(<ShotMap data={SHOTS} squads={SQUADS} />);
-    expect(analyst).toContain("10′ · A. Moreau · Goal · xG 0.30");
+    expect(analyst).toContain("10′, A. Moreau: Goal, xG 0.30");
     expect(analyst).toContain("Home: 2 shots, 1 scored, xG 0.32");
     const fan = render(<ShotMap data={SHOTS} squads={SQUADS} />, "?lang=en&mode=fan");
     expect(fan).not.toContain("xG");

@@ -196,7 +196,7 @@ describe("failed runs", () => {
     expect(html).toContain("The simulation did not finish");
     expect(html).toContain("Run again");
     expect(html).toContain("Try another");
-    expect(failureText(new ApiError(422, "x"), en)).toContain("(422)");
+    expect(failureText(new ApiError(422, "x"), en)).toContain("(error 422)");
     expect(failureText(new ApiError(502, "x"), en)).toContain("Could not reach the server");
     expect(failureText(new TypeError("Failed to fetch"), en)).toContain("Could not reach the server");
   });
@@ -268,11 +268,11 @@ describe("mock mode (?fixture=1)", () => {
     );
     const html = page("/whatif/p63");
     expect(html).toContain('href="/pivot/p63"');
-    expect(html).toContain("Pivot 64′: Substitution flipped the left flank");   // elapsed minute 63
+    expect(html).toContain("Turning point 64′: Substitution flipped the left flank");   // elapsed minute 63
     expect(html).toContain("Simulated, not a prediction");
     expect(html).toContain("Loading the scenarios…");
     expect(html).toContain("Pick a scenario to set up the replay.");
-    expect(page("/whatif/nope")).toContain("Pivot not found");
+    expect(page("/whatif/nope")).toContain("Turning point not found");
   });
 });
 
@@ -401,7 +401,7 @@ describe("the numbers behind the analyst's answer (Ax91)", () => {
     expect(questionOf(o("cancel_substitution"), en, "55", null, "Tessmouth United")).toBe("What if Tessmouth United hadn't made the 55′ substitution?");
     expect(questionOf(o("move_substitution", "", { new_minute: 74 }), en, "55", null, "Tessmouth United"))
       .toBe("What if Tessmouth United had made the 55′ substitution at 75′ instead?");
-    expect(questionOf(o("change_press", "Press higher from 12′"), translator("zh"), "12", null, "Vantry Town")).toMatch(/^假如Vantry Town从 12′ 起压得更靠前/);
+    expect(questionOf(o("change_press", "Press higher from 12′"), translator("zh"), "12", null, "Vantry Town")).toMatch(/^假如 Vantry Town 从 12′ 起压得更靠前/);
     expect(questionOf(o("remove_red_card"), translator("es"), "40", "A. Noroa", null)).toBe("¿Y si A. Noroa no hubiera sido expulsado en el 40′?");
   });
 });
