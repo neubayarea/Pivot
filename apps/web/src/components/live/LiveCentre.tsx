@@ -58,7 +58,8 @@ function LiveMetrics({ upToMin }: { upToMin: number }) {
   const from = Math.max(0, upToMin - 10);
   const win = useVizData<TeamStatsReport>(upToMin > 0 ? `/api/matches/${encodeURIComponent(match.match_id)}/stats?from=${from}&to=${upToMin}` : null);
   const analysis = useAnalysis(match.match_id, upToMin * 60);
-  const rolling = (analysis.data as unknown as { rolling?: Rolling } | null)?.rolling?.filter((r) => r.to <= upToMin + 5).slice(-8) ?? [];
+  // Whole five-minute blocks only: the block still being played has nulls and would draw a false dip.
+  const rolling = (analysis.data as unknown as { rolling?: Rolling } | null)?.rolling?.filter((r) => r.to - r.from === 5 && r.to <= upToMin).slice(-8) ?? [];
   const scope = win.data?.scopes[0];
   if (!scope) return null;
   return (
