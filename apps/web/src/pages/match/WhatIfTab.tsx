@@ -1,9 +1,8 @@
-// 假如 · What-if (C13 #316): the lab gets a tab of its own. Pick a turning point here, then a change
+// 假如 · What-if (C13 #316): the lab gets a tab of its own. A fan gets the ranked list in FanWhatIfs (Ax91). Pick a turning point here, then a change
 // in the lab; the first turning point is open when the link names none (`&pivot=`). Each chip names
 // its turning point, so the lab's own back link is not needed here.
 import { useEffect, useState } from "react";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
-import Stamp from "../../components/Stamp";
 import { RunProgress, WhatIfAnswer, scoreDashes } from "../../components/WhatIf";
 import { pivotHeadline } from "../../components/PivotList";
 import { useClock } from "../../data/clock";
@@ -13,6 +12,7 @@ import { forYourTeam, usePersona } from "../../data/persona";
 import { optionLabel, useOptionMinute, useScenarioRun, type ScenarioApi, type ScenarioOption } from "../../data/scenarios";
 import { useT } from "../../i18n";
 import { Lab, useScenarioSource } from "../WhatIfLab";
+import { FanWhatIfs } from "./FanWhatIfs";
 
 export function WhatIfTab({ moments, open, onPick }: { moments: Pivot[]; open: Pivot | null; onPick: (id: string) => void }) {
   const t = useT();
@@ -22,9 +22,10 @@ export function WhatIfTab({ moments, open, onPick }: { moments: Pivot[]; open: P
   // Ax77: the turning-point chips stick under the tabs.
   const row = useHeightVar("--pv-sub-h");
   const pivot = open ?? moments[0] ?? null;
-  // Ax91: the scenario the first answer shows, so a fan's lab does not show it a second time.
-  const [shown, setShown] = useState<string | null>(null);
+  const { fan } = usePersona();
   if (!pivot) return <p className="muted">{t("post.whatIfNone")}</p>;
+  // Ax91 (#431): a fan gets one ranked list of the match's biggest what-ifs, every turning point in it.
+  if (fan) return <FanWhatIfs moments={moments} source={source} />;
   return (
     <>
       {moments.length > 1 && (
@@ -39,9 +40,9 @@ export function WhatIfTab({ moments, open, onPick }: { moments: Pivot[]; open: P
           ))}
         </div>
       )}
-      <Featured key={`f-${pivot.pivot_id}`} pivot={pivot} source={source} onShown={setShown} />
+      <Featured key={`f-${pivot.pivot_id}`} pivot={pivot} source={source} />
       <div className="wi-tab">
-        <Lab key={pivot.pivot_id} pivotId={pivot.pivot_id} source={source} shownAbove={shown} />
+        <Lab key={pivot.pivot_id} pivotId={pivot.pivot_id} source={source} />
       </div>
     </>
   );
@@ -55,15 +56,13 @@ const STRIKING: ScenarioOption["type"][] = ["remove_goal", "remove_red_card", "c
  * before the viewer picks anything. With a ♥ team it is the change that would have helped that team.
  * A result run ahead (Bx14) answers at once; otherwise the usual progress shows while it runs.
  */
-function Featured({ pivot, source, onShown }: { pivot: Pivot; source: ScenarioApi; onShown: (id: string | null) => void }) {
+function Featured({ pivot, source }: { pivot: Pivot; source: ScenarioApi }) {
   const { teams } = useMatch();
   const t = useT();
-  const { side, fan } = usePersona();
+  const { side } = usePersona();
   const minuteOf = useOptionMinute();
   const [option, setOption] = useState<ScenarioOption | null>(null);
   const { state, run } = useScenarioRun(source);
-  const shownId = state.phase === "done" ? state.scenario.scenario_id : null;
-  useEffect(() => onShown(shownId), [shownId, onShown]);
   useEffect(() => {
     let alive = true;
     source.options(pivot.pivot_id).then((opts) => {
@@ -81,15 +80,13 @@ function Featured({ pivot, source, onShown }: { pivot: Pivot; source: ScenarioAp
   if (!option || state.phase === "failed" || state.phase === "idle") return null;
   const change = optionLabel(option, t, undefined, minuteOf(option));
   return (
-    <section className={`wi-feature ${fan ? "is-fan" : "is-an"}`} aria-labelledby="wi-feature-hd" aria-live="polite">
+    <section className="wi-feature is-an" aria-labelledby="wi-feature-hd" aria-live="polite">
       <h2 id="wi-feature-hd" tabIndex={-1}>{scoreDashes(t("wi.feature", { change }))}</h2>
       {state.phase === "done" ? (
         <>
           <WhatIfAnswer scenario={state.scenario} change={change} minute={minuteOf(option)}
             pressLower={/lower/i.test(option.label)} teams={teams} compact />
-          <p className="muted wi-feature-more">
-            {fan ? <Stamp tone="warn">{t("whatif.simulated")}</Stamp> : null} {t(fan ? "wi.featureMore" : "wi.an.featureMore")}
-          </p>
+          <p className="muted wi-feature-more">{t("wi.an.featureMore")}</p>
         </>
       ) : (
         <RunProgress scenario={state.phase === "running" ? state.scenario : null} />

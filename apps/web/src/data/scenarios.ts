@@ -45,6 +45,15 @@ const cache = new Map<string, Scenario>();
 export const cacheKey = (b: StartScenario) =>
   JSON.stringify([b.pivot_id, b.type, b.n_runs ?? DEFAULT_RUNS, Object.entries(b.params ?? {}).sort()]);
 export const clearScenarioCache = () => cache.clear();
+/** Keeps a finished run (Ax91: a stored answer read ahead for the fan's list), so asking again answers at once. */
+export const rememberScenario = (b: StartScenario, s: Scenario) => {
+  if (s.status === "completed" && s.result) cache.set(cacheKey(b), s);
+};
+/** The finished run for this question if this session has one. */
+export const knownScenario = (b: StartScenario) => {
+  const s = cache.get(cacheKey(b));
+  return s?.result ? (s as Scenario & { result: SimResult }) : undefined;
+};
 
 type RunOpts = {
   onUpdate: (s: Scenario) => void;

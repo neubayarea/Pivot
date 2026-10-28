@@ -53,6 +53,8 @@ export type ScenarioOption = {
   team: "home" | "away" | null;
   /** move_substitution: `new_minute`, an elapsed minute (0-based). */
   params: Record<string, number | string>;
+  /** A result at the default run count is already stored, so asking answers at once (Ax91). */
+  stored?: boolean;
 };
 
 export type RunCount = ScenarioSpec["n_runs"];

@@ -294,6 +294,22 @@ class WhatIf:
                                                             o.params)) <= DEFAULT_RUNS
                 else o for o in options]
 
+    def answered(self, pivot_id: str, match: Match, options: list[ScenarioOption]) -> set[str]:
+        """The enabled chips with a finished result at the default run count (Ax91): a fan's list leads with them."""
+        replay = self.replays.get(match.match_id)
+        if replay is None:
+            return set()
+        stored = self._stored(match.match_id)
+        done: set[str] = set()
+        for o in options:
+            if not o.enabled or o.at_minute is None:
+                continue
+            key = cache_key(replay.version, o.to_spec(pivot_id, seed_base=seed_base(pivot_id, o.type), n_runs=DEFAULT_RUNS))
+            known = self._keys.get(key)
+            if (known and self.scenarios[known].status == "completed") or getattr(stored.get(key), "result", None) is not None:
+                done.add(o.type)
+        return done
+
     @staticmethod
     def _chip(version: str, pivot_id: str, type_: str, target: str | None, params: dict[str, int | str]) -> str:
         """A chip on one version of the match, at any number of runs: the cache key without `n_runs`."""
@@ -675,14 +691,17 @@ async def list_scenarios(request: Request, pivot_id: str) -> list[dict[str, Any]
     """The What-if chips of a pivot ("{match_id}:p{minute}"), pivot's own trigger first.
 
     Each is `{type, label, enabled, disabled_reason, target_event_id, at_minute, team, params}`;
-    a disabled one says why in `disabled_reason`.
+    a disabled one says why in `disabled_reason`. `stored` is true when a result at the default run
+    count is already there, so asking for it answers at once (Ax91).
     """
     whatif = _whatif(request)
     try:
         pivot, match = await whatif.pivot(pivot_id)
     except LookupError as e:
         raise HTTPException(404, str(e)) from None
-    return [chip(o) for o in await whatif.options(pivot, match)]
+    options = await whatif.options(pivot, match)
+    done = await asyncio.to_thread(whatif.answered, pivot.pivot_id, match, options)
+    return [{**chip(o), "stored": o.type in done} for o in options]
 
 
 @router.post("/scenarios", status_code=202)
