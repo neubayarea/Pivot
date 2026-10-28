@@ -401,7 +401,7 @@ describe("the numbers behind the analyst's answer (Ax91)", () => {
     expect(questionOf(o("cancel_substitution"), en, "55", null, "Tessmouth United")).toBe("What if Tessmouth United hadn't made the 55′ substitution?");
     expect(questionOf(o("move_substitution", "", { new_minute: 74 }), en, "55", null, "Tessmouth United"))
       .toBe("What if Tessmouth United had made the 55′ substitution at 75′ instead?");
-    expect(questionOf(o("change_press", "Press higher from 12′"), translator("zh"), "12", null, "Vantry Town")).toMatch(/^假如Vantry Town从 12′ 起压得更靠前/);
+    expect(questionOf(o("change_press", "Press higher from 12′"), translator("zh"), "12", null, "Vantry Town")).toMatch(/^假如 Vantry Town 从 12′ 起压得更靠前/);
     expect(questionOf(o("remove_red_card"), translator("es"), "40", "A. Noroa", null)).toBe("¿Y si A. Noroa no hubiera sido expulsado en el 40′?");
   });
 });
