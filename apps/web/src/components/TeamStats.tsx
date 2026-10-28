@@ -28,6 +28,7 @@ export function statText(v: number | null | undefined, m: StatMetricInfo): strin
   if (m.unit === "pct") return `${v.toFixed(v % 1 ? 1 : 0)}%`;
   if (m.unit === "xg" || m.unit === "index") return v.toFixed(2);
   if (m.unit === "m" || m.unit === "km") return v.toFixed(1);
+  if (m.unit === "ratio") return v.toFixed(1);
   return String(Math.round(v));
 }
 

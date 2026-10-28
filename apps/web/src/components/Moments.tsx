@@ -227,6 +227,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, chi
           {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims: countOf(t, "numbers", claims), evidence: countOf(t, "events", events) })}</dd></div>}
           <div className="open-more"><Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link></div>
         </dl>
+        {cause && <p className="muted pivot-context-note">{t("moments.contextNote")}</p>}
       </div>
       {pivot.status === "degraded" && (
         <div className="banner warn" role="status">

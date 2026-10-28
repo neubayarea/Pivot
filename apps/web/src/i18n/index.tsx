@@ -12,7 +12,7 @@ export type Lang = ViewerPrefs["language"];
 export type MessageKey = keyof typeof en;
 export type Messages = Partial<Record<MessageKey, string>>;
 export type Vars = Record<string, string | number>;
-export type T = (key: MessageKey, vars?: Vars) => string;
+export type T = ((key: MessageKey, vars?: Vars) => string) & { language?: Lang };
 
 export const LANGS: readonly Lang[] = ["en", "zh", "es"];
 const TABLES: Record<Lang, Messages> = { en, zh, es };
@@ -46,7 +46,7 @@ const warned = new Set<string>();
 
 /** A t() for one language. `tables` is only swapped in tests. */
 export function translator(lang: Lang, tables: Record<Lang, Messages> = TABLES): T {
-  return (key, vars) => {
+  return Object.assign((key: MessageKey, vars?: Vars) => {
     let text = tables[lang][key];
     if (text === undefined) {
       if (import.meta.env.DEV && lang !== "en" && !warned.has(`${lang}:${key}`)) {
@@ -56,7 +56,7 @@ export function translator(lang: Lang, tables: Record<Lang, Messages> = TABLES):
       text = tables.en[key] ?? key;
     }
     return vars ? text.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m)) : text;
-  };
+  }, { language: lang });
 }
 
 /** The saved choice; null when there is none or storage is blocked (private mode, sandboxed frame). */

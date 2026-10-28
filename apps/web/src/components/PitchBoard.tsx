@@ -119,14 +119,17 @@ export default function PitchBoard({ simple = false }: { simple?: boolean } = {}
   const names = { home: teams.home.short_name, away: teams.away.short_name };
   // Ax59: a player picked in the list or on the pitch takes over the card until Back.
   const roster = (marked: ReadonlySet<string>) => (
-    <Card title={t("board.roster")} className="more-roster">
+    <details className="card more-roster" open={picked ? true : undefined}>
+      <summary>{t("board.roster")}</summary>
+      <div className="live-roster-body">
       {picked && players.has(picked) ? (
         <PlayerDetail player={players.get(picked)!} role={roleOf(picked)} onBack={() => setPicked(null)} />
       ) : (
         <Roster squads={squads} frame={frame} now={now} events={events} roleOf={roleOf} picked={picked} marked={marked}
           onPick={setPicked} names={names} />
       )}
-    </Card>
+      </div>
+    </details>
   );
   if (missing) {
     return (

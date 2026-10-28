@@ -3,7 +3,13 @@
 .live-lay { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 0 16px 16px;
   grid-template-areas: "pitch" "side" "events" "stats" "below" "roster"; }
 .live-lay > .more-pitch { grid-area: pitch; }
-.live-lay > .more-roster { grid-area: roster; max-height: 420px; }
+.live-lay > .more-roster { grid-area: roster; display: block; height: auto; max-height: none; }
+.live-lay > .more-roster > summary { cursor: pointer; font-weight: 700; }
+.live-lay > .more-roster[open] > summary { margin-bottom: 12px; }
+.live-lay .live-roster-body { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; }
+.live-lay .more-events { display: grid; height: auto; max-height: none; min-width: 0; }
+.live-lay .more-events > .feed { max-height: 360px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.pivot-context-note { grid-column: 1 / -1; font-size: var(--pv-fs-sm); }
 .live-lay > .live-side { grid-area: side; display: grid; gap: 14px; align-content: start; min-width: 0; }
 .live-lay > .more-events { grid-area: events; }
 .live-lay > .more-stats { grid-area: stats; }
