@@ -16,7 +16,7 @@ from pivot_api.sims import Replay
 from pivot_api.whatif import NOT_REPLAYABLE, WhatIf, cache_key, seed_base
 from pivot_core.domain import OutcomeDist, Pivot, Scenario, ScenarioSpec, SimResult
 from pivot_core.sim.whatif import run_whatif
-from pivot_worker.models import OfflineModelClient, ScriptedModelClient
+from pivot_worker.models import ModelUnavailable, OfflineModelClient, ScriptedModelClient
 
 PIVOT_ID = f"{DEMO_MATCH_ID}:p61"
 CHIP_FIELDS = {"type", "label", "enabled", "disabled_reason", "target_event_id", "at_minute", "team", "params"}
@@ -367,3 +367,82 @@ def test_a_translation_is_stored_and_read_back_after_a_restart(tmp_path, monkeyp
 
     whatif, models, read, prewarmed = asyncio.run(after_restart())
     assert read == spanish and models.calls == [] and prewarmed == 1
+
+
+class SlowModel:
+    """A model that takes as long as the test likes to answer (#396: ~30 s in production)."""
+
+    def __init__(self) -> None:
+        self.calls, self.answer = 0, asyncio.Event()
+
+    async def complete_json(self, tier, messages, *, timeout):
+        self.calls += 1
+        await self.answer.wait()
+        raise ModelUnavailable("still thinking")
+
+
+def test_a_stored_template_comparison_is_answered_at_once_after_a_restart(tmp_path, monkeypatch):
+    """#396: a stored result whose comparison is the template is served straight away; the model is asked
+    again only in the background, and a failed retry leaves the stored answer as it was."""
+    monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("PIVOT_RESULTS_BACKEND", raising=False)
+
+    async def start():
+        adapters = build_adapters("local")
+        replays: dict[str, Replay] = {}
+        match_id, _ = await sims.load_fixture(adapters, sims.FIXTURE, replays)
+        return adapters, replays, match_id
+
+    async def pivot_on_a_substitution(adapters, match_id):
+        events = await adapters.matches.list_events(match_id)
+        sub = next(e for e in events if e.type == "substitution" and e.minute >= 60)
+        pivot = Pivot(pivot_id=f"{match_id}:p{sub.minute}", match_id=match_id, minute=sub.minute, direction="away",
+                      severity=2, status="confirmed", trigger_event_ids=[sub.event_id], chain_id="test")
+        await adapters.matches.upsert_pivot(pivot)
+        return pivot.pivot_id
+
+    async def first_run():
+        adapters, replays, match_id = await start()
+        pivot_id = await pivot_on_a_substitution(adapters, match_id)
+        whatif = WhatIf(adapters, replays, OfflineModelClient(), runner=FakeRunner(), workers=0)
+        whatif.start()
+        try:
+            scenario = await whatif.submit(pivot_id, "cancel_substitution")
+            while (scenario := whatif.get(scenario.scenario_id)).status not in ("completed", "failed"):
+                await asyncio.sleep(0.05)
+        finally:
+            await whatif.stop()
+        return pivot_id, scenario
+
+    pivot_id, first = asyncio.run(first_run())
+    assert first.status == "completed" and first.result.narrative.source == "template"
+
+    async def after_restart():
+        adapters, replays, match_id = await start()
+        await pivot_on_a_substitution(adapters, match_id)
+        model, runner = SlowModel(), FakeRunner()
+        whatif = WhatIf(adapters, replays, model, runner=runner, workers=0)
+        whatif.start()
+        try:
+            t0 = time.monotonic()
+            answer = await whatif.submit(pivot_id, "cancel_substitution")
+            took = time.monotonic() - t0
+            for _ in range(100):                          # the background rewrite asks the model
+                if model.calls:
+                    break
+                await asyncio.sleep(0.02)
+            asked = model.calls
+            model.answer.set()                            # it fails: the template stays the answer
+            for _ in range(200):
+                if whatif._queue.empty() and whatif.get(answer.scenario_id).status == "completed":
+                    await asyncio.sleep(0.1)
+                    break
+                await asyncio.sleep(0.02)
+            return answer, took, asked, runner, whatif.get(answer.scenario_id)
+        finally:
+            await whatif.stop()
+
+    answer, took, asked, runner, later = asyncio.run(after_restart())
+    assert answer.status == "completed" and answer.result == first.result and took < 1.0
+    assert asked >= 1 and runner.calls == []                 # asked again in the background, never replayed
+    assert later.status == "completed" and later.result == first.result

@@ -444,3 +444,48 @@ def test_333_the_writers_are_told_to_keep_club_names(p74):
 def test_333_the_explainer_is_told_the_headline_follows_the_momentum():
     text = ex.system_prompt(ViewerPrefs(), TEAMS_505).text
     assert "The headline is about `pivot.towards`" in text
+
+
+# --- #396: S2026-27-TES-VAN pivot ②. D. Sahaltessen scored for Tessmouth, and the model's headline, in
+# English and in Chinese, spelt him "Sahltessen". Nothing caught it: the name matched no player at all.
+
+TES_PLAYERS = {"h09": "D. Sahaltessen", "h07": "K. Morrowen", "a04": "J. Vantberg"}
+TES_TEAMS = {"home": "Tessmouth", "away": "Vanholm"}
+
+
+@pytest.fixture
+def tes_goal():
+    g = event("m064-s01200", 63, "shot", shot_outcome="goal", player_id="h09")
+    return {g.event_id: g}
+
+
+def misspelt(narrative, events, **kw):
+    return [m for c, m in issues(narrative, events, minute=64, team_names=TES_TEAMS, player_names=TES_PLAYERS, **kw)
+            if "not a name in this match" in m]
+
+
+@pytest.mark.parametrize("lang, headline, text", [
+    ("en", "Sahltessen's goal sparks Tessmouth fightback", "D. Sahaltessen scored for Tessmouth."),
+    ("zh", "Sahltessen的进球点燃Tessmouth反击", "D. Sahaltessen为Tessmouth进球。"),
+])
+def test_396_a_misspelt_player_name_is_sent_back(tes_goal, lang, headline, text):
+    bad = card(text, lang=lang, evidence=["m064-s01200"], headline=headline)
+    found = misspelt(bad, tes_goal)
+    assert len(found) == 1 and "The headline writes 'Sahltessen'" in found[0] and "'Sahaltessen'" in found[0]
+    code = next(c for c, m in issues(bad, tes_goal, minute=64, team_names=TES_TEAMS, player_names=TES_PLAYERS)
+                if "not a name in this match" in m)
+    assert code == "evidence_invalid"                           # fed back to the writer like the other checks
+    good = card(text, lang=lang, evidence=["m064-s01200"], headline=headline.replace("Sahltessen", "Sahaltessen"))
+    assert misspelt(good, tes_goal) == []
+    in_text = card(text.replace("Sahaltessen", "Sahaltesen"), lang=lang, evidence=["m064-s01200"],
+                   headline=headline.replace("Sahltessen", "Sahaltessen"))
+    assert ["Sentence 1 writes 'Sahaltesen'" in m for m in misspelt(in_text, tes_goal)] == [True]
+
+
+def test_396_real_words_teams_and_coaches_are_not_taken_for_misspelt_names(tes_goal):
+    # Common words near a surname ("Tomorrow"), the clubs and the players as written pass; so does the coach.
+    text = ("Tomorrow Tessmouth and Vanholm meet again; Morrowen and Vantberg watched, and coach "
+            "D. Sahaltessan smiled.")
+    narrative = card(text, evidence=["m064-s01200"], headline="Sahaltessen goal swings it")
+    assert misspelt(narrative, tes_goal, other_names=["D. Sahaltessan"]) == []
+    assert misspelt(narrative, tes_goal) != []                  # without the coach's name it is a near miss

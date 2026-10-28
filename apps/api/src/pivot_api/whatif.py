@@ -18,7 +18,8 @@ Progress and the end go out on the match's live channel as `scenario.progress` a
 A finished scenario is cached by (match version, pivot, type, target event, params, n_runs, seed_base), with a
 `seed_base` derived from the pivot and type, so the same question twice gets the same answer at once.
 The cache goes through the result store (files or Cosmos DB, Ax10/Ax11), so it survives a restart; a
-comparison that came from the template is written again on the first request after one.
+stored comparison that came from the template is served at once, and on the first request after a restart
+the model is asked for it again in the background (#396); its comparison replaces the template if it passes.
 
 Runs write the comparison in English. A GET with `?lang=` for another language gets a translation of
 that English comparison (Ax39, as Ax35 does for pivot cards): the model translates only the headline and
@@ -32,8 +33,8 @@ scenarios are translated into `PIVOT_PREWARM_LANGS` once its warm-up has run.
 2-core VM. So every chip of the recorded demo is run ahead of time on a bigger machine
 (scripts/make_whatif_fixture.py, Bx11) into `demo-1021.whatif.json` next to it, which is read at
 startup and used like the result store, by cache key; a file made for another version of the demo is
-ignored. A stored result is not replayed, only its comparison is asked of the model again, as for a
-template comparison in the store. At startup the warm-up asks for the comparison of each pivot's chips
+ignored. A stored result is not replayed, only its comparison is asked of the model again (in the
+background, the stored one is served meanwhile), as for a template comparison in the store. At startup the warm-up asks for the comparison of each pivot's chips
 in that file, and runs the first `PIVOT_WHATIF_WARM` chips of each pivot that are not in it, in the
 background, after anything a viewer asks for.
 
@@ -330,9 +331,11 @@ class WhatIf:
             self._keep(key, stored)
             if stored.result.narrative is not None and stored.result.narrative.source == "llm":
                 return stored
-            # The replays are kept; the comparison came from the template, so ask the model again.
-            return self._enqueue(stored.model_copy(update={"status": "running"}), key, option.label, replay,
-                                 priority, stored.result)
+            # The comparison came from the template. Answer with it at once (#396: not ~30 s of model calls
+            # first); the model gets another go in the background, behind what viewers ask for, and a
+            # comparison it writes replaces the template when it passes.
+            self._enqueue(stored, key, option.label, replay, WARM, stored.result)
+            return stored
         if self._queue.qsize() >= self.max_queued:
             raise OverflowError("too many what-if scenarios are waiting; try again in a minute")
         scenario = Scenario(scenario_id=f"{match.match_id}:s{uuid.uuid4().hex[:12]}", match_id=match.match_id,
@@ -560,6 +563,8 @@ class WhatIf:
                 raise
             except Exception:                 # one bad scenario must not stop the queue
                 log.exception("what-if %s failed", job.scenario_id)
+                if job.result is not None and self.scenarios[job.scenario_id].status == "completed":
+                    continue                  # a background rewrite of a stored answer: keep that answer
                 await self._update(job.scenario_id, "scenario.progress", status="failed")
 
     async def _run(self, job: Job) -> None:
@@ -595,6 +600,9 @@ class WhatIf:
             await steps.record(Step("executor", f"{runs} replays per arm from {spec.at_minute + 1}' in "
                                                 f"{time.perf_counter() - t0:.1f}s"))
         narrative = await self._compare(scenario, result, job.label, steps, chain)
+        kept = scenario.result.narrative if scenario.status == "completed" and scenario.result else None
+        if kept is not None and narrative.source != "llm":
+            return                            # a background rewrite that fell back again: the stored answer stays
         done = await self._update(job.scenario_id, "scenario.completed", status="completed", done=total,
                                   result=result.model_copy(update={"narrative": narrative}))
         if self.adapters.results is not None:

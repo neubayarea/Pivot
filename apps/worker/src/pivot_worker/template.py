@@ -68,8 +68,15 @@ def _label(metric: str, lang: str, fan: bool) -> str:
     return FAN_NOUNS_EN.get(metric, term.fan_label) if fan else term.label
 
 
+# "The next five minutes" reads as the minutes after the event just named; when that event came earlier than
+# the pivot, the stat sentence says the minutes after the game turned instead (#396).
+_LATER = {"en": ("in the next five minutes", "in the five minutes after the game turned"),
+          "zh": ("此后五分钟", "比赛转折后五分钟"),
+          "es": ("En los cinco minutos siguientes", "En los cinco minutos tras el giro del partido")}
+
+
 def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, evidence: list[str],
-                   fan: bool = False, lang: str = "en") -> ExplanationSentence | None:
+                   fan: bool = False, lang: str = "en", found: Sequence[MatchEvent] = ()) -> ExplanationSentence | None:
     """The biggest change for `side`: a rise if the match turned their way, a fall if it turned against them."""
     m = c.minute
     before, after = (max(0, m - COMPARE_MINUTES), m), (m, m + COMPARE_MINUTES)
@@ -99,6 +106,9 @@ def _stat_sentence(c: PivotCandidate, side: str, team: str, stats: StatSource, e
     text = phrases.get(f"{key}_{metric}", phrases[key]).format(
         team=team, owner=possessive(team), label=label, verb=phrases[verb],
         a=format_value(a, unit), b=format_value(b, unit))
+    if c.minute - min((e.minute for e in found), default=c.minute) >= 3:
+        # Set off by an earlier event (#396: a substitution at 82', a pivot at 88'): the windows are the pivot's.
+        text = text.replace(*_LATER[lang])
     if lang == "es":
         text = text[0].upper() + text[1:]
     claims = [Claim(value=v, unit=unit, stat_ref=r) for v, r in ((a, refs[0]), (b, refs[1]))]
@@ -185,7 +195,7 @@ def template_explain(
         if note:
             sentences.append(note)
         stat = _stat_sentence(candidate, side, team, stats, ids[:4], fan=prefs.audience == "fan",
-                              lang=lang) if found else None
+                              lang=lang, found=found[:1]) if found else None
         if stat:
             sentences.append(stat)
         momentum = "momentum" if gaining else "momentum_lost"
