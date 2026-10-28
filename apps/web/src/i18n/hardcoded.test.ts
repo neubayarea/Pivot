@@ -17,8 +17,8 @@ const schemaText = Object.values(import.meta.glob<string>("../../../../packages/
 /** Attributes a viewer reads or hears. */
 const SHOWN_ATTRS = new Set(["aria-label", "title", "placeholder", "alt", "label", "aria-description"]);
 /** Words that are the same in every language: the product's name. */
-// "ivot" is the wordmark after the p mark (Ax86).
-const SAME_EVERYWHERE = new Set(["Pivot", "ivot"]);
+// "ivot" is the wordmark after the p mark (Ax86); "iv" sits between the p mark and the football (Dx10).
+const SAME_EVERYWHERE = new Set(["Pivot", "ivot", "iv"]);
 /** Elements whose text is code, not words (the field a number came from: `stat_ref.xg`). */
 const CODE_TAGS = new Set(["code", "pre"]);
 const WORDS = /[A-Za-z]{2,}/;

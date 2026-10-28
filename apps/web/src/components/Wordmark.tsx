@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Link } from "react-router-dom";
 
 // Carry3's "p" mark (Ax86). The same drawing is public/logo.svg; here it is inline so the letter takes the bar's text colour.
@@ -13,9 +14,43 @@ function Mark() {
   );
 }
 
-/** The site's name in the bar: the mark stands in for the first letter, so it reads "pivot". With `to` it is a link home. */
+// Dx10: a football for the "o". Centre panel in Pivot yellow, the other panels ink; the rim takes the text
+// colour, so the ball keeps its edge on the dark bar. The same drawing is in public/wordmark.svg and favicon.svg.
+const pentagon = (cx: number, cy: number, r: number, deg: number) =>
+  [0, 1, 2, 3, 4].map((k) => {
+    const a = ((deg + 72 * k) * Math.PI) / 180;
+    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+  }).join(" ");
+const SPOKES = [0, 1, 2, 3, 4].map((k) => {
+  const deg = -90 + 72 * k;
+  const [ux, uy] = [Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180)];
+  return { patch: pentagon(50 * ux, 50 * uy, 13.5, deg + 180), x1: 18 * ux, y1: 18 * uy, x2: 36.5 * ux, y2: 36.5 * uy };
+});
+
+/** The football that stands in for the "o". */
+function Ball() {
+  const clip = `wm-ball-${useId()}`;
+  return (
+    <svg className="wordmark-o" viewBox="-50 -50 100 100" aria-hidden="true" focusable="false">
+      {/* The panels a little smaller than the rim, so a light rim never covers a patch. */}
+      <g transform="scale(.935)">
+        <clipPath id={clip}><circle r={47} /></clipPath>
+        <circle r={47} fill="#FFFFFF" />
+        <g clipPath={`url(#${clip})`} fill="#121418" stroke="#121418" strokeWidth={3.5} strokeLinejoin="round">
+          {SPOKES.map((s, i) => (
+            <g key={i}><polygon points={s.patch} /><line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} /></g>
+          ))}
+        </g>
+        <polygon points={pentagon(0, 0, 18, -90)} fill="#FFCC1F" stroke="#121418" strokeWidth={3.5} strokeLinejoin="round" />
+      </g>
+      <circle r={47} fill="none" stroke="currentColor" strokeWidth={6} />
+    </svg>
+  );
+}
+
+/** The site's name in the bar: the p mark and a football stand in for two letters, so it reads "pivot". With `to` it is a link home. */
 export default function Wordmark({ to }: { to?: string }) {
-  const body = <><Mark /><span aria-hidden="true">ivot</span></>;
+  const body = <><Mark /><span aria-hidden="true">iv</span><Ball /><span aria-hidden="true">t</span></>;
   return to
     ? <Link to={to} className="brand" aria-label="Pivot">{body}</Link>
     : <span className="brand" role="img" aria-label="Pivot">{body}</span>;
