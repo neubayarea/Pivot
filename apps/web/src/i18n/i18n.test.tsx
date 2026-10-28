@@ -157,8 +157,8 @@ describe("missing translations", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const t = translator("zh", { en, zh: { "board.events": "比赛事件" }, es: {} });
     expect(t("board.events")).toBe("比赛事件");
-    expect(t("board.pivots")).toBe("Pivots");
-    expect(t("board.pivots")).toBe("Pivots");
+    expect(t("board.pivots")).toBe("Turning points");
+    expect(t("board.pivots")).toBe("Turning points");
     expect(warn).toHaveBeenCalledTimes(1);
   });
 

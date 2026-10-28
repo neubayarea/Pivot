@@ -132,7 +132,7 @@ describe("board without pivots", () => {
     // C11: the score is in the header band; the page no longer repeats it in a kicker.
     expect(html).not.toContain("Full time: Harbour City 2–2 Northgate Rovers");
     expect(html).toContain("No clear swing in momentum in this match");
-    expect(html).not.toContain("Watching for the first pivot");
+    expect(html).not.toContain("Watching for the first turning point");
     expect(html).not.toContain("No pivots yet");
     expect(html).not.toContain("Kick-off");
     expect(html).toContain("Key moments");
@@ -152,8 +152,8 @@ describe("board without pivots", () => {
     const live = SEED_404.filter((e) => e.t < H2 + 2000);
     const html = render(view(live, "live"));
     expect(html).toContain("Kick-off: Harbour City");
-    expect(html).toContain("Watching for the first pivot");
-    expect(html).toContain("No pivots yet. Watching the momentum line.");
+    expect(html).toContain("Watching for the first turning point");
+    expect(html).toContain("No turning points yet. Watching the momentum line.");
     expect(html).not.toContain("No clear swing");
     const ht = render(view([ev({ event_id: "e1", type: "period_end", team: "home", period: 1, period_t: 2830, t: 2830 })], "live"));
     expect(ht).toContain("Half-time: Harbour City");
