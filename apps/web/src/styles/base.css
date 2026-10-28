@@ -24,9 +24,10 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Site bar: brand, which match, language, AI log ---------- */
 .top { background: var(--pv-bar); color: var(--pv-on-bar); display: flex; align-items: center; gap: 16px; padding: 8px 32px; flex-wrap: nowrap; font-size: var(--pv-fs-sm); }
-.brand { font-family: var(--pv-display); font-weight: 900; font-size: 26px; line-height: 1; display: flex; align-items: center; gap: 6px; text-decoration: none; color: var(--pv-on-bar); }
-/* The logo mark (Ax86): the p's bowl sits on the word's baseline, its stem drops below like a descender. */
-.brand-mark { width: auto; height: 26px; flex-shrink: 0; margin-bottom: -6px; }
+/* The wordmark (Ax86): the p mark stands in for the first letter of "ivot". The bowl is as tall as the x-height
+   (Hanken Grotesk 800 x-height is .493 em) and sits on the baseline; the stem drops below like a descender. */
+.brand { font-family: var(--pv-body); font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: -.02em; text-decoration: none; color: var(--pv-on-bar); white-space: nowrap; }
+.brand .wordmark-p { --xh: .493em; height: calc(var(--xh) / .7713); width: calc(var(--xh) / .7713 * .806); vertical-align: calc(var(--xh) / .7713 * -.2287); margin-right: .02em; overflow: visible; }
 .top .sp { flex: 1; }
 .top .seg { background: rgba(255, 255, 255, .06); }
 .top .seg button { color: var(--pv-on-bar); }
