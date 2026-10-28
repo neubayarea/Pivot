@@ -280,11 +280,11 @@ a.pv:hover { background: var(--pv-gold-soft); }
 .scrub input[type="range"]::-moz-range-track { background: transparent; }
 .scrub input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; background: var(--pv-gold); border: 1px solid var(--pv-hair); border-radius: 0; }
 .src { position: relative; cursor: help; text-decoration: underline dotted var(--pv-ink-2); text-underline-offset: 3px; }
-.src .tip { display: none; position: absolute; z-index: 5; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); min-width: 180px; padding: 6px 9px; background: var(--pv-bar); color: var(--pv-on-bar); border: 2px solid var(--pv-gold); font-family: var(--pv-label); font-size: 12px; font-weight: 600; line-height: 1.4; text-align: left; white-space: nowrap; }
+/* Sourced.tsx places the tip (fixed, inside the window) and shows it on hover or focus. */
+.src .tip { display: grid; visibility: hidden; position: fixed; z-index: 60; left: 0; top: 0; pointer-events: none; min-width: 180px; padding: 6px 9px; background: var(--pv-bar); color: var(--pv-on-bar); border: 2px solid var(--pv-gold); font-family: var(--pv-label); font-size: 12px; font-weight: 600; line-height: 1.4; text-align: left; white-space: nowrap; }
 .src .tip > * { display: block; }
 .src .tip b { color: var(--pv-gold); }
 .src .tip code { font-size: 11px; color: var(--pv-on-bar); opacity: .7; }
-.src:hover .tip, .src:focus .tip { display: grid; }
 table.ba { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 table.ba th { font-family: var(--pv-label); font-size: 11px; text-align: right; color: var(--pv-ink-2); padding: 3px 6px; border-bottom: 1px solid var(--pv-hair); }
 table.ba th:first-child, table.ba td:first-child { text-align: left; }
