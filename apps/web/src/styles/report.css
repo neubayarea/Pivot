@@ -157,3 +157,11 @@
 .rp-band-v { font-weight: 700; font-size: 14px; }
 .rp.stack > .rp-sec { grid-column: 1 / -1; }
 .rp.stack .rp-radar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-width: 1000px; }
+
+/* C21 (P0): a score state too short for per-90, and long words never running out of a card. */
+.rp-short .rp-cell { color: var(--pv-ink-2); }
+.rp-cell-k { display: block; font-size: 10px; color: var(--pv-ink-2); }
+.rp-short-note { display: block; font-weight: 500; font-size: 11px; color: var(--pv-ink-2); white-space: normal; max-width: 14em; }
+.rp-sec, .rp-sec > *, .post .kmet, .rp-dsv-key span { min-width: 0; }
+.rp-take, .rp-note, .rp-src, .rp-hd h2, .rp-hd h3, .rp-band-v { overflow-wrap: anywhere; }
+.rp-hd { flex-wrap: wrap; }
