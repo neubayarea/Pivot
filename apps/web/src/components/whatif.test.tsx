@@ -14,6 +14,7 @@ import {
 } from "../data/scenarios";
 import { translator } from "../i18n";
 import WhatIfLab from "../pages/WhatIfLab";
+import { questionOf } from "../pages/match/FanWhatIfs";
 import { ArmCompare, RunFailed, effectOf, expectedPoints, meaningOf, RunProgress, ScenarioChips, ScenarioResult, failureText, scoreDashes, storyLine } from "./WhatIf";
 
 const ev = (id: string, minute: number, team: "home" | "away", type: MatchEvent["type"], extra: Partial<MatchEvent> = {}) =>
@@ -391,5 +392,16 @@ describe("the numbers behind the analyst's answer (Ax91)", () => {
     expect(meaningOf(o("move_substitution", "", { new_minute: 74 }), en, "58")).toBe("The same substitution, made at 75′ instead.");
     expect(meaningOf(o("change_press", "Press lower from 12′"), translator("zh"), "12")).toBe("这支球队退得更深，把球让给对手。");
     expect(meaningOf(o("cancel_substitution"), translator("es"), "55")).toMatch(/suplente/);
+  });
+  it("asks each change as a fan's question, with the player or team and the minute (Ax91)", () => {
+    const o = (type: ScenarioOption["type"], label = "", params = {}) =>
+      ({ type, label, enabled: true, disabled_reason: null, target_event_id: null, at_minute: 16, team: "home", params }) as ScenarioOption;
+    expect(questionOf(o("remove_goal"), en, "17", "Z. Sadoseno", null)).toBe("What if Z. Sadoseno's 17′ goal hadn't counted?");
+    expect(questionOf(o("remove_goal"), en, "17", null, null)).toBe("What if the 17′ goal hadn't counted?");
+    expect(questionOf(o("cancel_substitution"), en, "55", null, "Tessmouth United")).toBe("What if Tessmouth United hadn't made the 55′ substitution?");
+    expect(questionOf(o("move_substitution", "", { new_minute: 74 }), en, "55", null, "Tessmouth United"))
+      .toBe("What if Tessmouth United had made the 55′ substitution at 75′ instead?");
+    expect(questionOf(o("change_press", "Press higher from 12′"), translator("zh"), "12", null, "Vantry Town")).toMatch(/^假如Vantry Town从 12′ 起压得更靠前/);
+    expect(questionOf(o("remove_red_card"), translator("es"), "40", "A. Noroa", null)).toBe("¿Y si A. Noroa no hubiera sido expulsado en el 40′?");
   });
 });

@@ -10,7 +10,7 @@ import { RunFailed, RunProgress, ScenarioChips, ScenarioResult, meaningOf } from
 import { useClock } from "../data/clock";
 import { useFixture, useMatch } from "../data/match";
 import { mockScenarioApi } from "../data/scenarioMock";
-import { numberLocale, scrollBehavior } from "../data/motion";
+import { numberLocale } from "../data/motion";
 import { forYourTeam, usePersona } from "../data/persona";
 import {
   DEFAULT_RUNS, MOVE_RANGE, RUN_COUNTS, clockMinute, liveScenarioApi, optionLabel, useOptionMinute, useScenarioRun, type RunCount,
@@ -45,11 +45,7 @@ export function useScenarioSource(): ScenarioApi {
   return useMemo(() => (fixture ? mockScenarioApi(() => read.current) : liveScenarioApi), [fixture]);
 }
 
-export function Lab({ pivotId, source, shownAbove = null }: {
-  pivotId: string; source: ScenarioApi;
-  /** The scenario the tab already shows above the lab (Ax91): a fan gets a pointer to it, not the same answer again. */
-  shownAbove?: string | null;
-}) {
+export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi }) {
   const { pivotDetail, teams, eventById } = useMatch();
   const { t } = usePrefs();
   const { minute } = useClock();
@@ -178,21 +174,7 @@ export function Lab({ pivotId, source, shownAbove = null }: {
             {state.phase === "failed" && (
               <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={tryAnother} />
             )}
-            {state.phase === "done" && (state.scenario.scenario_id === shownAbove ? (
-              <div className="wi-fan-same">
-                <p>{t("wi.fan.sameAbove")}</p>
-                <div className="comp-row">
-                  <Button variant="primary" onClick={() => {
-                    const hd = document.getElementById("wi-feature-hd");
-                    hd?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
-                    hd?.focus({ preventScroll: true });
-                  }}>{t("wi.fan.seeAbove")}</Button>
-                  <Button variant="ghost" onClick={tryAnother}>{t("whatif.tryAnother")}</Button>
-                </div>
-              </div>
-            ) : (
-              <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} source={source} />
-            ))}
+            {state.phase === "done" && <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} source={source} />}
           </div>
         </div>
       ) : (
