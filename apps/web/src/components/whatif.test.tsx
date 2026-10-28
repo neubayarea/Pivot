@@ -301,6 +301,18 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
       "Sin la roja del 38′, las opciones de victoria de Harbour City bajan del 82% al 46%, y el resultado más probable pasa de 3–1 a 1–1.");
   });
 
+  it("follows a fan's ♥ team instead of the outcome that moved most (Ax91)", () => {
+    // Cancel 55′ substitution at ①: the away win moved most (22% to 13%), but a Tessmouth fan reads Tessmouth's chance.
+    const cancel = { ...input, type: "cancel_substitution", minute: "55", change: "Cancel 55′ substitution",
+      teams: { ...teams, home: { ...teams.home, name: "Tessmouth United" }, away: { ...teams.away, name: "Vantry Town" } },
+      result: { ...withStats, baseline: d(0.4, 0.38, 0.22), counterfactual: d(0.48, 0.395, 0.125), significant: {} } };
+    expect(storyLine(cancel, en)).toMatch(/^Without the 55′ substitution, the chance of Vantry Town winning falls from 22% to 13%/);
+    expect(storyLine({ ...cancel, side: "home" }, en)).toMatch(/^Without the 55′ substitution, the chance of Tessmouth United winning rises from 40% to 48%/);
+    expect(storyLine({ ...cancel, side: "home" }, translator("zh"))).toMatch(/Tessmouth United 赢球的机会从 40% .*48%/);
+    expect(storyLine({ ...cancel, side: "home" }, translator("es"))).toMatch(/Tessmouth United .*40% .*48%/);
+    expect(storyLine({ ...cancel, side: "away" }, en)).toMatch(/the chance of Vantry Town winning falls from 22% to 13%/);
+  });
+
   it("drops the score for a result stored before the stats, and names other changes plainly", () => {
     const old = { ...input, result: { ...withStats, baseline_stats: null, counterfactual_stats: undefined } };
     expect(storyLine(old, en)).toBe("Without the 38′ red card, the chance of Harbour City winning falls from 82% to 46%.");
