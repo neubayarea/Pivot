@@ -55,7 +55,9 @@
 .live-metrics-strip .lc-metrics { margin: 0; }
 .live-lay.an { grid-template-areas: "metrics" "pitch" "events" "side" "stats" "roster"; }
 .live-lay .live-fan-numbers { padding: 16px 20px; }
-.live-fan-numbers .live-bars { gap: 10px; }
+.live-fan-numbers .live-bars { margin: 0; padding: 0; gap: 12px; }
+.live-fan-numbers .live-bars li { grid-template-columns: 76px auto minmax(0, 1fr) auto; grid-template-areas: "k h bar a"; gap: 8px; }
+.live-fan-numbers .live-bar-k { font-size: var(--pv-fs-sm); }
 .live-fan-numbers .live-bar-v { font-size: var(--pv-fs-xl); }
 @media (min-width: 1100px) {
   .live-lay.an { grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
