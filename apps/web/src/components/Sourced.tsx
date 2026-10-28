@@ -29,7 +29,7 @@ function place(anchor: HTMLElement, tip: HTMLElement) {
   tip.style.visibility = "visible";
 }
 
-/** A number with its source: hover or focus shows the stat_ref it was read from. A "from" claim
+/** A number with its source: hover or focus shows where it was read from (metric, team, window), in words. A "from" claim
  * (the earlier value of a "4 to 14" figure) adds its own window and value. */
 export default function Sourced({ claim, from, className = "", children }: { claim: Claim; from?: Claim; className?: string; children: ReactNode }) {
   const { teams, playerName } = useMatch();
@@ -65,7 +65,6 @@ export default function Sourced({ claim, from, className = "", children }: { cla
         <span>
           {span(statWindow)} · {formatValue(claim)}
         </span>
-        <code>stat_ref.{metric}</code>
       </span>
     </span>
   );
