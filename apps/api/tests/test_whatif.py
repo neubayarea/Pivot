@@ -19,7 +19,7 @@ from pivot_core.sim.whatif import run_whatif
 from pivot_worker.models import ModelUnavailable, OfflineModelClient, ScriptedModelClient
 
 PIVOT_ID = f"{DEMO_MATCH_ID}:p61"
-CHIP_FIELDS = {"type", "label", "enabled", "disabled_reason", "target_event_id", "at_minute", "team", "params"}
+CHIP_FIELDS = {"type", "label", "enabled", "disabled_reason", "target_event_id", "at_minute", "team", "params", "stored"}
 
 
 def dist(home: float, draw: float) -> OutcomeDist:
@@ -82,6 +82,13 @@ def test_chips_of_a_known_pivot(client):
     red = by_type["remove_red_card"]
     assert not red["enabled"] and red["disabled_reason"] == "No red card in this match"
     assert chips[0]["type"] == "cancel_substitution"            # the pivot's own trigger first
+    assert not any(c["stored"] for c in chips)                    # nothing run yet (Ax91)
+
+
+def test_a_finished_chip_is_marked_stored(client):
+    wait_done(client, client.post("/api/scenarios", json={"pivot_id": PIVOT_ID, "type": "cancel_substitution"}).json()["scenario_id"])
+    by_type = {c["type"]: c for c in client.get(f"/api/pivots/{PIVOT_ID}/scenarios").json()}
+    assert by_type["cancel_substitution"]["stored"] and not by_type["move_substitution"]["stored"]
 
 
 def test_a_match_without_a_replay_has_only_disabled_chips(client):
