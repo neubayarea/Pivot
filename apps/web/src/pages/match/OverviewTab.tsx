@@ -6,8 +6,9 @@
 // 概况 · Overview (Ax69, #316 #322): the tab that opens after the match, and it changes with who is
 // watching: its blocks run in `ORDER.fan.post` / `ORDER.analyst.post` (data/persona.ts). A fan starts
 // with their ♥ team's match, the ★ player and the story of the match in cards, then the momentum line;
-// an analyst starts with the momentum line and the open turning point. Both get the key moments and
-// the five core team stats, and the AI's work log is a link at the bottom.
+// an analyst starts with the momentum line and the open turning point. Both get the key moments; a fan
+// also gets the five core team stats and the set pieces and shots, which an analyst finds on the Stats
+// tab instead (Ax89 #410). The AI's work log is a link at the bottom.
 import { Fragment, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Pivot1 as Pivot, TeamStatsReport } from "@pivot/contracts";
@@ -171,7 +172,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
       </OpenMoment>
     ),
     teamStats: (
-      <Section id="post-core" title={t("ov.core")} note={t(fan ? "ov.coreNoteFan" : "ov.coreNote")}>
+      <Section id="post-core" title={t("ov.core")} note={t("ov.coreNoteFan")}>
         <div className="card"><TeamStats state={report} only={CORE} /></div>
       </Section>
     ),
@@ -193,6 +194,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
     ),
   };
   // The blocks in the order each audience reads them (data/persona.ts); a fan also gets the core five, after the key moments.
+  // An analyst has the key numbers at the top already, and set pieces on the Stats tab (Ax89 #410).
   const order: string[] = [...persona.order.post];
   if (!fan) order.unshift("xgRace", "report");
   if (fan && !order.includes("teamStats")) order.splice(order.indexOf("keys") + 1, 0, "teamStats");

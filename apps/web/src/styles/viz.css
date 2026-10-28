@@ -42,3 +42,18 @@
 .viz-ghost line { stroke-width: 1.5; stroke-dasharray: 3 3; opacity: .55; }
 .viz-ghost circle { fill: none; stroke-width: 1.5; opacity: .45; }
 .viz-subs { display: inline-flex; align-items: center; gap: 6px; font-size: var(--pv-fs-sm); justify-self: start; cursor: pointer; }
+
+/* Ax88: the pass network's fan sentence, analyst controls, counts on the lines and the most involved. */
+.viz-net-most { margin: 0; font-size: var(--pv-fs-md); font-weight: 700; letter-spacing: -.01em; }
+.viz-net-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.viz-net-min { display: inline-flex; align-items: center; gap: 10px; font-size: var(--pv-fs-sm); color: var(--pv-ink-2); }
+.viz-net-min input[type="range"] { width: 140px; accent-color: var(--pv-ink); }
+.viz-net-min b { min-width: 2ch; color: var(--pv-ink); }
+.viz-node.faded { opacity: .28; }
+.viz-hub { fill: none; stroke: var(--pv-ink); stroke-width: 2.5; }
+.viz-edge-n { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; fill: var(--pv-ink);
+  paint-order: stroke; stroke: var(--pv-pitch); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.viz-edge-n.fan { font-size: 12px; }
+.viz-net-hubs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; font-size: var(--pv-fs-sm); }
+.viz-net-hubs ol { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; }
+.viz-net-hubs li .num { margin-left: 6px; color: var(--pv-ink-2); }

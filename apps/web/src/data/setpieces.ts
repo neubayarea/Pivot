@@ -13,9 +13,17 @@
 // - A free kick within SHOOTING_M of the goal it attacks is "shooting" (a direct shot is on); one in
 //   the attacking third otherwise is "attacking"; the rest are "deep" and hidden by default.
 // - At the kick: who stands in the penalty box. Each attacker in the box (the taker aside) is paired
-//   with the nearest free defender (keeper aside), closest pairs first; a pair within MARK_M is a
-//   marker. Three in five or more attackers marked reads "man", one in three or fewer "zonal", in
-//   between "mixed"; fewer than two attackers in the box is too few to say.
+//   with the nearest free defender (keeper aside), closest pairs first; a pair within MARK_M (a free
+//   kick) or CORNER_MARK_M (a corner) is a marker. Fewer than two attackers in the box is too few to say.
+// - A free kick: three in five or more attackers marked reads "man", one in three or fewer "zonal", in
+//   between "mixed". The simulator marks every attacker in the box there and puts the spare men in a
+//   line, so the attackers' share is the measure.
+// - A corner (Ax58, #273): the simulator's teams defend it zonal (six zones, two markers), mixed (four
+//   zones, markers on the rest) or man (two zones, a marker on every attacker), sim/setpieces.py. A
+//   marker stands a metre goal-side of his man; a zonal defender holds a spot within ZONE_DEPTH of the
+//   goal line (the posts, the six-yard line, the penalty spot) and marks nobody. Of those two kinds, fewer
+//   than ZONAL_MAN zonal reads "man", ZONAL_ZONAL or more "zonal", in between "mixed"; mixed needs two of
+//   each. Edge-of-box men (15 m out and more) are neither. Tuned on 12 simulated matches (#273's PR).
 // - A free kick's wall: two or more defenders WALL_NEAR–WALL_FAR metres from the ball, within
 //   WALL_DEG degrees of the line from the ball to the middle of the goal. The simulator builds its
 //   wall 9.15 m off (Ax44, sim/setpieces.py); the wider band also catches a wall still settling.
@@ -31,6 +39,13 @@ export const FOLLOW_S = 15;
 export const KICK_WITHIN = 240;
 export const SHOOTING_M = 30;
 export const MARK_M = 2.5;
+/** A corner's marker: closer than MARK_M, as a zone holder next to an attacker is often within 2.5 m. */
+export const CORNER_MARK_M = 1.75;
+/** A corner's zonal defenders stand this close to the goal line. */
+export const ZONE_DEPTH = 12;
+/** Share of zonal defenders among zonal and marking: below ZONAL_MAN man, from ZONAL_ZONAL zonal. */
+export const ZONAL_MAN = 0.4;
+export const ZONAL_ZONAL = 0.6;
 export const WALL_NEAR = 1.5;
 export const WALL_FAR = 12;
 export const WALL_DEG = 25;
@@ -150,8 +165,10 @@ export type Marking = "man" | "zonal" | "mixed";
 export type Setup = {
   attackersInBox: string[];
   defendersInBox: string[];
-  /** Attacker id -> the defender paired with him within MARK_M. */
+  /** Attacker id -> the defender paired with him within MARK_M (CORNER_MARK_M on a corner). */
   pairs: [string, string][];
+  /** A corner's zonal defenders: near goal, marking nobody. Empty for a free kick. */
+  zonal: string[];
   /** null when fewer than two attackers were in the box. */
   marking: Marking | null;
   /** Defenders in the wall, sorted across the pitch; empty for a corner or no wall. */
@@ -179,15 +196,17 @@ export function setupAt(frame: TrackingFrame, sp: SetPiece, isHome: (id: string)
   const usedA = new Set<string>();
   const usedD = new Set<string>();
   const pairs: [string, string][] = [];
+  const corner = sp.kind === "corner";
+  const within = corner ? CORNER_MARK_M : MARK_M;
   for (const [dist, a, d] of cand) {
-    if (dist > MARK_M) break;
+    if (dist > within) break;
     if (usedA.has(a.player_id) || usedD.has(d.player_id)) continue;
     usedA.add(a.player_id);
     usedD.add(d.player_id);
     pairs.push([a.player_id, d.player_id]);
   }
-  const share = attackers.length ? pairs.length / attackers.length : 0;
-  const marking: Marking | null = attackers.length < 2 ? null : share >= 0.6 ? "man" : share <= 1 / 3 ? "zonal" : "mixed";
+  const zonal = corner ? free.filter((d) => !usedD.has(d.player_id) && Math.abs(d.x - goalX(att)) <= ZONE_DEPTH).map((d) => d.player_id) : [];
+  const marking: Marking | null = attackers.length < 2 ? null : corner ? cornerMarking(zonal.length, pairs.length) : freeKickMarking(pairs.length / attackers.length);
 
   let wall: string[] = [];
   if (sp.kind === "free_kick" && sp.event.location) {
@@ -202,7 +221,17 @@ export function setupAt(frame: TrackingFrame, sp: SetPiece, isHome: (id: string)
     });
     if (inWall.length >= 2) wall = inWall.sort((a, b) => a.y - b.y).map((p) => p.player_id);
   }
-  return { attackersInBox: attackers.map((p) => p.player_id), defendersInBox: defenders.map((p) => p.player_id), pairs, marking, wall };
+  return { attackersInBox: attackers.map((p) => p.player_id), defendersInBox: defenders.map((p) => p.player_id), pairs, zonal, marking, wall };
+}
+
+/** A free kick: by the share of the attackers in the box with a marker. */
+const freeKickMarking = (share: number): Marking => (share >= 0.6 ? "man" : share <= 1 / 3 ? "zonal" : "mixed");
+
+/** A corner: by the share of zonal defenders among the zonal and the markers; mixed needs two of each. */
+export function cornerMarking(zonal: number, marking: number): Marking {
+  if (zonal < 2 || marking < 2) return marking >= zonal ? "man" : "zonal";
+  const share = zonal / (zonal + marking);
+  return share < ZONAL_MAN ? "man" : share >= ZONAL_ZONAL ? "zonal" : "mixed";
 }
 
 // --- Shot clips ---------------------------------------------------------------------------------

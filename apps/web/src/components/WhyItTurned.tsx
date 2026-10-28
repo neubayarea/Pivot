@@ -7,6 +7,7 @@ import { useLocalising } from "../data/view";
 import { isMessageKey, narrativeLang, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import { surname } from "./FocusPickers";
+import { WorkingDots } from "./Skeleton";
 import Sourced from "./Sourced";
 
 // Numbers the verifier checked get the highlighter: "9 to 3", "6 of 8", "48% to 61%"; in Spanish
@@ -107,7 +108,7 @@ const kindOf = (type: string, t: T) => {
 };
 
 export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outside }: Props) {
-  const { eventById, playerName } = useMatch();
+  const { eventById, playerName, teams } = useMatch();
   const { prefs, t } = usePrefs();
   const { minute } = useClock();
   const localising = useLocalising();
@@ -121,6 +122,12 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   const [opened, setOpened] = useState<ReadonlySet<number>>(new Set());
   // The sentence whose sources were just shown: its first chip takes the focus the button had.
   const [justOpened, setJustOpened] = useState<number | null>(null);
+  // Ax79: the version on screen (whose, in which language). When the fan version or the translation
+  // that was being written arrives, its sentences fade in where the analyst text was.
+  const version = narrative ? `${pivot?.pivot_id}:${narrative.prefs.audience}:${narrativeLang(narrative) ?? ""}:${narrative.sentences.length}` : "";
+  const [first, setFirst] = useState({ pivot: pivot?.pivot_id, version });
+  if (first.pivot !== pivot?.pivot_id) setFirst({ pivot: pivot?.pivot_id, version });
+  const arrived = first.pivot === pivot?.pivot_id && version !== first.version;
   if (!pivot || !narrative) {
     return (
       <Card title={t("why.title")} className="why">
@@ -134,6 +141,14 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   // The API writes English when it cannot write the asked language; say so instead of hiding it.
   const served = narrativeLang(narrative);
   const fellBack = served !== null && served !== prefs.language;
+  if (fellBack) {
+    return (
+      <Card title={t("why.title")} className="why">
+        <p>{t("pivot.fallbackHeadline", { team: teams[pivot.direction].name })}</p>
+        <p className="muted" role="status">{t("pivot.languagePending")}</p>
+      </Card>
+    );
+  }
   // Likewise the analyst version while the fan one is written (or when it could not be).
   const plainForFan = prefs.audience === "fan" && narrative.prefs.audience !== "fan";
   const vars = { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served ?? "en"}`) };
@@ -141,12 +156,13 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
     <Card title={t("why.title")} note={t(auto ? "why.noteAuto" : "why.noteVerified", { minute: minute(pivot.minute) })} className="why drop">
       {(fellBack || plainForFan) && (
         // A div, not a p: the drop cap goes on the first paragraph of the explanation.
-        <div className="lang-note" role="note">
+        <div className={`lang-note${localising ? " writing" : ""}`} role={localising ? "status" : "note"}>
           {t(noteKey(fellBack, plainForFan, localising), vars)}
+          {localising && <WorkingDots />}
         </div>
       )}
       {narrative.sentences.map((s, i) => (
-        <p key={i} lang={fellBack ? served : undefined}>
+        <p key={`${version}:${i}`} lang={fellBack ? served : undefined} className={arrived ? "ph-in" : undefined}>
           <Highlighted text={s.text} claims={s.claims} name={name} />
           {fan && s.evidence_ids.length > 0 && !opened.has(i) ? (
             <>

@@ -80,18 +80,26 @@ async def match_stats(request: Request, match_id: str, scope: StatScope | None =
     events, frames = await matchdata.inputs(request, match)
     last = matchdata.last_second(match, events, frames)
     cut = None if up_to is None or up_to >= last else up_to
-    calc = await matchdata.calculator(request, match, cut)
     covered = last if cut is None else cut
-    finished = match.status == "finished" and cut is None
 
-    cache = matchdata.shared(request, "team_stats", dict) if finished else {}
-    key = (match_id, window)
-    if key not in cache:
+    async def work() -> list[TeamStatsScope]:
+        calc = await matchdata.calculator(request, match, cut)
         if window is not None:
             rows = [await asyncio.to_thread(stat_row, calc, "window", None, window)]
         else:
             rows = await asyncio.to_thread(team_stats, calc, cut)
-        cache[key] = [TeamStatsScope(scope=r["scope"], period=r["period"], window=tuple(r["window"]),
-                                     home=r["home"], away=r["away"]) for r in rows]
-    scopes = [s for s in cache[key] if scope is None or s.scope == scope]
+        return [TeamStatsScope(scope=r["scope"], period=r["period"], window=tuple(r["window"]),
+                               home=r["home"], away=r["away"]) for r in rows]
+
+    key = (match_id, window)
+    if match.status != "finished":
+        rows = await work()
+    elif cut is not None:
+        rows = await matchdata.cut_answer(request, "team_stats", (*key, cut), work)
+    else:
+        cache = matchdata.shared(request, "team_stats", dict)
+        if key not in cache:
+            cache[key] = await work()
+        rows = cache[key]
+    scopes = [s for s in rows if scope is None or s.scope == scope]
     return TeamStatsReport(match_id=match_id, up_to_t=covered, metrics=METRICS, scopes=scopes)

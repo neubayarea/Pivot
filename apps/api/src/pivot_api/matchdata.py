@@ -3,11 +3,17 @@
 Shared by the per-player numbers (players.py) and the team stats (team_stats.py). Reading and
 checking 6,000 frames takes a second or two, so it happens once per match; a calculator cut at a
 second of the match (`up_to`, for a replay or a live match) is kept for the last few seconds asked.
+
+One match's frames take about 180 MB as models (#423), so only the last PIVOT_MATCH_CACHE matches
+asked for (default 4) keep their events, frames and calculators; an older one is read again when
+asked. What is worked out from them (the stats, the pictures, the analysis) is small and is kept
+by each endpoint for every match.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 from collections import OrderedDict
 from pathlib import Path
 
@@ -18,7 +24,9 @@ from pivot_core.domain import Match, MatchEvent, TrackingFrame
 
 from . import sims
 
-CUT_CACHE = 16                               # calculators cut at an up_to, per app
+CUT_CACHE = 8                                # calculators cut at an up_to, per app (each holds frames)
+CUT_ANSWERS = 48                             # answers worked out at an up_to, per endpoint (a few kB each)
+MATCH_CACHE = int(os.getenv("PIVOT_MATCH_CACHE") or 4)   # matches whose events, frames and calculator are kept
 
 
 def frames_path(request: Request, match_id: str) -> Path | None:
@@ -35,18 +43,47 @@ def shared(request: Request, name: str, make):
     return getattr(state, name)
 
 
-async def inputs(request: Request, match: Match) -> tuple[list[MatchEvent], list[TrackingFrame]]:
-    """Events and frames of a match, kept after the first read once the match is finished.
+async def cut_answer(request: Request, name: str, key: tuple, make):
+    """What an endpoint worked out for a finished match at an `up_to` (Ax90, #430), kept for the last
+    CUT_ANSWERS questions: a live match or a replay asks again at the same minute from every viewer
+    and on every tab switch, and working it out again takes a second. `make()` is awaited on a miss."""
+    cache = shared(request, f"{name}_cut", OrderedDict)
+    if key not in cache:
+        cache[key] = await make()
+        while len(cache) > CUT_ANSWERS:
+            cache.popitem(last=False)
+    cache.move_to_end(key)
+    return cache[key]
+
+
+def _forget(request: Request, match_id: str) -> None:
+    """Drop everything holding a match's frames: its calculators, whole and cut."""
+    shared(request, "match_calcs", OrderedDict).pop(match_id, None)
+    cut = shared(request, "match_calcs_cut", OrderedDict)
+    for key in [k for k in cut if k[0] == match_id]:
+        del cut[key]
+
+
+async def inputs(request: Request, match: Match, keep: bool = True) -> tuple[list[MatchEvent], list[TrackingFrame]]:
+    """Events and frames of a match, kept after the first read once the match is finished, for the
+    last MATCH_CACHE matches asked. `keep=False` reads them without keeping them (a pass over every
+    match, like the analysis baseline, must not push the matches people are looking at out).
     No frames file: no frames."""
-    cache = shared(request, "match_inputs", dict) if match.status == "finished" else {}
+    cache = shared(request, "match_inputs", OrderedDict) if match.status == "finished" else OrderedDict()
     async with shared(request, "match_inputs_lock", asyncio.Lock):
-        if match.match_id not in cache:
-            events = await request.app.state.adapters.matches.list_events(match.match_id)
-            path = frames_path(request, match.match_id)
-            frames = [] if path is None else await asyncio.to_thread(
-                lambda: [TrackingFrame.model_validate(f) for f in sims.read_frames(path)])
+        if match.match_id in cache:
+            cache.move_to_end(match.match_id)
+            return cache[match.match_id]
+        events = await request.app.state.adapters.matches.list_events(match.match_id)
+        path = frames_path(request, match.match_id)
+        frames = [] if path is None else await asyncio.to_thread(
+            lambda: [TrackingFrame.model_validate(f) for f in sims.read_frames(path)])
+        if keep:
             cache[match.match_id] = (events, frames)
-        return cache[match.match_id]
+            while len(cache) > MATCH_CACHE:
+                old, _ = cache.popitem(last=False)
+                _forget(request, old)
+        return events, frames
 
 
 async def calculator(request: Request, match: Match, up_to_t: int | None = None) -> StatCalculator:
@@ -56,10 +93,13 @@ async def calculator(request: Request, match: Match, up_to_t: int | None = None)
         keep = [e for e in events if up_to_t is None or e.t <= up_to_t]
         return await asyncio.to_thread(StatCalculator, match, keep,
                                        [f for f in frames if up_to_t is None or f.t <= up_to_t])
-    full = shared(request, "match_calcs", dict)
+    full = shared(request, "match_calcs", OrderedDict)
     if up_to_t is None:
         if match.match_id not in full:
             full[match.match_id] = await asyncio.to_thread(StatCalculator, match, events, frames)
+            while len(full) > MATCH_CACHE:
+                full.popitem(last=False)
+        full.move_to_end(match.match_id)
         return full[match.match_id]
     cut = shared(request, "match_calcs_cut", OrderedDict)
     key = (match.match_id, up_to_t)

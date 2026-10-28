@@ -14,7 +14,9 @@ export function describe(e: MatchEvent, name: (id: string | null) => string, t: 
     case "pass": {
       const side = e.meta.side;
       if (e.pass_type === "corner") {
-        return t("event.corner", { side: side === "left" || side === "right" ? t(`event.side.${side}`) : "" });
+        return side === "left" || side === "right"
+          ? t("event.corner", { side: t(`event.side.${side}`) })
+          : t("event.cornerBare");
       }
       return e.receiver_id
         ? t("event.pass", { who, to: name(e.receiver_id), tick })
@@ -99,7 +101,7 @@ export default function EventFeed({ highlight }: { highlight: ReadonlySet<string
       </div>
     )}
     {/* C11: no aria-live here; at replay speed it would read out every row. New pivots have their own alert. */}
-    <div className="feed" ref={box} onScroll={(e) => (follow.current = e.currentTarget.scrollTop < 24)}>
+    <div className="feed" ref={box} tabIndex={0} role="region" aria-label={t("board.events")} onScroll={(e) => (follow.current = e.currentTarget.scrollTop < 24)}>
       {!shown.length && <p className="muted">{t("feed.none")}</p>}
       {/* The newest rows, plus any older event picked as evidence in "Why it turned". */}
       {shown.filter((e, i) => i < ROWS || highlight.has(e.event_id)).map((e) => {

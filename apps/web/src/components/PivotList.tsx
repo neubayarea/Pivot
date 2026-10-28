@@ -17,7 +17,8 @@ export function PivotStamp({ status }: { status: Pivot["status"] }) {
 
 /** A degraded pivot can arrive without a narrative; it still needs a line in the list. */
 export const pivotHeadline = (p: Pivot, teams: MatchView["teams"], t: T) =>
-  p.narrative?.headline ?? t("pivot.fallbackHeadline", { team: teams[p.direction].name });
+  (p.narrative && (!t.language || narrativeLang(p.narrative) === t.language) ? p.narrative.headline : null)
+    ?? t("pivot.fallbackHeadline", { team: teams[p.direction].name });
 
 export function Severity({ level }: { level: Pivot["severity"] }) {
   const t = useT();

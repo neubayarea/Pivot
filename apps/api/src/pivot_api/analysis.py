@@ -361,17 +361,44 @@ def profile(values: dict[Side, list[float | None]], baseline: tuple[int, list[li
                            home_values=[_r(v) for v in values["home"]], away_values=[_r(v) for v in values["away"]])
 
 
+def _stats_values(request: Request, match_id: str) -> dict[Side, list[float | None]] | None:
+    """A match's PROFILE values from the team stats already worked out for it (/stats), if any."""
+    rows = matchdata.shared(request, "team_stats", dict).get((match_id, None)) or []
+    whole = next((r for r in rows if r.scope == "match"), None)
+    if whole is None:
+        return None
+    return {side: [getattr(whole, side).get(m) for m in PROFILE] for side in SIDES}
+
+
+async def _profile_values(request: Request, match: Match) -> dict[Side, list[float | None]]:
+    """A match's PROFILE values, worked out once and kept as numbers (#423): from its /stats when that
+    was asked, else from a calculator built for this and dropped, its frames read without being kept."""
+    kept = matchdata.shared(request, "analysis_profile_values", dict)
+    if match.match_id not in kept:
+        values = _stats_values(request, match.match_id)
+        if values is None:
+            events, frames = await matchdata.inputs(request, match, keep=False)
+            end = matchdata.last_second(match, events, frames)
+
+            def work() -> dict[Side, list[float | None]]:
+                return match_values(StatCalculator(match, events, frames), end)
+            values = await asyncio.to_thread(work)
+            del events, frames
+        kept[match.match_id] = values
+    return kept[match.match_id]
+
+
 async def baseline(request: Request) -> tuple[int, list[list[float]]]:
-    """Both teams' PROFILE values in every finished stored match: (matches, one list per metric). Kept."""
+    """Both teams' PROFILE values in every finished stored match: (matches, one list per metric).
+    Only the numbers are kept, a few per match: no match's events, frames or calculator stay alive
+    for it (#423)."""
     cache = matchdata.shared(request, "analysis_baseline", dict)
     stored = [m for m in await request.app.state.adapters.matches.list_matches() if m.status == "finished"]
     key = tuple(sorted(m.match_id for m in stored))
     if key not in cache:
         columns: list[list[float]] = [[] for _ in PROFILE]
         for m in stored:
-            events, frames = await matchdata.inputs(request, m)
-            calc = await matchdata.calculator(request, m)
-            values = await asyncio.to_thread(match_values, calc, matchdata.last_second(m, events, frames))
+            values = await _profile_values(request, m)
             for side in SIDES:
                 for i, v in enumerate(values[side]):
                     if v is not None:
@@ -482,12 +509,19 @@ async def get_analysis(request: Request, match_id: str, up_to: int | None = Quer
     events, frames = await matchdata.inputs(request, match)
     last = matchdata.last_second(match, events, frames)
     cut = None if up_to is None or up_to >= last else up_to
-    finished = match.status == "finished" and cut is None
-    cache = matchdata.shared(request, "analysis", dict) if finished else {}
-    if match_id not in cache:
+
+    async def work() -> MatchAnalysis:
         calc = await matchdata.calculator(request, match, cut)
         base = await baseline(request)
-        cache[match_id] = await asyncio.to_thread(analysis, calc, match, last if cut is None else cut, base)
+        return await asyncio.to_thread(analysis, calc, match, last if cut is None else cut, base)
+
+    if match.status != "finished":
+        return await work()
+    if cut is not None:
+        return await matchdata.cut_answer(request, "analysis", (match_id, cut), work)
+    cache = matchdata.shared(request, "analysis", dict)
+    if match_id not in cache:
+        cache[match_id] = await work()
     return cache[match_id]
 
 

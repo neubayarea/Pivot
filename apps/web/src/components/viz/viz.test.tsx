@@ -7,6 +7,7 @@ import type { AveragePositionsReport, HeatmapReport, PassNetworkReport, ShotMap 
 import { vizPath, vizQuery } from "../../data/viz";
 import { PrefsProvider } from "../../i18n";
 import { AveragePositions, Heatmap, PassNetwork, ShotMap, VizBox, heatCells, shotRadius } from ".";
+import { hubsOf, pairsOf } from "./PassNetwork";
 import { W, toPx } from "./pitch";
 
 const g = globalThis as { window?: { location: { search: string }; localStorage: Pick<Storage, "getItem" | "setItem" | "removeItem"> } };
@@ -109,9 +110,38 @@ describe("pass network", () => {
     const html = render(<PassNetwork data={NET} side="home" squads={SQUADS} />);
     expect(html.match(/class="viz-edge"/g)).toHaveLength(2);
     expect(html.match(/class="viz-node/g)).toHaveLength(3);
-    expect(html).toContain("B. Lind to A. Moreau: 9 passes");
+    expect(html).toContain("B. Lind to A. Moreau: 9. A. Moreau to B. Lind: 0.");
     expect(html).toContain(`cx="${toPx(75, 34)[0]}"`);
     expect(html).toContain("3 or more completed passes");
+  });
+
+  it("adds both directions up per pair and ranks the most involved", () => {
+    const pairs = pairsOf([{ from_id: "h09", to_id: "h05", passes: 3 }, { from_id: "h05", to_id: "h09", passes: 9 },
+      { from_id: "h01", to_id: "h05", passes: 4 }]);
+    expect(pairs[0]).toEqual({ a: "h05", b: "h09", ab: 9, ba: 3, passes: 12 });
+    expect(pairs).toHaveLength(2);
+    expect(hubsOf(NET.teams.home.nodes).map((h) => [h.id, h.n])).toEqual([["h05", 75], ["h09", 32], ["h01", 25]]);
+  });
+
+  it("analyst: a count on every line, a slider, the halves and the three most involved", () => {
+    const html = render(<PassNetwork data={NET} side="home" squads={SQUADS} onPeriod={() => {}} />);
+    expect(html.match(/class="viz-edge-n"/g)).toHaveLength(2);
+    expect(html).toContain('type="range"');
+    expect(html).toContain("Minimum passes to draw a line");
+    expect(html).toContain("First half");
+    expect(html).toContain("Most involved");
+    expect(html.match(/class="viz-hub"/g)).toHaveLength(3);
+    expect(html).toContain("75 passes");
+  });
+
+  it("fan: the top pairs named on the line, one sentence, others faded", () => {
+    const html = render(<PassNetwork data={NET} side="home" squads={SQUADS} />, "?lang=en&mode=fan");
+    expect(html).toContain("Most passes between B. Lind and A. Moreau (9)");
+    expect(html).toContain("Lind and Moreau: 9");
+    expect(html).not.toContain('type="range"');
+    expect(html).not.toContain("Most involved");
+    const zh = render(<PassNetwork data={NET} side="home" squads={SQUADS} />, "?lang=zh&mode=fan");
+    expect(zh).toContain("配合最多的是 B. Lind 和 A. Moreau（9 次）");
   });
 
   it("an empty side says so", () => {
@@ -150,5 +180,14 @@ describe("data hooks", () => {
     expect(render(<VizBox state={{ data: null, loading: true, error: false }}>{() => null}</VizBox>)).toContain("Loading…");
     expect(render(<VizBox state={{ data: null, loading: false, error: true }}>{() => null}</VizBox>, "?lang=zh"))
       .toContain("没能加载");
+  });
+
+  it("VizBox says why a load failed and offers a Retry (Ax79)", () => {
+    const failed = (fault: number | "offline", q?: string) =>
+      render(<VizBox state={{ data: null, loading: false, error: true, fault, retry: () => {} }}>{() => null}</VizBox>, q);
+    expect(failed(503)).toContain("error 503");
+    expect(failed(503)).toContain(">Retry</button>");
+    expect(failed("offline", "?lang=es")).toContain("Reintentar");
+    expect(failed(404, "?lang=zh")).toContain("错误 404");
   });
 });

@@ -1,0 +1,87 @@
+/* The Replay / Live tab's two layouts (C21, #401). PitchBoard renders the pitch card (.more-pitch)
+   and the roster card (.more-roster); the grid places them with the rest. */
+.live-lay { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 0 16px 16px;
+  grid-template-areas: "pitch" "side" "events" "stats" "below" "roster"; }
+.live-lay > .more-pitch { grid-area: pitch; }
+.live-lay > .more-roster { grid-area: roster; display: block; height: auto; max-height: none; }
+.live-lay > .more-roster > summary { cursor: pointer; font-weight: 700; }
+.live-lay > .more-roster[open] > summary { margin-bottom: 12px; }
+.live-lay .live-roster-body { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; }
+.live-lay .more-events { display: grid; height: auto; max-height: none; min-width: 0; }
+.live-lay .more-events > .feed { max-height: 360px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.pivot-context-note { grid-column: 1 / -1; font-size: var(--pv-fs-sm); }
+.live-lay > .live-side { grid-area: side; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.live-lay > .more-events { grid-area: events; }
+.live-lay > .more-stats { grid-area: stats; }
+.live-lay > .live-below { grid-area: below; }
+.live-lay .live-side .lc { margin: 0; }
+/* Inside the side column the cards stack: base.css gives the events card a grid area of its own. */
+.live-lay .live-side > * { grid-area: auto; min-width: 0; }
+.live-lay .live-side .live-hd { display: grid; gap: 6px; }
+.live-lay .live-side .lc-row { grid-template-columns: minmax(0, 1fr); }
+
+@media (min-width: 1100px) {
+  .live-lay { grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); }
+  .live-lay.an { grid-template-areas: "pitch side" "events side" "stats side" "roster roster"; }
+  .live-lay.fan { grid-template-areas: "pitch side" "below side" "roster roster"; }
+  /* The live centre stays in view while the pitch plays, under the sticky bar and tabs. */
+  .live-lay > .live-side {
+    position: sticky; top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + 12px); align-self: start;
+    max-height: calc(100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain;
+  }
+}
+
+/* Fan: the line on who is on top, large, and the big moments in large rows. */
+.live-lay.fan .lc-now { font-family: var(--pv-display); font-size: var(--pv-fs-2xl); font-weight: 800; line-height: 1.15; color: var(--pv-ink); }
+.live-lay.fan .live-big { max-height: 460px; }
+.live-lay.fan .live-big .feed > div { font-size: var(--pv-fs-md); padding: 10px 4px; gap: 12px; }
+.live-lay.fan .live-big .feed .t { font-weight: 700; }
+
+/* Fan: three big bars, each split between the two kit colours. */
+.live-below { display: grid; gap: 16px; }
+.live-bars { list-style: none; display: grid; gap: 14px; }
+.live-bars li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "k k k" "h bar a"; gap: 6px 12px; align-items: center; }
+.live-bar-k { grid-area: k; font-weight: 700; font-size: var(--pv-fs-md); }
+.live-bar-v { font-family: var(--pv-display); font-size: var(--pv-fs-xl); font-weight: 800; min-width: 3ch; }
+.live-bar-v.home { grid-area: h; color: var(--pv-home); }
+.live-bar-v.away { grid-area: a; color: var(--pv-away); text-align: right; }
+.live-bar { grid-area: bar; display: block; height: 14px; border-radius: var(--pv-r-pill); background: var(--pv-away); overflow: hidden; }
+.live-bar i { display: block; height: 100%; width: var(--share); background: var(--pv-home); }
+.live-more summary { cursor: pointer; font-weight: 600; }
+.live-more[open] summary { margin-bottom: 12px; }
+
+/* #428: different opening screens, not the same pitch with a panel below it. */
+.live-metrics-strip { grid-area: metrics; min-width: 0; }
+.live-metrics-strip .lc-metrics { margin: 0; }
+.live-lay.an { grid-template-areas: "metrics" "pitch" "events" "side" "stats" "roster"; }
+.live-lay .live-fan-numbers { padding: 16px 20px; }
+.live-fan-numbers .live-bars { margin: 0; padding: 0; gap: 12px; }
+.live-fan-numbers .live-bars li { grid-template-columns: 76px auto minmax(0, 1fr) auto; grid-template-areas: "k h bar a"; gap: 8px; }
+.live-fan-numbers .live-bar-k { font-size: var(--pv-fs-sm); }
+.live-fan-numbers .live-bar-v { font-size: var(--pv-fs-xl); }
+@media (min-width: 1100px) {
+  .live-lay.an { grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+    grid-template-areas: "metrics metrics" "pitch events" "side stats" "roster roster"; align-items: start; }
+  .live-lay.an > .live-side { position: static; max-height: none; overflow: visible; }
+  .live-lay.an > .more-events { align-self: stretch; }
+  .live-lay.an > .more-events > .feed { max-height: 500px; }
+  .live-lay.fan { grid-template-columns: minmax(0, 70fr) minmax(0, 30fr); }
+  .live-metrics-strip .lc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .live-metrics-strip .lc-m dd .num { font-size: 32px; }
+  .live-metrics-strip .lc-m dd { gap: 20px; }
+  .live-metrics-strip .rp-src { margin-top: 8px; }
+  .live-lay.fan .lc-now { font-size: 30px; }
+}
+@media (min-width: 1100px) {
+  /* A compact analyst scoreboard leaves room for the working data; manual expansion still wins. */
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) { padding: 8px 32px; gap: 4px; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-score { align-items: center; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-team { padding-top: 0; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-name { font-size: 28px; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-sc { font-size: 38px; padding: 3px 12px; box-shadow: none; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-mid { display: flex; align-items: center; gap: 12px; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-state { display: grid; justify-items: start; gap: 2px; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-goals { font-size: 11px; }
+}
+.live-metrics-strip .lc-metrics { min-height: 180px; }
+.live-metrics-strip .lc-m { grid-template-rows: auto auto 30px; }

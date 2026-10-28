@@ -5,14 +5,18 @@ import { frameAt, useFrameStore, useFrameWindow } from "../data/live/frames";
 import { cueSpan, cuesAt } from "../data/motion";
 import { minuteAt, minuteLabel, PLAIN_PERIODS, useClock } from "../data/clock";
 import { isRedCard, type Side, type SquadPlayer } from "../data/view";
+import { usePersona } from "../data/persona";
+import { PassingLanes, PressingZones, ShapeBands, pressEvents } from "./live/PitchOverlays";
+import ReportBoundary from "./report/ReportBoundary";
 import { usePrefs, useT, type MessageKey } from "../i18n";
 import Card from "./Card";
 import ControlBar, { barKey, type BarMark } from "./ControlBar";
 import { describe } from "./EventFeed";
 import FollowButton from "./FollowButton";
 import { EventCues, smoothFor, usePitchMotion } from "./motion";
-import Pitch, { whoFromSquads } from "./Pitch";
+import Pitch, { PITCH_RATIO, whoFromSquads } from "./Pitch";
 import { PlayerNumbers, usePlayerReport } from "./PlayerCard";
+import { faultOf, LoadFailed, Placeholder, WorkingDots } from "./Skeleton";
 import {
   backLineX, frameShape, lineOf, lineupAt, meanShape, shapeLines, tacticsAt, type Lineup, type Role, type Shape,
 } from "./shape";
@@ -41,8 +45,10 @@ const LINE_ORDER = ["GK", "DF", "MF", "AM", "FW"];
  * of their own next to the pitch card, so "More details" can put them in their own cell.
  * Ax67: the shape numbers stay up whichever layer is on, right under the caption, with each
  * team's tactics at the clock below them.
+ * C21 (#401): `simple` is the fan's board: the pitch, the playback bar and its speeds, no layers,
+ * no shape and tactics table and no keyboard hint.
  */
-export default function PitchBoard() {
+export default function PitchBoard({ simple = false }: { simple?: boolean } = {}) {
   const { match, playback, squads, sheets, teams, events, pivots, playerName, eventById, preMatch } = useMatch();
   const t = useT();
   const { at, clock, minute: minuteOf } = useClock();
@@ -59,6 +65,8 @@ export default function PitchBoard() {
     if (f) shown.current = f;
     return shown.current;
   }, [store.around, store.version, now]);
+  // Ax79: the pitch fades in when it replaces the placeholder, not when it was there from the start.
+  const [waited] = useState(() => !frame);
   const svg = useRef<SVGSVGElement>(null);
   const scrub = useRef<HTMLInputElement>(null);
   const time = useRef<HTMLSpanElement>(null);
@@ -77,7 +85,11 @@ export default function PitchBoard() {
     if (time.current && time.current.textContent !== text) time.current.textContent = text;
   });
   const [picked, setPicked] = useState<string | null>(null);
+  // The analyst lands on the tactical view; the fan's simple board hides all layers.
+  const { fan } = usePersona();
   const [shapeOn, setShapeOn] = useState(true);
+  const [pressOn, setPressOn] = useState(false);
+  const [lanesOn, setLanesOn] = useState(true);
   const [compare, setCompare] = useState(false);
 
   const who = useMemo(() => whoFromSquads(squads), [squads]);
@@ -107,14 +119,17 @@ export default function PitchBoard() {
   const names = { home: teams.home.short_name, away: teams.away.short_name };
   // Ax59: a player picked in the list or on the pitch takes over the card until Back.
   const roster = (marked: ReadonlySet<string>) => (
-    <Card title={t("board.roster")} className="more-roster">
+    <details className="card more-roster" open={picked ? true : undefined}>
+      <summary>{t("board.roster")}</summary>
+      <div className="live-roster-body">
       {picked && players.has(picked) ? (
         <PlayerDetail player={players.get(picked)!} role={roleOf(picked)} onBack={() => setPicked(null)} />
       ) : (
         <Roster squads={squads} frame={frame} now={now} events={events} roleOf={roleOf} picked={picked} marked={marked}
           onPick={setPicked} names={names} />
       )}
-    </Card>
+      </div>
+    </details>
   );
   if (missing) {
     return (
@@ -154,38 +169,63 @@ export default function PitchBoard() {
   const seekBy = (d: number) => playback && playback.seek((playback.now?.() ?? match.clock) + d);
   return (
     <>
-      <Card title={t("board.pitch")} note={note} className="pitch-board more-pitch">
-        {lineup && (
+      <Card title={t("board.pitch")} note={note} className={`pitch-board more-pitch${simple ? " simple" : ""}`}>
+        {lineup && !simple && (
           <div className="pb-tools">
             <span className="seg" role="group" aria-label={t("board.layers")}>
               <button type="button" aria-pressed={shapeOn} onClick={() => setShapeOn(!shapeOn)}>
-                {t("board.layerShape")}
+                {t(fan ? "board.layerShape" : "ov.shape")}
               </button>
+              {!fan && (
+                <>
+                  <button type="button" aria-pressed={pressOn} onClick={() => setPressOn(!pressOn)}>{t("ov.press")}</button>
+                  <button type="button" aria-pressed={lanesOn} onClick={() => setLanesOn(!lanesOn)}>{t("ov.lanes")}</button>
+                </>
+              )}
               <button type="button" aria-pressed={compare && shapeOn} onClick={() => setCompare(!compare)} disabled={!shapeOn || minute === 0}>
                 {t("board.layerCompare")}
               </button>
             </span>
             <small className="muted">{t("board.legend")}</small>
+            {!fan && pressOn && (
+              <small className="ov-key">
+                {t("ov.pressKey", {
+                  home: teams.home.short_name, away: teams.away.short_name,
+                  h: pressEvents(events, now).filter((e) => e.type === "pressure" && e.team === "home").length,
+                  a: pressEvents(events, now).filter((e) => e.type === "pressure" && e.team === "away").length,
+                })}
+              </small>
+            )}
+            {!fan && lanesOn && <small className="ov-key">{t("ov.lanesKey")}</small>}
           </div>
         )}
         <div className="pb-main" tabIndex={playback ? 0 : undefined} aria-keyshortcuts={playback ? "Space K ArrowLeft ArrowRight" : undefined}
           onKeyDown={playback ? (e) => barKey(e, { toggle: () => play(!playback.playing), seekBy, step: STEP_S }) : undefined}>
           {frame ? (
             <Pitch frame={frame} actions={[]} selected={null} who={who} animated svgRef={svg}
-              className={playback && !playback.playing ? "paused" : undefined}
+              className={[playback && !playback.playing && "paused", waited && "ph-in"].filter(Boolean).join(" ") || undefined}
               label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })}
               picked={picked} onPick={setPicked} marked={marked} tag={tag}
-              under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
+              under={(
+                <ReportBoundary quiet resetKey={now}>
+                  {!fan && !simple && pressOn && <PressingZones events={events} now={now} id={`ov-${match.match_id}`} />}
+                  {!fan && !simple && shapeOn && lineup && <ShapeBands frame={frame} roles={lineup.roles} isHome={isHome} />}
+                  {!simple && shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
+                  {!fan && !simple && lanesOn && <PassingLanes events={events} now={now} id={`ov-${match.match_id}`} />}
+                </ReportBoundary>
+              )}
               over={<EventCues cues={cues} />} />
+          ) : store.error ? (
+            <LoadFailed message={t("board.pitchFailed")} fault={faultOf(store.error)} onRetry={store.retry} ratio={PITCH_RATIO} />
           ) : (
-            <div className="empty-box muted">{t("board.pitchLoading")}</div>
+            <Placeholder label={t("board.pitchLoading")} ratio={PITCH_RATIO} lines={0} />
           )}
           {playback && (
             <ControlBar playing={playback.playing} onPlaying={play} value={match.clock} min={0} max={playback.end} onSeek={playback.seek}
               step={STEP_S} speeds={BOARD_SPEEDS} speed={match.speed} onSpeed={(s) => playback.setSpeed(s as Speed)} marks={marks}
               lead={LEAD_S} format={clock} inputRef={scrub} timeRef={time} />
           )}
-          {playback && <small className="muted clip-keys">{t("board.keys")}</small>}
+          {playback && !simple && <small className="muted clip-keys">{t("board.keys")}</small>}
           <div className="pb-side">
             <p className="pitch-cap" aria-live="off">
               {latest && (
@@ -195,7 +235,7 @@ export default function PitchBoard() {
               )}
               {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
             </p>
-            {((lineup && frame) || tactics) && (
+            {!simple && ((lineup && frame) || tactics) && (
               <ShapeTable frame={frame} lineup={lineup} before={compare && shapeOn ? before : undefined} beforeLabel={beforeLabel}
                 isHome={isHome} names={names} tactics={tactics} />
             )}
@@ -305,7 +345,7 @@ export function ShapeTable({ frame, lineup, before, beforeLabel, isHome, names, 
       </table>
       {shape && (
         <small className="muted">
-          {before === undefined ? t("board.shapeNote") : before === null ? t("board.shapeLoading") : t("board.shapeVs", { when: beforeLabel })}
+          {before === undefined ? t("board.shapeNote") : before === null ? <>{t("board.shapeLoading")} <WorkingDots /></> : t("board.shapeVs", { when: beforeLabel })}
         </small>
       )}
     </div>

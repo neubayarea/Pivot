@@ -95,7 +95,8 @@ describe("switching language", () => {
   it("says when the explanation came back in English", () => {
     withWindow("?lang=zh");
     const html = render(<FixtureProvider><WhyItTurned pivot={pv74} selected={new Set()} onToggle={() => {}} /></FixtureProvider>);
-    expect(html).toContain("暂时没有中文解释，先显示英文版。");
+    expect(html).toContain("这个语言的解释暂未就绪");
+    expect(html).not.toContain(pv74.narrative!.sentences[0].text);
     withWindow("?lang=en");
     expect(render(<FixtureProvider><WhyItTurned pivot={pv74} selected={new Set()} onToggle={() => {}} /></FixtureProvider>)).not.toContain("lang-note");
   });
@@ -109,8 +110,9 @@ describe("switching language", () => {
         </LocalisingContext.Provider>
       </FixtureProvider>,
     );
-    expect(html).toContain("正在写中文解释，先显示英文版。");
-    expect(html).toContain('lang="en"');                       // the English sentences say what they are
+    expect(html).toContain("这个语言的解释暂未就绪");
+    expect(html).not.toContain('lang="en"');
+    expect(html).not.toContain(pv74.narrative!.sentences[0].text);
   });
 });
 
@@ -137,8 +139,9 @@ describe("fan mode on the analyst version (Ax50)", () => {
 
   it("names both when the English analyst version stands in for a Chinese fan one", () => {
     withWindow("?mode=fan&lang=zh");
-    expect(why(pv74, true)).toContain("正在写中文球迷版，先显示英文分析师版。");
-    expect(why(pv74)).toContain("暂时没有中文球迷版，先显示英文分析师版。");
+    expect(why(pv74, true)).toContain("这个语言的解释暂未就绪");
+    expect(why(pv74)).toContain("这个语言的解释暂未就绪");
+    expect(why(pv74)).not.toContain(pv74.narrative!.headline);
   });
 
   it("says nothing once the fan version is in, or for an analyst", () => {

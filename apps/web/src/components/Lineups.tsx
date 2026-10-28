@@ -6,7 +6,8 @@
 // Ax69: on the line-ups tab the ♥ team attacks up the page, and each player has the shared ☆ Follow button (#324).
 // Once the match is under way each player also shows what he did: goals, cards, when he came on or
 // went off, and his rating (data/lineupFacts.ts), in the list and on the pitch.
-import type { TeamSheet } from "@pivot/contracts";
+import { useState, type ReactNode } from "react";
+import type { PlayerReport, TeamSheet } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { lineupFacts, shortName, type Facts } from "../data/lineupFacts";
 import { useMatch, type Side, type SquadPlayer } from "../data/match";
@@ -72,14 +73,19 @@ function useFacts(on: boolean): Map<string, Facts> | null {
   return live ? lineupFacts(events, players.data?.players) : null;
 }
 
-function FormationPitch({ sheets, up = "home", followed = null, facts }: { sheets: Record<Side, TeamSheet>; up?: Side; followed?: string | null; facts: Map<string, Facts> | null }) {
+function FormationPitch({ sheets, up = "home", followed = null, facts, card }: {
+  sheets: Record<Side, TeamSheet>; up?: Side; followed?: string | null; facts: Map<string, Facts> | null;
+  /** C21 (#401): the card shown while a player is hovered or focused, if any. */
+  card?: (playerId: string) => ReactNode;
+}) {
   const { teams, squads } = useMatch();
   const t = useT();
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   // Home attacks up the page; with the away side up, the whole pitch turns round.
   const turn = ([x, y]: [number, number]): [number, number] => (up === "home" ? [x, y] : [W - x, H - y]);
   const byId = new Map([...squads.home, ...squads.away].map((p) => [p.player_id, p]));
   const places = { home: formationPlaces("home", sheets.home), away: formationPlaces("away", sheets.away) };
-  return (
+  const svg = (
     <svg className="lu-pitch" viewBox={`-2 -6 ${W + 4} ${H + 12}`} role="img"
       aria-label={t("pre.pitchLabel", { home: `${teams.home.name} ${sheets.home.formation}`, away: `${teams.away.name} ${sheets.away.formation}` })}>
       <rect x="0" y="0" width={W} height={H} className="lu-grass" />
@@ -97,7 +103,14 @@ function FormationPitch({ sheets, up = "home", followed = null, facts }: { sheet
             // The team at the top has its names above the dots, so the two front lines do not meet at halfway.
             const top = side !== up;
             return (
-              <g key={s.player_id} className={followed === s.player_id ? "followed" : undefined} transform={`translate(${cx} ${cy})`}>
+              <g key={s.player_id} className={followed === s.player_id ? "followed" : undefined} transform={`translate(${cx} ${cy})`}
+                {...(card ? {
+                  tabIndex: 0,
+                  onMouseEnter: () => setHover({ id: s.player_id, x: (cx + 2) / (W + 4), y: (cy + 6) / (H + 12) }),
+                  onMouseLeave: () => setHover(null),
+                  onFocus: () => setHover({ id: s.player_id, x: (cx + 2) / (W + 4), y: (cy + 6) / (H + 12) }),
+                  onBlur: () => setHover(null),
+                } : {})}>
                 <title>{p?.name ?? name}</title>
                 <circle r="3.1" />
                 <text className="lu-no" dy="1.1">{p?.shirt ?? ""}</text>
@@ -112,6 +125,19 @@ function FormationPitch({ sheets, up = "home", followed = null, facts }: { sheet
         </g>
       ))}
     </svg>
+  );
+  if (!card) return svg;
+  const shown = hover && card(hover.id);
+  return (
+    <div className="lu-pitch-wrap">
+      {svg}
+      {shown && (
+        <div className={`lu-pcard${hover!.x > 0.6 ? " left" : ""}${hover!.y > 0.6 ? " above" : ""}`} role="tooltip"
+          style={{ left: `${hover!.x * 100}%`, top: `${hover!.y * 100}%` }}>
+          {shown}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -169,17 +195,23 @@ function TeamList({ side, sheet, follow, facts, formation }: { side: Side; sheet
  * `facts`: goals, cards, changes and ratings once the match is under way; `formation`: the shape in
  * each list's header (off where the coach's plan already says it).
  */
-export default function Lineups({ up = "home", follow = false, facts: withFacts = false, formation = true }: {
+export default function Lineups({ up = "home", follow = false, facts: withFacts = false, formation = true, card }: {
   up?: Side; follow?: boolean; facts?: boolean; formation?: boolean;
+  /** C21 (#401): a card for a hovered player on the pitch, from his /players/stats row. */
+  card?: (p: PlayerReport) => ReactNode;
 }) {
-  const { sheets } = useMatch();
+  const { sheets, match, playback } = useMatch();
   const { prefs } = usePrefs();
   const facts = useFacts(withFacts);
+  const upTo = match.status === "finished" && !playback ? null : Math.floor(match.clock / 60) * 60;
+  const rows = usePlayers(card && match.status !== "scheduled" ? match.match_id : null, upTo).data?.players;
+  const byId = new Map((rows ?? []).map((p) => [p.player_id, p]));
+  const cardOf = card && rows ? (id: string) => (byId.has(id) ? card(byId.get(id)!) : null) : undefined;
   // The team at the bottom of the pitch is listed first.
   const order: Side[] = up === "home" ? ["home", "away"] : ["away", "home"];
   return (
     <div className={`lineups${sheets ? "" : " no-sheet"}${follow ? " with-follow" : ""}`}>
-      {sheets && <FormationPitch sheets={sheets} up={up} followed={prefs.focus_player_id} facts={facts} />}
+      {sheets && <FormationPitch sheets={sheets} up={up} followed={prefs.focus_player_id} facts={facts} card={cardOf} />}
       {order.map((s) => <TeamList key={s} side={s} sheet={sheets?.[s]} follow={follow} facts={facts} formation={formation} />)}
     </div>
   );

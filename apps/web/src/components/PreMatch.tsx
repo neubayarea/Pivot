@@ -5,10 +5,12 @@
 // C11 (Ax63): a match preview's order. `PreMatchTop` is the tale of the tape (table, form,
 // head-to-head) under one strip of match facts; `PreMatchStories` is the news and the context
 // effects, then the ties. Each person and team carries a small swatch in its own kit colour.
+import { useState } from "react";
 import type { ContextEffect, HeadToHead as H2H, MatchContext, PastMeeting, TeamForm } from "@pivot/contracts";
 import { useMatch, type Side, type TeamPlan } from "../data/match";
 import { plural, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
+import { LoadFailed, Placeholder } from "./Skeleton";
 import LangTag from "./LangTag";
 import { numberLocale } from "../data/motion";
 import { formFromReport, h2hFromReport, usePreMatchReport, usePreMatchText } from "../data/prematch";
@@ -51,17 +53,35 @@ export function PreMatchTop() {
   const { match } = useMatch();
   // A season fixture's context has no form or head-to-head; `/prematch` has both (Ax83, #395).
   const needsReport = !!pre && (!pre.context.form.length || !pre.context.head_to_head);
-  const { data: report } = usePreMatchReport(needsReport ? match.match_id : null);
+  const state = usePreMatchReport(needsReport ? match.match_id : null);
+  const report = state.data;
+  const [waited] = useState(() => needsReport && !state.data);
   if (!pre) return null;
   const { context, plans, teams, t, title } = pre;
   const form = context.form.length ? context.form : formFromReport(report);
   const h2h = context.head_to_head ?? h2hFromReport(report);
+  // Ax79: while `/prematch` is still to answer, grey blocks hold the form and head-to-head's place;
+  // a failed request (not a 404: no report for this match) says why, with a Retry.
+  const waiting = needsReport && !report && !state.error;
+  const failed = needsReport && state.error && state.fault !== 404;
   return (
     <section className="card pre-top" aria-label={title("occasion")}>
       <Occasion context={context} t={t} />
-      <div className="pre-tape">
-        <Form form={form} t={t} title={title("form")} name={(s) => teams[s].name} />
-        <HeadToHead h={h2h} plans={plans} t={t} title={title("h2h")} short={(s) => teams[s].short_name} />
+      <div className={`pre-tape${waited && !waiting ? " ph-in" : ""}`}>
+        {waiting ? (
+          <>
+            <Placeholder label={t("pre.loading")} block={28} lines={4} />
+            <div className="ph" aria-hidden="true">
+              <div className="ph-body">{[0, 1, 2, 3].map((i) => <span key={i} className="sk sk-shim sk-line" />)}</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <Form form={form} t={t} title={title("form")} name={(s) => teams[s].name} />
+            <HeadToHead h={h2h} plans={plans} t={t} title={title("h2h")} short={(s) => teams[s].short_name} />
+            {failed && <LoadFailed message={t("pre.failed")} fault={state.fault} onRetry={state.retry} />}
+          </>
+        )}
       </div>
     </section>
   );
