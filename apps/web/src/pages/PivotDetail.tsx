@@ -18,6 +18,7 @@ import { fixtureMode, involves, useMatch } from "../data/match";
 import { swingAt, usePersona } from "../data/persona";
 import { inWindow } from "../data/window";
 import { countOf, usePrefs } from "../i18n";
+import { InvolvedTag } from "../components/PlayerMatch";
 import NotFound from "./NotFound";
 
 // Evidence actions stay drawn for a few seconds either side of the event.
@@ -136,6 +137,7 @@ export default function PivotDetail() {
             <PivotStamp status={pivot.status} />
           )}
           {disputed && <Stamp tone="warn">{tr("detail.flaggedStamp")}</Stamp>}
+          <InvolvedTag pivot={pivot} />
           <span className="pipe">{tr("pivot.momentumTo", { team: teams[pivot.direction].name })}</span>
           {persona.side && (
             <span className={`lean-tag ${persona.lean(pivot)}`} style={{ "--tc": `var(--pv-${pivot.direction})` } as CSSProperties}>

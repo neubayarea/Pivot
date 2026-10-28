@@ -18,6 +18,7 @@ import Pitch, { whoFromSquads } from "./Pitch";
 import { PivotStamp, pivotHeadline } from "./PivotList";
 import { faultOf, LoadFailed, Placeholder, type LoadFault } from "./Skeleton";
 import { RunFailed, RunProgress, ScenarioResult } from "./WhatIf";
+import { InvolvedTag } from "./PlayerMatch";
 import WhyItTurned from "./WhyItTurned";
 
 /** What set the pivot off, as the event list says it: "38′ Red card · Lisais". Null without a trigger. */
@@ -71,6 +72,7 @@ function MomentRow({ p, n, on, onPick }: { p: Pivot; n: number; on: boolean; onP
       <span className="pr-sw">
         <Swing p={p} />
         <span className="to">{t("post.swingTo", { team: teams[p.direction].name })}</span>
+        <InvolvedTag pivot={p} />
         {l && <span className={`lean-tag ${l}`} style={{ "--tc": `var(--pv-${p.direction})` } as CSSProperties}>{t(l === "for" ? "you.for" : "you.against")}</span>}
       </span>
       <span className="pr-st"><PivotStamp status={p.status} /></span>
@@ -108,7 +110,7 @@ function MomentPitch({ pivot, picked }: { pivot: Pivot; picked: string | null })
   const actions = shown?.location ? [shown] : [];
   return (
     <figure className="mo-pitch">
-      <Pitch frame={frame} actions={actions} selected={shown?.event_id ?? null} focus={null} who={who}
+      <Pitch frame={frame} actions={actions} selected={shown?.event_id ?? null} who={who}
         label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })} />
       <figcaption>
         {shown && <><b>{shown.clock_label.replace(/'$/, "′")}</b> {describe(shown, playerName, t)}</>}
@@ -208,6 +210,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, chi
   const { minute } = useClock();
   const cause = useCause(pivot);
   const picked = [...evidence].at(-1) ?? null;
+  const followed = usePersona().player !== null;
   const sentences = pivot.narrative?.sentences ?? [];
   const claims = sentences.reduce((k, s) => k + s.claims.length, 0);
   const events = new Set(sentences.flatMap((s) => s.evidence_ids)).size;
@@ -225,6 +228,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, chi
           {cause && <div><dt>{t("open.trigger")}</dt><dd>{cause}</dd></div>}
           <div className="swung"><dt>{t("open.swung")}</dt><dd>{teams[pivot.direction].name}</dd></div>
           {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims: countOf(t, "numbers", claims), evidence: countOf(t, "events", events) })}</dd></div>}
+          {followed && <div className="open-inv"><dt>{t("follow.following")}</dt><dd><InvolvedTag pivot={pivot} /></dd></div>}
           <div className="open-more"><Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link></div>
         </dl>
         {cause && <p className="muted pivot-context-note">{t("moments.contextNote")}</p>}

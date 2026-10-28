@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode, Ref } from "react";
 import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
-import { involves, type Side, type SquadPlayer } from "../data/view";
+import { involves, useMaybeMatch, type Side, type SquadPlayer } from "../data/view";
+import { usePrefs } from "../i18n";
 import { PITCH } from "../fixtures/pivot-detail";
 
 // 105 x 68 m at 5 px per metre, same drawing as "06 S2" in the design spec. Home attacks to the right.
@@ -17,7 +18,10 @@ type Props = {
   actions: MatchEvent[];
   selected: string | null;
   label: string;
-  /** The followed player (C08): gold outline on his dot, a gold ring on actions he took part in. */
+  /**
+   * The followed player (C08, Ax92): a bigger dot with a gold ring and his surname always shown, the others
+   * a little faded; a gold ring on actions he took part in. Left out, it is the viewer's ★ player.
+   */
   focus?: string | null;
   /** Side and shirt number of each player; without it, ids like the fixture's "hcy-11" are read. */
   who?: (id: string) => Who;
@@ -111,20 +115,31 @@ function Action({ e, on, mine }: { e: MatchEvent; on: boolean; mine: boolean }) 
   );
 }
 
-export default function Pitch({ frame, actions, selected, label, focus = null, who = fromId, stepMs,
+/** "D. Sahaltessen" → "Sahaltessen": the followed player's label on the pitch. */
+export const surname = (name: string) => name.trim().split(/\s+/).at(-1) ?? name;
+
+export default function Pitch({ frame, actions, selected, label, focus: focusProp, who = fromId, stepMs,
   picked = null, onPick, marked, tag, under, over, animated = false, svgRef, className }: Props) {
+  const { prefs } = usePrefs();
+  const view = useMaybeMatch();
+  const focus = focusProp === undefined ? (prefs.focus_player_id ?? null) : focusProp;
+  const focusAt = focus ? frame.players.find((p) => p.player_id === focus) : undefined;
+  const focusName = focus && view ? surname(view.playerName(focus)) : "";
   const ball = px([frame.ball.x, frame.ball.y]);
   const style = stepMs && !animated ? ({ "--pv-step": `${Math.round(stepMs)}ms` } as CSSProperties) : undefined;
   // The ball carrier's ring is the board's (onPick); the detail page marks its evidence instead.
   const carrier = onPick ? frame.ball.owner_id : null;
   const pickedAt = picked ? frame.players.find((p) => p.player_id === picked) : undefined;
+  // The followed player is drawn last but for the picked one, so nobody covers him.
+  const top = [focusAt, animated ? pickedAt : undefined].filter((p) => p !== undefined);
+  const order = [...frame.players.filter((p) => !top.includes(p)), ...top];
   return (
-    <svg className={`pitch${animated ? " anim" : ""}${className ? ` ${className}` : ""}`} viewBox={`0 0 ${W} ${H}`} role="img"
+    <svg className={`pitch${animated ? " anim" : ""}${focusAt ? " following" : ""}${className ? ` ${className}` : ""}`} viewBox={`0 0 ${W} ${H}`} role="img"
       aria-label={label} style={style} ref={svgRef}>
       <Markings />
       {under}
       {actions.filter((e) => e.event_id !== selected).map((e) => <Action key={e.event_id} e={e} on={false} mine={involves(e, focus)} />)}
-      {(animated && pickedAt ? [...frame.players.filter((p) => p !== pickedAt), pickedAt] : frame.players).map((p) => {
+      {order.map((p) => {
         const { home, shirt } = who(p.player_id);
         const followed = p.player_id === focus;
         const ring = p.player_id === picked ? "picked" : marked?.has(p.player_id) ? "marked" : p.player_id === carrier ? "carrier" : "";
@@ -134,7 +149,13 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
             onClick={onPick ? () => onPick(p.player_id === picked ? null : p.player_id) : undefined}>
             {tag && <title>{tag(p.player_id)}</title>}
             {onPick && <circle r={16} fill="transparent" />}
-            {followed && <circle r={14} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />}
+            {followed && (
+              <>
+                <circle className="follow-pulse" r={19} fill="none" stroke="var(--pv-gold)" strokeWidth={3} />
+                <circle r={18} fill="none" stroke="var(--pv-ink)" strokeWidth={7} />
+                <circle r={18} fill="none" stroke="var(--pv-gold)" strokeWidth={4} />
+              </>
+            )}
             {ring === "picked" && <circle r={15} fill="none" stroke="var(--pv-ink)" strokeWidth={3} />}
             {ring === "marked" && <circle r={14} fill="none" stroke="var(--pv-ink)" strokeWidth={2.5} strokeDasharray="5 3" />}
             {ring === "carrier" && (
@@ -143,10 +164,11 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
                 <circle r={14} fill="none" stroke="var(--pv-sheet)" strokeWidth={3} />
               </>
             )}
-            <circle r={9} fill={home ? "var(--pv-home)" : "var(--pv-away)"} stroke={followed ? "var(--pv-gold)" : "var(--pv-ink)"} strokeWidth={followed ? 3 : 2} />
-            <text y={4} fontSize={10} fontWeight={700} textAnchor="middle" fill="var(--pv-sheet)">
+            <circle r={followed ? 12 : 9} fill={home ? "var(--pv-home)" : "var(--pv-away)"} stroke="var(--pv-ink)" strokeWidth={2} />
+            <text y={followed ? 4.5 : 4} fontSize={followed ? 12 : 10} fontWeight={700} textAnchor="middle" fill="var(--pv-sheet)">
               {shirt}
             </text>
+            {followed && focusName && p !== pickedAt && <FollowTag name={focusName} x={p.x * S} />}
             {/* Moving with its dot, the picked player's name rides inside the group when animated. */}
             {animated && p === pickedAt && tag && <Label x={p.x * S} y={p.y * S} text={tag(p.player_id)} relative />}
           </g>
@@ -163,6 +185,19 @@ export default function Pitch({ frame, actions, selected, label, focus = null, w
       </g>
       {!animated && pickedAt && tag && <Label x={pickedAt.x * S} y={pickedAt.y * S} text={tag(pickedAt.player_id)} />}
     </svg>
+  );
+}
+
+/** The followed player's surname next to his dot, on whichever side has room; it moves with the dot. */
+function FollowTag({ name, x }: { name: string; x: number }) {
+  const w = name.length * 7.4 + 14;
+  const left = x > W - w - 30;
+  const x0 = left ? -24 - w : 24;
+  return (
+    <g className="follow-tag" pointerEvents="none">
+      <rect x={x0} y={-11} width={w} height={22} rx={11} fill="var(--pv-gold)" stroke="var(--pv-ink)" strokeWidth={1.5} />
+      <text x={x0 + w / 2} y={4.5} fontSize={13} fontWeight={700} textAnchor="middle" fill="var(--pv-on-gold)">★ {name}</text>
+    </g>
   );
 }
 
