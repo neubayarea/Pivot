@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { useT } from "../i18n";
-import Brand from "./Brand";
+import Wordmark from "./Wordmark";
 import StateCard from "./StateCard";
 
 /** Last line of defence: a render error shows a message and a way back instead of a blank page. */
@@ -25,7 +25,7 @@ export function ErrorScreen({ error }: { error: Error }) {
   return (
     <>
       <header className="top">
-        <Brand />
+        <Wordmark />
       </header>
       <main className="page">
         <StateCard title={t("error.title")} tone="error" actions={<>

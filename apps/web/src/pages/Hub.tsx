@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
-import Brand from "../components/Brand";
+import Wordmark from "../components/Wordmark";
 import Segmented from "../components/Segmented";
 import { Placeholder } from "../components/Skeleton";
 import Stamp from "../components/Stamp";
@@ -38,7 +38,7 @@ function HubBar({ prefs, onPrefsChange, teams }: {
   const t = useT();
   return (
     <header className="top">
-      <Brand to="/" />
+      <Wordmark to="/" />
       <span className="sp" />
       <Segmented
         label={t("top.audience")}
