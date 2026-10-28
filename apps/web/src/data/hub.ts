@@ -117,6 +117,16 @@ export function liveNow(live: HubLive, nowMs = Date.now()): LiveNow {
   };
 }
 
+/** QA round 5: the live match in a list of matches (the match picker) has the score at the wall-clock
+ * minute and says it is live, never its final score; in the break after full time it is the final. */
+export function asLive<M extends { match_id: string; score: Score; status: string }>(
+  m: M, live: HubLive | null, nowMs = Date.now(),
+): M {
+  if (!live || m.match_id !== live.match_id) return m;
+  const now = liveNow(live, nowMs);
+  return now.over ? m : { ...m, score: { ...m.score, ...now.score }, status: "live" };
+}
+
 /** Ticks once a second, so the live card's clock moves. */
 export function useNow(ms = 1000): number {
   const [now, setNow] = useState(() => Date.now());

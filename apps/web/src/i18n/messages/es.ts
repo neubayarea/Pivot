@@ -53,6 +53,7 @@ export const es: Messages = {
   "hub.hist.note": "Todos los partidos de liga de las jornadas {from}–{to}, {n} en total, del archivo de la temporada",
   "hub.hist.reds": "Tarjetas rojas: {n}",
   "hub.hist.full": "Partido completo",
+  "hub.hist.live": "En directo",
   "hub.next.title": "Próxima jornada",
   "hub.next.note": "Jornada {n}: cada partido jugado {runs} veces desde el inicio por el simulador",
   "hub.next.noPrediction": "Aún sin predicción",

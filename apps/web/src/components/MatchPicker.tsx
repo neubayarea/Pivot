@@ -1,6 +1,7 @@
 // The match select in the top bar (Ax6). Picking one reloads S1 with that match and remembers it.
 import type { Match } from "@pivot/contracts";
 import { matchLabel, matchdayOf, useMatchChoice, useMatchList, type MatchList } from "../data/choice";
+import { asLive, useHub, useNow } from "../data/hub";
 import { useMatch } from "../data/match";
 import { useT } from "../i18n";
 
@@ -36,12 +37,16 @@ export default function MatchPicker() {
   const { match, playback, teams } = useMatch();
   const t = useT();
   const list = useMatchList(choice !== null);
+  const live = useHub().data?.live ?? null;
+  const now = useNow(5000);
   if (!choice) return null;
   // C14: the simulated live match shows its score so far, not the final one; the next round's
   // fixtures are on the match centre, not in this list (unless one is open).
   const md = matchdayOf(match.match_id);
   const openLabel = `${teams.home.name} v ${teams.away.name}${md === null ? "" : ` · ${t("picker.matchday", { n: md })}`}`;
-  const listed = list.matches.filter((m) => m.status !== "scheduled" || m.match_id === match.match_id);
+  // QA round 5: the live match, open or not, never shows its final score here.
+  const listed = list.matches.filter((m) => m.status !== "scheduled" || m.match_id === match.match_id)
+    .map((m) => asLive(m, live, now));
   const matches = playback?.goLive
     ? listed.map((m) => (m.match_id === match.match_id ? { ...m, score: match.score, status: match.status } : m))
     : listed;

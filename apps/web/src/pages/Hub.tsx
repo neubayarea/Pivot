@@ -297,24 +297,26 @@ function Schedule({ rounds, fav }: { rounds: HubNext[]; fav: string | null }) {
 }
 
 /** #364: one game of the season so far; it opens only when its full match is stored. */
-function PastRow({ g, fav, label }: { g: HubPast; fav: string | null; label?: string }) {
+function PastRow({ g, fav, label, liveId }: { g: HubPast; fav: string | null; label?: string; liveId: string | null }) {
   const t = useT();
-  const score = `${g.score.home}–${g.score.away}`;
-  const reds = g.reds.home + g.reds.away;
+  // QA round 5: the game being played live right now keeps its final score and red cards to itself.
+  const live = g.match_id !== null && g.match_id === liveId;
+  const score = live ? t("hub.hist.live") : `${g.score.home}–${g.score.away}`;
+  const reds = live ? 0 : g.reds.home + g.reds.away;
   const body = (
     <>
       <span className="hub-meta">{label}</span>
       <TeamName team={g.home} fav={fav} />
-      <span className="hub-score num">{score}</span>
+      <span className={live ? "hub-score hub-past-live" : "hub-score num"}>{live ? <Stamp tone="live">{score}</Stamp> : score}</span>
       <TeamName team={g.away} fav={fav} />
       <span className="hub-meta">{reds > 0 && t("hub.hist.reds", { n: reds })}</span>
-      <span className="hub-meta">{g.match_id && t("hub.hist.full")}</span>
+      <span className="hub-meta">{g.match_id && !live && t("hub.hist.full")}</span>
     </>
   );
   return (
     <li>
       {g.match_id ? (
-        <Link to={`/?match=${encodeURIComponent(g.match_id)}&tab=overview`} className="hub-past-row"
+        <Link to={live ? liveHref(g.match_id) : `/?match=${encodeURIComponent(g.match_id)}&tab=overview`} className="hub-past-row"
           aria-label={t("hub.open", { home: g.home.name, away: g.away.name, score })}>{body}</Link>
       ) : <div className="hub-past-row">{body}</div>}
     </li>
@@ -322,7 +324,7 @@ function PastRow({ g, fav, label }: { g: HubPast; fav: string | null; label?: st
 }
 
 /** #364: the whole league's season so far from the season file, a round at a time, or the viewer's club's games. */
-function History({ rounds, fav }: { rounds: HubRound[]; fav: string | null }) {
+function History({ rounds, fav, liveId }: { rounds: HubRound[]; fav: string | null; liveId: string | null }) {
   const t = useT();
   const day = useRoundDate();
   const [picked, setPicked] = useState(String(rounds[0].matchday));
@@ -356,13 +358,13 @@ function History({ rounds, fav }: { rounds: HubRound[]; fav: string | null }) {
         {onlyMine ? (
           <ul>
             {rounds.flatMap((r) => r.results.filter((g) => [g.home.short_name, g.away.short_name].includes(fav))
-              .map((g) => <PastRow key={`${r.matchday}-${g.home.short_name}`} g={g} fav={fav}
+              .map((g) => <PastRow key={`${r.matchday}-${g.home.short_name}`} g={g} fav={fav} liveId={liveId}
                 label={t("hub.sched.day", { n: r.matchday, date: day(r.date) })} />))}
           </ul>
         ) : (
           <>
             <h3>{t("hub.sched.day", { n: round.matchday, date: day(round.date) })}</h3>
-            <ul>{pinned(round.results, fav).map((g) => <PastRow key={g.home.short_name} g={g} fav={fav} />)}</ul>
+            <ul>{pinned(round.results, fav).map((g) => <PastRow key={g.home.short_name} g={g} fav={fav} liveId={liveId} />)}</ul>
           </>
         )}
       </div>
@@ -419,7 +421,9 @@ export default function Hub() {
             ))}
           </section>
         )}
-        {data?.history && data.history.length > 0 && <History rounds={data.history} fav={fav} />}
+        {data?.history && data.history.length > 0 && (
+          <History rounds={data.history} fav={fav} liveId={data.live?.match_id ?? null} />
+        )}
       </main>
     </>
   );
