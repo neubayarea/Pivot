@@ -12,6 +12,8 @@ also lists the What-if chips of every turning point.
 Read-only: GET requests only, so nothing is computed or stored beyond the server's own caches (no
 POST, no what-if run). A few at a time, since the server has two cores. Prints every request slower
 than --slow seconds or not answered 200, then a one-line summary; exits 1 if any request failed.
+If a whole round of requests gets no good answer (the server restarting, a deploy), it stops there
+rather than keep asking: run it again once the site answers.
 """
 
 from __future__ import annotations
@@ -92,14 +94,23 @@ def main() -> int:
           f"(What-if chips for {', '.join(with_whatif)})")
 
     start = time.monotonic()
-    flagged, failed = [], 0
-    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-        for path, status, secs, _ in pool.map(lambda p: get(base, p), paths):
-            if status != 200 or secs > args.slow:
-                flagged.append((secs, status, path))
-                failed += status != 200
-                print(f"{secs:6.1f} s  {status or 'no answer':>9}  {path}", flush=True)
-    print(f"done in {time.monotonic() - start:.0f} s: {len(paths)} requests, {len(flagged)} slower than "
+    flagged, failed, asked = [], 0, 0
+    workers = max(1, args.workers)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        # A round of `workers` requests at a time, so a server that stops answering is noticed at once.
+        for i in range(0, len(paths), workers):
+            round_ = list(pool.map(lambda p: get(base, p), paths[i:i + workers]))
+            asked += len(round_)
+            for path, status, secs, _ in round_:
+                if status != 200 or secs > args.slow:
+                    flagged.append((secs, status, path))
+                    failed += status != 200
+                    print(f"{secs:6.1f} s  {status or 'no answer':>9}  {path}", flush=True)
+            if all(status in (0, 502, 503, 504) for _, status, _, _ in round_):
+                print(f"the server stopped answering ({', '.join(str(r[1] or 'no answer') for r in round_)}); "
+                      f"stopped after {asked} of {len(paths)} requests. Run it again once the site answers.")
+                break
+    print(f"done in {time.monotonic() - start:.0f} s: {asked} requests, {len(flagged)} slower than "
           f"{args.slow:g} s or not 200, {failed} not 200")
     return 1 if failed else 0
 

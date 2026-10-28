@@ -209,7 +209,7 @@ What we knowingly left for after the deadline:
 
 - **Pitch overlays on the analyst Live tab**: the team's shape lines, pressing zones and passing lanes drawn on the live pitch.
 - **Next-round predictions that use the pre-match context.** Context effects (form, news, reunions) are off by default, so every simulation, the next-round predictions included, ignores them for now.
-- **What-if results worked out ahead of time for all 20 matches.** 2 are done and 18 are in progress; until then, the other matches' what-ifs are simulated when first asked.
+- **What-if precompute for the other 18 matches.** What-if is precomputed for the demo and the live match; the other 18 matches compute on the server on first use (slower). Precompute them later.
 - **The mobile layout** ([#259](https://github.com/neubayarea/Pivot/issues/259): on a phone the English and Spanish match header is too long, and the page scrolls sideways).
 - [#338](https://github.com/neubayarea/Pivot/issues/338): the single-process local build on Windows answers an unknown API path with the home page instead of a 404.
 - [#342](https://github.com/neubayarea/Pivot/issues/342): the synthetic season's schedule gives some clubs many more away games than home games.
