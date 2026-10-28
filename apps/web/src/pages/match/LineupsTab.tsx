@@ -82,20 +82,8 @@ export function LineupsTab() {
   const { preMatch, match } = useMatch();
   const { side, fan } = usePersona();
   const played = match.status !== "scheduled";
-  if (fan) {
-    return (
-      <div className="post lineups-tab">
-        <section className="post-sec" aria-labelledby="lu-xi-hd" id="lu-xi">
-          <header className="sec-hd">
-            <h2 id="lu-xi-hd">{t("pre.lineups")}</h2>
-            <p className="muted">{t("lu.note")}</p>
-          </header>
-          <Lineups up={side ?? "home"} follow facts formation />
-        </section>
-        {played && <FanLineupExtras />}
-      </div>
-    );
-  }
+  // C21 (#401): a fan's tab is the one before (the video's shot 7b films it), with the player of the
+  // match and the substitutions after the coach's plan; the analyst's parts are the analyst's only.
   return (
     <div className="post lineups-tab">
       <section className="post-sec" aria-labelledby="lu-side-hd" id="lu-side">
@@ -115,12 +103,13 @@ export function LineupsTab() {
           <h2 id="lu-xi-hd">{t("pre.lineups")}</h2>
           <p className="muted">{t("lu.note")}</p>
         </header>
-        <Lineups up={side ?? "home"} follow facts formation={!preMatch} card={(p) => <PlayerHoverCard p={p} />} />
+        <Lineups up={side ?? "home"} follow facts formation={!preMatch} card={fan ? undefined : (p) => <PlayerHoverCard p={p} />} />
       </section>
-      {played && <SubImpactTable />}
-      {played && <RatingSpread />}
-      {played && <PaperVsActual />}
+      {!fan && played && <SubImpactTable />}
+      {!fan && played && <RatingSpread />}
+      {!fan && played && <PaperVsActual />}
       <TeamTactics />
+      {fan && played && <FanLineupExtras />}
     </div>
   );
 }
