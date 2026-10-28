@@ -108,7 +108,7 @@ const kindOf = (type: string, t: T) => {
 };
 
 export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outside }: Props) {
-  const { eventById, playerName } = useMatch();
+  const { eventById, playerName, teams } = useMatch();
   const { prefs, t } = usePrefs();
   const { minute } = useClock();
   const localising = useLocalising();
@@ -141,6 +141,14 @@ export default function WhyItTurned({ pivot, selected, onToggle, chipHint, outsi
   // The API writes English when it cannot write the asked language; say so instead of hiding it.
   const served = narrativeLang(narrative);
   const fellBack = served !== null && served !== prefs.language;
+  if (fellBack) {
+    return (
+      <Card title={t("why.title")} className="why">
+        <p>{t("pivot.fallbackHeadline", { team: teams[pivot.direction].name })}</p>
+        <p className="muted" role="status">{t("pivot.languagePending")}</p>
+      </Card>
+    );
+  }
   // Likewise the analyst version while the fan one is written (or when it could not be).
   const plainForFan = prefs.audience === "fan" && narrative.prefs.audience !== "fan";
   const vars = { wanted: t(`lang.${prefs.language}`), served: t(`lang.${served ?? "en"}`) };

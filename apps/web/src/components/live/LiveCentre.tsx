@@ -16,6 +16,7 @@ import { usePersona } from "../../data/persona";
 import { useVizData } from "../../data/viz";
 import { useT, type MessageKey } from "../../i18n";
 import MomentumChart from "../MomentumChart";
+import { LoadFailed, Placeholder } from "../Skeleton";
 import PostMatchReport from "../report/PostMatchReport";
 import ReportBoundary from "../report/ReportBoundary";
 import { num, or0, pct } from "../report/fmt";
@@ -51,7 +52,7 @@ function Spark({ rows, k }: { rows: Rolling; k: RollKey }) {
   );
 }
 
-function LiveMetrics({ upToMin }: { upToMin: number }) {
+export function LiveMetrics({ upToMin }: { upToMin: number }) {
   const { match, teams } = useMatch();
   const t = useT();
   const { minute: clockOf } = useClock();
@@ -61,7 +62,14 @@ function LiveMetrics({ upToMin }: { upToMin: number }) {
   // Whole five-minute blocks only: the block still being played has nulls and would draw a false dip.
   const rolling = (analysis.data as unknown as { rolling?: Rolling } | null)?.rolling?.filter((r) => r.to - r.from === 5 && r.to <= upToMin).slice(-8) ?? [];
   const scope = win.data?.scopes[0];
-  if (!scope) return null;
+  if (!scope) return (
+    <section className="lc-card lc-metrics">
+      {win.error
+        ? <LoadFailed message={t("ts.error")} fault={win.fault} onRetry={win.retry} />
+        : upToMin === 0 ? <p className="muted">{t("live.metrics.kickoff")}</p>
+          : <Placeholder label={t("live.metrics.loading")} block={80} lines={1} />}
+    </section>
+  );
   return (
     <section className="lc-card lc-metrics" aria-labelledby="lc-metrics-hd">
       <header className="rp-hd">
@@ -139,7 +147,7 @@ function ShotPopups({ upTo }: { upTo: number }) {
   return createPortal(<ShotCard key={shown.event_id} shot={shown} onClose={() => setShown(null)} />, document.body);
 }
 
-export default function LiveCentre({ moments, upTo }: { moments: Pivot[]; upTo: number | null }) {
+export default function LiveCentre({ moments, upTo, hideMetrics = false }: { moments: Pivot[]; upTo: number | null; hideMetrics?: boolean }) {
   const { match, teams, metrics, pivots } = useMatch();
   const t = useT();
   const { fan } = usePersona();
@@ -174,7 +182,7 @@ export default function LiveCentre({ moments, upTo }: { moments: Pivot[]; upTo: 
       <ReportBoundary resetKey={`${match.match_id}:${minute}`}>
         <div className="lc-row">
           <div className="lc-col">
-            <LiveMetrics upToMin={minute} />
+            {!hideMetrics && <LiveMetrics upToMin={minute} />}
             {metrics.length > 0 && (
               <div className="lc-card">
                 <MomentumChart metrics={metrics} pivots={pivots} homeLabel={teams.home.short_name} awayLabel={teams.away.short_name} numbered={moments.map((p) => p.pivot_id)} />
