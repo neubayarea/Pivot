@@ -3,7 +3,8 @@
 // its turning point, so the lab's own back link is not needed here.
 import { useEffect, useState } from "react";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
-import { Distribution, RunProgress, storyLine } from "../../components/WhatIf";
+import Stamp from "../../components/Stamp";
+import { RunProgress, WhatIfAnswer, scoreDashes } from "../../components/WhatIf";
 import { pivotHeadline } from "../../components/PivotList";
 import { useClock } from "../../data/clock";
 import { useHeightVar } from "../../data/headerFold";
@@ -21,6 +22,8 @@ export function WhatIfTab({ moments, open, onPick }: { moments: Pivot[]; open: P
   // Ax77: the turning-point chips stick under the tabs.
   const row = useHeightVar("--pv-sub-h");
   const pivot = open ?? moments[0] ?? null;
+  // Ax91: the scenario the first answer shows, so a fan's lab does not show it a second time.
+  const [shown, setShown] = useState<string | null>(null);
   if (!pivot) return <p className="muted">{t("post.whatIfNone")}</p>;
   return (
     <>
@@ -36,9 +39,9 @@ export function WhatIfTab({ moments, open, onPick }: { moments: Pivot[]; open: P
           ))}
         </div>
       )}
-      <Featured key={`f-${pivot.pivot_id}`} pivot={pivot} source={source} />
+      <Featured key={`f-${pivot.pivot_id}`} pivot={pivot} source={source} onShown={setShown} />
       <div className="wi-tab">
-        <Lab key={pivot.pivot_id} pivotId={pivot.pivot_id} source={source} />
+        <Lab key={pivot.pivot_id} pivotId={pivot.pivot_id} source={source} shownAbove={shown} />
       </div>
     </>
   );
@@ -52,13 +55,15 @@ const STRIKING: ScenarioOption["type"][] = ["remove_goal", "remove_red_card", "c
  * before the viewer picks anything. With a ♥ team it is the change that would have helped that team.
  * A result run ahead (Bx14) answers at once; otherwise the usual progress shows while it runs.
  */
-function Featured({ pivot, source }: { pivot: Pivot; source: ScenarioApi }) {
+function Featured({ pivot, source, onShown }: { pivot: Pivot; source: ScenarioApi; onShown: (id: string | null) => void }) {
   const { teams } = useMatch();
   const t = useT();
-  const { side } = usePersona();
+  const { side, fan } = usePersona();
   const minuteOf = useOptionMinute();
   const [option, setOption] = useState<ScenarioOption | null>(null);
   const { state, run } = useScenarioRun(source);
+  const shownId = state.phase === "done" ? state.scenario.scenario_id : null;
+  useEffect(() => onShown(shownId), [shownId, onShown]);
   useEffect(() => {
     let alive = true;
     source.options(pivot.pivot_id).then((opts) => {
@@ -76,19 +81,15 @@ function Featured({ pivot, source }: { pivot: Pivot; source: ScenarioApi }) {
   if (!option || state.phase === "failed" || state.phase === "idle") return null;
   const change = optionLabel(option, t, undefined, minuteOf(option));
   return (
-    <section className="wi-feature" aria-labelledby="wi-feature-hd" aria-live="polite">
-      <h2 id="wi-feature-hd">{t("wi.feature", { change })}</h2>
+    <section className={`wi-feature ${fan ? "is-fan" : "is-an"}`} aria-labelledby="wi-feature-hd" aria-live="polite">
+      <h2 id="wi-feature-hd" tabIndex={-1}>{scoreDashes(t("wi.feature", { change }))}</h2>
       {state.phase === "done" ? (
         <>
-          <p className="wi-feature-line">
-            {storyLine({ result: state.scenario.result, type: option.type, minute: minuteOf(option), change,
-              pressLower: /lower/i.test(option.label), teams }, t)}
+          <WhatIfAnswer scenario={state.scenario} change={change} minute={minuteOf(option)}
+            pressLower={/lower/i.test(option.label)} teams={teams} compact />
+          <p className="muted wi-feature-more">
+            {fan ? <Stamp tone="warn">{t("whatif.simulated")}</Stamp> : null} {t(fan ? "wi.featureMore" : "wi.an.featureMore")}
           </p>
-          <div className="dists">
-            <Distribution label={t("whatif.asPlayed", { minute: minuteOf(option) ?? "" })} dist={state.scenario.result.baseline} teams={teams} />
-            <Distribution label={t("whatif.changed", { change })} dist={state.scenario.result.counterfactual} teams={teams} significant={state.scenario.result.significant} />
-          </div>
-          <p className="muted wi-feature-more">{t("wi.featureMore")}</p>
         </>
       ) : (
         <RunProgress scenario={state.phase === "running" ? state.scenario : null} />

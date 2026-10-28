@@ -6,11 +6,11 @@ import Kicker from "../components/Kicker";
 import { pivotHeadline } from "../components/PivotList";
 import Segmented from "../components/Segmented";
 import Stamp from "../components/Stamp";
-import { RunFailed, RunProgress, ScenarioChips, ScenarioResult } from "../components/WhatIf";
+import { RunFailed, RunProgress, ScenarioChips, ScenarioResult, meaningOf } from "../components/WhatIf";
 import { useClock } from "../data/clock";
 import { useFixture, useMatch } from "../data/match";
 import { mockScenarioApi } from "../data/scenarioMock";
-import { numberLocale } from "../data/motion";
+import { numberLocale, scrollBehavior } from "../data/motion";
 import { forYourTeam, usePersona } from "../data/persona";
 import {
   DEFAULT_RUNS, MOVE_RANGE, RUN_COUNTS, clockMinute, liveScenarioApi, optionLabel, useOptionMinute, useScenarioRun, type RunCount,
@@ -45,7 +45,11 @@ export function useScenarioSource(): ScenarioApi {
   return useMemo(() => (fixture ? mockScenarioApi(() => read.current) : liveScenarioApi), [fixture]);
 }
 
-export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi }) {
+export function Lab({ pivotId, source, shownAbove = null }: {
+  pivotId: string; source: ScenarioApi;
+  /** The scenario the tab already shows above the lab (Ax91): a fan gets a pointer to it, not the same answer again. */
+  shownAbove?: string | null;
+}) {
   const { pivotDetail, teams, eventById } = useMatch();
   const { t } = usePrefs();
   const { minute } = useClock();
@@ -135,6 +139,63 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
         <span className="sp" />
         <Stamp tone="warn">{t("whatif.simulated")}</Stamp>
       </div>
+      {fan ? (
+        // Ax91: a fan picks from big cards, each with what it means; one tap plays it out.
+        <div className="wi-fan-lab">
+          <section className="card wi-fan-pick" aria-labelledby="wi-fan-pick-hd">
+            <h2 id="wi-fan-pick-hd">{t("wi.fan.pickTitle")}</h2>
+            <p className="muted">{t("wi.fan.pickNote")}</p>
+            {opts.kind === "loading" && (
+              <div aria-busy="true" className="sk-lines">
+                <p className="sr-only" role="status">{t("whatif.loadingOptions")}</p>
+                {[0, 1, 2].map((i) => <span key={i} className="sk sk-line" aria-hidden="true" />)}
+              </div>
+            )}
+            {opts.kind === "error" && (
+              <div role="alert" className="run-failed">
+                <p>{t("whatif.optionsError")}</p>
+                <div className="comp-row"><Button onClick={() => setReload((n) => n + 1)}>{t("whatif.retry")}</Button></div>
+              </div>
+            )}
+            {opts.kind === "ready" && (options.some((o) => o.enabled) ? (
+              <div ref={chipsRef} className="wi-fan-cards" role="group" aria-label={t("whatif.pickLabel")}>
+                {options.filter((o) => o.enabled).map((o) => (
+                  <button key={o.type} type="button" className="wi-fan-card" aria-pressed={ranOption?.type === o.type}
+                    disabled={busy} onClick={() => { setSelected(o.type); run(body(o)); }}>
+                    <b>{optionLabel(o, t, o.type === "move_substitution" ? moveTo : undefined, minuteOf(o))}</b>
+                    <span>{meaningOf(o, t, minuteOf(o))}</span>
+                    {o.team && <small>{teams[o.team].name}</small>}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">{t("whatif.noOptions")}</p>
+            ))}
+          </section>
+          <div ref={resultRef} tabIndex={-1} className="result-slot card">
+            {state.phase === "idle" && <div className="placeholder">{t("wi.fan.idle")}</div>}
+            {(state.phase === "starting" || state.phase === "running") && <RunProgress scenario={state.phase === "running" ? state.scenario : null} />}
+            {state.phase === "failed" && (
+              <RunFailed error={state.error} onRetry={() => run(state.body, { fresh: true })} onReset={tryAnother} />
+            )}
+            {state.phase === "done" && (state.scenario.scenario_id === shownAbove ? (
+              <div className="wi-fan-same">
+                <p>{t("wi.fan.sameAbove")}</p>
+                <div className="comp-row">
+                  <Button variant="primary" onClick={() => {
+                    const hd = document.getElementById("wi-feature-hd");
+                    hd?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+                    hd?.focus({ preventScroll: true });
+                  }}>{t("wi.fan.seeAbove")}</Button>
+                  <Button variant="ghost" onClick={tryAnother}>{t("whatif.tryAnother")}</Button>
+                </div>
+              </div>
+            ) : (
+              <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} source={source} />
+            ))}
+          </div>
+        </div>
+      ) : (
       <div className="grid3">
         <div className="stack">
           <Card title={t("whatif.pickTitle")} note={opts.kind === "ready" ? t("whatif.pickNote", { n: options.filter((o) => o.enabled).length }) : undefined}>
@@ -230,9 +291,10 @@ export function Lab({ pivotId, source }: { pivotId: string; source: ScenarioApi 
             )}
             {state.phase === "done" && <ScenarioResult state={state} option={ranOption} teams={teams} onReset={tryAnother} source={source} />}
           </div>
-          {!fan && <p className="fine">{t("whatif.fine")}</p>}
+          <p className="fine">{t("whatif.fine")}</p>
         </Card>
       </div>
+      )}
     </>
   );
 }

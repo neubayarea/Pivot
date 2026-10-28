@@ -14,7 +14,7 @@ import {
 } from "../data/scenarios";
 import { translator } from "../i18n";
 import WhatIfLab from "../pages/WhatIfLab";
-import { ArmCompare, RunFailed, RunProgress, ScenarioChips, ScenarioResult, failureText, scoreDashes, storyLine } from "./WhatIf";
+import { ArmCompare, RunFailed, effectOf, expectedPoints, meaningOf, RunProgress, ScenarioChips, ScenarioResult, failureText, scoreDashes, storyLine } from "./WhatIf";
 
 const ev = (id: string, minute: number, team: "home" | "away", type: MatchEvent["type"], extra: Partial<MatchEvent> = {}) =>
   ({ event_id: id, seq: minute, t: minute * 60, minute, period: minute < 45 ? 1 : 2, team, type, meta: {}, shot_outcome: null, ...extra }) as MatchEvent;
@@ -331,12 +331,20 @@ describe("the result as a story, with the two arms side by side (Ax51)", () => {
     const state = { phase: "done", body, scenario, cached: false } as Extract<RunState, { phase: "done" }>;
     const props = { option: mockOptions(view, "p63")[0], teams: view.teams, onReset: () => {}, source };
     const plain = render(<ScenarioResult state={state} {...props} />);
-    expect(plain).not.toContain("Side by side");
+    expect(plain).not.toContain("Team numbers, from");
+    expect(plain).toContain("stored before the score and team numbers were kept");
     expect(plain).toMatch(/Without the 63′ substitution, the chance of Harbour City winning (rises|falls) from \d+% to \d+%\./);
     const rich = { ...state, scenario: { ...scenario, result: { ...scenario.result!, ...withStats } } };
     const html = render(<ScenarioResult state={rich} {...props} />);
-    expect(html).toContain("Side by side");
+    expect(html).toContain("Team numbers, from 63′ to the final whistle");
     expect(html).toContain("and the most likely score goes from 3–1 to 1–1.");
+    // Ax91: the analyst's breakdown: the score grids, the forest plot and how it was run.
+    expect(html).toContain("Likeliest final scores");
+    expect(html).toContain('aria-label="3–1 in 21% of replays"');
+    expect(html).toContain("What changed, number by number");
+    expect(html).toContain("How it was run");
+    expect(html).toContain("200 each way (400 replays)");
+    expect(html).toMatch(/Effect on HCY win/);
   });
 });
 
@@ -345,5 +353,31 @@ describe("what-if typography (C13 QA)", () => {
     expect(scoreDashes("from 1-2 to 2-2")).toBe("from 1–2 to 2–2");
     expect(scoreDashes("a 4-3-3 shape")).toBe("a 4-3-3 shape");
     expect(scoreDashes("Remove 38' red card, at 90'.")).toBe("Remove 38′ red card, at 90′.");
+  });
+});
+
+describe("the numbers behind the analyst's answer (Ax91)", () => {
+  const d = (h: number, dr: number, a: number) => ({ home_win: h, draw: dr, away_win: a, home_advance: null, ci95: {} });
+  it("gives the effect in points with a 95% interval and the chance it helps", () => {
+    const e = effectOf({ baseline: d(0.335, 0.3, 0.365), counterfactual: d(0.5, 0.23, 0.27) }, 200, "home_win");
+    expect(e.points).toBeCloseTo(16.5, 5);
+    expect(e.lo).toBeCloseTo(7.0, 0);
+    expect(e.hi).toBeCloseTo(26.0, 0);
+    expect(e.helps).toBeGreaterThan(0.999);
+    expect(effectOf({ baseline: d(0.4, 0.3, 0.3), counterfactual: d(0.4, 0.3, 0.3) }, 200, "home_win").helps).toBeCloseTo(0.5, 5);
+  });
+  it("counts expected points as three for a win and one for a draw", () => {
+    const x = expectedPoints(d(0.5, 0.23, 0.27), "home", 200);
+    expect(x.mean).toBeCloseTo(1.73, 5);
+    expect(x.lo).toBeLessThan(x.mean);
+    expect(x.hi).toBeGreaterThan(x.mean);
+  });
+  it("says what each change means in plain words, in every language", () => {
+    const o = (type: ScenarioOption["type"], label = "", params = {}) =>
+      ({ type, label, enabled: true, disabled_reason: null, target_event_id: null, at_minute: 50, team: "home", params }) as ScenarioOption;
+    expect(meaningOf(o("remove_goal"), en, "17")).toBe("Play the rest of the match as if this goal never counted.");
+    expect(meaningOf(o("move_substitution", "", { new_minute: 74 }), en, "58")).toBe("The same substitution, made at 75′ instead.");
+    expect(meaningOf(o("change_press", "Press lower from 12′"), translator("zh"), "12")).toBe("这支球队退得更深，把球让给对手。");
+    expect(meaningOf(o("cancel_substitution"), translator("es"), "55")).toMatch(/suplente/);
   });
 });
