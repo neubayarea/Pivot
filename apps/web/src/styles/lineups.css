@@ -1,0 +1,53 @@
+/* The line-ups tab's player cards, substitution impact and rating bands (C21, #401). */
+
+/* A card over the formation pitch while a player is hovered or focused. */
+.lu-pitch-wrap { position: relative; min-width: 0; }
+.lu-pitch-wrap .lu-team g[tabindex] { cursor: default; outline: none; }
+.lu-pitch-wrap .lu-team g[tabindex]:focus-visible circle { stroke: var(--pv-focus); stroke-width: .8; }
+.lu-pcard {
+  position: absolute; z-index: 5; transform: translate(12px, 12px); width: 232px;
+  background: var(--pv-sheet); color: var(--pv-ink); border: 1px solid var(--pv-hair); border-radius: var(--pv-r-panel);
+  box-shadow: var(--pv-lift); padding: 10px 12px; display: grid; gap: 8px; pointer-events: none; font-size: var(--pv-fs-sm);
+}
+.lu-pcard.left { transform: translate(calc(-100% - 12px), 12px); }
+.lu-pcard.above { transform: translate(12px, calc(-100% - 12px)); }
+.lu-pcard.left.above { transform: translate(calc(-100% - 12px), calc(-100% - 12px)); }
+.lu-card-name { font-weight: 700; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.lu-card-name .muted { font-weight: 500; }
+.lu-card-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; }
+.lu-card-stats div { display: grid; gap: 2px; min-width: 0; }
+.lu-card-stats dt { color: var(--pv-ink-2); font-size: var(--pv-fs-xs); }
+.lu-card-stats dd { font-weight: 700; }
+
+/* What the changes did. */
+.lu-subs { overflow-x: auto; }
+.lu-subs-t { width: 100%; border-collapse: collapse; font-size: var(--pv-fs-sm); }
+.lu-subs-t th { text-align: left; font-weight: 600; color: var(--pv-ink-2); font-size: var(--pv-fs-xs); padding: 6px 8px; border-bottom: 1px solid var(--pv-rule); }
+.lu-subs-t td { padding: 8px; border-bottom: 1px solid var(--pv-hair); vertical-align: top; }
+.lu-subs-t .num { text-align: right; white-space: nowrap; }
+.lu-subs-t td:nth-child(2) { min-width: 220px; }
+.lu-sub-on, .lu-sub-off { white-space: nowrap; }
+.lu-subs-t small.up { color: var(--pv-win); }
+.lu-subs-t small.down { color: var(--pv-loss); }
+
+/* Squad ratings in bands: one pair of bars per band, in the two kit colours. */
+.lu-bands { list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.lu-bands li { display: grid; gap: 6px; justify-items: center; min-width: 0; }
+.lu-bars { display: flex; gap: 4px; align-items: end; height: 120px; width: 100%; justify-content: center; }
+.lu-bars i { display: flex; justify-content: center; align-items: flex-start; width: 40%; max-width: 28px; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--tc); }
+.lu-bars i.home { --tc: var(--pv-home); }
+.lu-bars i.away { --tc: var(--pv-away); }
+.lu-bars b { color: var(--pv-on-team); font-size: var(--pv-fs-xs); padding-top: 2px; }
+.lu-band { font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
+.lu-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: var(--pv-fs-sm); }
+
+/* The fan's player of the match and substitutions. */
+.lu-fan { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.lu-best-name { font-weight: 700; font-size: var(--pv-fs-lg); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.lu-best-rating { font-family: var(--pv-display); font-size: var(--pv-fs-3xl); font-weight: 900; line-height: 1; }
+.lu-fan-subs .pre-list li { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .lu-bands { gap: 4px; }
+  .lu-bars { height: 90px; }
+}
