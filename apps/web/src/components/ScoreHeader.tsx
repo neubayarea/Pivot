@@ -49,8 +49,9 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
   const goals = scorers(events, side, playerName, t, at);
   return (
     <div className={`mh-team ${side}${fav ? " fav" : ""}`} style={{ "--tc": team.color } as CSSProperties}>
+      {/* Dx12: live-score layout, each team a column with its crest above the name. */}
+      <Crest short={team.short_name} size={80} className="mh-crest" />
       <span className="mh-name" title={team.name}>
-        <Crest short={team.short_name} size={80} />
         <span className="tm-full">{team.name}</span>
         <span className="tm-short">{team.short_name}</span>
         <FollowTeam side={side} />
@@ -150,14 +151,14 @@ export default function ScoreHeader({ prefs, fold, children }: Props & { fold?: 
       <div className="mh-score">
         <TeamSide side="home" fav={prefs.focus_team === "home"} />
         <div className="mh-mid">
+          <span className="mh-state">
+            {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
+            <Stamp tone={shown === "replay" ? "line" : STATUS_TONE[shown]}>{t(shown === "replay" ? "tabs.replay" : `status.${shown}`)}</Stamp>
+          </span>
           <span className="mh-sc num" role="img" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
             <span>{match.score.home}</span>
             <span className="mh-dash" aria-hidden="true">–</span>
             <span>{match.score.away}</span>
-          </span>
-          <span className="mh-state">
-            {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
-            <Stamp tone={shown === "replay" ? "line" : STATUS_TONE[shown]}>{t(shown === "replay" ? "tabs.replay" : `status.${shown}`)}</Stamp>
           </span>
         </div>
         <TeamSide side="away" fav={prefs.focus_team === "away"} />

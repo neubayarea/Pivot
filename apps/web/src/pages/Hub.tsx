@@ -79,15 +79,17 @@ function LiveNow({ live, line, fav }: { live: HubLive; line: HubLine; fav: strin
       <div className="hub-live-head">
         <h2 id="hub-live-h">{t("hub.live.title")}</h2>
         <Stamp tone="live">{t("hub.live.sim")}</Stamp>
-        <span className="hub-live-min num" aria-label={t("hub.live.clock", { minute: now.minute })}>
-          {now.over ? t("status.finished") : `${now.minute}′`}
-        </span>
       </div>
       <Link to={href} className="hub-live-score" aria-label={t("hub.open", {
         home: line.home.name, away: line.away.name, score: `${now.score.home}–${now.score.away}` })}>
-        <TeamName team={line.home} fav={fav} crest={48} />
-        <span className="hub-live-goals num">{now.score.home}–{now.score.away}</span>
-        <TeamName team={line.away} fav={fav} crest={48} />
+        <TeamName team={line.home} fav={fav} crest={72} />
+        <span className="hub-live-mid">
+          <span className={`hub-live-min num${now.over ? " over" : ""}`} aria-label={t("hub.live.clock", { minute: now.minute })}>
+            {now.over ? t("status.finished") : `${now.minute}′`}
+          </span>
+          <span className="hub-live-goals num">{now.score.home}–{now.score.away}</span>
+        </span>
+        <TeamName team={line.away} fav={fav} crest={72} />
       </Link>
       <div className="hub-live-foot">
         <p>
