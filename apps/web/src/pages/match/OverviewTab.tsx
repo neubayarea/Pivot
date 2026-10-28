@@ -17,7 +17,7 @@ import MomentumChart from "../../components/MomentumChart";
 import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments";
 import MatchStory from "../../components/MatchStory";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
-import PostMatchReport from "../../components/report/PostMatchReport";
+import PostMatchReport, { useReportTitle } from "../../components/report/PostMatchReport";
 import ReportBoundary from "../../components/report/ReportBoundary";
 import SetPiecesAndShots from "../../components/SetPieces";
 import StartDemoButton from "../../components/StartDemoButton";
@@ -80,6 +80,7 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
   // The team stats follow the replay or the live clock, whole minutes, like the live tab's.
   const upTo = finished ? null : Math.floor(match.clock / 60) * 60;
   const report = useTeamStats(scheduled ? null : match.match_id, upTo);
+  const reportTitle = useReportTitle(upTo);
   // C18 (#366): the analyst's xG race; the shots are fetched only for an analyst.
   const shots = useShotMap(scheduled || fan ? null : match.match_id, { upTo, stepS: 60 });
 
@@ -109,9 +110,9 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
     ),
     // C19 (#385): the analyst's post-match report, under the xG race.
     report: (
-      <Section id="post-report" title={t("rp.title")} note={t("rp.note")} className="post-report">
+      <Section id="post-report" title={reportTitle} note={t(upTo === null ? "rp.noteOverview" : "rp.noteLive")} className="post-report">
         <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
-          <PostMatchReport moments={moments} upTo={upTo} />
+          <PostMatchReport parts={["deserved", "players"]} players={5} moments={moments} upTo={upTo} />
         </ReportBoundary>
       </Section>
     ),

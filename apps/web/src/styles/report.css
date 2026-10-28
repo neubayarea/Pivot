@@ -137,3 +137,23 @@
 /* While the analysis loads: an empty outline where it will go, no numbers. */
 .rp-wait { grid-column: 1 / -1; min-height: 320px; border-radius: var(--pv-r-panel); border: 1.5px dashed var(--pv-hair); background: transparent; }
 .rp-failed { padding: var(--pv-s3) var(--pv-s4); border: 1.5px dashed var(--pv-hair); border-radius: var(--pv-r-panel); font-size: var(--pv-fs-sm); }
+
+/* C20 (#391): "so far" while the match is on; blocks not reached; the fan's band; the Stats tab's report. */
+.rp-live { font-size: var(--pv-fs-xs); font-weight: 700; padding: 2px 8px; border-radius: var(--pv-r-pill); background: var(--pv-sunk); color: var(--pv-ink-2); }
+.rp-note { font-size: var(--pv-fs-sm); margin: 0; }
+.rp-hd h2 { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-xl); line-height: 1.1; }
+.rp-todo rect { fill: none; stroke: var(--pv-hair); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.rp-todo text { font-size: 12px; fill: var(--pv-ink-2); }
+.rp-dsv-bar .seg { min-width: 8px; }
+.rp-kicker { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-lg); color: var(--pv-ink-2); margin: 0; }
+.stats-report { gap: var(--pv-s3); }
+.stats-page .rp-sec h2 { scroll-margin-top: calc(var(--pv-stick-h, 0px) + var(--pv-tabs-h, 0px) + var(--pv-sub-h, 0px) + 12px); }
+.rp-fan { display: grid; gap: var(--pv-s3); }
+.rp-band { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+.rp-band li { display: grid; gap: 4px; padding: 10px 12px; border-radius: 6px; background: var(--pv-sunk); min-height: 64px; align-content: space-between; }
+.rp-band li.b-home, .rp-band li.b-away { background: var(--c); color: #fff; }
+.rp-band li.b-todo { background: transparent; border: 1.5px dashed var(--pv-hair); color: var(--pv-ink-2); }
+.rp-band-k { font-size: 12px; font-weight: 600; opacity: .85; }
+.rp-band-v { font-weight: 700; font-size: 14px; }
+.rp.stack > .rp-sec { grid-column: 1 / -1; }
+.rp.stack .rp-radar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-width: 1000px; }
