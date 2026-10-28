@@ -9,7 +9,7 @@ import { BANDS, MIN_MINUTES, cardStats, cardValue, ratingSpread, subImpact, type
 import { useMatch } from "../data/match";
 import { bestPlayer, usePlayers } from "../data/persona";
 import { useT, type MessageKey, type T } from "../i18n";
-import { Kit } from "./PreMatch";
+import { Kit, TeamKit } from "./PreMatch";
 import "../styles/lineups.css";
 
 /** The clock reached, in whole minutes, for a live match or a replay; null for a finished one. */
@@ -117,7 +117,7 @@ export function RatingSpread() {
           ))}
         </ol>
         <p className="lu-legend">
-          {(["home", "away"] as Side[]).map((s) => <span key={s} className="pre-who"><Kit side={s} />{teams[s].name}</span>)}
+          {(["home", "away"] as Side[]).map((s) => <span key={s} className="pre-who"><TeamKit side={s} size={24} />{teams[s].name}</span>)}
         </p>
       </div>
     </section>

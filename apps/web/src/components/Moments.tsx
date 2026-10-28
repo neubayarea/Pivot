@@ -13,6 +13,7 @@ import { countOf, useT } from "../i18n";
 import { detailFrame } from "../pages/PivotDetail";
 import { useScenarioSource } from "../pages/WhatIfLab";
 import Button from "./Button";
+import Crest from "./Crest";
 import { describe } from "./EventFeed";
 import Pitch, { whoFromSquads } from "./Pitch";
 import { PivotStamp, pivotHeadline } from "./PivotList";
@@ -71,7 +72,7 @@ function MomentRow({ p, n, on, onPick }: { p: Pivot; n: number; on: boolean; onP
       </span>
       <span className="pr-sw">
         <Swing p={p} />
-        <span className="to">{t("post.swingTo", { team: teams[p.direction].name })}</span>
+        <span className="to with-crest"><Crest short={teams[p.direction].short_name} size={28} />{t("post.swingTo", { team: teams[p.direction].name })}</span>
         <InvolvedTag pivot={p} />
         {l && <span className={`lean-tag ${l}`} style={{ "--tc": `var(--pv-${p.direction})` } as CSSProperties}>{t(l === "for" ? "you.for" : "you.against")}</span>}
       </span>

@@ -16,7 +16,7 @@ import {
 import { isMessageKey, plural, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import LangTag from "./LangTag";
-import { Kit } from "./PreMatch";
+import { Kit, TeamKit } from "./PreMatch";
 import { LoadFailed, Placeholder } from "./Skeleton";
 import "../styles/prematch.css";
 
@@ -120,7 +120,7 @@ const hasAny = (x: PrematchTeam | null) =>
 function TeamHead({ side, t, mine, name }: Pick<Ctx, "t" | "mine" | "name"> & { side: Side }) {
   return (
     <p className={`pre-dh ${side}`}>
-      <span className="pre-name"><Kit side={side} />{name(side)}</span>
+      <span className="pre-name"><TeamKit side={side} size={48} />{name(side)}</span>
       {mine && <span className="pre-role">{t(mine === side ? "pre.yourTeam" : "pre.opponent")}</span>}
     </p>
   );

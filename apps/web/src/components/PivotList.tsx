@@ -3,6 +3,7 @@ import type { Pivot1 as Pivot } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { useMatch, type MatchView } from "../data/match";
 import { narrativeLang, useT, type T } from "../i18n";
+import Crest from "./Crest";
 import LangTag from "./LangTag";
 import { InvolvedTag } from "./PlayerMatch";
 import Stamp from "./Stamp";
@@ -58,7 +59,7 @@ export default function PivotList({ activeId }: { activeId: string | null }) {
               <PivotStamp status={p.status} />
               <InvolvedTag pivot={p} />
             </span>
-            <span className="to">{t("pivot.momentumTo", { team: teams[p.direction].name })}</span>
+            <span className="to with-crest"><Crest short={teams[p.direction].short_name} size={28} />{t("pivot.momentumTo", { team: teams[p.direction].name })}</span>
           </Link>
         ),
       )}

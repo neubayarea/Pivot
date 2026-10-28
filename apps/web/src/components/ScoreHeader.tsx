@@ -16,6 +16,7 @@ import { shownStatus } from "../data/view";
 import { useT, type T } from "../i18n";
 import { surname } from "./FocusPickers";
 import FollowTeam, { FollowingChip } from "./FollowTeam";
+import Crest from "./Crest";
 import Stamp from "./Stamp";
 
 const STATUS_TONE = { live: "live", paused: "warn", finished: "ok", scheduled: "line" } as const;
@@ -49,7 +50,7 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
   return (
     <div className={`mh-team ${side}${fav ? " fav" : ""}`} style={{ "--tc": team.color } as CSSProperties}>
       <span className="mh-name" title={team.name}>
-        <span className="mh-crest" aria-hidden="true" />
+        <Crest short={team.short_name} size={80} />
         <span className="tm-full">{team.name}</span>
         <span className="tm-short">{team.short_name}</span>
         <FollowTeam side={side} />
@@ -77,7 +78,7 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
   const t = useT();
   const side = (s: Side) => (
     <span className={`mh-bar-team ${s}${favTeam === s ? " fav" : ""}`} style={{ "--tc": teams[s].color } as CSSProperties} title={teams[s].name}>
-      <span className="mh-chip" aria-hidden="true" />
+      <Crest short={teams[s].short_name} size={28} fallback={<span className="mh-chip" aria-hidden="true" />} />
       <span className="tm-full">{teams[s].name}</span>
       <span className="tm-short">{teams[s].short_name}</span>
       <FollowTeam side={s} />

@@ -247,6 +247,8 @@ a.pv:hover { background: var(--pv-gold-soft); }
 .pv .m { font-family: var(--pv-display); font-size: 19px; line-height: 1.1; grid-row: span 3; }
 .pv .tt { font-weight: 700; line-height: 1.3; }
 .pv .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.with-crest { display: inline-flex; align-items: center; gap: 6px; }
+.with-crest .crest { flex: none; object-fit: contain; }
 .pv .to { font-family: var(--pv-label); font-size: 12px; font-weight: 600; color: var(--pv-ink-2); }
 .pv.wait .tt { color: var(--pv-ink-2); font-style: italic; font-weight: 500; }
 .sev { letter-spacing: 1px; color: var(--pv-red); font-size: 12px; }
@@ -590,7 +592,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .mh-team.home .mh-name { flex-direction: row-reverse; }
 .mh-name .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-name .tm-short { display: none; }
-.mh-crest { display: none; }
+.mh-name .crest { flex: none; width: 80px; height: 80px; margin-block: -14px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .35)); }
 /* Ax69: the ♥ beside each name picks the viewer's team. A user's choice is ink or white, never yellow. */
 .fav-btn { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; padding: 0 4px; border: 0; border-radius: var(--pv-r-pill); background: transparent; color: inherit; font: inherit; font-family: var(--pv-body); line-height: 1; cursor: pointer; opacity: .72; }
 .fav-btn:hover { opacity: 1; background: rgba(0, 0, 0, .18); }
@@ -617,6 +619,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   .mh-name { font-size: 22px; gap: 6px; }
   .mh-name .tm-full { display: none; }
   .mh-name .tm-short { display: inline; }
+  .mh-name .crest { width: 36px; height: 36px; margin-block: -6px; }
   .mh-goals { display: none; }
   .mh-sc { font-size: 32px; padding: 2px 10px 4px; }
 }
@@ -633,6 +636,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .mh-bar-team.fav .tm-full, .mh-bar-team.fav .tm-short { text-decoration: underline 2px var(--tc); text-underline-offset: 4px; }
 .mh-bar-team .fav-btn { color: var(--tc); min-width: 28px; min-height: 28px; }
 .mh-bar-team .fav-btn:hover { background: var(--pv-sunk); }
+.mh-bar-team .crest { flex: none; width: 28px; height: 28px; object-fit: contain; }
 .mh-chip { flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--tc); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
 .mh-bar-mid { display: inline-flex; align-items: center; gap: 10px; }
 .mh-bar-mid .stamp:not(.live) { background: var(--pv-sunk); color: var(--pv-ink-2); border-color: transparent; }
@@ -655,6 +659,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   .mh-bar-team { font-size: var(--pv-fs-sm); gap: 6px; }
   .mh-bar-team .tm-full, .mh-toggle-txt, .mh-bar-mid .stamp { display: none; }
   .mh-bar-team .tm-short { display: inline; }
+  .mh-bar-team .crest { width: 24px; height: 24px; }
   .mh-bar-mid { gap: 6px; }
   .mh-bar-sc { font-size: var(--pv-fs-lg); padding: 3px 8px 4px; }
   .mh-toggle.open { right: 12px; width: 32px; padding: 0; }
@@ -815,6 +820,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ts > .seg { justify-self: start; }
 .ts-teams { display: flex; justify-content: space-between; margin: 0; font-weight: 700; font-size: var(--pv-fs-sm); }
 .ts-teams span { display: inline-flex; align-items: center; gap: 6px; }
+.ts-teams .crest { width: 28px; height: 28px; object-fit: contain; }
+.spot-team .crest { width: 24px; height: 24px; margin-right: 6px; object-fit: contain; vertical-align: -6px; }
 .ts-teams span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--tc); }
 .ts-teams .fav::after { content: "♥"; color: var(--tc); }
 .ts-teams small { font-weight: 600; color: var(--tc); }

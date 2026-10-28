@@ -5,6 +5,7 @@
  * error): results and tones read from ink, grey and the words themselves. Nothing floats. */
 :is(.pre-kit, .pre-team, .pre-tally li, .pre-split i, .plan-head, .plan-val, .lu-team, .lu-list).home { --tc: var(--pv-home); }
 :is(.pre-kit, .pre-team, .pre-tally li, .pre-split i, .plan-head, .plan-val, .lu-team, .lu-list).away { --tc: var(--pv-away); }
+.pre-crest { display: inline-block; flex: none; margin-right: 8px; object-fit: contain; vertical-align: middle; }
 .pre-kit { display: inline-block; flex: none; width: 10px; height: 10px; margin-right: 8px; border-radius: var(--pv-r-pill); background: var(--tc); vertical-align: 0; }
 .pre-top, .pre-stories .card, .plan { overflow-wrap: anywhere; }
 
@@ -28,7 +29,7 @@
 .pre-team.away { justify-items: end; text-align: right; }
 .pre-name { display: inline-flex; align-items: center; font-weight: 700; font-size: var(--pv-fs-lg); line-height: 1.2; }
 .pre-team.away .pre-name { flex-direction: row-reverse; }
-.pre-team.away .pre-name .pre-kit { margin: 0 0 0 8px; }
+.pre-team.away .pre-name .pre-kit, .pre-team.away .pre-name .pre-crest { margin: 0 0 0 8px; }
 .pre-place { display: flex; align-items: baseline; gap: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pre-team.away .pre-place { flex-direction: row-reverse; }
 .pre-place b { font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-3xl); line-height: .95; }
@@ -285,3 +286,8 @@
 
 /* #311: with a ♥ team picked, its column comes first in the two-column cards. */
 .pre-cols > .pre-col.mine { order: -1; }
+
+/* Dx12: smaller crests on phones. */
+@media (max-width: 720px) {
+  .pre-name .pre-crest, .lu-list h3 .pre-crest { width: 36px; height: 36px; }
+}

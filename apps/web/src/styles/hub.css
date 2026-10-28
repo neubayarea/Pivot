@@ -31,6 +31,7 @@
 .hub-you { font-size: var(--pv-fs-sm); font-weight: 700; text-align: right; }
 
 .hub-team { display: flex; align-items: center; gap: var(--pv-s2); min-width: 0; font-weight: 600; }
+.hub-team .crest { flex: none; object-fit: contain; }
 .hub-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--kit); flex: none; }
 .hub-team.mine { font-weight: 800; text-decoration: underline; text-decoration-color: var(--kit); text-decoration-thickness: 3px; text-underline-offset: 5px; }
 
@@ -117,3 +118,9 @@ a.hub-past-row:hover { background: var(--pv-sunk); }
 
 /* QA round 5: the game being played live, in the season list: a stamp where its score would be. */
 .hub-past-row .hub-past-live { font-size: var(--pv-fs-xs); }
+
+/* Dx12: crests step down on phones so a row of two names and a score still fits at 375px. */
+@media (max-width: 720px) {
+  .hub-team .crest { width: 28px; height: 28px; }
+  .hub-live-score .hub-team .crest { width: 36px; height: 36px; }
+}
