@@ -2,9 +2,13 @@
 // the line-up seen from the viewer's ♥ team (its lines against theirs, where it has a spare man and
 // where it is short, and how the two plans differ, data/matchup.ts), and each coach's plan.
 // With a team picked that team attacks up the pitch; without one the matchup asks for a team.
+// C21 (#401): analysts also get a card for each player on the pitch (minutes, rating, three stats for
+// the role), what each substitution changed and the squad's ratings in bands; fans get the formation
+// with ratings, the player of the match and the substitutions.
 import type { CSSProperties } from "react";
 import FollowTeam from "../../components/FollowTeam";
 import Lineups from "../../components/Lineups";
+import { FanLineupExtras, PlayerHoverCard, RatingSpread, SubImpactTable } from "../../components/LineupsMore";
 import TeamTactics from "../../components/TeamTactics";
 import { AveragePositions, VizBox, useAveragePositions } from "../../components/viz";
 import { useMatch, type Side } from "../../data/match";
@@ -77,6 +81,9 @@ export function LineupsTab() {
   // The coach's plan below names each shape; the lists then leave it out.
   const { preMatch, match } = useMatch();
   const { side, fan } = usePersona();
+  const played = match.status !== "scheduled";
+  // C21 (#401): a fan's tab is the one before (the video's shot 7b films it), with the player of the
+  // match and the substitutions after the coach's plan; the analyst's parts are the analyst's only.
   return (
     <div className="post lineups-tab">
       <section className="post-sec" aria-labelledby="lu-side-hd" id="lu-side">
@@ -96,10 +103,13 @@ export function LineupsTab() {
           <h2 id="lu-xi-hd">{t("pre.lineups")}</h2>
           <p className="muted">{t("lu.note")}</p>
         </header>
-        <Lineups up={side ?? "home"} follow facts formation={!preMatch} />
+        <Lineups up={side ?? "home"} follow facts formation={!preMatch} card={fan ? undefined : (p) => <PlayerHoverCard p={p} />} />
       </section>
-      {!fan && match.status !== "scheduled" && <PaperVsActual />}
+      {!fan && played && <SubImpactTable />}
+      {!fan && played && <RatingSpread />}
+      {!fan && played && <PaperVsActual />}
       <TeamTactics />
+      {fan && played && <FanLineupExtras />}
     </div>
   );
 }
