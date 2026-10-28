@@ -17,6 +17,7 @@ import KeyMoments, { KeyLegend, keyId, keyWhat } from "../../components/KeyMomen
 import MomentumChart from "../../components/MomentumChart";
 import { MomentCards, OpenMoment, WhatIfInline } from "../../components/Moments";
 import MatchStory from "../../components/MatchStory";
+import PlayerMatch from "../../components/PlayerMatch";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
 import PostMatchReport, { useReportTitle } from "../../components/report/PostMatchReport";
 import ReportBoundary from "../../components/report/ReportBoundary";
@@ -220,6 +221,8 @@ export function OverviewTab({ moments, open, onPick, evidence, onEvidence, keySe
         {over && <StartDemoButton matchId={match.match_id}>{t("demo.startShort")}</StartDemoButton>}
       </header>
 
+      {/* Ax92: the ★ player's own match first; nothing at all when no one is followed. */}
+      <PlayerMatch />
       {order.map((id) => <Fragment key={id}>{blocks[id]}</Fragment>)}
     </div>
   );

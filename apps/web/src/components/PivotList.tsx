@@ -4,6 +4,7 @@ import { useClock } from "../data/clock";
 import { useMatch, type MatchView } from "../data/match";
 import { narrativeLang, useT, type T } from "../i18n";
 import LangTag from "./LangTag";
+import { InvolvedTag } from "./PlayerMatch";
 import Stamp from "./Stamp";
 
 /** How far the checking pipeline got: verified by the AI, or the template fallback when it timed out. */
@@ -55,6 +56,7 @@ export default function PivotList({ activeId }: { activeId: string | null }) {
             <span className="meta">
               <Severity level={p.severity} />
               <PivotStamp status={p.status} />
+              <InvolvedTag pivot={p} />
             </span>
             <span className="to">{t("pivot.momentumTo", { team: teams[p.direction].name })}</span>
           </Link>
