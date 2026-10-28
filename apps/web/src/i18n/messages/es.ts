@@ -1587,4 +1587,6 @@ export const es: Messages = {
   "wi.fan.upDraw": "{n} empates más de cada 100 partidos",
   "wi.fan.downDraw": "{n} empates menos de cada 100 partidos",
   "wi.an.featureMore": "Ejecútalo en el laboratorio de abajo para ver los marcadores, las cifras de los equipos y cómo se hizo, o elige otro punto de inflexión arriba.",
+  "wi.fan.sameAbove": "Es la respuesta que aparece arriba en la página.",
+  "wi.fan.seeAbove": "Verla",
 };

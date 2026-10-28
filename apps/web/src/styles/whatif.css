@@ -93,3 +93,5 @@
 .wi-feature-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .wi-stats td.tm { text-align: left; }
 .wi-stats th[scope="rowgroup"] { width: 26%; }
+.wi-fan-same { display: grid; gap: 12px; padding: 4px 0; }
+.wi-fan-same p { margin: 0; font-weight: 600; font-size: 17px; }

@@ -1585,4 +1585,6 @@ export const zh: Messages = {
   "wi.fan.upDraw": "每 100 场多平 {n} 场",
   "wi.fan.downDraw": "每 100 场少平 {n} 场",
   "wi.an.featureMore": "在下面的实验室里运行，可以看到比分分布、两队数据和计算方法；也可以在上面换一个转折点。",
+  "wi.fan.sameAbove": "这就是页面顶部显示的结果。",
+  "wi.fan.seeAbove": "去看看",
 };

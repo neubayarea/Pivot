@@ -717,7 +717,8 @@ export function ScenarioResult({ state, option, teams, onReset, source }: Result
   const change = option ? optionLabel(option, t, moveTo, minuteOf(option)) : scenario.spec.type;
   const { narrative, writing } = useComparisonIn(source, scenario, prefs.language);
   const served = narrativeLang(narrative);
-  const sentences = narrative?.sentences ?? [];
+  // Ax91: a fan reads the headline and the first line; the rest (often the template's shot counts) is an analyst's.
+  const sentences = (narrative?.sentences ?? []).slice(0, fan ? 1 : undefined);
   return (
     <div className="result">
       <div className="stamps">

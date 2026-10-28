@@ -1586,4 +1586,6 @@ export const en = {
   "wi.fan.upDraw": "{n} more draws in every 100 matches",
   "wi.fan.downDraw": "{n} fewer draws in every 100 matches",
   "wi.an.featureMore": "Run it in the lab below for the scorelines, the team numbers and how it was run. Or pick another turning point above.",
+  "wi.fan.sameAbove": "This is the answer shown at the top of the page.",
+  "wi.fan.seeAbove": "Show me",
 };
