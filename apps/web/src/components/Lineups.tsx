@@ -16,6 +16,7 @@ import { usePrefs, useT, type T } from "../i18n";
 import FollowButton from "./FollowButton";
 import Grass from "./Grass";
 import { surname } from "./FocusPickers";
+import { TeamKit } from "./PreMatch";
 import "../styles/prematch.css";
 
 const W = 68;
@@ -157,7 +158,7 @@ function TeamList({ side, sheet, follow, facts, formation }: { side: Side; sheet
   return (
     <section className={`card lu-list ${side}`}>
       <h3>
-        <span><i className={`pre-kit ${side}`} aria-hidden="true" />{teams[side].name}</span>
+        <span><TeamKit side={side} size={48} />{teams[side].name}</span>
         {sheet && formation && <small>{sheet.formation}</small>}
       </h3>
       <ol aria-label={sheet ? t("pre.starters") : t("pre.squad")}>

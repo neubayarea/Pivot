@@ -8,6 +8,7 @@ import { useMatch } from "../data/match";
 import { FAN_STATS } from "../data/persona";
 import { useVizData, type VizState } from "../data/viz";
 import { isMessageKey, usePrefs, type T } from "../i18n";
+import Crest from "./Crest";
 import Segmented from "./Segmented";
 import { LoadFailed, Placeholder } from "./Skeleton";
 
@@ -90,6 +91,7 @@ export default function TeamStats({ state, only }: { state: VizState<TeamStatsRe
       <p className="ts-teams" aria-hidden="true">
         {(["home", "away"] as const).map((side) => (
           <span key={side} className={prefs.focus_team === side ? "fav" : undefined} style={{ "--tc": `var(--pv-${side})` } as CSSProperties}>
+            <Crest short={teams[side].short_name} size={28} />
             {teams[side].name}
             {prefs.focus_team === side && <small>{t("ts.yours")}</small>}
           </span>

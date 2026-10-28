@@ -3,6 +3,7 @@ import type { TrackingFrame } from "@pivot/contracts";
 import { Link, useLocation, useParams } from "react-router-dom";
 import Button from "../components/Button";
 import Card from "../components/Card";
+import Crest from "../components/Crest";
 import { describe } from "../components/EventFeed";
 import Pitch, { whoFromSquads } from "../components/Pitch";
 import PlayerCard from "../components/PlayerCard";
@@ -138,7 +139,7 @@ export default function PivotDetail() {
           )}
           {disputed && <Stamp tone="warn">{tr("detail.flaggedStamp")}</Stamp>}
           <InvolvedTag pivot={pivot} />
-          <span className="pipe">{tr("pivot.momentumTo", { team: teams[pivot.direction].name })}</span>
+          <span className="pipe with-crest"><Crest short={teams[pivot.direction].short_name} size={28} />{tr("pivot.momentumTo", { team: teams[pivot.direction].name })}</span>
           {persona.side && (
             <span className={`lean-tag ${persona.lean(pivot)}`} style={{ "--tc": `var(--pv-${pivot.direction})` } as CSSProperties}>
               {tr(persona.lean(pivot) === "for" ? "you.for" : "you.against")}

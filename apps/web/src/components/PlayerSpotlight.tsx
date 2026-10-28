@@ -8,6 +8,7 @@ import { useClock } from "../data/clock";
 import { useMatch } from "../data/match";
 import { coreStats, roleGroup, teamRating, usePersona, usePlayers, type StatKey } from "../data/persona";
 import { usePrefs } from "../i18n";
+import Crest from "./Crest";
 import { describe } from "./EventFeed";
 import FollowButton from "./FollowButton";
 import LangTag from "./LangTag";
@@ -56,7 +57,7 @@ export default function PlayerSpotlight({ upTo = null, onPivot }: { upTo?: numbe
           <p className="spot-k">{t("spot.title")}</p>
           <h2 id="spot-hd">{report.name}</h2>
           <FollowButton playerId={report.player_id} name={report.name} />
-          <p className="muted">{teams[side].name}, {fan ? t(`role.${roleGroup(report.role)}`) : report.role}</p>
+          <p className="muted spot-team"><Crest short={teams[side].short_name} size={24} />{teams[side].name}, {fan ? t(`role.${roleGroup(report.role)}`) : report.role}</p>
         </div>
         {s && (
           <div className="spot-rating">

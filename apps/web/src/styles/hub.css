@@ -7,11 +7,18 @@
 /* Live now: the one hero panel. */
 .hub-live { background: var(--pv-sheet); border-radius: var(--pv-r-panel); padding: var(--pv-s5); display: grid; gap: var(--pv-s4); }
 .hub-live-head { display: flex; align-items: center; gap: var(--pv-s3); }
-.hub-live-min { margin-left: auto; font-family: var(--pv-display); font-weight: 800; font-size: var(--pv-fs-2xl); line-height: 1; }
-.hub-live-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--pv-s5);
+.hub-live-mid { display: grid; justify-items: center; gap: var(--pv-s2); }
+.hub-live-min { font-weight: 700; font-size: var(--pv-fs-sm); color: var(--pv-red); line-height: 1; }
+.hub-live-min.over { color: var(--pv-ink-2); }
+.hub-live-min:not(.over)::before { content: "● "; }
+.hub-live-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: var(--pv-s5);
   text-decoration: none; color: inherit; padding: var(--pv-s4) 0; border-radius: var(--pv-r-ctl); }
 .hub-live-score .hub-team { font-size: var(--pv-fs-xl); font-weight: 700; }
 .hub-live-score .hub-team:first-child { justify-content: flex-end; }
+/* Dx12: the live card reads like a live-score app, each team a column with its crest above the name. */
+.hub-live-score .hub-team { flex-direction: column; justify-content: flex-start; gap: var(--pv-s2); text-align: center; }
+.hub-live-score .hub-team:first-child { justify-content: flex-start; }
+.hub-live-score .hub-team .crest { width: 72px; height: 72px; }
 .hub-live-goals { font-family: var(--pv-display); font-weight: 900; font-size: var(--pv-fs-4xl); line-height: 1; }
 .hub-live-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--pv-s4); }
 .hub-live-foot p { font-weight: 600; }
@@ -31,6 +38,7 @@
 .hub-you { font-size: var(--pv-fs-sm); font-weight: 700; text-align: right; }
 
 .hub-team { display: flex; align-items: center; gap: var(--pv-s2); min-width: 0; font-weight: 600; }
+.hub-team .crest { flex: none; object-fit: contain; }
 .hub-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--kit); flex: none; }
 .hub-team.mine { font-weight: 800; text-decoration: underline; text-decoration-color: var(--kit); text-decoration-thickness: 3px; text-underline-offset: 5px; }
 
@@ -117,3 +125,26 @@ a.hub-past-row:hover { background: var(--pv-sunk); }
 
 /* QA round 5: the game being played live, in the season list: a stamp where its score would be. */
 .hub-past-row .hub-past-live { font-size: var(--pv-fs-xs); }
+
+/* Dx12: crests step down on phones so a row of two names and a score still fits at 375px. */
+@media (max-width: 720px) {
+  .hub-team .crest { width: 28px; height: 28px; }
+  .hub-live-score .hub-team .crest { width: 48px; height: 48px; }
+  .hub-live-score .hub-team { font-size: var(--pv-fs-md); }
+}
+
+/* Phones: nothing on the Hub may push the page wider than the screen (found while adding crests, #443).
+   A round's own schedule list drops its fixed venue/date columns, and each next-round fixture stacks:
+   the two teams on one line, the prediction bar full width under them, then the likeliest score and xG. */
+@media (max-width: 720px) {
+  .hub-sched-row, .hub-sched-row:has(> .hub-meta:first-child:empty) { grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr); }
+  .hub-sched-row > .hub-meta { grid-column: 1 / -1; }
+  .hub-sched-row > .hub-meta:empty { display: none; }
+  .hub-fx { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "home away" "pred pred" "facts facts"; row-gap: var(--pv-s2); }
+  .hub-fx > .hub-team:first-child { grid-area: home; justify-content: flex-start; }
+  .hub-fx > .hub-team:last-of-type { grid-area: away; justify-content: flex-end; text-align: right; }
+  .hub-fx > .hub-pred, .hub-fx > .hub-meta { grid-area: pred; }
+  .hub-fx > .hub-facts { grid-area: facts; grid-column: auto; flex-wrap: wrap; gap: var(--pv-s2) var(--pv-s5); }
+  .hub-section-head { flex-wrap: wrap; }
+  .hub-team { overflow-wrap: anywhere; }
+}

@@ -247,6 +247,8 @@ a.pv:hover { background: var(--pv-gold-soft); }
 .pv .m { font-family: var(--pv-display); font-size: 19px; line-height: 1.1; grid-row: span 3; }
 .pv .tt { font-weight: 700; line-height: 1.3; }
 .pv .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.with-crest { display: inline-flex; align-items: center; gap: 6px; }
+.with-crest .crest { flex: none; object-fit: contain; }
 .pv .to { font-family: var(--pv-label); font-size: 12px; font-weight: 600; color: var(--pv-ink-2); }
 .pv.wait .tt { color: var(--pv-ink-2); font-style: italic; font-weight: 500; }
 .sev { letter-spacing: 1px; color: var(--pv-red); font-size: 12px; }
@@ -583,14 +585,11 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .match-stick.full { top: var(--mh-full-h, 0px); }
 .mh { position: relative; color: #FFFFFF; background: linear-gradient(90deg, var(--pv-home-kit, #1E6B45) 0 50%, var(--pv-away-kit, #4A1D57) 50% 100%); padding: 14px 32px 16px; display: grid; gap: 10px; }
 .mh-score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 4px 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
-.mh-team { display: grid; gap: 4px; min-width: 0; padding-top: 14px; }
-.mh-team.home { justify-items: end; text-align: right; }
-.mh-team.away { justify-items: start; text-align: left; }
+.mh-team { display: grid; justify-items: center; align-content: start; gap: 6px; min-width: 0; text-align: center; }
 .mh-name { display: inline-flex; align-items: center; gap: 10px; font-family: var(--pv-display); font-weight: 800; font-size: 40px; line-height: 1; min-width: 0; max-width: 100%; }
-.mh-team.home .mh-name { flex-direction: row-reverse; }
 .mh-name .tm-full { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mh-name .tm-short { display: none; }
-.mh-crest { display: none; }
+.mh-crest { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .35)); }
 /* Ax69: the ♥ beside each name picks the viewer's team. A user's choice is ink or white, never yellow. */
 .fav-btn { display: inline-grid; place-items: center; min-width: 32px; min-height: 32px; padding: 0 4px; border: 0; border-radius: var(--pv-r-pill); background: transparent; color: inherit; font: inherit; font-family: var(--pv-body); line-height: 1; cursor: pointer; opacity: .72; }
 .fav-btn:hover { opacity: 1; background: rgba(0, 0, 0, .18); }
@@ -602,8 +601,6 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .follow-x:hover { background: rgba(255, 255, 255, .2); }
 .mh-goals { list-style: none; margin: 0; padding: 0; font-weight: 500; font-size: var(--pv-fs-sm); line-height: 1.45; color: rgba(255, 255, 255, .88); }
 .mh-goals li::before { content: "⚽ "; font-size: .85em; }
-.mh-team.home .mh-goals li::before { content: none; }
-.mh-team.home .mh-goals li::after { content: " ⚽"; font-size: .85em; }
 .mh-mid { display: grid; justify-items: center; gap: 6px; }
 .mh-sc { display: flex; align-items: center; font-family: var(--pv-display); font-weight: 900; font-size: 60px; line-height: 1; background: #14161A; color: #FFFFFF; border-radius: 12px; padding: 4px 18px 6px; box-shadow: 0 12px 28px -14px rgba(0, 0, 0, .7); }
 .mh-sc > span:not(.mh-dash) { min-width: .75em; text-align: center; }
@@ -617,6 +614,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   .mh-name { font-size: 22px; gap: 6px; }
   .mh-name .tm-full { display: none; }
   .mh-name .tm-short { display: inline; }
+  .mh-crest { width: 48px; height: 48px; }
   .mh-goals { display: none; }
   .mh-sc { font-size: 32px; padding: 2px 10px 4px; }
 }
@@ -633,6 +631,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .mh-bar-team.fav .tm-full, .mh-bar-team.fav .tm-short { text-decoration: underline 2px var(--tc); text-underline-offset: 4px; }
 .mh-bar-team .fav-btn { color: var(--tc); min-width: 28px; min-height: 28px; }
 .mh-bar-team .fav-btn:hover { background: var(--pv-sunk); }
+.mh-bar-team .crest { flex: none; width: 28px; height: 28px; object-fit: contain; }
 .mh-chip { flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--tc); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
 .mh-bar-mid { display: inline-flex; align-items: center; gap: 10px; }
 .mh-bar-mid .stamp:not(.live) { background: var(--pv-sunk); color: var(--pv-ink-2); border-color: transparent; }
@@ -655,6 +654,7 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
   .mh-bar-team { font-size: var(--pv-fs-sm); gap: 6px; }
   .mh-bar-team .tm-full, .mh-toggle-txt, .mh-bar-mid .stamp { display: none; }
   .mh-bar-team .tm-short { display: inline; }
+  .mh-bar-team .crest { width: 24px; height: 24px; }
   .mh-bar-mid { gap: 6px; }
   .mh-bar-sc { font-size: var(--pv-fs-lg); padding: 3px 8px 4px; }
   .mh-toggle.open { right: 12px; width: 32px; padding: 0; }
@@ -815,6 +815,8 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .ts > .seg { justify-self: start; }
 .ts-teams { display: flex; justify-content: space-between; margin: 0; font-weight: 700; font-size: var(--pv-fs-sm); }
 .ts-teams span { display: inline-flex; align-items: center; gap: 6px; }
+.ts-teams .crest { width: 28px; height: 28px; object-fit: contain; }
+.spot-team .crest { width: 24px; height: 24px; margin-right: 6px; object-fit: contain; vertical-align: -6px; }
 .ts-teams span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--tc); }
 .ts-teams .fav::after { content: "♥"; color: var(--tc); }
 .ts-teams small { font-weight: 600; color: var(--tc); }

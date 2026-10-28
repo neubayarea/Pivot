@@ -4,6 +4,7 @@ import type { ViewerPrefs } from "@pivot/contracts";
 import Wordmark from "../components/Wordmark";
 import Segmented from "../components/Segmented";
 import { faultText, Placeholder } from "../components/Skeleton";
+import Crest from "../components/Crest";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
 import {
@@ -78,15 +79,17 @@ function LiveNow({ live, line, fav }: { live: HubLive; line: HubLine; fav: strin
       <div className="hub-live-head">
         <h2 id="hub-live-h">{t("hub.live.title")}</h2>
         <Stamp tone="live">{t("hub.live.sim")}</Stamp>
-        <span className="hub-live-min num" aria-label={t("hub.live.clock", { minute: now.minute })}>
-          {now.over ? t("status.finished") : `${now.minute}′`}
-        </span>
       </div>
       <Link to={href} className="hub-live-score" aria-label={t("hub.open", {
         home: line.home.name, away: line.away.name, score: `${now.score.home}–${now.score.away}` })}>
-        <TeamName team={line.home} fav={fav} />
-        <span className="hub-live-goals num">{now.score.home}–{now.score.away}</span>
-        <TeamName team={line.away} fav={fav} />
+        <TeamName team={line.home} fav={fav} crest={72} />
+        <span className="hub-live-mid">
+          <span className={`hub-live-min num${now.over ? " over" : ""}`} aria-label={t("hub.live.clock", { minute: now.minute })}>
+            {now.over ? t("status.finished") : `${now.minute}′`}
+          </span>
+          <span className="hub-live-goals num">{now.score.home}–{now.score.away}</span>
+        </span>
+        <TeamName team={line.away} fav={fav} crest={72} />
       </Link>
       <div className="hub-live-foot">
         <p>
@@ -101,12 +104,13 @@ function LiveNow({ live, line, fav }: { live: HubLive; line: HubLine; fav: strin
   );
 }
 
-function TeamName({ team, fav }: { team: HubTeam; fav: string | null }) {
+/** Dx12: the crest is the first thing a fan reads, so it is big where the row has room. */
+function TeamName({ team, fav, crest = 28 }: { team: HubTeam; fav: string | null; crest?: number }) {
   const t = useT();
   const mine = fav === team.short_name;
   return (
     <span className={`hub-team${mine ? " mine" : ""}`} style={kit(team)}>
-      <span className="hub-dot" aria-hidden="true" />
+      <Crest short={team.short_name} size={crest} fallback={<span className="hub-dot" aria-hidden="true" />} />
       {team.name}
       {mine && <span className="sr-only"> ({t("hub.yours")})</span>}
     </span>
@@ -128,9 +132,9 @@ function ResultRow({ line, fav, fan }: { line: HubLine; fav: string | null; fan:
     <li>
       <Link to={`/?match=${encodeURIComponent(line.match_id)}&tab=overview`} className="hub-row"
         aria-label={t("hub.open", { home: line.home.name, away: line.away.name, score })}>
-        <TeamName team={line.home} fav={fav} />
+        <TeamName team={line.home} fav={fav} crest={40} />
         <span className="hub-score num">{score}</span>
-        <TeamName team={line.away} fav={fav} />
+        <TeamName team={line.away} fav={fav} crest={40} />
         <span className="hub-meta">{t(fan ? "hub.pivotsFan" : "hub.pivots", { n: line.pivots })}</span>
         <span className="hub-meta">
           {line.best && (fan ? t("hub.bestFan", { name: line.best.name })
@@ -186,9 +190,9 @@ function FixtureRow({ f, fav, fan }: { f: HubFixture; fav: string | null; fan: b
     <li className={mine ? "mine" : undefined}>
       <Link to={`/?match=${encodeURIComponent(f.match_id)}&tab=preview`} className="hub-fx"
         aria-label={t("hub.next.open", { home: f.home.name, away: f.away.name })}>
-        <TeamName team={f.home} fav={fav} />
+        <TeamName team={f.home} fav={fav} crest={40} />
         {p ? <PredictionBar p={p} home={f.home} away={f.away} fan={fan} /> : <span className="hub-meta">{t("hub.next.noPrediction")}</span>}
-        <TeamName team={f.away} fav={fav} />
+        <TeamName team={f.away} fav={fav} crest={40} />
         <dl className="hub-facts">
           {p && fan && <div><dt>{t("hub.pred.say")}</dt><dd>{verdictLine(p, f, t)}</dd></div>}
           {top && (

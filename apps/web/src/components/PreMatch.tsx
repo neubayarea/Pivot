@@ -10,6 +10,7 @@ import type { ContextEffect, HeadToHead as H2H, MatchContext, PastMeeting, TeamF
 import { useMatch, type Side, type TeamPlan } from "../data/match";
 import { plural, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
+import Crest from "./Crest";
 import { LoadFailed, Placeholder } from "./Skeleton";
 import LangTag from "./LangTag";
 import { numberLocale } from "../data/motion";
@@ -29,6 +30,12 @@ const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", 
 
 /** A small square in the team's kit colour, before a team or person's name. */
 export const Kit = ({ side }: { side: Side | undefined }) => (side ? <i className={`pre-kit ${side}`} aria-hidden="true" /> : null);
+
+/** Dx12: a team's crest beside its name, or its kit dot for a club without one. */
+export function TeamKit({ side, size = 20 }: { side: Side; size?: number }) {
+  const { teams } = useMatch();
+  return <Crest short={teams[side].short_name} size={size} className="pre-crest" fallback={<Kit side={side} />} />;
+}
 
 function usePre() {
   const { preMatch, teams, squads, playerName, match } = useMatch();
@@ -168,7 +175,7 @@ function Form({ form, t, title, name }: Part & { form: TeamForm[]; name: (s: Sid
       <div className="pre-teams">
         {rows.map((f) => (
           <div key={f.side} className={`pre-team ${f.side}`}>
-            <span className="pre-name"><Kit side={f.side} />{name(f.side)}</span>
+            <span className="pre-name"><TeamKit side={f.side} size={48} />{name(f.side)}</span>
             {f.league_position != null && (
               <span className="pre-place">
                 <b>{t("pre.place", { n: f.league_position, ord: ordinal(f.league_position) })}</b>

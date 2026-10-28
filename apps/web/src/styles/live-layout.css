@@ -76,7 +76,8 @@
   /* A compact analyst scoreboard leaves room for the working data; manual expansion still wins. */
   body:has(.live-lay.an) .mh:not(.slim):not(.pinned) { padding: 8px 32px; gap: 4px; }
   body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-score { align-items: center; }
-  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-team { padding-top: 0; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-team { padding-top: 0; gap: 2px; }
+  body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-crest { width: 40px; height: 40px; }
   body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-name { font-size: 28px; }
   body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-sc { font-size: 38px; padding: 3px 12px; box-shadow: none; }
   body:has(.live-lay.an) .mh:not(.slim):not(.pinned) .mh-mid { display: flex; align-items: center; gap: 12px; }

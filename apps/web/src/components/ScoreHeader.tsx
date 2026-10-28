@@ -16,6 +16,7 @@ import { shownStatus } from "../data/view";
 import { useT, type T } from "../i18n";
 import { surname } from "./FocusPickers";
 import FollowTeam, { FollowingChip } from "./FollowTeam";
+import Crest from "./Crest";
 import Stamp from "./Stamp";
 
 const STATUS_TONE = { live: "live", paused: "warn", finished: "ok", scheduled: "line" } as const;
@@ -48,8 +49,9 @@ function TeamSide({ side, fav }: { side: Side; fav: boolean }) {
   const goals = scorers(events, side, playerName, t, at);
   return (
     <div className={`mh-team ${side}${fav ? " fav" : ""}`} style={{ "--tc": team.color } as CSSProperties}>
+      {/* Dx12: live-score layout, each team a column with its crest above the name. */}
+      <Crest short={team.short_name} size={80} className="mh-crest" />
       <span className="mh-name" title={team.name}>
-        <span className="mh-crest" aria-hidden="true" />
         <span className="tm-full">{team.name}</span>
         <span className="tm-short">{team.short_name}</span>
         <FollowTeam side={side} />
@@ -77,7 +79,7 @@ function SlimBar({ favTeam, controls, onExpand, button, track }: {
   const t = useT();
   const side = (s: Side) => (
     <span className={`mh-bar-team ${s}${favTeam === s ? " fav" : ""}`} style={{ "--tc": teams[s].color } as CSSProperties} title={teams[s].name}>
-      <span className="mh-chip" aria-hidden="true" />
+      <Crest short={teams[s].short_name} size={28} fallback={<span className="mh-chip" aria-hidden="true" />} />
       <span className="tm-full">{teams[s].name}</span>
       <span className="tm-short">{teams[s].short_name}</span>
       <FollowTeam side={s} />
@@ -149,14 +151,14 @@ export default function ScoreHeader({ prefs, fold, children }: Props & { fold?: 
       <div className="mh-score">
         <TeamSide side="home" fav={prefs.focus_team === "home"} />
         <div className="mh-mid">
+          <span className="mh-state">
+            {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
+            <Stamp tone={shown === "replay" ? "line" : STATUS_TONE[shown]}>{t(shown === "replay" ? "tabs.replay" : `status.${shown}`)}</Stamp>
+          </span>
           <span className="mh-sc num" role="img" aria-label={`${teams.home.name} ${match.score.home}, ${teams.away.name} ${match.score.away}`}>
             <span>{match.score.home}</span>
             <span className="mh-dash" aria-hidden="true">–</span>
             <span>{match.score.away}</span>
-          </span>
-          <span className="mh-state">
-            {match.status !== "scheduled" && <span className="mh-clock num">{match.clockLabel}</span>}
-            <Stamp tone={shown === "replay" ? "line" : STATUS_TONE[shown]}>{t(shown === "replay" ? "tabs.replay" : `status.${shown}`)}</Stamp>
           </span>
         </div>
         <TeamSide side="away" fav={prefs.focus_team === "away"} />
