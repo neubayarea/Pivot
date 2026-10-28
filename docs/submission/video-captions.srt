@@ -1,140 +1,144 @@
 1
-00:00:00,150 --> 00:00:03,917
-Harbour City 3, Northgate Rovers 3:
+00:00:00,150 --> 00:00:04,186
+Tessmouth United 4, Vantry Town 3:
 one simulated match.
 
 2
-00:00:03,967 --> 00:00:07,733
+00:00:04,236 --> 00:00:08,125
 Pivot finds the moments that turned it,
 explains why,
 
 3
-00:00:07,783 --> 00:00:11,550
+00:00:08,175 --> 00:00:11,550
 and lets you replay it
 with one thing changed.
 
 4
-00:00:12,150 --> 00:00:14,150
+00:00:12,150 --> 00:00:14,472
 Pivot found three turning points.
 
 5
-00:00:14,200 --> 00:00:17,020
-Take Anbel's goal at 35 minutes.
+00:00:14,522 --> 00:00:17,617
+Take the 12th minute,
+when Vantry took over.
 
 6
-00:00:17,070 --> 00:00:20,710
+00:00:17,667 --> 00:00:21,044
 A Judge agent confirms
 it really swung the game.
 
 7
-00:00:20,760 --> 00:00:22,350
+00:00:21,094 --> 00:00:22,782
 An Explainer writes why.
 
 8
-00:00:22,400 --> 00:00:26,040
+00:00:22,832 --> 00:00:26,631
 A Verifier recomputes every number
 from the event log:
 
 9
-00:00:26,090 --> 00:00:30,550
-Northgate's passes into the final third
-went from zero to four.
+00:00:26,681 --> 00:00:30,550
+Vantry's passes into the final third
+went from 4 to 14.
 
 10
-00:00:31,150 --> 00:00:34,810
+00:00:31,150 --> 00:00:34,051
 Now switch to Fan
-and pick Harbour City.
+and pick Tessmouth.
 
 11
-00:00:34,860 --> 00:00:38,984
+00:00:34,101 --> 00:00:38,256
 Same moment, same checked facts,
 told from your side:
 
 12
-00:00:39,034 --> 00:00:42,231
-"Harbour City lose grip
-after Northgate's second."
+00:00:38,306 --> 00:00:42,383
+"Tessmouth United lose control
+after Vantry's goal."
 
 13
-00:00:42,281 --> 00:00:44,550
+00:00:42,433 --> 00:00:44,550
 In Chinese or Spanish, too.
 
 14
-00:00:45,150 --> 00:00:46,421
+00:00:45,150 --> 00:00:46,400
 Follow a player.
 
 15
-00:00:46,471 --> 00:00:50,825
-Miquingorini scored a hat-trick
-and is rated 9.3.
+00:00:46,450 --> 00:00:51,450
+Sahaltessen scored a hat-trick,
+the first from the penalty spot,
 
 16
-00:00:50,875 --> 00:00:56,550
-You get his shots, his heatmap
-and his part in each turning point.
+00:00:51,500 --> 00:00:52,828
+and is rated 9.9.
 
 17
-00:00:57,150 --> 00:01:01,016
-So what if his equaliser
-had been ruled out?
+00:00:52,878 --> 00:00:56,550
+You get his shots, his heatmap
+and his passing.
 
 18
-00:01:01,066 --> 00:01:07,978
+00:00:57,150 --> 00:01:01,791
+So what if Vantry's opening penalty
+had been ruled out?
+
+19
+00:01:01,841 --> 00:01:08,169
 Pivot saves the match at that minute
 and plays the rest 200 times each way.
 
-19
-00:01:08,028 --> 00:01:14,069
-Northgate's chance of winning doubles,
-from 26 to 53 percent.
-
 20
-00:01:14,119 --> 00:01:17,550
-The ranges don't overlap.
-It's a clear difference.
+00:01:08,219 --> 00:01:13,112
+Tessmouth's chance of winning rises
+from 34 to 50 percent.
 
 21
-00:01:18,150 --> 00:01:21,003
-Every match replays on the pitch,
+00:01:13,162 --> 00:01:17,550
+Those ranges don't overlap.
+It's a clear difference.
 
 22
-00:01:21,053 --> 00:01:25,357
+00:01:18,150 --> 00:01:20,987
+Every match replays on the pitch,
+
+23
+00:01:21,037 --> 00:01:25,508
 with passes, shots and tackles
 drawn as they happen.
 
-23
-00:01:25,407 --> 00:01:30,679
-Set pieces too: his first goal
-came from a free kick,
-
 24
-00:01:30,729 --> 00:01:34,550
-three attackers against eight defenders,
-all three man-marked.
+00:01:25,558 --> 00:01:28,481
+Set pieces too: on this free kick,
 
 25
-00:01:35,150 --> 00:01:39,119
-Before kick-off: third against fifth,
-two points apart, the storylines,
+00:01:28,531 --> 00:01:34,550
+five attackers faced all eleven Vantry players,
+with five in the wall.
 
 26
-00:01:39,169 --> 00:01:45,550
-and each coach's plan: a defensive 4-3-3
-against a balanced 4-2-3-1.
+00:01:35,150 --> 00:01:41,209
+Before kick-off: four wins in five for Tessmouth,
+five draws for Vantry,
 
 27
-00:01:46,150 --> 00:01:49,026
-The agents run on Azure AI Foundry.
+00:01:41,259 --> 00:01:45,550
+a cup semi-final days later,
+and each coach's plan.
 
 28
-00:01:49,076 --> 00:01:52,788
+00:01:46,150 --> 00:01:48,807
+The agents run on Azure AI Foundry.
+
+29
+00:01:48,857 --> 00:01:52,730
 Results live in Cosmos DB,
 matches in Blob Storage.
 
-29
-00:01:52,838 --> 00:01:55,296
+30
+00:01:52,780 --> 00:01:55,437
 Every club and player is synthetic.
 
-30
-00:01:55,346 --> 00:01:56,550
+31
+00:01:55,487 --> 00:01:56,550
 This is Pivot.

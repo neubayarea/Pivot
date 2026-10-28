@@ -16,7 +16,7 @@ Pivot finds the few moments that turned a football match. AI agents explain why 
 
 **What Pivot does.** Each match page opens on *the 3 moments that changed the course of this match*, marked on a momentum chart. Pick one. Pivot shows what set it off (a goal, a card, a substitution), which way the game swung, and two or three sentences on why. Every number in those sentences is underlined and linked to the statistic it was checked against. Under each moment, **What if…** lets you change one thing and see how much it mattered: disallow a goal, remove a red card, cancel or move a substitution, or press higher.
 
-In our demo match, Harbour City 3–3 Northgate Rovers, Miquingorini's 65′ equaliser is one of the turning points. Pivot replays the rest of the match 200 times with that goal disallowed and 200 times as played. Northgate's chance of winning goes from 26 % to 53 %, the most likely score from 2–2 to 1–2, and the 95 % ranges don't overlap.
+In our demo match, Tessmouth United 4–3 Vantry Town, Sadoseno's 17′ penalty sets off the first turning point. Pivot replays the rest of the match 200 times with that goal disallowed and 200 times as played. Tessmouth's chance of winning goes from 34 % to 50 %, the most likely score from 1–1 to 1–0, and the 95 % ranges for a Tessmouth win don't overlap.
 
 **Why it matters.**
 - **Fans** get the story of the match in plain words, from their own team's side, around the player they follow, in their own language.
@@ -63,19 +63,19 @@ Around the turning points, the match page has:
 
 ## Testing instructions
 
-Live site: https://pivot.in-stacks.com/ (no sign-in). It opens the demo match, **Harbour City 3–3 Northgate Rovers** (`?match=M-seed-101`). A private window works best, because the site remembers your language, viewer settings and last match.
+Live site: https://pivot.in-stacks.com/ (no sign-in). It opens the demo match, **Tessmouth United 4–3 Vantry Town** (`?match=S2026-27-TES-VAN`). A private window works best, because the site remembers your language, viewer settings and last match.
 
 The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Preview**. Each tab has its own link (`?tab=overview|whatif|replay|stats|lineups|preview`).
 
-1. **Overview**: "The 3 moments that changed the course of this match", with a momentum chart marked ① 14′ ② 35′ ③ 72′.
-2. Click **② 35′, "Anbel's goal shifts momentum decisively"**. Under **Why it turned**, hover an underlined number to see the statistic it was checked against. Click an evidence chip such as **#676** to see the event on the mini pitch.
-3. In the top bar, switch **Analyst → Fan** and pick **♥ Harbour City**. The same moment is rewritten from Harbour City's side ("Harbour City lose grip after Northgate's second"). Try **中文** and **ES**. If a version hasn't been written yet, the analyst one shows for a few seconds first.
-4. Pick **★ M. Miquingorini** (three goals). Open **Stats** for his player card, the team's numbers, the shot map, heatmaps and pass network.
-5. Back on Overview, click **③ 72′**. Under **What if…** (or in the **What if** tab, under **Pivot 3, 72′**), click **Disallow 65′ goal**, then **Run simulation**. It was computed in advance, so it shows at once: Northgate's chance of winning goes from 26 % to 53 %. Please stay with the precomputed chips on the live server: it has 2 CPU cores, and a new scenario takes minutes.
-6. Under **Key moments**, play any goal as a clip. Under **Set pieces & shots**, open the **60′ free kick** to see who was in the box and how they were marked.
-7. **Replay**: **Start demo** replays the match from 0′ with momentum drawn live and turning points appearing as they happen. Add `&from=66` to the link to start at 66′.
-8. **Preview** and **Line-ups**: the table, form, head-to-head, storylines and each coach's plan.
-9. **Trace** in the top bar: every step the AI took for each moment, with the model, the time it took and the Verifier's verdict.
+1. **Overview**: "The 3 moments that changed the course of this match", with a momentum chart marked ① 12′ ② 50′ ③ 88′.
+2. Card **① 12′, "Vantry Town gains control with sharp attack"** is open under the list. Under **Why it turned**, hover an underlined number to see the statistic it was checked against. Click an evidence chip such as **#329** to see the event on the mini pitch.
+3. In the top bar, switch **Analyst → Fan**, pick **♥ Tessmouth United** and click **① 12′**. The same moment is rewritten from Tessmouth's side ("Tessmouth United lose control after Vantry's goal"). Try **中文** and **ES**. If a version hasn't been written yet, the analyst one shows for a few seconds first.
+4. Pick **★ D. Sahaltessen** (three goals). Open **Stats** for his player card, the team's numbers, the shot map, heatmaps and pass network.
+5. Open the **What if** tab. Under **Pivot 1, 12′**, click **Disallow 17′ goal**, then **Run simulation**. It was computed in advance, so it shows at once: Tessmouth's chance of winning goes from 34 % to 50 %. Please stay with the precomputed chips on the live server: it has 2 CPU cores, and a new scenario takes minutes.
+6. Under **Key moments**, play any goal as a clip. Under **Set pieces & shots**, open the **7′ free kick** to see who was in the box, how they were marked and who stood in the wall.
+7. **Replay**: **Start demo** replays the match from 0′ with momentum drawn live and turning points appearing as they happen. Add `&from=75` to the link to start just before the 75′ goal.
+8. **Preview** and **Line-ups**: form, the last five games, home and away records, both line-ups and each coach's plan.
+9. **AI log** in the top bar: every step the AI took for each moment, with the model, the time it took and the Verifier's verdict.
 
 To run it locally without any keys, follow "Run it locally" in the README (`PIVOT_PIPELINE=fake`). Everything works there, including every what-if (about 30 seconds each on a laptop). Explanations are template text in that mode.
 
