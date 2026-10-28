@@ -286,7 +286,6 @@ a.pv:hover { background: var(--pv-gold-soft); }
 .src .tip { display: grid; visibility: hidden; position: fixed; z-index: 60; left: 0; top: 0; pointer-events: none; min-width: 180px; padding: 6px 9px; background: var(--pv-bar); color: var(--pv-on-bar); border: 2px solid var(--pv-gold); font-family: var(--pv-label); font-size: 12px; font-weight: 600; line-height: 1.4; text-align: left; white-space: nowrap; }
 .src .tip > * { display: block; }
 .src .tip b { color: var(--pv-gold); }
-.src .tip code { font-size: 11px; color: var(--pv-on-bar); opacity: .7; }
 table.ba { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 table.ba th { font-family: var(--pv-label); font-size: 11px; text-align: right; color: var(--pv-ink-2); padding: 3px 6px; border-bottom: 1px solid var(--pv-hair); }
 table.ba th:first-child, table.ba td:first-child { text-align: left; }
