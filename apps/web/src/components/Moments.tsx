@@ -9,7 +9,7 @@ import { useFrames } from "../data/live/frames";
 import { fixtureMode, useMatch } from "../data/match";
 import { usePersona } from "../data/persona";
 import { optionLabel, useOptionMinute, useScenarioRun, type ScenarioOption } from "../data/scenarios";
-import { useT } from "../i18n";
+import { countOf, useT } from "../i18n";
 import { detailFrame } from "../pages/PivotDetail";
 import { useScenarioSource } from "../pages/WhatIfLab";
 import Button from "./Button";
@@ -223,7 +223,7 @@ export function OpenMoment({ pivot, n, evidence, onEvidence, onPrev, onNext, chi
         <dl className="open-facts">
           {cause && <div><dt>{t("open.trigger")}</dt><dd>{cause}</dd></div>}
           <div className="swung"><dt>{t("open.swung")}</dt><dd>{teams[pivot.direction].name}</dd></div>
-          {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims, evidence: events })}</dd></div>}
+          {pivot.status === "confirmed" && <div><dt>{t("open.checked")}</dt><dd>{t("open.checkedValue", { claims: countOf(t, "numbers", claims), evidence: countOf(t, "events", events) })}</dd></div>}
           <div className="open-more"><Link to={`/pivot/${pivot.pivot_id}`} className="more-link">{t("moments.detail")}</Link></div>
         </dl>
       </div>

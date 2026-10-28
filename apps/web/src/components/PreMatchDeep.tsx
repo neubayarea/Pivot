@@ -12,7 +12,7 @@ import {
   type PrematchFixture, type PrematchFormStats, type PrematchGame, type PrematchMeeting, type PrematchRecord, type PrematchReport,
   type PrematchTeam, type PrematchUsualXi,
 } from "../data/prematch";
-import { isMessageKey, usePrefs, type MessageKey, type T } from "../i18n";
+import { isMessageKey, plural, usePrefs, type MessageKey, type T } from "../i18n";
 import Card from "./Card";
 import LangTag from "./LangTag";
 import { Kit } from "./PreMatch";
@@ -162,7 +162,7 @@ function RecordTable({ side, team, t, num }: Ctx & { side: Side; team: PrematchT
 function Ground({ ground, meetings, venue, t, short, mine }: Ctx & { ground: NonNullable<NonNullable<PrematchReport["head_to_head"]>["at_this_ground"]>; meetings: PrematchMeeting[]; venue: string }) {
   const parts: [string, string][] = [
     ["home", t("pre.wins", { team: short("home"), n: ground.home_w })],
-    ["draw", t("pre.draws", { n: ground.d })],
+    ["draw", plural(t, "pre.draws", ground.d)],
     ["away", t("pre.wins", { team: short("away"), n: ground.away_w })],
   ];
   const won = (m: PrematchMeeting): Side | null => (m.ft[0] === m.ft[1] ? null : m.ft[0] > m.ft[1] ? "home" : "away");
@@ -170,7 +170,7 @@ function Ground({ ground, meetings, venue, t, short, mine }: Ctx & { ground: Non
     <section className="pre-ground" aria-labelledby="pre-ground-hd">
       <h4 id="pre-ground-hd">
         {t("pre.atGround", { venue })}
-        <small>{t("pre.played", { n: ground.played })}</small>
+        <small>{plural(t, "pre.played", ground.played)}</small>
       </h4>
       <p className="pre-ground-tally">
         {parts.map(([k, said]) => (
@@ -418,7 +418,7 @@ function Fixture({ f, league, t, fan }: Ctx & { side: Side; f: PrematchFixture; 
         <b>{f.competition}</b>
         {f.stage && <> <Stage stage={f.stage} t={t} /></>}
         {f.fictional && <span className="pre-chip">{t("pre.fictional")}</span>}
-        <b className="num pre-fx-days">{t("pre.inDays", { n: f.days_until })}</b>
+        <b className="num pre-fx-days">{plural(t, "pre.inDays", f.days_until)}</b>
       </p>
       <RotationNote f={f} t={t} />
       {then && (
