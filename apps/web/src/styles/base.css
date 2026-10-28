@@ -95,7 +95,9 @@ button { font: inherit; color: inherit; }
 .btn.pri:hover { background: color-mix(in oklab, var(--pv-ink) 82%, var(--pv-sheet)); }
 .btn.ghost { border-color: transparent; background: transparent; text-decoration: underline; padding-inline: 4px; }
 .btn.ghost:hover { text-decoration-thickness: 2px; }
-.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--pv-r-ctl); background: var(--pv-sunk); }
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--pv-r-ctl); background: var(--pv-sunk);
+  /* Ax52 (#259): never wider than its box; on a narrow phone the options wrap. */
+  flex-wrap: wrap; max-width: 100%; }
 .seg button { font-weight: 600; font-size: var(--pv-fs-sm); padding: 3px 11px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; color: var(--pv-ink-2); }
 .seg button:hover:not([aria-pressed="true"]) { color: var(--pv-ink); background: color-mix(in oklab, var(--pv-sunk) 60%, var(--pv-hair)); }
 .seg button[aria-pressed="true"] { background: var(--pv-sheet); color: var(--pv-ink); box-shadow: 0 1px 2px rgba(18, 20, 24, .15); }
@@ -397,6 +399,9 @@ table.ba td.big { font-family: var(--pv-display); font-weight: 800; font-size: 1
 .lead h1 { font-family: var(--pv-display); font-weight: 800; font-size: clamp(24px, 3.4vw, 40px); line-height: 1.08; max-width: 24em; }
 .lead .lede { color: var(--pv-ink-2); font-size: var(--pv-fs-lg); max-width: 46em; }
 .board { display: grid; gap: 20px; padding: 32px 32px 64px; }
+/* Ax52 (#259): one column the width of the screen, so a wide child (a chip row, a table) scrolls
+   inside itself instead of widening the page on a phone. */
+.board { grid-template-columns: minmax(0, 1fr); }
 
 .mom-mk { cursor: pointer; }
 .mom-mk line { stroke: var(--pv-ink); stroke-width: 2; stroke-dasharray: 4 3; }
@@ -638,7 +643,9 @@ details.more > summary small { font-weight: 600; text-transform: none; color: va
 .tabs [role="tab"][aria-selected="true"] { color: var(--pv-ink); border-bottom-color: var(--pv-ink); }
 .tab-panel { min-width: 0; }
 @media (max-width: 720px) {
-  .tabs [role="tablist"] { padding: 0 12px; gap: 16px; }
+  /* Ax52 (#259): six tabs are wider than a phone in English and Spanish; they wrap to a second row. */
+  .tabs [role="tablist"] { padding: 0 12px; gap: 0 16px; flex-wrap: wrap; }
+  .tabs [role="tab"] { padding-block: 10px 8px; }
 }
 
 /* ---------- Tab contents (Ax59) ---------- */

@@ -165,3 +165,11 @@
 .rp-sec, .rp-sec > *, .post .kmet, .rp-dsv-key span { min-width: 0; }
 .rp-take, .rp-note, .rp-src, .rp-hd h2, .rp-hd h3, .rp-band-v { overflow-wrap: anywhere; }
 .rp-hd { flex-wrap: wrap; }
+
+/* Ax52 (#259): on a phone the wide charts keep a readable size and scroll sideways inside their own
+   card; the page itself never does. The lanes and the style profile stack. */
+@media (max-width: 720px) {
+  .rp-shots, .rp-phases { grid-template-columns: minmax(0, 1fr); overflow-x: auto; overscroll-behavior-x: contain; }
+  .rp-shots > svg, .rp-phases > svg { width: 860px; max-width: none; }
+  .rp-lanes, .rp .rp-radar, .rp.stack .rp-radar { grid-template-columns: minmax(0, 1fr); }
+}
