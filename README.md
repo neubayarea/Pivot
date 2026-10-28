@@ -10,6 +10,7 @@ Pivot finds the few moments that turned a football match, has AI agents explain 
 
 <p align="center">
   <a href="https://pivot.in-stacks.com"><img alt="Live demo" src="https://img.shields.io/badge/live%20demo-pivot.in--stacks.com-facc15?style=for-the-badge"></a>
+  <a href="https://youtu.be/HGJ11chiHKg"><img alt="Demo video" src="https://img.shields.io/badge/demo%20video-1%3A55-ff0000?style=for-the-badge"></a>
   <img alt="Azure AI Foundry" src="https://img.shields.io/badge/Azure%20AI%20Foundry-Judge%20%C2%B7%20Explainer%20%C2%B7%20Comparator-0078D4?style=for-the-badge">
   <img alt="Microsoft Agent Framework" src="https://img.shields.io/badge/Microsoft%20Agent%20Framework-detect%20workflow-444444?style=for-the-badge">
   <img alt="Azure Cosmos DB" src="https://img.shields.io/badge/Azure%20Cosmos%20DB-results-0078D4?style=for-the-badge">
@@ -18,6 +19,7 @@ Pivot finds the few moments that turned a football match, has AI agents explain 
 
 <p align="center">
   <b><a href="https://pivot.in-stacks.com">Open the live demo</a></b> (no sign-in) ·
+  <b><a href="https://youtu.be/HGJ11chiHKg">▶ Watch the demo video</a></b> (1:55) ·
   <a href="docs/submission/project-description.md">Project description</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#run-it-locally">Run it locally</a>
