@@ -26,6 +26,11 @@ Pivot finds the few moments that turned a football match, has AI agents explain 
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/HGJ11chiHKg"><img src="https://img.youtube.com/vi/HGJ11chiHKg/maxresdefault.jpg" width="720" alt="Watch the Pivot demo video on YouTube"></a>
+  <br><b><a href="https://youtu.be/HGJ11chiHKg">▶ Watch the demo video on YouTube (1:55)</a></b>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/readme/fan-to-analyst.gif" width="900" alt="The same live minute in Fan view, then one click to Analyst view">
   <br><sub>A simulated live match. The same minute in <b>Fan</b> view, then one click to <b>Analyst</b> view.</sub>
 </p>
