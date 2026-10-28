@@ -70,8 +70,16 @@ describe("the overview", () => {
       const core = html.indexOf('id="post-core"');
       const trace = html.indexOf('id="post-trace"');
       expect(keys).toBeGreaterThan(0);
-      expect(core).toBeGreaterThan(0);
       expect(trace).toBeGreaterThan(Math.max(keys, core));
+      // Ax89 (#410): an analyst already has the key numbers at the top, so no core five and no set
+      // pieces here (they moved to the Stats tab); a fan keeps both.
+      if (mode === "fan") {
+        expect(core).toBeGreaterThan(0);
+        expect(html).toContain('id="post-set-pieces"');
+      } else {
+        expect(core).toBe(-1);
+        expect(html).not.toContain('id="post-set-pieces"');
+      }
     }
   });
 
