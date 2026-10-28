@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
+import Brand from "./Brand";
 import { useMatch } from "../data/match";
 import { useT } from "../i18n";
 import MatchPicker from "./MatchPicker";
@@ -25,9 +26,7 @@ export default function TopBar({ prefs, onPrefsChange }: Props) {
   const t = useT();
   return (
     <header className="top">
-      <Link to="/" className="brand">
-        Pivot
-      </Link>
+      <Brand to="/" />
       <MatchPicker />
       <span className="sp" />
       <ViewerControls prefs={prefs} onPrefsChange={onPrefsChange} />

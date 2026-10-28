@@ -24,8 +24,9 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Site bar: brand, which match, language, AI log ---------- */
 .top { background: var(--pv-bar); color: var(--pv-on-bar); display: flex; align-items: center; gap: 16px; padding: 8px 32px; flex-wrap: nowrap; font-size: var(--pv-fs-sm); }
-.brand { font-family: var(--pv-display); font-weight: 900; font-size: 26px; line-height: 1; display: flex; align-items: center; gap: 2px; text-decoration: none; color: var(--pv-on-bar); }
-.brand::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--pv-gold); margin-top: 10px; }
+.brand { font-family: var(--pv-display); font-weight: 900; font-size: 26px; line-height: 1; display: flex; align-items: center; gap: 6px; text-decoration: none; color: var(--pv-on-bar); }
+/* The logo mark (Ax86): the p's bowl sits on the word's baseline, its stem drops below like a descender. */
+.brand-mark { width: auto; height: 26px; flex-shrink: 0; margin-bottom: -6px; }
 .top .sp { flex: 1; }
 .top .seg { background: rgba(255, 255, 255, .06); }
 .top .seg button { color: var(--pv-on-bar); }
