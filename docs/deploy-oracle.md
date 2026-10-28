@@ -242,7 +242,7 @@ cd ~/Pivot && git checkout 5b07004 && cd deploy/oracle && docker compose up -d -
 | `PIVOT_FOUNDRY_ENDPOINT`、`PIVOT_FOUNDRY_API_VERSION`、`PIVOT_MODEL_STANDARD`、`PIVOT_MODEL_MINI` | Foundry 模型的地址和部署名，D 线提供 |
 | `AZURE_TENANT_ID`、`AZURE_CLIENT_ID`、`AZURE_CLIENT_SECRET` | 虚拟机不在 Azure 里，用服务主体登录 Azure 去调模型，D 线 / A 线提供。三个要一起填；填了密钥就只用这个服务主体登录 |
 | `PIVOT_WEB_DIST` | 网页文件的位置，镜像里已经设好，不用填 |
-| `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 20，`0` 不生成。网站按种子顺序列出，默认打开第一场 |
+| `PIVOT_SIM_MATCHES` | 启动时生成几场模拟比赛，默认 20，`0` 不生成。网站按 `sims.FIXTURE_IDS` 的顺序列出赛季里的真实比赛，默认打开第一场 |
 | `PIVOT_DATA_DIR` | 生成的比赛和 AI 写的结果存在哪个文件夹，要指向一块持久的硬盘卷，例如 `/data`。不设就存在容器里，重新部署就丢，见 [比赛数据放在哪](match-data.md) |
 | `PIVOT_RESULTS` | `1`（默认）把 AI 写的结果存到 `PIVOT_DATA_DIR/results/`，重启后读回来不再调模型；`0` 只放在内存里 |
 | `PIVOT_RESULTS_TAG` | 默认空。改成一个新值再部署，就丢掉存下的结果、让 AI 全部重写，见 [比赛数据放在哪](match-data.md) |

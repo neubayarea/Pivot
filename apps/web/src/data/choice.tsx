@@ -47,7 +47,7 @@ export const matchdayOf = (id: string): number | null => {
   return m ? Number(m[1]) : null;
 };
 
-/** "HBC 4–5 ROV (game 101)"; the recorded demo and the hand-made sample say so instead of a seed. */
+/** "TES 4–3 VAN (MD27)", "HBC 4–5 ROV (game 101)"; the recorded demo and the hand-made sample say so instead of a seed. */
 export function matchLabel(m: Match, t: T): string {
   // C14: a fixture of the next round has no score and no seed worth showing yet:
   // "Lunsford Sporting v Harbour City · MD31" (#354), never its id.
@@ -55,11 +55,15 @@ export function matchLabel(m: Match, t: T): string {
     const md = matchdayOf(m.match_id);
     return `${m.home.name} v ${m.away.name} · ${md === null ? t("picker.next") : t("picker.matchday", { n: md })}`;
   }
+  // #364: a season fixture played in full says its matchday ("TES 4–3 VAN (MD27)"), not its seed.
+  const md = matchdayOf(m.match_id);
   const tag = isRecordedDemo(m)
     ? t("picker.demo")
     : m.match_id === DEMO_MATCH_ID
       ? t("picker.sample")
-      : t("picker.seed", { seed: m.seed });
+      : md !== null
+        ? t("picker.matchday", { n: md })
+        : t("picker.seed", { seed: m.seed });
   const status = m.status === "finished" ? "" : `, ${t(`status.${m.status}`)}`;
   return `${m.home.short_name} ${m.score.home}–${m.score.away} ${m.away.short_name} (${tag}${status})`;
 }

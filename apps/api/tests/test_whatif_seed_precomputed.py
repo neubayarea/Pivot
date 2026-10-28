@@ -17,7 +17,7 @@ from pivot_api.whatif import (
     SEED_PRECOMPUTED_DIR, cache_key, load_precomputed, portable_sim_version, precomputed_path, write_precomputed,
 )
 
-SITE = {s.match_id for s in sims.specs_first(40)}
+SITE = {*(s.match_id for s in sims.specs_first(40)), *sims.FIXTURE_IDS}      # the seed matches and the season fixtures (#364)
 
 
 def _crlf_checkout() -> bool:
@@ -59,7 +59,7 @@ def test_the_server_reads_a_seed_matchs_file_at_startup(tmp_path, monkeypatch):
     async def no_sims(*_, **__):
         return None
 
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "2")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "2")   # the seed matches (conftest: no fixtures)
     monkeypatch.setenv("PIVOT_WHATIF_WARM", "0")
     monkeypatch.setenv("PIVOT_PREWARM_LANGS", "none")
     monkeypatch.setattr(app_module, "load_sims", no_sims)

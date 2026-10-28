@@ -19,11 +19,11 @@ describe("the ♥ team is a club (#354)", () => {
     expect(sideOfClub(LUN_HBC, "HBC")).toBe("away");
     expect(sideOfClub(LUN_HBC, "ROV")).toBeNull();
   });
-  it("reads a choice saved before clubs were as that side of Harbour City v Northgate Rovers", () => {
-    expect(savedClub(null, "home")).toBe("HBC");
-    expect(sideOfClub(LUN_HBC, savedClub(null, "home"))).toBe("away");
-    expect(savedClub("LUN", "away")).toBe("LUN");
-    expect(savedClub(null, null)).toBeNull();
+  it("reads a side with no club saved (a team= link) as that side of the match it opens on", () => {
+    expect(savedClub(null, "home", LUN_HBC)).toBe("LUN");
+    expect(sideOfClub(LUN_HBC, savedClub(null, "home", LUN_HBC))).toBe("home");
+    expect(savedClub("LUN", "away", HBC_ROV)).toBe("LUN");
+    expect(savedClub(null, null, HBC_ROV)).toBeNull();
   });
 });
 

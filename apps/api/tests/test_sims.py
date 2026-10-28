@@ -78,15 +78,22 @@ def test_stored_match_and_candidates_on_the_queue(tmp_path, calls, sim_output):
 
 def test_specs_from_env(monkeypatch):
     monkeypatch.setenv("PIVOT_SIM_MATCHES", "2")
-    assert [s.seed for s in specs_from_env()] == [101, 212]
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "8")
-    assert [s.seed for s in specs_from_env()][-2:] == [707, 808]
+    assert [s.match_id for s in specs_from_env()] == list(sims.FIXTURE_IDS[:2])
     monkeypatch.setenv("PIVOT_SIM_MATCHES", "0")
     assert specs_from_env() == []
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "8")                  # the older seed matches, only when asked for
+    assert [s.seed for s in specs_from_env()][:2] == [101, 212]
+    assert [s.seed for s in specs_from_env()][-2:] == [707, 808]
+
+
+def _seeds_only(monkeypatch, n: int = 1) -> None:
+    """One seed match and no season fixture: the fake `simulate` below gives a seed match's output."""
+    monkeypatch.setenv("PIVOT_SIM_MATCHES", "0")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", str(n))
 
 
 def test_api_lists_simulated_matches_with_the_demo(tmp_path, monkeypatch, calls):
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
+    _seeds_only(monkeypatch)
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     with TestClient(app) as client:
@@ -113,7 +120,7 @@ def _wait_for_sims(client: TestClient, limit_s: float = 120) -> dict:
 def _client_with_frames(tmp_path, monkeypatch):
     # Start the app once: entering a TestClient again runs startup again, with a new, empty store
     # that a second background load fills while the test is already asking for frames (#161).
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
+    _seeds_only(monkeypatch)
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     with TestClient(app) as client:
@@ -205,14 +212,32 @@ def test_ax55_recorded_demo_is_off_unless_asked_for(tmp_path, monkeypatch):
     assert sims.fixture_from_env() == tmp_path / "other.json"
 
 
-def test_ax55_twenty_matches_by_default_the_first_seed_first(monkeypatch):
-    monkeypatch.delenv("PIVOT_SIM_MATCHES")
+def test_364_twenty_season_fixtures_by_default_every_club_in_one(monkeypatch):
+    monkeypatch.delenv("PIVOT_SIM_MATCHES", raising=False)
+    monkeypatch.delenv("PIVOT_SIM_SEEDS", raising=False)
     specs = specs_from_env()
-    assert len(specs) == 20 and specs[0].match_id == "M-seed-101"
-    assert [s.seed for s in specs] == sorted(s.seed for s in specs)
+    assert [s.match_id for s in specs] == list(sims.FIXTURE_IDS) and len(specs) == 20
+    assert specs[0].match_id == "S2026-27-TES-VAN"                   # the site's default, the demo video's
+    assert all(isinstance(s, sims.FixtureSpec) for s in specs)       # no Harbour City v Northgate Rovers seeds
+    from pivot_core.sim.world import CLUBS
+    assert {c for s in specs for c in (s.home, s.away)} == {c.club_id for c in CLUBS}
 
 
-def test_ax55_api_lists_simulated_matches_in_seed_list_order_then_the_rest():
+def test_364_every_listed_fixture_is_a_played_game_of_the_season_file():
+    season = sims._season()
+    played = {(r["matchday"], r["home"], r["away"]): r for r in season["results"]}
+    for spec in sims.fixtures_first(len(sims.FIXTURE_IDS)):
+        r = played[(spec.matchday, spec.home, spec.away)]
+        assert r["seed"] == spec.seed                                 # the same seed: the same full match
+
+
+def test_364_spec_by_id_finds_fixtures_and_seed_matches():
+    assert sims.spec_by_id("S2026-27-TES-VAN") == sims.FixtureSpec.from_id("S2026-27-TES-VAN")
+    assert sims.spec_by_id("M-seed-101") == SPEC
+    assert sims.spec_by_id("S2099-01-AAA-BBB") is None and sims.spec_by_id("nope") is None
+
+
+def test_ax55_api_lists_simulated_matches_in_listing_order_then_the_rest():
     order = ["M-seed-101", "M-seed-212", "M-seed-303"]
     with TestClient(app) as client:
         repo = app.state.adapters.matches

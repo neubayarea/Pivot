@@ -16,7 +16,7 @@
 
 代码在 `apps/api/src/pivot_api/sims.py`。要增减比赛，改那里的比赛列表（种子），不要提交生成的文件。
 
-**网站默认打开哪一场**：比赛列表（`GET /api/matches`）按这份种子列表的顺序排，**第一场就是默认比赛**（现在是种子 101，`M-seed-101`）。这是一条固定规则，不看比赛结果挑。顶栏的比赛选择也按这个顺序。打开一个已经不存在的旧链接（例如以前的 `?match=M-seed-29`），网站会换成默认比赛，并在顶栏下面提示一句。
+**网站默认打开哪一场**：网站列出的 20 场是赛季里真实踢过的比赛（#364，`apps/api/src/pivot_api/sims.py` 里的 `FIXTURE_IDS`，挑的是比分接近、逆转、红牌、帽子戏法多的场次，20 支球队每队至少一场），用赛季文件里同一个种子完整重踢一遍，比分和 `eval/fixtures/season-2026.json` 一致。比赛列表（`GET /api/matches`）按这份清单的顺序排，**第一场就是默认比赛**（现在是 `S2026-27-TES-VAN`，Tessmouth United 4–3 Vantry Town）。以前的 Harbour City 对 Northgate Rovers 种子比赛（`M-seed-*`）默认不再列出，`PIVOT_SIM_SEEDS=N` 可以把前 N 场加在后面。顶栏的比赛选择也按这个顺序。打开一个已经不存在的旧链接（例如以前的 `?match=M-seed-29`），网站会换成默认比赛，并在顶栏下面提示一句。
 
 **20 场要算多久**：2 核的服务器上第一次启动（或改了模拟器之后）大约 1 分半钟（按以前 6 场约 25 秒推算）；算好一场列表里就多一场，网站不用等全部算完。以后重启直接读硬盘，几秒钟。想连这 1 分半也省掉，就在多核电脑上用 `scripts/sims_blob.py` 预先生成并传到 Blob，见下面「模拟比赛放到 Azure Blob」。
 
@@ -28,7 +28,7 @@
 
 **虚构联赛的赛季结果（season-2026.json）也提交了**：测试用的这场固定比赛的近况、积分榜、交锋记录、生涯和新闻都从它算出来（B13，见《数据定义说明》CTX-005）。它只有 294 场的比分、进球人、红牌、换人和每个上场球员的评分，没有事件和跑位帧，约 270 KB。提交它是为了让这个世界固定下来：模拟器以后改了，这场比赛的背景也不会跟着变。要重算就先跑 `uv run scripts/make_season.py`（12 核电脑上 3 到 6 分钟），再跑 `make_demo.py --seed 29`。
 
-**网站比赛提前算好的「假如」也提交了**（Bx14，`eval/fixtures/whatif/<比赛编号>.whatif.json`，每场几十 KB）：线上服务器只有 2 核，现算一个「假如」要好几分钟，所以 `M-seed-101` 等几场的每个按钮都在多核电脑上提前算好，服务器启动时读进来。每个文件都记着它对应的模拟器版本：`sim/` 或 `analytics/` 的代码一改，旧文件就对不上了，服务器会在日志里说一声，然后改回现算，不会出错。要重算就跑 `uv run scripts/make_whatif_fixture.py --match M-seed-101 M-seed-212 M-seed-303 M-seed-404 --runs 200`（12 核电脑上每场约 15 分钟）。在 Windows 上算也没问题：脚本写的是 Linux 上的版本号（`portable_sim_version`）。
+**网站比赛提前算好的「假如」也提交了**（Bx14，`eval/fixtures/whatif/<比赛编号>.whatif.json`，每场几十 KB）：线上服务器只有 2 核，现算一个「假如」要好几分钟，所以演示比赛 `S2026-27-TES-VAN`、正在直播的 `S2026-29-BRI-FAL` 等几场的每个按钮都在多核电脑上提前算好，服务器启动时读进来。每个文件都记着它对应的模拟器版本：`sim/` 或 `analytics/` 的代码一改，旧文件就对不上了，服务器会在日志里说一声，然后改回现算，不会出错。要重算就跑 `uv run scripts/make_whatif_fixture.py --match S2026-27-TES-VAN S2026-29-BRI-FAL --runs 200`（12 核电脑上每场约 15 分钟）。在 Windows 上算也没问题：脚本写的是 Linux 上的版本号（`portable_sim_version`）。
 
 ## AI 写的结果也存在硬盘上
 
@@ -56,7 +56,7 @@ AI 小组给每个转折点写的东西，也存在同一块硬盘上，重启�
 想让 AI 重新写：
 
 - 全部重写：在 Dokploy 的 Environment 里加或改 `PIVOT_RESULTS_TAG`（随便一个新值，比如 `2`），重新部署。旧结果会被删掉，所有转折点重新调一次模型。
-- 只重写一场：删掉 `/data/results/<比赛>/` 这个文件夹（比如 `M-seed-101`），再重启。
+- 只重写一场：删掉 `/data/results/<比赛>/` 这个文件夹（比如 `S2026-27-TES-VAN`），再重启。
 - 完全不存（每次重启都重新写）：`PIVOT_RESULTS=0`。
 
 手写的样例比赛 `M-api-demo`（只在 `PIVOT_SAMPLE_MATCH=1` 时加载）本来就是写死的，不存。代码在 `packages/pivot_adapters/src/pivot_adapters/local/results.py`。
@@ -106,7 +106,7 @@ PIVOT_SIMS_BACKEND=blob
 az storage container create --account-name pivotstore1024 --name sims --auth-mode login
 ```
 
-文件名和硬盘上一样：`M-seed-101.<版本号>.json.gz` 和 `M-seed-101.<版本号>.frames.json.gz`，版本号就是 `SIM_VERSION`。服务器不会自己删旧版本，用下面的脚本清。
+文件名和硬盘上一样：`S2026-27-TES-VAN.<版本号>.json.gz` 和 `S2026-27-TES-VAN.<版本号>.frames.json.gz`，版本号就是 `SIM_VERSION`。服务器不会自己删旧版本，用下面的脚本清。
 
 ### 在自己电脑上生成并上传
 
@@ -114,7 +114,7 @@ az storage container create --account-name pivotstore1024 --name sims --auth-mod
 
 ```bash
 export PIVOT_BLOB_ENDPOINT=https://pivotstore1024.blob.core.windows.net/
-uv run scripts/sims_blob.py generate-upload --count 50   # 前 50 场，规则同 PIVOT_SIM_MATCHES；也可以 --seeds 101,212
+uv run scripts/sims_blob.py generate-upload --count 20   # 前 20 场，规则同 PIVOT_SIM_MATCHES；也可以 --seeds 101,212（旧的种子比赛）
 uv run scripts/sims_blob.py list                         # Blob 里每个版本有几场、多大
 uv run scripts/sims_blob.py clean                        # 演练：列出不是当前版本的文件，不删
 uv run scripts/sims_blob.py clean --yes-delete           # 确认后真的删

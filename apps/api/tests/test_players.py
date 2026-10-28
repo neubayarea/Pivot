@@ -92,7 +92,7 @@ def test_rat_001_the_sent_off_player_is_part_of_that_pivot(client):
 
 
 def test_rat_001_a_simulated_match_serves_its_cached_lines(tmp_path, monkeypatch):
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "1")   # the seed matches (conftest: no fixtures)
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     spec = sims.SPECS[0]

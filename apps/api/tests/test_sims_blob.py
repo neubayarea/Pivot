@@ -117,7 +117,7 @@ def test_an_upload_that_fails_midway_still_serves_from_the_disk(tmp_path, calls)
 
 
 def test_the_site_still_serves_when_blob_is_unreachable(tmp_path, monkeypatch, calls):
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "1")   # the seed matches (conftest: no fixtures)
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     monkeypatch.setattr(app_module, "build_sim_store", lambda: FakeSimStore(unreachable=True))
@@ -134,7 +134,7 @@ def test_the_frames_endpoint_serves_a_match_that_was_downloaded(tmp_path, monkey
     store = FakeSimStore()
     load(store, tmp_path / "other")
     n = calls["n"]
-    monkeypatch.setenv("PIVOT_SIM_MATCHES", "1")
+    monkeypatch.setenv("PIVOT_SIM_SEEDS", "1")   # the seed matches (conftest: no fixtures)
     monkeypatch.setenv("PIVOT_DATA_DIR", str(tmp_path / "fresh"))
     monkeypatch.setattr(sims, "default_executor", lambda n: ThreadPoolExecutor(1))
     monkeypatch.setattr(app_module, "build_sim_store", lambda: store)
@@ -207,8 +207,9 @@ def test_script_generate_upload_skips_what_blob_has(script, work, calls, capsys)
 
 
 def test_script_count_follows_the_sim_matches_rule(script):
-    assert [s.seed for s in script.pick_specs(8, None)][-2:] == [707, 808]
-    assert len(script.pick_specs(None, None)) == 6
+    # #364: --count takes the site's season fixtures, as PIVOT_SIM_MATCHES does
+    assert [s.match_id for s in script.pick_specs(2, None)] == list(sims.FIXTURE_IDS[:2])
+    assert [s.match_id for s in script.pick_specs(None, None)] == list(sims.FIXTURE_IDS)
     assert [s.seed for s in script.pick_specs(None, [212, 999])] == [212, 999]
 
 
