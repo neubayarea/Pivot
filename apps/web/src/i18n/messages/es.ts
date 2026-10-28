@@ -1507,4 +1507,10 @@ export const es: Messages = {
   "lc.pattern.goal_kick": "Saque de puerta",
   "lc.pattern.kick_off": "Saque inicial",
   "lc.pattern.penalty": "Penalti",
+  // C21 (#401): the analyst's pitch overlays.
+  "ov.shape": "Líneas del equipo",
+  "ov.press": "Zonas de presión",
+  "ov.lanes": "Líneas de pase",
+  "ov.pressKey": "Presión en los últimos 5 minutos: {home} {h} presiones, {away} {a}.",
+  "ov.lanesKey": "Pases completados en los últimos 3 minutos, de zona a zona; más ancho es más, más intenso es progresivo.",
 };
