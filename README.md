@@ -1,18 +1,72 @@
-<img src="apps/web/public/wordmark.svg" width="160" alt="pivot">
+<p align="center">
+  <img src="apps/web/public/wordmark.svg" width="230" alt="pivot">
+</p>
 
-# Pivot
+<h3 align="center">The moments that changed the match, and why.</h3>
 
-**Pivot finds the moments that turned a football match, explains why they mattered with numbers it has checked itself, and lets you replay the match with one thing changed.**
+<p align="center">
+Pivot finds the few moments that turned a football match, has AI agents explain why each one mattered, checks every number they use, and lets you replay the rest of the match with one decision changed: as a fan or as an analyst, for your club and your player, in English, Chinese or Spanish.
+</p>
 
-Built for the Microsoft × Premier League hackathon. The challenge asks us to *explain why a moment matters*. Pivot answers in three steps:
+<p align="center">
+  <a href="https://pivot.in-stacks.com"><img alt="Live demo" src="https://img.shields.io/badge/live%20demo-pivot.in--stacks.com-facc15?style=for-the-badge"></a>
+  <img alt="Azure AI Foundry" src="https://img.shields.io/badge/Azure%20AI%20Foundry-Judge%20%C2%B7%20Explainer%20%C2%B7%20Comparator-0078D4?style=for-the-badge">
+  <img alt="Microsoft Agent Framework" src="https://img.shields.io/badge/Microsoft%20Agent%20Framework-detect%20workflow-444444?style=for-the-badge">
+  <img alt="Azure Cosmos DB" src="https://img.shields.io/badge/Azure%20Cosmos%20DB-results-0078D4?style=for-the-badge">
+  <img alt="Synthetic data" src="https://img.shields.io/badge/data-100%25%20synthetic-2e7d32?style=for-the-badge">
+</p>
 
-1. **Find it.** A momentum meter follows the match minute by minute and flags the minutes where the game swung.
-2. **Explain it.** A team of AI agents on Microsoft Agent Framework and Azure AI Foundry writes the explanation. Every number in the text is recomputed by a deterministic checker before it reaches the screen.
-3. **Test it.** "What if the red card had not been given?" Pivot replays the rest of the match hundreds of times with and without the change and shows how the result shifts, with 95% confidence ranges.
+<p align="center">
+  <b><a href="https://pivot.in-stacks.com">Open the live demo</a></b> (no sign-in) ·
+  <a href="docs/submission/project-description.md">Project description</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#run-it-locally">Run it locally</a>
+</p>
 
-All matches, clubs and players are synthetic (see [Data](#data-and-disclaimer)).
+<p align="center">
+  <img src="docs/screenshots/readme/fan-to-analyst.gif" width="900" alt="The same live minute in Fan view, then one click to Analyst view">
+  <br><sub>A simulated live match. The same minute in <b>Fan</b> view, then one click to <b>Analyst</b> view.</sub>
+</p>
 
-![Pivot live board: momentum chart, turning-point cards, pitch and match stats](docs/screenshots/submission/02-match-pivot-cards.png)
+## Pivot in 30 seconds
+
+- **The problem.** Match stats tell you *what* happened: possession, shots, xG. They don't tell you which moments turned the game, or why. AI can write a fluent summary, but it gets numbers wrong, and one wrong number loses a fan's trust.
+- **What Pivot does.** It follows the match minute by minute, flags the minutes where the game swung, and has a team of AI agents explain each one. A Verifier, written as plain code, recomputes every number before it reaches the screen. Then you can ask *"what if?"*: Pivot saves the match at that minute and replays the rest 200 times each way.
+- **Who it is for.** A fan gets the story in plain words, from their club's side, around the player they follow. An analyst gets a live data centre and a post-match report. These are two different pages, not one page with different wording.
+
+## One pipeline, five stages
+
+The challenge (rule 4.1) asks for one pipeline: ingest, interpret, explain, render, personalize. This is how Pivot does each step.
+
+| Stage | What Pivot does | Where to see it |
+|---|---|---|
+| **Ingest** | Our own match engine plays 22 rated players, each with a position every second. It sends out every event: passes, shots, tackles, pressure and possession changes. Every match can be replayed from its seed and saved at any minute. | **Live** tab of the simulated live match |
+| **Interpret** | It computes 23 team stats for the whole match, either half or any window of minutes, including xG, field tilt and PPDA. A per-minute momentum meter and a change-point alarm flag the minutes where the game swung. | **Overview**, **Stats** |
+| **Explain** | Agents built with Microsoft Agent Framework on Azure AI Foundry:<br>• a **Judge** decides whether a moment is a real turning point;<br>• an **Explainer** writes why;<br>• a **Verifier** recomputes every number and sends wrong drafts back. | Turning-point cards, **AI log** |
+| **Render** | A momentum chart, turning-point cards, and a pitch that draws passes, shots and tackles as they happen, with shape lines, pressing zones and passing lanes. Every key moment and set piece has a clip. | **Live**, **Replay**, **Overview** |
+| **Personalize** | **Fan** or **Analyst** view. Pick your club, and the moment is told from your side. Follow a player, and that player stays highlighted all match. English, Chinese or Spanish, each version checked again. | Top bar: **Fan / Analyst**, **♥ Team**, **★ Player**, **EN / 中文 / ES** |
+
+## See it
+
+| Fan view, live | Analyst view, live |
+|---|---|
+| ![Fan view of the live match: pitch, who is on top right now, the big moments](docs/screenshots/readme/live-fan.jpg) | ![Analyst view of the same minute: last ten minutes xG, tilt, PPDA, possession with trend lines, tactical pitch with pressing zones and passing lanes](docs/screenshots/readme/live-analyst.jpg) |
+| **A turning point, every number checked.** Hover a number to see the statistic it was checked against. | **The AI log.** The Verifier sent the first draft back with its reasons, and the Explainer rewrote it. |
+| ![Turning point card with the evidence tooltip for 4 to 14](docs/screenshots/readme/turning-point.jpg) | ![AI log: Judge, Explainer, Verifier sent back, rewrite, every claim checks out](docs/screenshots/readme/ai-log.jpg) |
+| **What if, for a fan.** The biggest what-ifs of the match, for your team, in one line. | **What if, for an analyst.** The effect with 95% ranges, and "clear difference" only when the ranges don't overlap. |
+| ![Fan what-if list: what if the 54th-minute goal hadn't counted, 44% to 20%](docs/screenshots/readme/whatif-fan.jpg) | ![Analyst what-if: disallow the 17th-minute goal, +16 points, 95% ranges](docs/screenshots/readme/whatif-analyst.jpg) |
+| **Your club, your language.** The same checked moment from Tessmouth's side, here in Chinese. | **Analyst report.** Match phases, game state, shot quality, attacking lanes and style percentiles. |
+| ![Fan overview in Chinese, from Tessmouth United's side](docs/screenshots/readme/personalise.jpg) | ![Analyst Stats tab: style profile radar with percentiles](docs/screenshots/readme/analyst-report.jpg) |
+
+## Why it stands out
+
+| Judging criterion | What to look at |
+|---|---|
+| **Agentic design and innovation** | Judge → Explainer ⇄ Verifier is a Microsoft Agent Framework workflow with a rewrite loop. A failed draft goes back with the problems listed. After three failures, a plain summary built only from checked numbers is shown and marked "Auto summary". A Comparator agent explains each what-if. Every step, with model, latency and verdict, is in the **AI log**. |
+| **Technological implementation** | A reproducible simulator that can be saved at any minute. What-if replays use paired seeds: run *i* with and without the change uses the same random seed, so the change is the only difference within a pair. Results come with 95% Wilson ranges. They are stored in Azure Cosmos DB, so a repeated question never calls the model again. |
+| **Real-world impact** | Fans get a story they can trust. Analysts can test "did that decision really decide it?" with a controlled replay instead of an opinion. Everything after the simulator reads a plain list of events, so one adapter would bring in a real event feed (see [From synthetic matches to real ones](#from-synthetic-matches-to-real-ones)). |
+| **User experience** | Fan and Analyst are two different pages on every tab, the followed player is highlighted across the match, there are three languages, and the live site needs no sign-in. |
+| **Hackathon category** | All five stages of rule 4.1 above, on synthetic, football-realistic data. |
 
 ## Try it
 
@@ -38,12 +92,6 @@ The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Previ
 The live server has only 2 CPU cores. The what-if chips on the demo match were computed in advance, so a stored one, such as **Disallow 17′ goal**, answers at once. A scenario that is not stored takes a few minutes there and queues behind the others. Every scenario runs quickly on your own machine (see [Run it locally](#run-it-locally)).
 
 To see what the AI agents did, click **AI log** in the top bar. It lists each step (Judge, Explainer, Verifier) for every turning point, the model used, latency, tokens and the verdict. The raw data is at `https://pivot.in-stacks.com/api/pivots/<pivot id>/traces`. The pivot id (such as `S2026-27-TES-VAN:p11`) is in the link once a turning point is open (`&pivot=`).
-
-| Pivot detail with evidence | What-if result |
-|---|---|
-| ![Turning point detail page](docs/screenshots/submission/03-pivot-89-detail.png) | ![What-if Lab result](docs/screenshots/submission/04-whatif-result.png) |
-
-More screenshots: [home](docs/screenshots/submission/01-home.png), [dark mode](docs/screenshots/submission/05-match-pivot-cards-dark.png).
 
 ## How it works
 
