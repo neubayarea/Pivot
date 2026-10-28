@@ -1,0 +1,95 @@
+/* Ax91: the What-if answer in a fan's version and an analyst's version. Tokens and shared classes only. */
+
+/* Fan: one sentence, one big pair of numbers, the three-way bars, the likeliest score. */
+.wi-fan { display: grid; gap: 20px; min-width: 0; }
+.wi-fan-line { font-weight: 700; font-size: 22px; line-height: 1.35; max-width: 52ch; margin: 0; }
+.wi-fan-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-weight: 700; font-size: 15px; color: var(--pv-ink-2); }
+.wi-fan-you { color: var(--tc); }
+.wi-fan-big { display: grid; gap: 8px; padding: 16px 20px; background: var(--pv-sunk); border-radius: var(--pv-r-panel); box-shadow: inset 6px 0 var(--tc); }
+.wi-fan-pair { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 40px; }
+.wi-fan-pair > div { display: grid; gap: 2px; }
+.wi-fan-pair span { font-size: 14px; color: var(--pv-ink-2); }
+.wi-fan-pair b { font-family: var(--pv-display); font-weight: 900; font-size: 72px; line-height: .9; color: var(--pv-ink-2); }
+.wi-fan-pair .now b { color: var(--tc); box-shadow: inset 0 -8px var(--pv-gold); }
+.wi-fan-pair .now span { color: var(--pv-ink); font-weight: 700; }
+.wi-fan-move { margin: 0 0 6px; font-weight: 700; font-size: 17px; }
+.wi-fan-who { display: grid; gap: 8px; }
+.wi-fan .dist .row { height: 52px; }
+.wi-fan .dist .row i { font-size: 18px; padding-inline: 12px; }
+.wi-fan .dist .label { font-size: 14px; }
+.wi-fan-score { display: grid; gap: 8px; }
+.wi-fan-score dl { display: flex; flex-wrap: wrap; gap: 12px 48px; margin: 0; }
+.wi-fan-score dl > div { display: grid; gap: 2px; }
+.wi-fan-score dt { font-size: 14px; color: var(--pv-ink-2); }
+.wi-fan-score .now dt { color: var(--pv-ink); font-weight: 700; }
+.wi-fan-score dd { margin: 0; }
+.wi-score { display: inline-flex; align-items: baseline; gap: 10px; }
+.wi-score b { font-family: var(--pv-display); font-weight: 900; font-size: 48px; line-height: 1; }
+.wi-score small { font-weight: 700; font-size: 14px; color: var(--pv-ink-2); }
+
+/* Fan lab: the changes as big cards, then the answer. */
+.wi-fan-lab { display: grid; gap: 14px; padding: 14px 32px 32px; }
+.wi-fan-pick h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.wi-fan-pick > p { margin: 4px 0 12px; }
+.wi-fan-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.wi-fan-card { display: grid; gap: 6px; align-content: start; text-align: left; padding: 16px 18px; border: 1px solid var(--pv-hair); border-radius: var(--pv-r-ctl); background: var(--pv-sheet); color: var(--pv-ink); cursor: pointer; font: inherit; }
+.wi-fan-card b { font-size: 18px; }
+.wi-fan-card span { font-size: 15px; line-height: 1.45; color: var(--pv-ink-2); }
+.wi-fan-card small { font-size: 13px; font-weight: 600; color: var(--pv-ink-2); }
+.wi-fan-card[aria-pressed="true"] { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-sheet); }
+.wi-fan-card[aria-pressed="true"] :is(span, small) { color: inherit; opacity: .85; }
+.wi-fan-card:disabled { cursor: progress; }
+@media (prefers-reduced-motion: no-preference) {
+  .wi-fan-card { transition: background-color 150ms, border-color 150ms; }
+}
+.wi-fan-card:hover:not([aria-pressed="true"]):not(:disabled) { background: var(--pv-sunk); }
+.wi-fan-lab .result-slot.card { padding: 20px 24px; }
+@media (max-width: 900px) { .wi-fan-lab { padding-inline: 16px; } }
+
+/* Analyst: the headline number, the effect, then the charts and the tables. */
+.wi-an { display: grid; gap: 18px; min-width: 0; }
+.wi-an-hd { font-size: 15px; font-weight: 700; margin: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; }
+.wi-an-hd small { font-size: 12px; font-weight: 500; color: var(--pv-ink-2); }
+.wi-an-block { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.wi-an-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; }
+@media (max-width: 1100px) { .wi-an-pair { grid-template-columns: minmax(0, 1fr); } }
+.wi-effect { gap: 8px 32px; padding: 10px 0; border-block: 1px solid var(--pv-hair); }
+.wi-effect > div { cursor: help; }
+.wi-effect dd { font-size: 17px; }
+
+.wi-mxs { display: flex; flex-wrap: wrap; gap: 16px; }
+.wi-mx { margin: 0; display: grid; gap: 4px; }
+.wi-mx figcaption { font-size: 12px; font-weight: 700; color: var(--pv-ink-2); }
+.wi-mx table { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; }
+.wi-mx th { font-size: 11px; font-weight: 600; color: var(--pv-ink-2); width: 16px; }
+.wi-mx td { width: 34px; height: 30px; text-align: center; font-size: 12px; font-weight: 700; border-radius: 4px; background: var(--pv-sunk); }
+.wi-mx.was td[style] { background: color-mix(in srgb, var(--pv-ink-2) calc(var(--a) * 70%), var(--pv-sunk)); }
+.wi-mx.now td[style] { background: color-mix(in srgb, var(--pv-gold) calc(var(--a) * 100%), var(--pv-sunk)); color: var(--pv-on-gold); }
+.wi-mx.was td[style] { color: var(--pv-ink); }
+.wi-mx td.top { outline: 2px solid var(--pv-ink); outline-offset: -2px; }
+
+.wi-forest { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.wi-forest li { display: grid; grid-template-columns: 11em minmax(0, 1fr) 4.5em; gap: 8px; align-items: center; }
+.wi-forest .k { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wi-forest .k small { color: var(--tc); font-weight: 700; }
+.wi-forest .track { position: relative; height: 16px; background: linear-gradient(var(--pv-ink-2), var(--pv-ink-2)) 50% 0 / 1px 100% no-repeat; }
+.wi-forest .ci { position: absolute; top: 7px; height: 2px; background: var(--tc); }
+.wi-forest .pt { position: absolute; top: 3px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; border: 2px solid var(--tc); background: var(--pv-sheet); }
+.wi-forest .pt.clear { background: var(--tc); }
+.wi-forest .v { font-size: 12px; font-weight: 700; text-align: right; }
+.wi-forest-axis { display: grid; grid-template-columns: 11em 1fr auto 1fr 4.5em; gap: 0 8px; font-size: 11px; color: var(--pv-ink-2); }
+.wi-forest-axis span:nth-child(1) { grid-column: 2; }
+.wi-forest-axis span:nth-child(3) { text-align: right; }
+
+.wi-table th[scope="rowgroup"] { vertical-align: top; color: var(--pv-ink); font-size: 13px; padding-top: 6px; }
+.wi-stats tr:not(.second) td { border-bottom: 0; }
+.wi-stats td small { font-weight: 500; }
+.wi-kit { display: inline-flex; align-items: center; gap: 6px; }
+.wi-kit::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--tc); }
+.wi-method { gap: 8px 32px; }
+
+/* The first answer on the tab follows the same split. */
+.wi-feature.is-an .dist .ci { display: block; }
+.wi-feature-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wi-stats td.tm { text-align: left; }
+.wi-stats th[scope="rowgroup"] { width: 26%; }
