@@ -13,6 +13,7 @@ import MatchStats from "../../components/MatchStats";
 import PitchBoard from "../../components/PitchBoard";
 import PlayerSpotlight from "../../components/PlayerSpotlight";
 import PlayerTable from "../../components/PlayerTable";
+import LiveCentre from "../../components/live/LiveCentre";
 import FanPhases from "../../components/report/FanPhases";
 import PageNav from "../../components/report/PageNav";
 import PostMatchReport, { useReportTitle } from "../../components/report/PostMatchReport";
@@ -116,6 +117,8 @@ export function LiveTab({ moments, evidence }: { moments: Pivot[]; evidence: Rea
           <EventFeed highlight={evidence} />
         </Card>
       </div>
+      {/* C21 (#401): the live centre, a fan's "who is on top" and momentum, an analyst's numbers. */}
+      <LiveCentre moments={moments} upTo={upTo} />
       <PivotAlert moments={moments} />
     </>
   );
