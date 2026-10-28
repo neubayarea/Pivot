@@ -43,7 +43,7 @@ export const ORDER = {
   analyst: {
     pre: ["form", "headToHead", "plan", "lineups", "yourTeam", "spotlight", "stories"],
     live: ["pitch", "stats", "events", "teamStats", "pictures", "spotlight", "yourTeam"],
-    post: ["yourTeam", "momentum", "pivots", "teamStats", "keys", "setPieces", "spotlight", "trace"],
+    post: ["yourTeam", "momentum", "pivots", "keys", "spotlight", "trace"],
   },
 } as const satisfies Record<Audience, Record<"pre" | "live" | "post", readonly string[]>>;
 

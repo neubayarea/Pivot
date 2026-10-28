@@ -139,9 +139,9 @@ describe("board without pivots", () => {
     expect(html).toContain("Stoppage-time equaliser");
     expect(html).toContain("Turns it round");
     expect(html).toContain("Penalty to HBC");
-    // Key moments come right after the momentum line, before set pieces and shots.
+    // Key moments come right after the momentum line; an analyst's set pieces are on the Stats tab (Ax89 #410).
     expect(html.indexOf("Momentum")).toBeLessThan(html.indexOf("Key moments"));
-    expect(html.indexOf("Key moments")).toBeLessThan(html.indexOf("Set pieces &amp; shots"));
+    expect(html).not.toContain("Set pieces &amp; shots");
     // Four goals and a penalty marked on the line, and a legend for them; no numbered pivot in it.
     expect(html.match(/class="mom-key/g)).toHaveLength(5);
     expect(html).toContain("km-legend");

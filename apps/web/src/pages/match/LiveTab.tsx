@@ -144,7 +144,7 @@ export function StatsTab() {
     </>
   );
   // C20 (#391): the Stats tab is the deep read. An analyst gets the team stats, then the report's
-  // phases, game state, shot quality, lanes and style, the pictures and the player table, with an
+  // phases, game state, shot quality, set pieces (Ax89), lanes and style, the pictures and the player table, with an
   // "on this page" row; a fan gets the key numbers, who was on top when, and the pictures.
   return (
     <div ref={root} className="stats-page">
@@ -163,7 +163,7 @@ export function StatsTab() {
         <div className="live-sec stats-report">
           <p className="rp-kicker">{reportTitle}</p>
           <ReportBoundary resetKey={`${match.match_id}:${upTo}`}>
-            <PostMatchReport parts={["phases", "state", "shots", "lanes", "profile"]} level={2} stack moments={moments} upTo={upTo} />
+            <PostMatchReport parts={["phases", "state", "shots", "setPieces", "lanes", "profile"]} level={2} stack moments={moments} upTo={upTo} />
           </ReportBoundary>
         </div>
       )}

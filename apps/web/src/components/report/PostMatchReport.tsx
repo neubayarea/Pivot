@@ -23,12 +23,13 @@ import Lanes, { LANES, laneShares } from "./Lanes";
 import Phases, { METRIC_KEY, bestSpell, type PhaseMetric } from "./Phases";
 import PlayerContrib, { topContributors } from "./PlayerContrib";
 import ReportSection from "./ReportSection";
+import SetPiecesAndShots from "../SetPieces";
 import ShotQuality from "./ShotQuality";
 import StyleRadar from "./StyleRadar";
 import { count, num, or0, pct, share } from "./fmt";
 import "../../styles/report.css";
 
-export type ReportPart = "deserved" | "phases" | "state" | "shots" | "lanes" | "profile" | "players";
+export type ReportPart = "deserved" | "phases" | "state" | "shots" | "setPieces" | "lanes" | "profile" | "players";
 
 type Props = {
   parts: readonly ReportPart[];
@@ -81,6 +82,13 @@ export default function PostMatchReport({ parts, moments, upTo, players: nPlayer
   out.shots = (
     <ReportSection key="shots" id="rp-shots" title={t("rp.sq.title")} takeaway={sqTake} source={t(q ? "rp.src.shots" : "rp.src.shotsOnly")} className="wide" {...sec}>
       <ShotQuality shots={shots.data?.shots ?? []} quality={q} names={names} nameOf={playerName} />
+    </ReportSection>
+  );
+  // Ax89 (#410): the set pieces and shot clips, moved here from the analyst's Overview. Drawn from the
+  // events and frames, so it shows with or without /analysis.
+  out.setPieces = (
+    <ReportSection key="setPieces" id="rp-set-pieces" title={t("rp.sp.title")} source={t("rp.src.setPieces")} className="wide" {...sec}>
+      <SetPiecesAndShots key={match.match_id} folded={false} />
     </ReportSection>
   );
 
