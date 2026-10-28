@@ -11,8 +11,9 @@ import ControlBar, { barKey, type BarMark } from "./ControlBar";
 import { describe } from "./EventFeed";
 import FollowButton from "./FollowButton";
 import { EventCues, smoothFor, usePitchMotion } from "./motion";
-import Pitch, { whoFromSquads } from "./Pitch";
+import Pitch, { PITCH_RATIO, whoFromSquads } from "./Pitch";
 import { PlayerNumbers, usePlayerReport } from "./PlayerCard";
+import { faultOf, LoadFailed, Placeholder, WorkingDots } from "./Skeleton";
 import {
   backLineX, frameShape, lineOf, lineupAt, meanShape, shapeLines, tacticsAt, type Lineup, type Role, type Shape,
 } from "./shape";
@@ -59,6 +60,8 @@ export default function PitchBoard() {
     if (f) shown.current = f;
     return shown.current;
   }, [store.around, store.version, now]);
+  // Ax79: the pitch fades in when it replaces the placeholder, not when it was there from the start.
+  const [waited] = useState(() => !frame);
   const svg = useRef<SVGSVGElement>(null);
   const scrub = useRef<HTMLInputElement>(null);
   const time = useRef<HTMLSpanElement>(null);
@@ -172,13 +175,15 @@ export default function PitchBoard() {
           onKeyDown={playback ? (e) => barKey(e, { toggle: () => play(!playback.playing), seekBy, step: STEP_S }) : undefined}>
           {frame ? (
             <Pitch frame={frame} actions={[]} selected={null} who={who} animated svgRef={svg}
-              className={playback && !playback.playing ? "paused" : undefined}
+              className={[playback && !playback.playing && "paused", waited && "ph-in"].filter(Boolean).join(" ") || undefined}
               label={t("detail.pitchLabel", { t: frame.t, n: frame.players.length })}
               picked={picked} onPick={setPicked} marked={marked} tag={tag}
               under={shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
               over={<EventCues cues={cues} />} />
+          ) : store.error ? (
+            <LoadFailed message={t("board.pitchFailed")} fault={faultOf(store.error)} onRetry={store.retry} ratio={PITCH_RATIO} />
           ) : (
-            <div className="empty-box muted">{t("board.pitchLoading")}</div>
+            <Placeholder label={t("board.pitchLoading")} ratio={PITCH_RATIO} lines={0} />
           )}
           {playback && (
             <ControlBar playing={playback.playing} onPlaying={play} value={match.clock} min={0} max={playback.end} onSeek={playback.seek}
@@ -305,7 +310,7 @@ export function ShapeTable({ frame, lineup, before, beforeLabel, isHome, names, 
       </table>
       {shape && (
         <small className="muted">
-          {before === undefined ? t("board.shapeNote") : before === null ? t("board.shapeLoading") : t("board.shapeVs", { when: beforeLabel })}
+          {before === undefined ? t("board.shapeNote") : before === null ? <>{t("board.shapeLoading")} <WorkingDots /></> : t("board.shapeVs", { when: beforeLabel })}
         </small>
       )}
     </div>

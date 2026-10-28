@@ -16,7 +16,7 @@ import Button from "./Button";
 import { describe } from "./EventFeed";
 import Pitch, { whoFromSquads } from "./Pitch";
 import { PivotStamp, pivotHeadline } from "./PivotList";
-import { Placeholder } from "./Skeleton";
+import { faultOf, LoadFailed, Placeholder, type LoadFault } from "./Skeleton";
 import { RunFailed, RunProgress, ScenarioResult } from "./WhatIf";
 import WhyItTurned from "./WhyItTurned";
 
@@ -129,17 +129,18 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
   const minuteOf = useOptionMinute();
   const source = useScenarioSource();
   const [options, setOptions] = useState<ScenarioOption[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<LoadFault | null>(null);
+  const [tries, setTries] = useState(0);
   const [chosen, setChosen] = useState<ScenarioOption["type"] | null>(null);
   const { state, run, reset } = useScenarioRun(source);
 
   useEffect(() => {
     let alive = true;
-    source.options(pivot.pivot_id).then((o) => alive && setOptions(o), () => alive && setFailed(true));
+    source.options(pivot.pivot_id).then((o) => alive && setOptions(o), (e: unknown) => alive && setFailed(faultOf(e)));
     return () => {
       alive = false;
     };
-  }, [source, pivot.pivot_id]);
+  }, [source, pivot.pivot_id, tries]);
 
   const enabled = (options ?? []).filter((o) => o.enabled).slice(0, 3);
   const option = enabled.find((o) => o.type === chosen);
@@ -155,8 +156,8 @@ export function WhatIfInline({ pivot }: { pivot: Pivot }) {
         <h3>{t("detail.whatIf")}</h3>
         <p className="muted">{t("moments.wiNote")}</p>
       </div>
-      {failed ? (
-        <p className="muted">{t("whatif.optionsError")}</p>
+      {failed !== null ? (
+        <LoadFailed message={t("whatif.optionsError")} fault={failed} onRetry={() => (setFailed(null), setTries((n) => n + 1))} />
       ) : !options ? (
         <Placeholder label={t("whatif.loadingOptions")} chips={4} lines={0} />
       ) : !enabled.length ? (

@@ -7,6 +7,8 @@ import { PITCH } from "../fixtures/pivot-detail";
 const S = 5;
 const W = PITCH.length * S;
 const H = PITCH.width * S;
+/** The drawing's width over height, for a placeholder that holds its place (Ax79). */
+export const PITCH_RATIO = W / H;
 const LINE = { fill: "none", stroke: "var(--pv-pitch-line)", strokeWidth: 2 };
 
 type Props = {

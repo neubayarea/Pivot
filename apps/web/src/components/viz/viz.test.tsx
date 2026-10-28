@@ -181,4 +181,13 @@ describe("data hooks", () => {
     expect(render(<VizBox state={{ data: null, loading: false, error: true }}>{() => null}</VizBox>, "?lang=zh"))
       .toContain("没能加载");
   });
+
+  it("VizBox says why a load failed and offers a Retry (Ax79)", () => {
+    const failed = (fault: number | "offline", q?: string) =>
+      render(<VizBox state={{ data: null, loading: false, error: true, fault, retry: () => {} }}>{() => null}</VizBox>, q);
+    expect(failed(503)).toContain("error 503");
+    expect(failed(503)).toContain(">Retry</button>");
+    expect(failed("offline", "?lang=es")).toContain("Reintentar");
+    expect(failed(404, "?lang=zh")).toContain("错误 404");
+  });
 });

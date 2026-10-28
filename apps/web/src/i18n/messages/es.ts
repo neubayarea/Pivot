@@ -150,6 +150,14 @@ export const es: Messages = {
 
   "common.retryNow": "Reintentar",
   "common.reload": "Recargar",
+  "load.retry": "Reintentar",
+  "load.reason.server": "El servidor tuvo un problema (error {status}).",
+  "load.reason.refused": "El servidor rechazó la petición (error {status}).",
+  "load.reason.offline": "No se pudo conectar con el servidor.",
+  "load.reason.data": "No se pudo leer la respuesta.",
+  "board.pitchFailed": "No se pudieron cargar las posiciones de los jugadores.",
+  "pre.loading": "Cargando la previa…",
+  "pre.failed": "No se pudo cargar la forma en detalle.",
 
   "banner.paused": "Datos detenidos en {clock}",
   "banner.failed": "Datos en vivo no disponibles: {reason}.",

@@ -10,7 +10,7 @@ import type { TrackingFrame } from "@pivot/contracts";
 import { useClock } from "../data/clock";
 import { advance, clipLength, nextRate, partAt, RATES, toClip, toMatch, type Clip, type ClipMark, type Rate } from "../data/clips";
 import type { KeyKind } from "../data/keyMoments";
-import { useFrameWindow } from "../data/live/frames";
+import { useFrameWindowState } from "../data/live/frames";
 import { fixtureMode, useMatch, type Side } from "../data/match";
 import { cueSpan, cuesAt } from "../data/motion";
 import { clipBall, frameBetween } from "../data/setpieces";
@@ -18,7 +18,8 @@ import { useT, type MessageKey } from "../i18n";
 import { describe } from "./EventFeed";
 import ControlBar, { barKey, type BarMark } from "./ControlBar";
 import { EventCues, usePitchMotion } from "./motion";
-import Pitch, { whoFromSquads } from "./Pitch";
+import Pitch, { PITCH_RATIO, whoFromSquads } from "./Pitch";
+import { faultOf, LoadFailed, Placeholder } from "./Skeleton";
 import { lineupAt } from "./shape";
 import "../styles/setpieces.css";
 
@@ -85,8 +86,10 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
   const matchId = useFramesMatch();
   const { parts } = clip;
   const length = clipLength(parts);
-  const frames = useFrameWindow(matchId, parts[0][0], parts.at(-1)![1]);
+  const { frames, error: framesError, retry: retryFrames } = useFrameWindowState(matchId, parts[0][0], parts.at(-1)![1]);
   const ready = !!frames?.length;
+  // Ax79: the pitch fades in when it replaces the placeholder.
+  const [waited] = useState(() => !ready);
   // posAt is the clip clock; React only hears about it a few times a second (Ax61), the motion loop on every frame.
   const [pos, setPosState] = useState(0);
   const posAt = useRef(0);
@@ -170,12 +173,13 @@ export default function ClipPlayer({ clip, label, title, intro, under, children 
 
   let pitch: ReactNode;
   if (matchId === null || (frames && !frames.length)) pitch = <div className="empty-box muted">{t("board.pitchNone")}</div>;
-  else if (!frame || !frames) pitch = <div className="empty-box muted">{t("board.pitchLoading")}</div>;
+  else if (framesError) pitch = <LoadFailed message={t("board.pitchFailed")} fault={faultOf(framesError)} onRetry={retryFrames} ratio={PITCH_RATIO} />;
+  else if (!frame || !frames) pitch = <Placeholder label={t("board.pitchLoading")} ratio={PITCH_RATIO} lines={0} />;
   else {
     const trailTo = clip.shot && clip.shot.t >= part[0] ? Math.min(tm, clip.shot.t - 1) : tm;
     pitch = (
       <Pitch frame={frame} actions={[]} selected={null} who={people.who} label={label} animated svgRef={svg}
-        className={playing ? undefined : "paused"}
+        className={[!playing && "paused", waited && "ph-in"].filter(Boolean).join(" ") || undefined}
         picked={pickedPlayer} onPick={setPickedPlayer} tag={people.tag} marked={new Set(clip.involved)}
         under={<>{under?.(frame, tm)}<BallTrail frames={frames.filter((f) => f.t >= part[0])} pos={trailTo} now={frame} /></>}
         over={<><EventCues cues={cues} /><Marks marks={reached} /></>} />

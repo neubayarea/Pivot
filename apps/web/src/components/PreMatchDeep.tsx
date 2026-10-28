@@ -5,7 +5,8 @@
 // side is "your team" and its numbers carry the kit colour, the other side's go grey. Fans get the
 // story and four numbers; analysts the full tables and the goals by period. A part the API has no
 // data for is left out, never shown as zeros.
-import { useMatch, type Side } from "../data/match";
+import { useState } from "react";
+import { fixtureMode, useMatch, type Side } from "../data/match";
 import { usePersona } from "../data/persona";
 import {
   PERIODS, gameTags, played, usePreMatchReport,
@@ -16,15 +17,55 @@ import { isMessageKey, plural, usePrefs, type MessageKey, type T } from "../i18n
 import Card from "./Card";
 import LangTag from "./LangTag";
 import { Kit } from "./PreMatch";
+import { LoadFailed, Placeholder } from "./Skeleton";
 import "../styles/prematch.css";
 
 const SIDES: Side[] = ["home", "away"];
 
-/** Fetches `/prematch` for the match on screen; nothing until it answers, nothing when it cannot. */
+/**
+ * Fetches `/prematch` for the match on screen. Ax79: grey blocks in the section's shape while it
+ * loads, the section fading in over them; nothing when the API has no report for the match (404, or
+ * the fixture), the reason and a Retry when the request failed.
+ */
 export default function PreMatchDeep() {
   const { match } = useMatch();
-  const { data } = usePreMatchReport(match.match_id);
-  return data ? <PreMatchDeepView report={data} /> : null;
+  const { t } = usePrefs();
+  const state = usePreMatchReport(match.match_id);
+  const [fixture] = useState(() => typeof window === "undefined" || fixtureMode());
+  const [waited] = useState(() => !state.data);
+  if (state.data) return <PreMatchDeepView report={state.data} fade={waited} />;
+  if (state.error) {
+    if (fixture || state.fault === 404) return null;
+    return (
+      <section className="post-sec pre-deep">
+        <LoadFailed message={t("pre.failed")} fault={state.fault} onRetry={state.retry} />
+      </section>
+    );
+  }
+  return <PreMatchDeepLoading label={t("pre.loading")} />;
+}
+
+/** The section's shape while it loads: a heading, a note, and the four cards. */
+export function PreMatchDeepLoading({ label }: { label: string }) {
+  return (
+    <section className="post-sec pre-deep" aria-busy="true">
+      <header className="sec-hd" aria-hidden="true">
+        <span className="sk sk-shim sk-head" />
+        <span className="sk sk-shim sk-line" />
+      </header>
+      <div className="pre-deep-grid">
+        <Placeholder className="card" label={label} block={96} lines={3} />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="card ph" aria-hidden="true">
+            <div className="ph-body">
+              <span className="sk sk-shim ph-block" style={{ height: 96 }} />
+              {[0, 1, 2].map((j) => <span key={j} className="sk sk-shim sk-line" />)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 type Ctx = {
@@ -33,7 +74,7 @@ type Ctx = {
 };
 
 /** The four blocks from one report; split out so tests can render it without a fetch. */
-export function PreMatchDeepView({ report }: { report: PrematchReport }) {
+export function PreMatchDeepView({ report, fade }: { report: PrematchReport; fade?: boolean }) {
   const { teams, playerName, preMatch } = useMatch();
   const { prefs, t } = usePrefs();
   const { fan, side: mine } = usePersona();
@@ -56,7 +97,7 @@ export function PreMatchDeepView({ report }: { report: PrematchReport }) {
   const order = fan ? [3, 1, 2, 0] : [0, 1, 2, 3];
   if (!SIDES.some((s) => hasAny(at[s])) && !report.head_to_head?.at_this_ground?.played) return null;
   return (
-    <section className="post-sec pre-deep" aria-labelledby="pre-deep-hd">
+    <section className={`post-sec pre-deep${fade ? " ph-in" : ""}`} aria-labelledby="pre-deep-hd">
       <header className="sec-hd">
         <h2 id="pre-deep-hd">{title("deep")}</h2>
         <p className="muted">{t(mine ? "pre.deepNoteMine" : "pre.deepNote", { team: mine ? teams[mine].name : "" })}</p>

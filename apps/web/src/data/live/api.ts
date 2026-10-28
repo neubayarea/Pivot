@@ -17,6 +17,16 @@ export class ApiError extends Error {
   }
 }
 
+/** Why a load failed, in a form the page can word (Ax79): an HTTP status, no connection, or an answer that is not JSON. */
+export type LoadFault = number | "offline" | "data";
+
+/** The fault behind a rejected request: ApiError carries the status; a TypeError is the network; anything else is a bad answer. */
+export function faultOf(err: unknown): LoadFault {
+  if (err instanceof ApiError) return err.status;
+  if (err instanceof TypeError) return "offline";
+  return "data";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, { headers: { accept: "application/json" }, ...init });
   if (!res.ok) {

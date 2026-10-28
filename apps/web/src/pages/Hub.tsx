@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { ViewerPrefs } from "@pivot/contracts";
 import Wordmark from "../components/Wordmark";
 import Segmented from "../components/Segmented";
-import { Placeholder } from "../components/Skeleton";
+import { faultText, Placeholder } from "../components/Skeleton";
 import Stamp from "../components/Stamp";
 import StateCard from "../components/StateCard";
 import {
@@ -375,7 +375,7 @@ function History({ rounds, fav, liveId }: { rounds: HubRound[]; fav: string | nu
 export default function Hub() {
   const { prefs, setPrefs } = usePrefs();
   const t = useT();
-  const { data, failed } = useHub();
+  const { data, failed, fault, retry } = useHub();
   const liveLine = data?.matches.find((m) => m.live) ?? null;
   const first = liveLine ?? data?.matches[0] ?? null;
   const teams = first && { home: first.home, away: first.away };
@@ -389,7 +389,12 @@ export default function Hub() {
       <HubBar prefs={prefs} onPrefsChange={setPrefs} teams={teams} />
       <main className="page hub">
         <h1>{t("hub.title")}</h1>
-        {failed && <StateCard title={t("hub.failed.title")} tone="error">{t("hub.failed")}</StateCard>}
+        {failed && (
+          <StateCard title={t("hub.failed.title")} tone="error"
+            actions={retry && <button type="button" className="btn" onClick={retry}>{t("load.retry")}</button>}>
+            {t("hub.failed")}{fault != null && <> {faultText(fault, t)}</>}
+          </StateCard>
+        )}
         {!data && !failed && <Placeholder className="hub-ph" label={t("hub.loading")} block={180} lines={6} />}
         {data?.live && liveLine && <LiveNow live={data.live} line={liveLine} fav={fav} />}
         {data?.next && data.next.fixtures.length > 0 && <NextRound next={data.next} fav={fav} fan={fan} />}
