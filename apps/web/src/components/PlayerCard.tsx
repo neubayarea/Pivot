@@ -21,7 +21,7 @@ const pct = (v: number) => `${Math.round(v)}%`;
 // Analysts get the full line; fans the numbers they can count themselves, no xG or rating.
 const ANALYST: Row[] = [
   ["minutes_played", (v) => `${v}′`], ["rating", (v) => v.toFixed(1)], ["goals", String], ["assists", String],
-  ["shots", String], ["xg", (v) => v.toFixed(2)], ["passes", (v, s) => (s.pass_accuracy_pct === null ? String(v) : `${v} · ${pct(s.pass_accuracy_pct)}`)],
+  ["shots", String], ["xg", (v) => v.toFixed(2)], ["passes", (v, s) => (s.pass_accuracy_pct === null ? String(v) : `${v} (${pct(s.pass_accuracy_pct)})`)],
   ["key_passes", String], ["tackles_won", String], ["interceptions", String], ["duels_won", String],
   ["distance_km", (v) => v.toFixed(1)],
 ];

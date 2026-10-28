@@ -62,7 +62,7 @@ describe("the followed player's card", () => {
     expect(html).toContain("Following A. Moreau");
     expect(html).toContain("#11, HCY, ST");
     expect(html).toContain("xG</dt><dd>0.41");
-    expect(html).toContain("18 · 83%");
+    expect(html).toContain("18 (83%)");
     expect(html).toContain("1: 38′, set it off");
   });
 

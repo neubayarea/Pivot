@@ -8,11 +8,11 @@ Built for the Microsoft × Premier League hackathon. The challenge asks us to *e
 
 1. **Find it.** A momentum meter follows the match minute by minute and flags the minutes where the game swung.
 2. **Explain it.** A team of AI agents on Microsoft Agent Framework and Azure AI Foundry writes the explanation. Every number in the text is recomputed by a deterministic checker before it reaches the screen.
-3. **Test it.** "What if the red card had not been given?" Pivot replays the rest of the match hundreds of times with and without the change and shows how the result shifts, with 95 % confidence ranges.
+3. **Test it.** "What if the red card had not been given?" Pivot replays the rest of the match hundreds of times with and without the change and shows how the result shifts, with 95% confidence ranges.
 
 All matches, clubs and players are synthetic (see [Data](#data-and-disclaimer)).
 
-![Pivot live board: momentum chart, pivot cards, pitch and match stats](docs/screenshots/submission/02-match-pivot-cards.png)
+![Pivot live board: momentum chart, turning-point cards, pitch and match stats](docs/screenshots/submission/02-match-pivot-cards.png)
 
 ## Try it
 
@@ -29,7 +29,7 @@ The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Previ
 | 3 | In the top bar, switch **Analyst → Fan** and pick **♥ Tessmouth United**, then click **① 12′** | The same moment, rewritten from Tessmouth's side: "Tessmouth United lose control after Vantry's goal". The analyst version shows for a few seconds if a version is still being written. |
 | 4 | Click **中文** and **ES**, then **EN** | The explanation in Chinese and Spanish. Every version goes through the same checks, so the evidence chips stay. |
 | 5 | Pick **★ D. Sahaltessen** (three goals), then open **Stats** | His player card: rating 9.9, goals, shots, heatmap and his part in each turning point. Further down are the 23 team stats (whole match or either half), a shot map, heatmaps and a pass network. |
-| 6 | Open the **What if** tab. Under **Pivot 1, 12′**, pick **Disallow 17′ goal**, keep **200** runs, click **Run simulation** | "Instant: simulated before". Without the 17′ goal, Tessmouth's chance of winning rises from 34 % to 50 %, and the most likely score goes from 1–1 to 1–0. The panel also shows 95 % ranges and "Why it differs". |
+| 6 | Open the **What if** tab. Under **Turning point 1, 12′**, pick **Disallow 17′ goal**, keep **200** runs, click **Run simulation** | "Instant: simulated before". Without the 17′ goal, Tessmouth's chance of winning rises from 34% to 50%, and the most likely score goes from 1–1 to 1–0. The panel also shows 95% ranges and "Why it differs". |
 | 7 | Under **Key moments**, click a goal; under **Set pieces & shots**, click the **7′ free kick** | A short clip on the pitch at 0.25× to 5×. For the set piece it also shows how many attackers and defenders were in the box and how they were marked. |
 | 8 | Open **Replay** and click **Start demo** | The match replays from 0′. Players glide on the pitch, passes, shots, tackles and cards are drawn as they happen, momentum is drawn live, and each turning point appears at its minute. Add `&from=75` to the link to start at 75:00 on the replay clock, just before the 75′ goal. |
 | 9 | Open **Preview** and **Line-ups** | Form, the last five games, home and away records, what comes next, both line-ups and each coach's plan (formation, style, press, tempo, set pieces). |
@@ -41,7 +41,7 @@ To see what the AI agents did, click **AI log** in the top bar. It lists each st
 
 | Pivot detail with evidence | What-if result |
 |---|---|
-| ![Pivot detail page](docs/screenshots/submission/03-pivot-89-detail.png) | ![What-if Lab result](docs/screenshots/submission/04-whatif-result.png) |
+| ![Turning point detail page](docs/screenshots/submission/03-pivot-89-detail.png) | ![What-if Lab result](docs/screenshots/submission/04-whatif-result.png) |
 
 More screenshots: [home](docs/screenshots/submission/01-home.png), [dark mode](docs/screenshots/submission/05-match-pivot-cards-dark.png).
 
@@ -54,7 +54,7 @@ flowchart LR
   subgraph vm["Oracle Cloud VM · 2 cores · deployed with Dokploy"]
     subgraph app["Pivot: one container, one process (pivot_api.single)"]
       api["FastAPI<br/>REST + WebSocket"]
-      sim["Simulator + momentum meter<br/>generates matches, flags candidate pivots"]
+      sim["Simulator + momentum meter<br/>generates matches, flags candidate turning points"]
       detect["Detect workflow<br/>(Microsoft Agent Framework)<br/>Judge → Explainer ⇄ Verifier → template fallback"]
       whatif["What-if runner<br/>process pool, paired seeds<br/>→ Comparator ⇄ Verifier"]
     end
@@ -76,7 +76,7 @@ flowchart LR
   whatif <--> cosmos
   sim <--> disk
   disk <-.->|"optional, PIVOT_SIMS_BACKEND=blob"| blob
-  detect -->|"new pivot"| api
+  detect -->|"new turning point"| api
 ```
 
 1. **Simulator.** A possession-chain engine plays a full match with 22 rated players: events (passes, shots with xG, fouls, cards, substitutions, VAR) plus player positions every second. Each match is reproducible from its seed and can be saved at any minute and played on.
@@ -85,7 +85,7 @@ flowchart LR
    - **Judge** (LLM) decides whether a candidate really is a turning point and how severe it is.
    - **Explainer** (LLM) writes a headline and up to three sentences. Each sentence cites event ids, and each number cites a stat reference.
    - **Verifier** (deterministic code) recomputes every cited number from the events and checks the score, which side momentum went to, and that every cited event was actually offered. If a check fails, the draft goes back to the Explainer with the problems listed. After three failed checks, or on a model error or timeout, a **template explainer** writes a plain, correct card instead (shown as "Auto summary").
-4. **What-if Lab.** The match is saved at the pivot minute and played on N times as it was and N times with the change. Run *i* of both groups uses the same random seed, so the only difference between the pair is the change. Results are win/draw/loss shares with Wilson 95 % intervals. The **Comparator** (LLM) writes "Why it differs". The Verifier only allows "more likely"-style words that match the computed change, and only allows "clear difference" when the intervals do not overlap.
+4. **What-if Lab.** The match is saved at the turning-point minute and played on N times as it was and N times with the change. Run *i* of both groups uses the same random seed, so the only difference between the pair is the change. Results are win/draw/loss shares with Wilson 95% intervals. The **Comparator** (LLM) writes "Why it differs". The Verifier only allows "more likely"-style words that match the computed change, and only allows "clear difference" when the intervals do not overlap.
 5. **Personalisation.** Analyst or Fan wording, a focus team or player, and English / Chinese / Spanish. Every version goes through the same Verifier.
 
 Design decisions are recorded in [docs/adr/](docs/adr/). The full architecture, including how the original all-Azure plan maps to what is deployed, is in [docs/architecture.md](docs/architecture.md) (Chinese).
@@ -96,7 +96,7 @@ Design decisions are recorded in [docs/adr/](docs/adr/). The full architecture, 
 |---|---|
 | **Azure AI Foundry** (gpt-4.1-mini) | The Judge, Explainer and Comparator agents. Calls have per-attempt timeouts and a shared deadline, so a slow model degrades to the template instead of breaking the page. |
 | **Microsoft Agent Framework** | The detect pipeline is an Agent Framework workflow: `Executor` nodes for Judge, Explainer, Verifier and Template, with the rewrite loop and fallbacks as edges ([`apps/worker/src/pivot_worker/detect.py`](apps/worker/src/pivot_worker/detect.py)). |
-| **Azure Cosmos DB** (free tier) | Stores everything the AI produced: pivot verdicts, explanations per language and audience, agent traces, and what-if results. A restart reads them back instead of calling the model again, and a repeated what-if question answers instantly. If Cosmos DB is unreachable, results go to local files. |
+| **Azure Cosmos DB** (free tier) | Stores everything the AI produced: turning-point verdicts, explanations per language and audience, agent traces, and what-if results. A restart reads them back instead of calling the model again, and a repeated what-if question answers instantly. If Cosmos DB is unreachable, results go to local files. |
 | **Azure Blob Storage** | The library of simulated match files (events plus per-second tracking, about 1 MB each compressed). Blob is the source of truth and the disk is a cache. Matches can be generated on a laptop and uploaded with [`scripts/sims_blob.py`](scripts/sims_blob.py). |
 | **Microsoft Entra ID** | The server signs in to Foundry, Cosmos DB and Blob with a service principal and role assignments. No account keys are stored anywhere. |
 | **GitHub** (Actions, Projects) | CI on every pull request: lint, Python tests, a check that the generated contracts are up to date, and a secret scan. All work was planned as issues on a GitHub Projects board. |
@@ -120,16 +120,16 @@ Below is a run of 60 simulated matches with the demo pairing (`uv run scripts/re
 | Per match | Simulated | Premier League | Source | Within tolerance |
 |---|---|---|---|---|
 | Goals | 2.9 | 3.1 | 2023–25 | ✓ |
-| Goals in the first half | 44.8 % | 43.8 % | 2023–25 | ✓ |
+| Goals in the first half | 44.8% | 43.8% | 2023–25 | ✓ |
 | Shots | 25.4 | 26.8 | 2023–25 | ✓ |
 | Shots on target | 9.6 | 9.5 | 2023–25 | ✓ |
 | Fouls | 22.9 | 22.1 | 2023–25 | ✓ |
 | Yellow cards | 3.7 | 4.1 | 2023–25 | ✓ |
 | Passes (no throw-ins) | 825 | 924 | 2015/16 | ✓ |
-| Pass height: ground / low / high | 66 / 11 / 23 % | 64 / 13 / 23 % | 2015/16 | ✓ |
+| Pass height: ground / low / high | 66 / 11 / 23% | 64 / 13 / 23% | 2015/16 | ✓ |
 | Pressures | 274 | 304 | 2015/16 | ✓ |
-| Home / draw / away | 40 / 30 / 30 % | 43 / 23 / 34 % | 2023–25 | (60 matches) |
-| Pass accuracy | 70.8 % | 76.0 % | 2015/16 | ✗ |
+| Home / draw / away | 40 / 30 / 30% | 43 / 23 / 34% | 2023–25 | (60 matches) |
+| Pass accuracy | 70.8% | 76.0% | 2015/16 | ✗ |
 | Interceptions | 13.4 | 23.5 | 2015/16 | ✗ |
 | Clearances | 26.4 | 57.0 | 2015/16 | ✗ |
 | xG per shot | 0.127 | 0.105–0.125 | literature | ✗ |
@@ -144,7 +144,7 @@ Everything after the simulator reads one thing: a list of match events (`MatchEv
 
 | Source | What it gives | Live? | Notes |
 | --- | --- | --- | --- |
-| StatsBomb open data | Full event data for past matches, some with player positions | No | Free. The first step: check whether the pivots Pivot finds in real matches are the ones analysts would pick, and learn a real expected-threat grid to replace the distance-based placeholder |
+| StatsBomb open data | Full event data for past matches, some with player positions | No | Free. The first step: check whether the turning points Pivot finds in real matches are the ones analysts would pick, and learn a real expected-threat grid to replace the distance-based placeholder |
 | Commercial event feeds (e.g. Stats Perform/Opta, Sportradar, StatsBomb) | Every pass, shot and foul, seconds after it happens | Yes | Licensed per competition and use |
 | Optical tracking data | 10–25 position frames per second for all players and the ball | Yes | Usually sold to clubs and broadcasters |
 | Broadcast video | Everything, in principle | Yes | Hard computer vision, and it needs the rights holder's permission. Not something we would do without a licence |
@@ -189,7 +189,7 @@ Developer notes in Chinese: [docs/dev-setup.zh.md](docs/dev-setup.zh.md). Contri
 |---|---|
 | [`apps/api`](apps/api) | FastAPI app: REST, WebSocket, what-if endpoints; `pivot_api.single` runs everything in one process |
 | [`apps/worker`](apps/worker) | The agents: Judge, Explainer, Verifier, Comparator, templates, the Agent Framework workflow |
-| [`apps/web`](apps/web) | React + TypeScript + Vite front end: live board, pivot detail, What-if Lab, broadcast overlay |
+| [`apps/web`](apps/web) | React + TypeScript + Vite front end: live board, turning-point detail, What-if Lab, broadcast overlay |
 | [`apps/simulator`](apps/simulator) | Command-line entry point for the simulator |
 | [`packages/pivot_core`](packages/pivot_core) | Domain models (the shared contract), simulator, momentum, change-point detection, what-if runner |
 | [`packages/pivot_adapters`](packages/pivot_adapters) | Storage adapters: local files, Azure Cosmos DB, Azure Blob Storage |
@@ -219,7 +219,7 @@ What we knowingly left for after the deadline:
 | Line | Area | GitHub |
 |---|---|---|
 | A | Platform: API, real-time, deployment, Azure | [@Carry3](https://github.com/Carry3) |
-| B | Simulator, momentum and pivot detection | [@momomojun](https://github.com/momomojun) |
+| B | Simulator, momentum and turning-point detection | [@momomojun](https://github.com/momomojun) |
 | C | Web front end | [@Avril131](https://github.com/Avril131) |
 | D | AI agents and verification | [@JadenChen10](https://github.com/JadenChen10) |
 

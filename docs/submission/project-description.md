@@ -16,7 +16,7 @@ Pivot finds the few moments that turned a football match. AI agents explain why 
 
 **What Pivot does.** Each match page opens on *the 3 moments that changed the course of this match*, marked on a momentum chart. Pick one. Pivot shows what set it off (a goal, a card, a substitution), which way the game swung, and two or three sentences on why. Every number in those sentences is underlined and linked to the statistic it was checked against. Under each moment, **What if…** lets you change one thing and see how much it mattered: disallow a goal, remove a red card, cancel or move a substitution, or press higher.
 
-In our demo match, Tessmouth United 4–3 Vantry Town, Sadoseno's 17′ penalty sets off the first turning point. Pivot replays the rest of the match 200 times with that goal disallowed and 200 times as played. Tessmouth's chance of winning goes from 34 % to 50 %, the most likely score from 1–1 to 1–0, and the 95 % ranges for a Tessmouth win don't overlap.
+In our demo match, Tessmouth United 4–3 Vantry Town, Sadoseno's 17′ penalty sets off the first turning point. Pivot replays the rest of the match 200 times with that goal disallowed and 200 times as played. Tessmouth's chance of winning goes from 34% to 50%, the most likely score from 1–1 to 1–0, and the 95% ranges for a Tessmouth win don't overlap.
 
 **Why it matters.**
 - **Fans** get the story of the match in plain words, from their own team's side, around the player they follow, in their own language.
@@ -32,7 +32,7 @@ In our demo match, Tessmouth United 4–3 Vantry Town, Sadoseno's 17′ penalty 
    - The **Verifier** is ordinary code, not a model. It recomputes each number from the event log, and checks the score at that minute, which side momentum went to, and that the cited events belong to the moment.
    - A failed draft goes back to the Explainer with the problems listed. After three failures, or if the model is slow or down, a plain summary built only from checked numbers is shown and marked "Auto summary".
 4. **Personalisation.** Each explanation is rewritten for **Analyst** or **Fan**, from the side of the team you pick, around the player you follow, in **English, Chinese or Spanish**. Chinese and Spanish are translations of the checked English version, and every version, translations included, goes through the same Verifier. Following a player also brings up the player's card: rating, goals, shots, heatmap, and their part in each turning point.
-5. **What-if replays.** The match is saved at the turning point and played on N times as it was and N times with the change. Run *i* of both groups uses the same random seed, so the only difference within a pair is the change. Pivot shows win/draw/loss with 95 % Wilson ranges and the most likely scores. A **Comparator** agent explains where the difference comes from, and the Verifier only allows "more likely" or "clear difference" when the numbers support it.
+5. **What-if replays.** The match is saved at the turning point and played on N times as it was and N times with the change. Run *i* of both groups uses the same random seed, so the only difference within a pair is the change. Pivot shows win/draw/loss with 95% Wilson ranges and the most likely scores. A **Comparator** agent explains where the difference comes from, and the Verifier only allows "more likely" or "clear difference" when the numbers support it.
 
 Around the turning points, the match page has:
 - a pre-match preview: table, form, head-to-head, storylines and each coach's plan;
@@ -71,7 +71,7 @@ The match page has six tabs: **Overview, What if, Replay, Stats, Line-ups, Previ
 2. Card **① 12′, "Vantry Town gains control with sharp attack"** is open under the list. Under **Why it turned**, hover an underlined number to see the statistic it was checked against. Click an evidence chip such as **#329** to see the event on the mini pitch.
 3. In the top bar, switch **Analyst → Fan**, pick **♥ Tessmouth United** and click **① 12′**. The same moment is rewritten from Tessmouth's side ("Tessmouth United lose control after Vantry's goal"). Try **中文** and **ES**. If a version hasn't been written yet, the analyst one shows for a few seconds first.
 4. Pick **★ D. Sahaltessen** (three goals). Open **Stats** for his player card, the team's numbers, the shot map, heatmaps and pass network.
-5. Open the **What if** tab. Under **Pivot 1, 12′**, click **Disallow 17′ goal**, then **Run simulation**. It was computed in advance, so it shows at once: Tessmouth's chance of winning goes from 34 % to 50 %. Please stay with the precomputed chips on the live server: it has 2 CPU cores, and a new scenario takes minutes.
+5. Open the **What if** tab. Under **Turning point 1, 12′**, click **Disallow 17′ goal**, then **Run simulation**. It was computed in advance, so it shows at once: Tessmouth's chance of winning goes from 34% to 50%. Please stay with the precomputed chips on the live server: it has 2 CPU cores, and a new scenario takes minutes.
 6. Under **Key moments**, play any goal as a clip. Under **Set pieces & shots**, open the **7′ free kick** to see who was in the box, how they were marked and who stood in the wall.
 7. **Replay**: **Start demo** replays the match from 0′ with momentum drawn live and turning points appearing as they happen. Add `&from=75` to the link to start just before the 75′ goal.
 8. **Preview** and **Line-ups**: form, the last five games, home and away records, both line-ups and each coach's plan.
@@ -86,7 +86,7 @@ All data is synthetic. What-if results are simulations of a synthetic match, not
 | Part | What we used |
 |---|---|
 | AI agents | Azure AI Foundry (a standard and a mini model deployment); Microsoft Agent Framework workflow: Judge → Explainer ⇄ Verifier → template fallback; Comparator ⇄ Verifier for what-if text; translator ⇄ Verifier for Chinese and Spanish |
-| Storage | Azure Cosmos DB (pivots, explanations per language, audience, team and player, agent traces, what-if results); Azure Blob Storage (simulated match library) |
+| Storage | Azure Cosmos DB (turning points, explanations per language, audience, team and player, agent traces, what-if results); Azure Blob Storage (simulated match library) |
 | Sign-in | Microsoft Entra ID service principal with role assignments; no account keys stored |
 | Back end | Python 3.12, FastAPI (REST and WebSocket), one process: simulator, momentum meter, change-point alarm, agents, what-if runner (process pool) |
 | Front end | React, TypeScript, Vite |
