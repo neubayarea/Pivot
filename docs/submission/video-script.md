@@ -107,6 +107,8 @@ If anything differs, re-read the shots off the page, then change the narration a
 
 ### Warm up (open each once, so nothing is written on camera)
 
+First run `uv run scripts/warm_live.py` once after a deploy: it opens every hub match's data on the live site (GET only), so no page loads cold.
+
 1. The start link. Wait for the momentum chart and card ①.
 2. Fan → ♥ Tessmouth United → click ① in the list. Wait until the headline reads "Tessmouth United lose control after Vantry's goal". While a version is being written, the card says "Writing the fan version. Showing the analyst version for now." Then click 中文 and ES once each.
 3. ☆ Follow D. Sahaltessen → Stats → Player spotlight → Heatmap.
