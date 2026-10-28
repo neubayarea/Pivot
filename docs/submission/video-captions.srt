@@ -1,144 +1,75 @@
 1
-00:00:00,150 --> 00:00:04,186
-Tessmouth United 4, Vantry Town 3:
-one simulated match.
+00:00:00,400 --> 00:00:03,289
+Football stories don't end with the scoreline.
 
 2
-00:00:04,236 --> 00:00:08,125
-Pivot finds the moments that turned it,
-explains why,
+00:00:03,309 --> 00:00:10,137
+Pivot ingests a synthetic match event by event, every pass, shot and tackle, and renders it beside the action.
 
 3
-00:00:08,175 --> 00:00:11,550
-and lets you replay it
-with one thing changed.
+00:00:10,137 --> 00:00:14,654
+A fan sees the pitch, who's on top right now, and the big moments.
 
 4
-00:00:12,150 --> 00:00:14,472
-Pivot found three turning points.
+00:00:15,100 --> 00:00:26,562
+Switch to Analyst, and the same match becomes a live data centre: expected goals, field tilt, pressing and possession over the last ten minutes, with shape, pressing zones and passing lanes on the pitch.
 
 5
-00:00:14,522 --> 00:00:17,617
-Take the 12th minute,
-when Vantry took over.
+00:00:27,400 --> 00:00:32,141
+Pivot turns the events into momentum, and flags the minutes where the game swung.
 
 6
-00:00:17,667 --> 00:00:21,044
-A Judge agent confirms
-it really swung the game.
+00:00:32,161 --> 00:00:36,842
+A Judge agent on Azure AI Foundry decides if it's a real turning point.
 
 7
-00:00:21,094 --> 00:00:22,782
+00:00:36,842 --> 00:00:39,166
 An Explainer writes why.
 
 8
-00:00:22,832 --> 00:00:26,631
-A Verifier recomputes every number
-from the event log:
+00:00:39,166 --> 00:00:47,137
+And a Verifier, plain code, recomputes every number from the event log: Vantry's passes into the final third went from four to fourteen.
 
 9
-00:00:26,681 --> 00:00:30,550
-Vantry's passes into the final third
-went from 4 to 14.
+00:00:47,600 --> 00:00:49,629
+Then it personalises.
 
 10
-00:00:31,150 --> 00:00:34,051
-Now switch to Fan
-and pick Tessmouth.
+00:00:49,649 --> 00:00:55,757
+Pick your club, and the same checked moment is told from your side, in English, Chinese or Spanish.
 
 11
-00:00:34,101 --> 00:00:38,256
-Same moment, same checked facts,
-told from your side:
+00:00:55,757 --> 00:00:59,849
+Follow a player, and Pivot keeps that player in focus all match.
 
 12
-00:00:38,306 --> 00:00:42,383
-"Tessmouth United lose control
-after Vantry's goal."
+00:01:00,600 --> 00:01:02,900
+And you can ask: what if?
 
 13
-00:00:42,433 --> 00:00:44,550
-In Chinese or Spanish, too.
+00:01:02,920 --> 00:01:07,708
+Pivot saves the match at that minute and replays the rest two hundred times each way.
 
 14
-00:00:45,150 --> 00:00:46,400
-Follow a player.
+00:01:07,708 --> 00:01:11,693
+A fan gets their team's biggest what-ifs, in one line.
 
 15
-00:00:46,450 --> 00:00:51,450
-Sahaltessen scored a hat-trick,
-the first from the penalty spot,
+00:01:11,693 --> 00:01:16,976
+An analyst gets the effect with its ninety-five percent range, and whether the difference is clear.
 
 16
-00:00:51,500 --> 00:00:52,828
-and is rated 9.9.
+00:01:18,800 --> 00:01:27,349
+After full time, analysts get the deep dive: match phases, game state, shot quality, attacking lanes and style percentiles.
 
 17
-00:00:52,878 --> 00:00:56,550
-You get his shots, his heatmap
-and his passing.
+00:01:29,300 --> 00:01:35,739
+The agents run on Azure AI Foundry and Microsoft Agent Framework, with results in Cosmos DB.
 
 18
-00:00:57,150 --> 00:01:01,791
-So what if Vantry's opening penalty
-had been ruled out?
-
-19
-00:01:01,841 --> 00:01:08,169
-Pivot saves the match at that minute
-and plays the rest 200 times each way.
-
-20
-00:01:08,219 --> 00:01:13,112
-Tessmouth's chance of winning rises
-from 34 to 50 percent.
-
-21
-00:01:13,162 --> 00:01:17,550
-Those ranges don't overlap.
-It's a clear difference.
-
-22
-00:01:18,150 --> 00:01:20,987
-Every match replays on the pitch,
-
-23
-00:01:21,037 --> 00:01:25,508
-with passes, shots and tackles
-drawn as they happen.
-
-24
-00:01:25,558 --> 00:01:28,481
-Set pieces too: on this free kick,
-
-25
-00:01:28,531 --> 00:01:34,550
-five attackers faced all eleven Vantry players,
-with five in the wall.
-
-26
-00:01:35,150 --> 00:01:41,209
-Before kick-off: four wins in five for Tessmouth,
-five draws for Vantry,
-
-27
-00:01:41,259 --> 00:01:45,550
-a cup semi-final days later,
-and each coach's plan.
-
-28
-00:01:46,150 --> 00:01:48,807
-The agents run on Azure AI Foundry.
-
-29
-00:01:48,857 --> 00:01:52,730
-Results live in Cosmos DB,
-matches in Blob Storage.
-
-30
-00:01:52,780 --> 00:01:55,437
+00:01:35,759 --> 00:01:38,400
 Every club and player is synthetic.
 
-31
-00:01:55,487 --> 00:01:56,550
+19
+00:01:38,400 --> 00:01:40,075
 This is Pivot.
