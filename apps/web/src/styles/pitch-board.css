@@ -57,3 +57,9 @@
 .pd-hd > .follow { margin-left: auto; flex: none; }
 /* C21 (#401): the analyst's overlay keys under the layer switches. */
 .ov-key { display: block; flex-basis: 100%; font-size: var(--pv-fs-xs); color: var(--pv-ink-2); }
+/* C21 (#401): the fan's simple board: the pitch takes the card, the caption sits under the playback bar. */
+@media (min-width: 0px) {
+  .pitch-board.simple .pb-main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+  .pitch-board.simple .pb-main > :first-child, .pitch-board.simple .pb-main > .ctl, .pitch-board.simple .pb-side { grid-column: 1; grid-row: auto; }
+  .pitch-board.simple .pb-main > :first-child { width: 100%; max-width: calc((100vh - var(--pv-stick-h, 0px) - var(--pv-tabs-h, 0px) - 220px) * 105 / 68); justify-self: center; }
+}
