@@ -9,6 +9,7 @@ import { usePrefs } from "../i18n";
 import FollowButton from "./FollowButton";
 import Segmented from "./Segmented";
 import { AveragePositions, Heatmap, PassNetwork, ShotMap, VizBox, useAveragePositions, useHeatmaps, usePassNetwork, useShotMap } from "./viz";
+import type { NetPeriod } from "./viz/PassNetwork";
 
 type Pic = "shots" | "heat" | "net" | "pos";
 
@@ -23,7 +24,11 @@ export default function MatchPictures({ upTo }: { upTo: number | null }) {
   // Only the picture on screen is fetched.
   const shots = useShotMap(pic === "shots" ? id : null, opts);
   const heat = useHeatmaps(pic === "heat" ? id : null, opts);
-  const net = usePassNetwork(pic === "net" ? id : null, opts);
+  // Ax88: the pass network asks for every pair (the picture filters: five for a fan, a slider for an
+  // analyst) and, for an analyst, one half when picked.
+  const [netPeriod, setNetPeriod] = useState<NetPeriod>("all");
+  const netHalf = prefs.audience === "fan" || netPeriod === "all" ? null : netPeriod === "1" ? 1 : 2;
+  const net = usePassNetwork(pic === "net" ? id : null, { ...opts, period: netHalf, minPasses: 1 });
   const pos = useAveragePositions(pic === "pos" ? id : null, opts);
   const names = { home: teams.home.name, away: teams.away.name };
   const focus = prefs.focus_player_id;
@@ -61,7 +66,8 @@ export default function MatchPictures({ upTo }: { upTo: number | null }) {
             </VizBox>
           )}
           {pic === "heat" && <VizBox state={heat}>{(d) => <Heatmap data={d} side={side} playerId={who} squads={squads} teamNames={names} />}</VizBox>}
-          {pic === "net" && <VizBox state={net}>{(d) => <PassNetwork data={d} side={side} squads={squads} teamNames={names} focus={who ?? focus} />}</VizBox>}
+          {pic === "net" && <VizBox state={net}>{(d) => <PassNetwork data={d} side={side} squads={squads} teamNames={names} focus={who ?? focus}
+            period={netPeriod} onPeriod={setNetPeriod} />}</VizBox>}
           {pic === "pos" && <VizBox state={pos}>{(d) => <AveragePositions data={d} squads={squads} teamNames={names} focus={focus} />}</VizBox>}
         </div>
         {pickable && (
