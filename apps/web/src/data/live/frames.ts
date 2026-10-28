@@ -10,6 +10,37 @@ export const CHUNK_S = 300;
 
 export const chunkOf = (t: number) => Math.floor(Math.max(0, t) / CHUNK_S);
 
+/**
+ * Windows already fetched (Ax90, #430): a pitch is unmounted with its tab, so opening the tab again
+ * asked for the same windows again. Only a full window is kept (a live match's current one still
+ * grows), and only the last KEEP_WINDOWS; two parts of the page asking at once share one request.
+ */
+const KEEP_WINDOWS = 8;
+const windows = new Map<string, TrackingFrame[]>();
+const loading = new Map<string, Promise<TrackingFrame[]>>();
+
+export function loadFrames(matchId: string, from: number, to: number): Promise<TrackingFrame[]> {
+  const key = `${matchId}:${from}:${to}`;
+  const kept = windows.get(key);
+  if (kept) {
+    windows.delete(key);
+    windows.set(key, kept);
+    return Promise.resolve(kept);
+  }
+  let p = loading.get(key);
+  if (!p) {
+    p = api.listFrames(matchId, from, to).then((frames) => {
+      if ((frames.at(-1)?.t ?? -Infinity) >= to - 5) {
+        windows.set(key, frames);
+        while (windows.size > KEEP_WINDOWS) windows.delete(windows.keys().next().value as string);
+      }
+      return frames;
+    }).finally(() => loading.delete(key));
+    loading.set(key, p);
+  }
+  return p;
+}
+
 /** The last frame at or before `t` (the first one if `t` is earlier); frames are in t order. */
 export function frameAt(frames: TrackingFrame[], t: number): TrackingFrame | null {
   if (!frames.length) return null;
@@ -52,7 +83,7 @@ export function useFrames(matchId: string | null, t: number): Frames {
     for (const c of [want, want + 1]) {
       if (asked.current.has(c)) continue;
       asked.current.add(c);
-      api.listFrames(matchId, c * CHUNK_S, (c + 1) * CHUNK_S - 1).then(
+      loadFrames(matchId, c * CHUNK_S, (c + 1) * CHUNK_S - 1).then(
         (frames) => alive.current && setChunks((prev) => ({ ...prev, [c]: frames })),
         (err) => {
           asked.current.delete(c);           // asked again when the clock next moves into it
@@ -84,7 +115,7 @@ export function useFrameWindowState(matchId: string | null, from: number, to: nu
   useEffect(() => {
     if (matchId === null || to < 0) return;
     let live = true;
-    api.listFrames(matchId, Math.max(0, from), to).then(
+    loadFrames(matchId, Math.max(0, from), to).then(
       (frames) => live && setGot({ key, frames, error: null }),
       (err) => live && setGot(err instanceof ApiError && err.status === 404 ? { key, frames: [], error: null } : { key, frames: null, error: err }),
     );
@@ -147,7 +178,7 @@ export function useFrameStore(matchId: string | null, t: number): FrameStore {
     for (const c of [want, want + 1, want - 1]) {
       if (c < 0 || asked.current.has(c)) continue;
       asked.current.add(c);
-      api.listFrames(matchId, c * CHUNK_S, (c + 1) * CHUNK_S - 1).then(
+      loadFrames(matchId, c * CHUNK_S, (c + 1) * CHUNK_S - 1).then(
         (frames) => {
           if (!alive.current) return;
           chunks.current.set(c, frames);

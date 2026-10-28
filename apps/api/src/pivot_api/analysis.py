@@ -509,12 +509,19 @@ async def get_analysis(request: Request, match_id: str, up_to: int | None = Quer
     events, frames = await matchdata.inputs(request, match)
     last = matchdata.last_second(match, events, frames)
     cut = None if up_to is None or up_to >= last else up_to
-    finished = match.status == "finished" and cut is None
-    cache = matchdata.shared(request, "analysis", dict) if finished else {}
-    if match_id not in cache:
+
+    async def work() -> MatchAnalysis:
         calc = await matchdata.calculator(request, match, cut)
         base = await baseline(request)
-        cache[match_id] = await asyncio.to_thread(analysis, calc, match, last if cut is None else cut, base)
+        return await asyncio.to_thread(analysis, calc, match, last if cut is None else cut, base)
+
+    if match.status != "finished":
+        return await work()
+    if cut is not None:
+        return await matchdata.cut_answer(request, "analysis", (match_id, cut), work)
+    cache = matchdata.shared(request, "analysis", dict)
+    if match_id not in cache:
+        cache[match_id] = await work()
     return cache[match_id]
 
 
