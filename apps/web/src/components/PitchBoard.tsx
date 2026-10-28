@@ -45,8 +45,10 @@ const LINE_ORDER = ["GK", "DF", "MF", "AM", "FW"];
  * of their own next to the pitch card, so "More details" can put them in their own cell.
  * Ax67: the shape numbers stay up whichever layer is on, right under the caption, with each
  * team's tactics at the clock below them.
+ * C21 (#401): `simple` is the fan's board: the pitch, the playback bar and its speeds, no layers,
+ * no shape and tactics table and no keyboard hint.
  */
-export default function PitchBoard() {
+export default function PitchBoard({ simple = false }: { simple?: boolean } = {}) {
   const { match, playback, squads, sheets, teams, events, pivots, playerName, eventById, preMatch } = useMatch();
   const t = useT();
   const { at, clock, minute: minuteOf } = useClock();
@@ -164,8 +166,8 @@ export default function PitchBoard() {
   const seekBy = (d: number) => playback && playback.seek((playback.now?.() ?? match.clock) + d);
   return (
     <>
-      <Card title={t("board.pitch")} note={note} className="pitch-board more-pitch">
-        {lineup && (
+      <Card title={t("board.pitch")} note={note} className={`pitch-board more-pitch${simple ? " simple" : ""}`}>
+        {lineup && !simple && (
           <div className="pb-tools">
             <span className="seg" role="group" aria-label={t("board.layers")}>
               <button type="button" aria-pressed={shapeOn} onClick={() => setShapeOn(!shapeOn)}>
@@ -203,10 +205,10 @@ export default function PitchBoard() {
               picked={picked} onPick={setPicked} marked={marked} tag={tag}
               under={(
                 <ReportBoundary quiet resetKey={now}>
-                  {!fan && pressOn && <PressingZones events={events} now={now} id={`ov-${match.match_id}`} />}
-                  {!fan && shapeOn && lineup && <ShapeBands frame={frame} roles={lineup.roles} isHome={isHome} />}
-                  {shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
-                  {!fan && lanesOn && <PassingLanes events={events} now={now} id={`ov-${match.match_id}`} />}
+                  {!fan && !simple && pressOn && <PressingZones events={events} now={now} id={`ov-${match.match_id}`} />}
+                  {!fan && !simple && shapeOn && lineup && <ShapeBands frame={frame} roles={lineup.roles} isHome={isHome} />}
+                  {!simple && shapeOn && lineup && <ShapeLayer frame={frame} lineup={lineup} before={compare ? before : null} isHome={isHome} />}
+                  {!fan && !simple && lanesOn && <PassingLanes events={events} now={now} id={`ov-${match.match_id}`} />}
                 </ReportBoundary>
               )}
               over={<EventCues cues={cues} />} />
@@ -220,7 +222,7 @@ export default function PitchBoard() {
               step={STEP_S} speeds={BOARD_SPEEDS} speed={match.speed} onSpeed={(s) => playback.setSpeed(s as Speed)} marks={marks}
               lead={LEAD_S} format={clock} inputRef={scrub} timeRef={time} />
           )}
-          {playback && <small className="muted clip-keys">{t("board.keys")}</small>}
+          {playback && !simple && <small className="muted clip-keys">{t("board.keys")}</small>}
           <div className="pb-side">
             <p className="pitch-cap" aria-live="off">
               {latest && (
@@ -230,7 +232,7 @@ export default function PitchBoard() {
               )}
               {!playback && <span className="muted">{latest && " · "}{t("board.pitchHint")}</span>}
             </p>
-            {((lineup && frame) || tactics) && (
+            {!simple && ((lineup && frame) || tactics) && (
               <ShapeTable frame={frame} lineup={lineup} before={compare && shapeOn ? before : undefined} beforeLabel={beforeLabel}
                 isHome={isHome} names={names} tactics={tactics} />
             )}
