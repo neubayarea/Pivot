@@ -159,7 +159,7 @@ describe("S4 agent trace page", () => {
 
   it("has loading, error and empty states", () => {
     expect(page({ kind: "loading" })).toContain('aria-busy="true"');
-    expect(text(page({ kind: "loading" }))).toContain("Loading the AI work log");
+    expect(text(page({ kind: "loading" }))).toContain("Loading the AI log");
     const failed = page({ kind: "error", error: new Error("x") });
     expect(failed).toContain('role="alert"');
     expect(text(failed)).toContain("Retry now");
