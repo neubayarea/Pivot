@@ -136,6 +136,19 @@ export interface AnalysisProfile {
   metrics: string[];
 }
 /**
+ * `from` / `to`: elapsed minutes (from <= minute < to); `period`: the period the window starts in.
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisRolling".
+ */
+export interface AnalysisRolling {
+  away: AnalysisPhaseTeam;
+  from: number;
+  home: AnalysisPhaseTeam;
+  period: number;
+  to: number;
+}
+/**
  * This interface was referenced by `Pivot`'s JSON-Schema
  * via the `definition` "AnalysisShotQuality".
  */
@@ -146,6 +159,53 @@ export interface AnalysisShotQuality {
   };
   shots: number;
   xg_per_shot: number | null;
+}
+/**
+ * One substitution: `minute` is the elapsed minute, `clock` the match clock's (54 for 54').
+ *
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisSub".
+ */
+export interface AnalysisSub {
+  after: {
+    [k: string]: AnalysisSubTeam;
+  };
+  before: {
+    [k: string]: AnalysisSubTeam;
+  };
+  clock: number;
+  cut_after: ("kick_off" | "half_time" | "full_time" | "now" | "sub") | null;
+  cut_before: ("kick_off" | "half_time" | "full_time" | "now" | "sub") | null;
+  event_id: string;
+  minute: number;
+  minutes_after: number;
+  minutes_before: number;
+  period: number;
+  player_off_id: string | null;
+  player_off_name: string | null;
+  player_on_id: string | null;
+  player_on_name: string | null;
+  reason: string | null;
+  t: number;
+  team: "home" | "away";
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  window_after: [number, number];
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  window_before: [number, number];
+}
+/**
+ * This interface was referenced by `Pivot`'s JSON-Schema
+ * via the `definition` "AnalysisSubTeam".
+ */
+export interface AnalysisSubTeam {
+  field_tilt_pct: number | null;
+  xg: number | null;
 }
 /**
  * Why an arm came out as it did: its final scores and each team's numbers after the replay start.
@@ -984,9 +1044,11 @@ export interface MatchAnalysis {
   match_id: string;
   phases: AnalysisPhase[];
   profile: AnalysisProfile;
+  rolling: AnalysisRolling[];
   shot_quality: {
     [k: string]: AnalysisShotQuality;
   };
+  subs: AnalysisSub[];
   up_to_t: number;
 }
 /**

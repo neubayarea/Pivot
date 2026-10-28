@@ -111,3 +111,40 @@ def test_up_to_counts_only_what_happened_by_then(client, report):
     total = lambda r: sum(q["shots"] for q in r["shot_quality"].values())   # noqa: E731
     assert total(early) <= total(report)
     assert client.get("/api/matches/no-such-match/analysis").status_code == 404
+
+
+def test_rolling_windows_run_five_minutes_from_kick_off_and_add_up(report, stats):
+    rolling = report["rolling"]
+    assert rolling[0]["from"] == 0 and all(r["to"] - r["from"] == 5 for r in rolling[:-1])
+    assert all(a["to"] == b["from"] for a, b in zip(rolling, rolling[1:]))
+    assert set(rolling[0]["home"]) == {"xg", "field_tilt_pct", "possession_pct", "ppda", "shots"}
+    for side in ("home", "away"):
+        assert sum(r[side]["xg"] or 0 for r in rolling) == pytest.approx(stats[side]["xg"], abs=0.03)
+        assert sum(r[side]["shots"] or 0 for r in rolling) == stats[side]["shots"]
+    assert {r["period"] for r in rolling} == {1, 2}
+
+
+def test_rolling_stops_at_up_to(client):
+    early = client.get(f"/api/matches/{MATCH['match_id']}/analysis", params={"up_to": 22 * 60}).json()
+    assert early["rolling"][-1]["to"] == 23 and len(early["rolling"]) == 5
+
+
+def test_one_row_per_substitution_with_its_windows(client, report):
+    events = client.get(f"/api/matches/{MATCH['match_id']}/events").json()
+    events = events.get("events", events) if isinstance(events, dict) else events
+    changes = [e for e in events if e["type"] == "substitution"]
+    rows = report["subs"]
+    assert [r["event_id"] for r in rows] == [e["event_id"] for e in changes] and rows
+    for r in rows:
+        assert r["window_before"][1] == r["minute"] == r["window_after"][0]
+        assert 0 <= r["minutes_before"] <= 15 and 0 <= r["minutes_after"] <= 15
+        for when in ("before", "after"):
+            lo, hi = r[f"window_{when}"]
+            # a window shorter than 15 minutes says why
+            assert (hi - lo == 15) == (r[f"cut_{when}"] is None)
+            assert set(r[when]) == {"home", "away"} and set(r[when]["home"]) == {"xg", "field_tilt_pct"}
+        assert r["player_off_name"] and r["player_on_name"] and r["team"] in ("home", "away")
+    first = rows[0]
+    lo, hi = first["window_after"]
+    window = client.get(f"/api/matches/{MATCH['match_id']}/stats", params={"from": lo, "to": hi}).json()["scopes"][0]
+    assert first["after"]["home"]["xg"] == pytest.approx(window["home"]["xg"], abs=0.005)
