@@ -14,6 +14,7 @@ import { useMatch, type Side, type SquadPlayer } from "../data/match";
 import { usePlayers } from "../data/persona";
 import { usePrefs, useT, type T } from "../i18n";
 import FollowButton from "./FollowButton";
+import Grass from "./Grass";
 import { surname } from "./FocusPickers";
 import "../styles/prematch.css";
 
@@ -88,7 +89,7 @@ function FormationPitch({ sheets, up = "home", followed = null, facts, card }: {
   const svg = (
     <svg className="lu-pitch" viewBox={`-2 -6 ${W + 4} ${H + 12}`} role="img"
       aria-label={t("pre.pitchLabel", { home: `${teams.home.name} ${sheets.home.formation}`, away: `${teams.away.name} ${sheets.away.formation}` })}>
-      <rect x="0" y="0" width={W} height={H} className="lu-grass" />
+      <Grass w={W} h={H} along="y" />
       <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="lu-line" />
       <circle cx={W / 2} cy={H / 2} r="9.15" className="lu-line" fill="none" />
       <rect x={W / 2 - 20.16} y="0" width="40.32" height="16.5" className="lu-line" fill="none" />

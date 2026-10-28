@@ -3,6 +3,7 @@ import type { MatchEvent, TrackingFrame } from "@pivot/contracts";
 import { involves, useMaybeMatch, type Side, type SquadPlayer } from "../data/view";
 import { usePrefs } from "../i18n";
 import { PITCH } from "../fixtures/pivot-detail";
+import Grass from "./Grass";
 
 // 105 x 68 m at 5 px per metre, same drawing as "06 S2" in the design spec. Home attacks to the right.
 const S = 5;
@@ -64,7 +65,7 @@ const px = ([x, y]: [number, number]) => [x * S, y * S] as const;
 function Markings() {
   return (
     <>
-      <rect x={0} y={0} width={W} height={H} fill="var(--pv-pitch)" />
+      <Grass w={W} h={H} />
       <rect x={1} y={1} width={W - 2} height={H - 2} {...LINE} />
       <line x1={W / 2} x2={W / 2} y1={0} y2={H} {...LINE} />
       <circle cx={W / 2} cy={H / 2} r={9.15 * S} {...LINE} />
