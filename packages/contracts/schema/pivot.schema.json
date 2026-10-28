@@ -376,6 +376,36 @@
       "title": "AnalysisProfile",
       "type": "object"
     },
+    "AnalysisRolling": {
+      "additionalProperties": false,
+      "description": "`from` / `to`: elapsed minutes (from <= minute < to); `period`: the period the window starts in.",
+      "properties": {
+        "away": {
+          "$ref": "#/$defs/AnalysisPhaseTeam"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "home": {
+          "$ref": "#/$defs/AnalysisPhaseTeam"
+        },
+        "period": {
+          "type": "integer"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "period",
+        "home",
+        "away"
+      ],
+      "title": "AnalysisRolling",
+      "type": "object"
+    },
     "AnalysisShotQuality": {
       "additionalProperties": false,
       "properties": {
@@ -470,6 +500,230 @@
         "field_tilt_pct"
       ],
       "title": "AnalysisStateTeam",
+      "type": "object"
+    },
+    "AnalysisSub": {
+      "additionalProperties": false,
+      "description": "One substitution: `minute` is the elapsed minute, `clock` the match clock's (54 for 54').",
+      "properties": {
+        "after": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AnalysisSubTeam"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        },
+        "before": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AnalysisSubTeam"
+          },
+          "propertyNames": {
+            "enum": [
+              "home",
+              "away"
+            ]
+          },
+          "type": "object"
+        },
+        "clock": {
+          "type": "integer"
+        },
+        "cut_after": {
+          "anyOf": [
+            {
+              "enum": [
+                "kick_off",
+                "half_time",
+                "full_time",
+                "now",
+                "sub"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cut_before": {
+          "anyOf": [
+            {
+              "enum": [
+                "kick_off",
+                "half_time",
+                "full_time",
+                "now",
+                "sub"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_id": {
+          "type": "string"
+        },
+        "minute": {
+          "type": "integer"
+        },
+        "minutes_after": {
+          "type": "number"
+        },
+        "minutes_before": {
+          "type": "number"
+        },
+        "period": {
+          "type": "integer"
+        },
+        "player_off_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "player_off_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "player_on_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "player_on_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "t": {
+          "type": "integer"
+        },
+        "team": {
+          "enum": [
+            "home",
+            "away"
+          ],
+          "type": "string"
+        },
+        "window_after": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "window_before": {
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "event_id",
+        "t",
+        "minute",
+        "clock",
+        "period",
+        "team",
+        "player_off_id",
+        "player_off_name",
+        "player_on_id",
+        "player_on_name",
+        "reason",
+        "window_before",
+        "window_after",
+        "minutes_before",
+        "minutes_after",
+        "cut_before",
+        "cut_after",
+        "before",
+        "after"
+      ],
+      "title": "AnalysisSub",
+      "type": "object"
+    },
+    "AnalysisSubTeam": {
+      "additionalProperties": false,
+      "properties": {
+        "field_tilt_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "xg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "xg",
+        "field_tilt_pct"
+      ],
+      "title": "AnalysisSubTeam",
       "type": "object"
     },
     "ArmStats": {
@@ -1724,6 +1978,12 @@
         "profile": {
           "$ref": "#/$defs/AnalysisProfile"
         },
+        "rolling": {
+          "items": {
+            "$ref": "#/$defs/AnalysisRolling"
+          },
+          "type": "array"
+        },
         "shot_quality": {
           "additionalProperties": {
             "$ref": "#/$defs/AnalysisShotQuality"
@@ -1735,6 +1995,12 @@
             ]
           },
           "type": "object"
+        },
+        "subs": {
+          "items": {
+            "$ref": "#/$defs/AnalysisSub"
+          },
+          "type": "array"
         },
         "up_to_t": {
           "type": "integer"
@@ -1748,7 +2014,9 @@
         "game_state",
         "shot_quality",
         "lanes",
-        "profile"
+        "profile",
+        "rolling",
+        "subs"
       ],
       "title": "MatchAnalysis",
       "type": "object"

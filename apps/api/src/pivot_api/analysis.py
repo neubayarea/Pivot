@@ -23,6 +23,14 @@ GET /api/matches/{id}/analysis[?up_to=<seconds>]
 - profile: eight match stats as percentiles against both teams' values in every finished stored
   match (PPDA inverted: a lower PPDA, a harder press, is a higher percentile). The baseline is kept.
 
+- rolling (C21, #401): five-minute windows of elapsed minutes from kick-off to `up_to` (or the end),
+  each with the same stats as a phase, for the live panel's trend lines.
+- subs (C21, #401): one row per substitution, both teams' xG and field tilt over the 15 minutes
+  before it and the 15 after (elapsed minutes; the substitution's own minute counts after). A window
+  stops short at kick-off, the half-time or full-time whistle, `up_to`, or another substitution's
+  minute (one made in the same minute is the same change); `cut_before` / `cut_after` say which, and
+  `minutes_before` / `minutes_after` are the minutes of play the window really has.
+
 `up_to` counts only what happened by that elapsed second, for a live match or a replay. A finished
 match's report is kept after the first request. A number with no answer is null, never 0.
 """
@@ -121,6 +129,46 @@ class AnalysisProfile(Model):
     away_values: list[float | None]
 
 
+class AnalysisRolling(Model):
+    """`from` / `to`: elapsed minutes (from <= minute < to); `period`: the period the window starts in."""
+    start: int = Field(alias="from")
+    end: int = Field(alias="to")
+    period: int
+    home: AnalysisPhaseTeam
+    away: AnalysisPhaseTeam
+
+
+class AnalysisSubTeam(Model):
+    xg: float | None
+    field_tilt_pct: float | None
+
+
+Cut = Literal["kick_off", "half_time", "full_time", "now", "sub"]
+
+
+class AnalysisSub(Model):
+    """One substitution: `minute` is the elapsed minute, `clock` the match clock's (54 for 54')."""
+    event_id: str
+    t: int
+    minute: int
+    clock: int
+    period: int
+    team: Side
+    player_off_id: str | None
+    player_off_name: str | None
+    player_on_id: str | None
+    player_on_name: str | None
+    reason: str | None
+    window_before: tuple[int, int]
+    window_after: tuple[int, int]
+    minutes_before: float
+    minutes_after: float
+    cut_before: Cut | None                    # why the window is shorter than 15 minutes, if it is
+    cut_after: Cut | None
+    before: dict[Side, AnalysisSubTeam]
+    after: dict[Side, AnalysisSubTeam]
+
+
 class MatchAnalysis(Model):
     match_id: str
     up_to_t: int
@@ -130,10 +178,13 @@ class MatchAnalysis(Model):
     shot_quality: dict[Side, AnalysisShotQuality]
     lanes: dict[Side, dict[Literal["left", "centre", "right"], AnalysisLane]]
     profile: AnalysisProfile
+    rolling: list[AnalysisRolling]
+    subs: list[AnalysisSub]
 
 
 CONTRACT_MODELS = (AnalysisDeserved, AnalysisPhaseTeam, AnalysisPhase, AnalysisStateTeam, AnalysisGameState,
-                   AnalysisShotQuality, AnalysisLane, AnalysisProfile, MatchAnalysis)
+                   AnalysisShotQuality, AnalysisLane, AnalysisProfile, AnalysisRolling, AnalysisSubTeam, AnalysisSub,
+                   MatchAnalysis)
 
 
 # --- the parts --------------------------------------------------------------------------------------
@@ -330,12 +381,96 @@ async def baseline(request: Request) -> tuple[int, list[list[float]]]:
     return cache[key]
 
 
+ROLLING_MINUTES = 5
+SUB_MINUTES = 15
+PHASE_STATS = ("xg", "field_tilt_pct", "possession_pct", "ppda", "shots")
+
+
+def _played(match: Match, end_t: int) -> list[tuple[int, int, int]]:
+    """(period, first elapsed minute, end minute) of each period of play by `end_t`, back to back: a
+    period after the first starts at the first whole minute after its kick-off, as the phases do."""
+    periods = sorted((p for p in match.periods if p.period != 5 and p.start_t <= end_t), key=lambda p: p.start_t)
+    last = end_t // 60 + 1
+    starts = [0 if i == 0 else (p.start_t + 59) // 60 for i, p in enumerate(periods)]
+    return [(p.period, lo, min(starts[i + 1] if i + 1 < len(periods) else last, last))
+            for i, (p, lo) in enumerate(zip(periods, starts))]
+
+
+def _minutes(match: Match, end_t: int, window: tuple[int, int]) -> float:
+    """Minutes of play inside an elapsed-minute window."""
+    spans = [(p.start_t, min(p.end_t, end_t)) for p in match.periods if p.period != 5 and p.start_t <= end_t]
+    return round(sum(max(0, min(b, window[1] * 60) - max(a, window[0] * 60)) for a, b in spans) / 60, 1)
+
+
+def rolling(calc: StatCalculator, match: Match, end_t: int) -> list[AnalysisRolling]:
+    out = []
+    played = _played(match, end_t)
+    last = end_t // 60 + 1
+    for lo in range(0, last, ROLLING_MINUTES):
+        window = (lo, min(lo + ROLLING_MINUTES, last))
+        period = next((p for p, a, b in played if a <= lo < b), played[-1][0] if played else 1)
+        teams = {side: AnalysisPhaseTeam(**{m: _r(_stat(calc, m, side, window)) for m in PHASE_STATS})
+                 for side in SIDES}
+        out.append(AnalysisRolling.model_validate({"from": window[0], "to": window[1], "period": period, **teams}))
+    return out
+
+
+def _clock(e: MatchEvent) -> int:
+    """The match clock's minute of an event: 54 for 54' (the second half starts at 45')."""
+    return {1: 0, 2: 45, 3: 90, 4: 105}.get(e.period, 0) + e.period_t // 60 + 1
+
+
+def _sub_team(calc: StatCalculator, window: tuple[int, int]) -> dict[Side, AnalysisSubTeam]:
+    return {side: AnalysisSubTeam(xg=_r(_stat(calc, "xg", side, window)),
+                                  field_tilt_pct=_r(_stat(calc, "field_tilt_pct", side, window))) for side in SIDES}
+
+
+def subs(calc: StatCalculator, match: Match, events: list[MatchEvent], end_t: int) -> list[AnalysisSub]:
+    names = {p.player_id: p.name for t in (match.home, match.away) for p in t.squad}
+    played = _played(match, end_t)
+    last = end_t // 60 + 1
+    over = match.status == "finished" and end_t >= max((p.end_t for p in match.periods), default=0)
+    changes = [e for e in events if e.type == "substitution" and e.team in SIDES]
+    minutes = sorted({e.t // 60 for e in changes})
+    out = []
+    for e in changes:
+        m = e.t // 60
+        period, start, stop = next(((p, a, b) for p, a, b in played if a <= m < b), (e.period, 0, last))
+        final = bool(played) and period == played[-1][0]
+        prev = max((x for x in minutes if x < m), default=None)
+        nxt = min((x for x in minutes if x > m), default=None)
+        lo, cut_before = m - SUB_MINUTES, None
+        if prev is not None and prev > lo:
+            lo, cut_before = prev, "sub"
+        if start > lo:
+            lo, cut_before = start, "kick_off" if period == 1 else "half_time"
+        hi, cut_after = m + SUB_MINUTES, None
+        if nxt is not None and nxt < hi:
+            hi, cut_after = nxt, "sub"
+        if stop < hi:
+            hi, cut_after = stop, "half_time" if not final else "full_time" if over else "now"
+        before, after = (max(lo, 0), m), (m, max(hi, m))
+        sub = e.substitution
+        off = sub.player_off_id if sub else None
+        on = sub.player_on_id if sub else e.player_id
+        out.append(AnalysisSub(
+            event_id=e.event_id, t=e.t, minute=m, clock=_clock(e), period=e.period, team=e.team,
+            player_off_id=off, player_off_name=names.get(off or ""), player_on_id=on,
+            player_on_name=names.get(on or ""), reason=getattr(sub, "reason", None),
+            window_before=before, window_after=after,
+            minutes_before=_minutes(match, end_t, before), minutes_after=_minutes(match, end_t, after),
+            cut_before=cut_before, cut_after=cut_after,
+            before=_sub_team(calc, before), after=_sub_team(calc, after)))
+    return out
+
+
 def analysis(calc: StatCalculator, match: Match, end_t: int, base: tuple[int, list[list[float]]]) -> MatchAnalysis:
     events = seen(calc, end_t)
     return MatchAnalysis(match_id=match.match_id, up_to_t=end_t, deserved=deserved(shots_of(events), match.seed or 0),
                          phases=phases(calc, match, end_t), game_state=game_state(calc, end_t),
                          shot_quality=shot_quality(events), lanes=lanes(calc, events),
-                         profile=profile(match_values(calc, end_t), base))
+                         profile=profile(match_values(calc, end_t), base),
+                         rolling=rolling(calc, match, end_t), subs=subs(calc, match, events, end_t))
 
 
 @router.get("/matches/{match_id}/analysis", response_model=MatchAnalysis)
