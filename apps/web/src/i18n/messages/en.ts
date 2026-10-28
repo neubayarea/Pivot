@@ -1368,4 +1368,6 @@ export const en = {
   "rp.pl.take": "{name} made the most: {v} xG + xA ({xg} + {xa}).",
   "metric.xa.short": "xA",
   "metric.xa.def": "Expected assists: the xG of the shots a player's passes set up",
+  // C19 hotfix: a report part that failed.
+  "rp.failed": "This part of the report could not be drawn. The rest of the page still works.",
 };

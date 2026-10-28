@@ -4,6 +4,7 @@
 import type { CSSProperties } from "react";
 import type { MatchAnalysis, Side } from "../../data/analysis";
 import { useT, type MessageKey } from "../../i18n";
+import { count, or0 } from "./fmt";
 
 const S = 340, C = S / 2, RAD = 120;
 
@@ -18,7 +19,7 @@ export default function StyleRadar({ profile, names }: { profile: MatchAnalysis[
   const t = useT();
   const n = profile.metrics.length;
   const label = (id: string) => t(`rp.pf.${id}` as MessageKey);
-  const poly = (vals: number[]) => vals.map((v, i) => radarPoint(i, n, v).join(",")).join(" ");
+  const poly = (vals: readonly (number | null)[]) => vals.map((v, i) => radarPoint(i, n, or0(v)).join(",")).join(" ");
   return (
     <div className="rp-radar">
       <svg viewBox={`-70 -10 ${S + 140} ${S + 20}`} role="img" aria-label={t("rp.pf.label", { n: profile.baseline_matches })}>
@@ -38,8 +39,8 @@ export default function StyleRadar({ profile, names }: { profile: MatchAnalysis[
           <g key={side} style={{ color: `var(--pv-${side})` }}>
             <polygon points={poly(profile[side])} className="rp-area" />
             {profile[side].map((v, i) => {
-              const [x, y] = radarPoint(i, n, v);
-              return <circle key={i} cx={x} cy={y} r={4} className="rp-vertex"><title>{`${names[side]} · ${label(profile.metrics[i])}: ${Math.round(v)}`}</title></circle>;
+              const [x, y] = radarPoint(i, n, or0(v));
+              return <circle key={i} cx={x} cy={y} r={4} className="rp-vertex"><title>{`${names[side]} · ${label(profile.metrics[i])}: ${count(v)}`}</title></circle>;
             })}
           </g>
         ))}
@@ -52,8 +53,8 @@ export default function StyleRadar({ profile, names }: { profile: MatchAnalysis[
             <tr key={id}>
               <th scope="row">{label(id)}</th>
               {(["home", "away"] as const).map((s) => (
-                <td key={s} className="num" style={{ "--tc": `var(--pv-${s})`, "--w": `${profile[s][i]}%` } as CSSProperties}>
-                  {Math.round(profile[s][i])}<span className="rp-inline" aria-hidden="true"><i /></span>
+                <td key={s} className="num" style={{ "--tc": `var(--pv-${s})`, "--w": `${or0(profile[s][i])}%` } as CSSProperties}>
+                  {count(profile[s][i])}<span className="rp-inline" aria-hidden="true"><i /></span>
                 </td>
               ))}
             </tr>

@@ -1369,4 +1369,6 @@ export const es: Messages = {
   "rp.pl.take": "{name} fue quien más aportó: {v} xG + xA ({xg} + {xa}).",
   "metric.xa.short": "xA",
   "metric.xa.def": "Asistencias esperadas: el xG de los tiros que preparan los pases de un jugador",
+  // C19 hotfix: a report part that failed.
+  "rp.failed": "Esta parte del informe no se pudo dibujar. El resto de la página sigue funcionando.",
 };

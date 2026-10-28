@@ -2,16 +2,17 @@
 // went in with the probability its xG gives, simulated on the API, as one bar in three parts, and the
 // expected points beside the real score.
 import type { CSSProperties } from "react";
-import type { MatchAnalysis, Side } from "../../data/analysis";
+import { isNum, type MatchAnalysis, type Side } from "../../data/analysis";
 import { useT } from "../../i18n";
+import { num, or0, share } from "./fmt";
 
-const pct = (v: number) => `${Math.round(v * 100)}%`;
-
-/** The one-line verdict: the real score against the result the chances made most likely. */
-export function deservedVerdict(d: MatchAnalysis["deserved"], score: Record<Side, number>): { key: "rp.dsv.match" | "rp.dsv.against" | "rp.dsv.draw"; side: Side | null; p: number } {
-  const best = d.home_win >= d.away_win && d.home_win >= d.draw ? "home" : d.away_win >= d.draw ? "away" : null;
+/** The one-line verdict: the real score against the result the chances made most likely; null without the three chances. */
+export function deservedVerdict(d: MatchAnalysis["deserved"], score: Record<Side, number>): { key: "rp.dsv.match" | "rp.dsv.against" | "rp.dsv.draw"; side: Side | null; p: number } | null {
+  const { home_win: h, draw: x, away_win: a } = d;
+  if (!isNum(h) || !isNum(x) || !isNum(a)) return null;
+  const best = h >= a && h >= x ? "home" : a >= x ? "away" : null;
   const actual = score.home > score.away ? "home" : score.away > score.home ? "away" : null;
-  const p = best === "home" ? d.home_win : best === "away" ? d.away_win : d.draw;
+  const p = best === "home" ? h : best === "away" ? a : x;
   if (best === actual) return { key: "rp.dsv.match", side: best, p };
   return best ? { key: "rp.dsv.against", side: best, p } : { key: "rp.dsv.draw", side: null, p };
 }
@@ -25,24 +26,27 @@ export default function Deserved({ d, names, score }: { d: MatchAnalysis["deserv
     { k: "draw", v: d.draw, label: t("rp.dsv.drawShort") },
     { k: "away", v: d.away_win, label: t("rp.dsv.win", { team: names.away }) },
   ];
+  const whole = parts.every((p) => isNum(p.v));
   return (
     <div className="rp-dsv">
-      <div className="rp-dsv-bar" role="img" aria-label={parts.map((p) => `${p.label} ${pct(p.v)}`).join(", ")}>
-        {parts.map((p) => (
-          <span key={p.k} className={`seg ${p.k}`} style={{ flexGrow: Math.max(p.v, 0.001), "--c": p.k === "draw" ? "var(--pv-ink-3, #9AA1AC)" : `var(--pv-${p.k})` } as CSSProperties}
-            title={`${p.label}: ${pct(p.v)}`}>
-            {p.v >= 0.12 && <b className="num">{pct(p.v)}</b>}
-          </span>
-        ))}
-      </div>
+      {whole && (
+        <div className="rp-dsv-bar" role="img" aria-label={parts.map((p) => `${p.label} ${share(p.v)}`).join(", ")}>
+          {parts.map((p) => (
+            <span key={p.k} className={`seg ${p.k}`} style={{ flexGrow: Math.max(or0(p.v), 0.001), "--c": p.k === "draw" ? "var(--pv-ink-3, #9AA1AC)" : `var(--pv-${p.k})` } as CSSProperties}
+              title={`${p.label}: ${share(p.v)}`}>
+              {or0(p.v) >= 0.12 && <b className="num">{share(p.v)}</b>}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="rp-dsv-key">
-        {parts.map((p) => <span key={p.k} className={p.k}>{p.label} <b className="num">{pct(p.v)}</b></span>)}
+        {parts.map((p) => <span key={p.k} className={p.k}>{p.label} <b className="num">{share(p.v)}</b></span>)}
       </div>
       <dl className="rp-dsv-pts">
         {(["home", "away"] as const).map((s) => (
           <div key={s} style={{ "--tc": `var(--pv-${s})` } as CSSProperties}>
             <dt>{names[s]}</dt>
-            <dd><span className="num rp-big">{d.xpts[s].toFixed(2)}</span> <span title={t("metric.xpts.def")}>{t("metric.xpts.short")}</span> <small>{t("rp.dsv.real", { n: pts(s) })}</small></dd>
+            <dd><span className="num rp-big">{num(d.xpts?.[s])}</span> <span title={t("metric.xpts.def")}>{t("metric.xpts.short")}</span> <small>{t("rp.dsv.real", { n: pts(s) })}</small></dd>
           </div>
         ))}
       </dl>

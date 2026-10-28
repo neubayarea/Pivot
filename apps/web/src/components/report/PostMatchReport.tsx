@@ -3,7 +3,8 @@
 // where its numbers come from. The numbers are the API's (/analysis, /shots); none is worked out here.
 import { useState } from "react";
 import type { Pivot1 as Pivot } from "@pivot/contracts";
-import { useAnalysis, type MatchAnalysis } from "../../data/analysis";
+import { isNum, reached, useAnalysis, type MatchAnalysis } from "../../data/analysis";
+import { count, num, or0, pct, share } from "./fmt";
 import { useClock } from "../../data/clock";
 import { keyMoments } from "../../data/keyMoments";
 import { useMatch } from "../../data/match";
@@ -35,7 +36,7 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
   const score = { home: match.score.home, away: match.score.away };
 
   const top = players.data ? topContributors(players.data.players, 1)[0] : undefined;
-  const plTake = top?.stats ? t("rp.pl.take", { name: top.name, v: (top.stats.xg + top.stats.xa).toFixed(2), xg: top.stats.xg.toFixed(2), xa: top.stats.xa.toFixed(2) }) : null;
+  const plTake = top?.stats ? t("rp.pl.take", { name: top.name, v: num(or0(top.stats.xg) + or0(top.stats.xa)), xg: num(top.stats.xg), xa: num(top.stats.xa) }) : null;
   const shotsSec = (quality: MatchAnalysis["shot_quality"] | null, takeaway: string | null) => (
     <ReportSection id="rp-shots" title={t("rp.sq.title")} takeaway={takeaway} source={t(quality ? "rp.src.shots" : "rp.src.shotsOnly")} className="wide">
       <ShotQuality shots={shots.data?.shots ?? []} quality={quality} names={names} nameOf={playerName} />
@@ -59,15 +60,18 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
     );
   }
 
+  // A live match sends nulls for what it has not reached: blocks still to come are left out, and a
+  // takeaway is skipped when its numbers are not there yet.
+  const phases = (data.phases ?? []).filter(reached);
   const v = deservedVerdict(data.deserved, score);
-  const dsvTake = t(v.key, { score: `${score.home}–${score.away}`, team: v.side ? full[v.side] : "", p: `${Math.round(v.p * 100)}%` });
+  const dsvTake = v && t(v.key, { score: `${score.home}–${score.away}`, team: v.side ? full[v.side] : "", p: share(v.p) });
 
-  const spell = bestSpell(data.phases, metric);
+  const spell = bestSpell(phases, metric);
   const mName = t(`metric.${METRIC_KEY[metric]}.short` as MessageKey);
-  const fmt = (x: number | null) => (x === null ? "–" : metric === "xg" ? x.toFixed(2) : metric === "ppda" ? x.toFixed(1) : `${Math.round(x)}%`);
+  const fmt = (x: number | null) => (metric === "xg" ? num(x) : metric === "ppda" ? num(x, 1) : pct(x));
   const phTake = spell && t("rp.ph.take", {
-    from: data.phases[spell.i].from, to: data.phases[spell.i].to, team: full[spell.side], metric: mName,
-    v: fmt(data.phases[spell.i][spell.side][metric]), w: fmt(data.phases[spell.i][spell.side === "home" ? "away" : "home"][metric]),
+    from: phases[spell.i].from, to: phases[spell.i].to, team: full[spell.side], metric: mName,
+    v: fmt(phases[spell.i][spell.side][metric]), w: fmt(phases[spell.i][spell.side === "home" ? "away" : "home"][metric]),
   });
   const keys = keyMoments(events, match.status === "finished");
   const marks = [
@@ -76,26 +80,35 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
   ];
 
   const md = mostDangerous(data.game_state);
-  const gsTake = md && t("rp.gs.take", { team: full[md.side], state: t(`rp.gs.when.${stateFor(md.row.state, md.side)}` as MessageKey), v: md.row[md.side].xg_per90.toFixed(2) });
+  const gsTake = md && t("rp.gs.take", { team: full[md.side], state: t(`rp.gs.when.${stateFor(md.row.state, md.side)}` as MessageKey), v: num(md.row[md.side].xg_per90) });
 
   const q = data.shot_quality;
-  const better = q.home.xg_per_shot >= q.away.xg_per_shot ? "home" : "away";
+  const hq = q?.home?.xg_per_shot, aq = q?.away?.xg_per_shot;
+  const better = isNum(hq) && isNum(aq) ? (hq >= aq ? "home" : "away") : null;
   const other = better === "home" ? "away" : "home";
-  const sqTake = t("rp.sq.take", { team: full[better], v: q[better].xg_per_shot.toFixed(2), w: q[other].xg_per_shot.toFixed(2), n: q[better].big_chances, m: q[other].big_chances });
+  const sqTake = better && t("rp.sq.take", {
+    team: full[better], v: num(q[better].xg_per_shot), w: num(q[other].xg_per_shot), n: count(q[better].big_chances), m: count(q[other].big_chances),
+  });
 
   // C19 B: the lane that made the most xG, the clearest difference in style.
   let lane: { side: "home" | "away"; k: (typeof LANES)[number] } | null = null;
   for (const side of ["home", "away"] as const) {
-    for (const k of LANES) if (!lane || data.lanes[side][k].xg > data.lanes[lane.side][lane.k].xg) lane = { side, k };
+    for (const k of LANES) {
+      const x = data.lanes?.[side]?.[k]?.xg;
+      if (isNum(x) && x > 0 && (!lane || x > or0(data.lanes[lane.side][lane.k].xg))) lane = { side, k };
+    }
   }
-  const lnTake = lane && t("rp.ln.take", { team: full[lane.side], lane: t(`rp.ln.word.${lane.k}` as MessageKey), xg: data.lanes[lane.side][lane.k].xg.toFixed(2), pct: laneShares(data.lanes[lane.side])[lane.k] });
+  const lnTake = lane && t("rp.ln.take", { team: full[lane.side], lane: t(`rp.ln.word.${lane.k}` as MessageKey), xg: num(data.lanes[lane.side][lane.k].xg), pct: laneShares(data.lanes[lane.side])[lane.k] });
   const pf = data.profile;
   let gap = -1;
-  pf.metrics.forEach((_, i) => { if (gap < 0 || Math.abs(pf.home[i] - pf.away[i]) > Math.abs(pf.home[gap] - pf.away[gap])) gap = i; });
-  const ahead = gap >= 0 && pf.home[gap] >= pf.away[gap] ? "home" : "away";
+  pf.metrics.forEach((_, i) => {
+    const h = pf.home[i], a = pf.away[i];
+    if (isNum(h) && isNum(a) && (gap < 0 || Math.abs(h - a) > Math.abs(or0(pf.home[gap]) - or0(pf.away[gap])))) gap = i;
+  });
+  const ahead = gap >= 0 && or0(pf.home[gap]) >= or0(pf.away[gap]) ? "home" : "away";
   const pfTake = gap >= 0 ? t("rp.pf.take", {
     metric: t(`rp.pf.${pf.metrics[gap]}` as MessageKey), team: full[ahead],
-    v: Math.round(pf[ahead][gap]), w: Math.round(pf[ahead === "home" ? "away" : "home"][gap]),
+    v: count(pf[ahead][gap]), w: count(pf[ahead === "home" ? "away" : "home"][gap]),
   }) : null;
 
   return (
@@ -103,12 +116,16 @@ export default function PostMatchReport({ moments, upTo }: { moments: Pivot[]; u
       <ReportSection id="rp-deserved" title={t("rp.dsv.title")} takeaway={dsvTake} source={t("rp.src.deserved", { n: data.deserved.n_sims.toLocaleString() })}>
         <Deserved d={data.deserved} names={names} score={score} />
       </ReportSection>
-      <ReportSection id="rp-state" title={t("rp.gs.title")} takeaway={gsTake} source={t("rp.src.state")}>
-        <GameStateTable rows={data.game_state} names={names} />
-      </ReportSection>
-      <ReportSection id="rp-phases" title={t("rp.ph.title")} takeaway={phTake} source={t("rp.src.phases")} className="wide">
-        <Phases phases={data.phases} names={names} marks={marks} onMetric={setMetric} />
-      </ReportSection>
+      {data.game_state?.length > 0 && (
+        <ReportSection id="rp-state" title={t("rp.gs.title")} takeaway={gsTake} source={t("rp.src.state")}>
+          <GameStateTable rows={data.game_state} names={names} />
+        </ReportSection>
+      )}
+      {phases.length > 0 && (
+        <ReportSection id="rp-phases" title={t("rp.ph.title")} takeaway={phTake} source={t("rp.src.phases")} className="wide">
+          <Phases phases={phases} names={names} marks={marks} onMetric={setMetric} />
+        </ReportSection>
+      )}
       {shotsSec(q, sqTake)}
       <ReportSection id="rp-lanes" title={t("rp.ln.title")} takeaway={lnTake} source={t("rp.src.lanes")} className="wide">
         <Lanes lanes={data.lanes} names={full} />

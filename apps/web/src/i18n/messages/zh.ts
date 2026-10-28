@@ -1367,4 +1367,6 @@ export const zh: Messages = {
   "rp.pl.take": "{name} 贡献最大：xG + xA 共 {v}（{xg} + {xa}）。",
   "metric.xa.short": "xA",
   "metric.xa.def": "预期助攻：球员的传球创造的那些射门的 xG",
+  // C19 hotfix: a report part that failed.
+  "rp.failed": "报告的这一部分没能画出来，页面其他部分照常可用。",
 };
