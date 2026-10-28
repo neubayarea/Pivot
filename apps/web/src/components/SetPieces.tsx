@@ -154,7 +154,9 @@ function SetPieceView({ sp }: { sp: SetPiece }) {
               <dt>{t("sp.marking")}</dt>
               <dd>
                 {setup.marking ? <b>{t(`sp.marking.${setup.marking}` as MessageKey)}</b> : t("sp.marking.few")}
-                {setup.marking && <small> {t("sp.markingWhy", { k: setup.pairs.length, n: setup.attackersInBox.length, m: MARK_M })}</small>}
+                {setup.marking && <small> {sp.kind === "corner"
+                  ? t("sp.markingCorner", { z: setup.zonal.length, k: setup.pairs.length })
+                  : t("sp.markingWhy", { k: setup.pairs.length, n: setup.attackersInBox.length, m: MARK_M })}</small>}
               </dd>
             </>
           )}

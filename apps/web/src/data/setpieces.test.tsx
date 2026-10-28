@@ -8,7 +8,7 @@ import { SetPieceBoard, ShotBoard } from "../components/SetPieces";
 import demo from "../../../../eval/frozen/m-seed-29-before-ax44.json";
 import { toView } from "./live/provider";
 import { MatchContext } from "./match";
-import { clipBall, frameBefore, frameBetween, freeKickZone, resultOf, setPieces, setupAt, shotClips, tally } from "./setpieces";
+import { clipBall, cornerMarking, frameBefore, frameBetween, freeKickZone, resultOf, setPieces, setupAt, shotClips, tally } from "./setpieces";
 
 let seq = 0;
 const ev = (o: Partial<MatchEvent>) =>
@@ -67,6 +67,47 @@ describe("the setup at the kick", () => {
   it("reads defenders holding spaces away from the attackers as zonal", () => {
     const f = frame(99, [at("h2", 98, 30), at("h3", 96, 38), at("h4", 100, 34), at("a2", 102, 26), at("a3", 102, 42), at("a4", 94, 34)]);
     expect(setupAt(f, corner, isHome, isKeeper).marking).toBe("zonal");
+  });
+
+  // Ax58 (#273): corners laid out the way sim/setpieces.py sets them up, the corner from the right flag.
+  // A spot is (metres off the goal line, metres towards the near side), as in ATTACK_BOX and ZONES there.
+  const spot = (id: string, d: number, near: number) => at(id, 105 - d, 34 + near);
+  const box = [[1.6, 0.8], [5.5, 4.5], [6.0, -5.0], [10.5, 0.5], [8.0, -1.5]];
+  const zones = [[6.0, 5.5], [3.5, 5.5], [6.5, 0.0], [6.5, -4.5], [10.0, 2.5], [10.5, -4.0]];
+  const attackers = box.map(([d, n], i) => spot(`h${i + 2}`, d, n));
+  // a marker a metre goal-side of his man; zone men on their spots; the keeper on his line
+  const markers = (who: number[]) => who.map((i, k) => spot(`a${k + 2}`, box[i][0] - 1, box[i][1]));
+  const zoneMen = (n: number) => zones.slice(0, n).map(([d, n2], k) => spot(`b${k + 2}`, d, n2));
+  const keeper = spot("a1", 1, 0);
+  const cornerAt = (defenders: ReturnType<typeof at>[]) => setupAt(frame(99, [at("h7", 105, 68), ...attackers, keeper, ...defenders]), corner, isHome, isKeeper);
+
+  it("reads a corner with two zones and a marker on every attacker as man-to-man", () => {
+    // and a man on the edge of the box for the second ball: neither zonal nor marking
+    const s = cornerAt([...zoneMen(2), ...markers([0, 1, 2, 3, 4]), spot("b9", 15.5, -8)]);
+    expect([s.zonal.length, s.pairs.length, s.marking]).toEqual([2, 5, "man"]);
+  });
+
+  it("reads a corner with six zones and two markers as zonal", () => {
+    const s = cornerAt([...zoneMen(6), ...markers([1, 2])]);
+    expect([s.zonal.length, s.pairs.length, s.marking]).toEqual([6, 2, "zonal"]);
+  });
+
+  it("reads a corner with four zones and markers on the rest as mixed", () => {
+    const s = cornerAt([...zoneMen(4), ...markers([0, 1, 2, 3, 4])]);
+    expect(s.marking).toBe("mixed");
+    expect([s.zonal.length, s.pairs.length]).toEqual([4, 5]);
+    // On a free kick the same layout is still read by the attackers marked: all five, man-to-man.
+    const fk = setPieces([ev({ t: 100, player_id: "h7", pass_type: "free_kick", location: [80, 34] })])[0];
+    const f = setupAt(frame(99, [...attackers, keeper, ...zoneMen(4), ...markers([0, 1, 2, 3, 4])]), fk, isHome, isKeeper);
+    expect([f.zonal.length, f.marking]).toEqual([0, "man"]);
+  });
+
+  it("needs two zonal and two markers for mixed", () => {
+    expect(cornerMarking(1, 6)).toBe("man");
+    expect(cornerMarking(5, 1)).toBe("zonal");
+    expect(cornerMarking(2, 2)).toBe("mixed");
+    expect(cornerMarking(2, 4)).toBe("man");
+    expect(cornerMarking(3, 2)).toBe("zonal");
   });
 
   it("finds a free kick's wall between the ball and the goal", () => {
