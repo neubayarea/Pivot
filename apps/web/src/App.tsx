@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import Brand from "./components/Brand";
+import Wordmark from "./components/Wordmark";
 import ConnectionBanner, { MissingMatchBanner } from "./components/ConnectionBanner";
 import KitColours from "./components/KitColours";
 import Playback from "./components/Playback";
@@ -22,7 +22,7 @@ import WhatIfLab from "./pages/WhatIfLab";
 const WAITING = (
   <>
     <header className="top">
-      <Brand />
+      <Wordmark />
     </header>
     <ConnectionBanner />
     <main className="page">

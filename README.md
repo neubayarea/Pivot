@@ -1,4 +1,4 @@
-<img src="apps/web/public/favicon.svg" width="72" alt="Pivot logo">
+<img src="apps/web/public/wordmark.svg" width="160" alt="pivot">
 
 # Pivot
 
